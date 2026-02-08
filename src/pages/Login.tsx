@@ -1,0 +1,58 @@
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Zap } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+    toast.success("Login successful! Redirecting to dashboard…");
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-surface p-4">
+      <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-card">
+        <div className="mb-8 text-center">
+          <Link to="/" className="inline-flex items-center gap-2 text-xl font-bold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <Zap className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="text-primary">Nexus</span>
+            <span className="text-gradient-gold">Flo24</span>
+          </Link>
+          <h1 className="mt-4 text-2xl font-bold">Welcome Back</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to your account</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
+          </div>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+          </div>
+          <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">
+            Sign In
+          </Button>
+        </form>
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Don't have an account?{" "}
+          <Link to="/register" className="font-medium text-accent hover:underline">Sign up free</Link>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
