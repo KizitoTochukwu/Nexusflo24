@@ -1,12 +1,17 @@
 import Layout from "@/components/layout/Layout";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, ArrowRight, Zap } from "lucide-react";
+import { Check, ArrowRight, Zap, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { PLANS, type PlanKey, type BillingCycle } from "@/lib/stripe/plans";
+import { toast } from "sonner";
 
 const tiers = [
   {
     name: "Free Trial",
+    key: null as PlanKey | null,
     monthlyPrice: 0,
     yearlyPrice: 0,
     note: "14 days, no card required",
@@ -22,9 +27,10 @@ const tiers = [
   },
   {
     name: "Pro",
+    key: "pro" as PlanKey,
     monthlyPrice: 49,
     yearlyPrice: 39,
-    note: "For growing businesses",
+    note: "14-day free trial (card required)",
     features: [
       "Unlimited contacts",
       "Unlimited campaigns",
@@ -40,9 +46,10 @@ const tiers = [
   },
   {
     name: "Agency",
+    key: "agency" as PlanKey,
     monthlyPrice: 149,
     yearlyPrice: 119,
-    note: "For teams & agencies",
+    note: "14-day free trial (card required)",
     features: [
       "Everything in Pro",
       "Multi-client workspaces",
@@ -53,7 +60,7 @@ const tiers = [
       "Priority phone support",
       "Custom integrations",
     ],
-    cta: "Contact Sales",
+    cta: "Start Free Trial",
     highlight: false,
   },
 ];
@@ -74,6 +81,38 @@ const comparisonFeatures = [
 
 const Pricing = () => {
   const [yearly, setYearly] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubscribe = async (planKey: PlanKey) => {
+    if (!user) {
+      navigate("/register?next=/pricing");
+      return;
+    }
+
+    setLoadingPlan(planKey);
+    const billingCycle: BillingCycle = yearly ? "yearly" : "monthly";
+    const plan = PLANS[planKey];
+    const priceId = yearly ? plan.yearlyPriceId : plan.monthlyPriceId;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+        body: { plan: planKey, billingCycle, priceId },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout");
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <Layout>
@@ -88,7 +127,6 @@ const Pricing = () => {
           <p className="mx-auto mt-4 max-w-lg text-primary-foreground/70">
             Start free. Scale as you grow. Save ~20% with yearly billing.
           </p>
-          {/* Toggle */}
           <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-navy-light bg-navy-light/40 p-1">
             <button
               onClick={() => setYearly(false)}
@@ -106,7 +144,6 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* Cards */}
       <section className="-mt-8 pb-20">
         <div className="container">
           <div className="grid gap-6 md:grid-cols-3">
@@ -140,21 +177,34 @@ const Pricing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to={tier.name === "Agency" ? "/contact?subject=sales" : "/register"} className="mt-8 block">
-                  <Button
-                    className={`w-full ${tier.highlight ? "bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold" : ""}`}
-                    variant={tier.highlight ? "default" : "outline"}
-                  >
-                    {tier.cta} <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+                <div className="mt-8">
+                  {tier.key ? (
+                    <Button
+                      className={`w-full ${tier.highlight ? "bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold" : ""}`}
+                      variant={tier.highlight ? "default" : "outline"}
+                      disabled={loadingPlan === tier.key}
+                      onClick={() => handleSubscribe(tier.key!)}
+                    >
+                      {loadingPlan === tier.key ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…</>
+                      ) : (
+                        <>{tier.cta} <ArrowRight className="ml-2 h-4 w-4" /></>
+                      )}
+                    </Button>
+                  ) : (
+                    <Link to="/register" className="block">
+                      <Button variant="outline" className="w-full">
+                        {tier.cta} <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Comparison table */}
       <section className="bg-surface py-20">
         <div className="container">
           <h2 className="mb-8 text-center text-2xl font-bold">Feature Comparison</h2>
