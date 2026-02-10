@@ -1,15 +1,18 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate,
   BarChart3, Settings, Zap, TrendingUp, Mail, MousePointerClick,
-  DollarSign, ListChecks, ChevronRight, Menu, X
+  DollarSign, ListChecks, ChevronRight, Menu, X, CreditCard, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
 } from "recharts";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", active: true },
@@ -61,13 +64,43 @@ const workflowNodes = [
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchParams] = useSearchParams();
+  const { user, subscription, subLoading, refreshSubscription } = useAuth();
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("checkout") === "success") {
+      toast.success("Subscription activated! Welcome aboard 🎉");
+      refreshSubscription();
+    }
+  }, [searchParams]);
+
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-portal-session");
+      if (error) throw error;
+      if (data?.url) window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to open billing portal");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  const planLabel = subscription?.plan === "agency" ? "Agency" : subscription?.plan === "pro" ? "Pro" : "Free";
+  const statusLabel = subscription?.status === "trialing" ? "Trial" : subscription?.status === "active" ? "Active" : subscription?.status || "—";
 
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Demo banner */}
       <div className="fixed left-0 right-0 top-0 z-50 bg-accent py-2 text-center text-xs font-semibold text-accent-foreground">
-        🎯 Demo Dashboard — Viewing sample data.{" "}
-        <Link to="/register" className="underline">Start your free trial</Link>
+        {user ? (
+          <>👋 Welcome, {user.email}</>
+        ) : (
+          <>🎯 Demo Dashboard — Viewing sample data.{" "}
+          <Link to="/register" className="underline">Start your free trial</Link></>
+        )}
       </div>
 
       {/* Sidebar */}
@@ -109,6 +142,45 @@ const Dashboard = () => {
         <div className="p-6 lg:p-8">
           <h1 className="text-2xl font-bold">Dashboard Overview</h1>
           <p className="text-sm text-muted-foreground">Welcome back! Here's what's happening today.</p>
+
+          {/* Billing Card */}
+          {user && (
+            <div className="mt-6 rounded-xl border bg-card p-5 shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-accent" />
+                  <div>
+                    <p className="text-sm font-semibold">
+                      Plan: <span className="text-accent">{planLabel}</span>
+                      {subscription?.status && (
+                        <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">{statusLabel}</span>
+                      )}
+                    </p>
+                    {subscription?.current_period_end && (
+                      <p className="text-xs text-muted-foreground">
+                        Renews {new Date(subscription.current_period_end).toLocaleDateString()}
+                        {subscription.cancel_at_period_end && " (cancels at end)"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {(!subscription || subscription.plan === "free" || subscription.status === "canceled") && (
+                    <Link to="/pricing">
+                      <Button size="sm" className="bg-accent text-accent-foreground hover:bg-gold-dark">
+                        Upgrade
+                      </Button>
+                    </Link>
+                  )}
+                  {subscription?.stripe_customer_id && (
+                    <Button size="sm" variant="outline" disabled={portalLoading} onClick={handleManageBilling}>
+                      {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Manage Billing"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Stats */}
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

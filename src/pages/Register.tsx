@@ -1,15 +1,18 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Register = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) {
       toast.error("Please fill in all fields.");
@@ -19,7 +22,22 @@ const Register = () => {
       toast.error("Password must be at least 6 characters.");
       return;
     }
-    toast.success("Account created! Welcome to NexusFlo24.");
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: { full_name: form.name },
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Check your email for a confirmation link!");
+    navigate("/login");
   };
 
   return (
@@ -34,7 +52,7 @@ const Register = () => {
             <span className="text-gradient-gold">Flo24</span>
           </Link>
           <h1 className="mt-4 text-2xl font-bold">Start Your Free Trial</h1>
-          <p className="mt-1 text-sm text-muted-foreground">14 days free. No credit card required.</p>
+          <p className="mt-1 text-sm text-muted-foreground">14 days free. Card required for paid plans.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -49,8 +67,8 @@ const Register = () => {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min. 6 characters" />
           </div>
-          <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">
-            Create Account
+          <Button type="submit" disabled={loading} className="w-full bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">
+            {loading ? "Creating account…" : "Create Account"}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
