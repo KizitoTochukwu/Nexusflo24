@@ -4,6 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const allowedOrigins = [
   "https://nexusflo24.lovable.app",
+  "https://id-preview--83abe329-97fa-4834-9de4-67adac397517.lovable.app",
   "http://localhost:5173",
 ];
 
