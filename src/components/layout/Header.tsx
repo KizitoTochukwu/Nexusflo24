@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
 
 const navLinks = [
+{ label: "Dashboard", to: "/dashboard" },
 { label: "Features", to: "/features" },
 { label: "Pricing", to: "/pricing" },
 { label: "About", to: "/about" },
-{ label: "Dashboard", to: "/dashboard" },
 { label: "Contact", to: "/contact" }];
 
 
