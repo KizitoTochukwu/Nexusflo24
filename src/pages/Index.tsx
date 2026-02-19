@@ -77,7 +77,7 @@ const Index = () => (
                 </Button>
               </Link>
               <Link to="/contact?subject=demo">
-                <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-navy-light text-base px-8">
+                <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-white hover:bg-primary hover:text-primary-foreground text-base px-8">
                   Book a Demo
                 </Button>
               </Link>
@@ -307,7 +307,7 @@ const Index = () => (
             </Button>
           </Link>
           <Link to="/contact?subject=demo">
-            <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-navy-light text-base px-8">
+            <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-white hover:bg-primary hover:text-primary-foreground text-base px-8">
               Book a Demo
             </Button>
           </Link>
