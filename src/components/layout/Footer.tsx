@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Zap, Mail, Twitter, Linkedin, Instagram } from "lucide-react";
+import { Mail, Twitter, Linkedin, Instagram } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -25,9 +26,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2 text-xl font-bold">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-                <Zap className="h-4 w-4 text-accent-foreground" />
-              </div>
+              <img src={logo} alt="NexusFlo24 Logo" className="h-8 w-8 rounded-lg object-cover" />
               <span>NexusFlo24</span>
             </Link>
             <p className="text-sm text-primary-foreground/70">
