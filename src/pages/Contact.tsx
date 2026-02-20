@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Mail, MapPin, MessageCircle, Zap } from "lucide-react";
+import { Mail, MapPin, MessageCircle, Zap, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useCaptureLead } from "@/hooks/useCaptureLead";
 
 const Contact = () => {
   const [searchParams] = useSearchParams();
@@ -17,9 +18,9 @@ const Contact = () => {
     company: "",
     message: subject === "demo" ? "I'd like to book a demo of NexusFlo24." : subject === "sales" ? "I'm interested in the Agency plan." : "",
   });
-  const [submitted, setSubmitted] = useState(false);
+  const { capture, loading, success } = useCaptureLead();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       toast.error("Please fill in all required fields.");
@@ -29,8 +30,20 @@ const Contact = () => {
       toast.error("Please enter a valid email address.");
       return;
     }
-    toast.success("Message sent! We'll get back to you within 24 hours.");
-    setSubmitted(true);
+    try {
+      await capture({
+        full_name: form.name,
+        email: form.email,
+        source: "Contact",
+        tags: ["website-signup", "contact-form", ...(subject ? [`contact-${subject}`] : [])],
+        notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Message: ${form.message}`,
+        formId: "contact-form",
+        page: "/contact",
+      });
+      toast.success("Message sent! We'll get back to you within 24 hours.");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -52,14 +65,13 @@ const Contact = () => {
       <section className="py-20">
         <div className="container">
           <div className="grid gap-12 lg:grid-cols-2">
-            {/* Form */}
             <div className="rounded-xl border bg-card p-8 shadow-card">
-              {submitted ? (
+              {success ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
                     <Mail className="h-8 w-8 text-accent" />
                   </div>
-                  <h3 className="text-xl font-bold">Message Sent!</h3>
+                  <h3 className="text-xl font-bold">You're in — check your inbox!</h3>
                   <p className="mt-2 text-muted-foreground">We'll get back to you within 24 hours.</p>
                 </div>
               ) : (
@@ -80,14 +92,14 @@ const Contact = () => {
                     <Label htmlFor="message">Message *</Label>
                     <Textarea id="message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Tell us how we can help…" rows={5} maxLength={1000} />
                   </div>
-                  <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">
+                  <Button type="submit" disabled={loading} className="w-full bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Send Message
                   </Button>
                 </form>
               )}
             </div>
 
-            {/* Info */}
             <div className="space-y-8">
               {[
                 { icon: Mail, title: "Email", desc: "support@nexusflo24.com", sub: "We respond within 24 hours." },
