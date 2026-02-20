@@ -36,6 +36,7 @@ const Register = () => {
       toast.error(error.message);
       return;
     }
+    localStorage.setItem("nexusflo_new_signup", "true");
     toast.success("Check your email for a confirmation link!");
     navigate("/login");
   };
