@@ -1,22 +1,36 @@
 import { Link } from "react-router-dom";
-import { Mail, Twitter, Linkedin, Instagram } from "lucide-react";
+import { Mail, Twitter, Linkedin, Instagram, Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useCaptureLead } from "@/hooks/useCaptureLead";
 
 const Footer = () => {
   const [email, setEmail] = useState("");
+  const { capture, loading, success } = useCaptureLead();
 
-  const handleNewsletter = (e: React.FormEvent) => {
+  const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
       toast.error("Please enter a valid email address.");
       return;
     }
-    toast.success("Subscribed! Your AI nurture flow starts now.");
-    setEmail("");
+    try {
+      await capture({
+        email,
+        source: "Newsletter",
+        tags: ["website-signup", "newsletter"],
+        notes: "Signed up via footer newsletter form.",
+        formId: "footer-newsletter",
+        page: window.location.pathname,
+      });
+      toast.success("You're in — check your inbox!");
+      setEmail("");
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -45,11 +59,7 @@ const Footer = () => {
           <div className="space-y-3">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-accent">Product</h4>
             {["Features", "Pricing", "Dashboard", "Integrations"].map((item) => (
-              <Link
-                key={item}
-                to={`/${item.toLowerCase()}`}
-                className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground"
-              >
+              <Link key={item} to={`/${item.toLowerCase()}`} className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                 {item}
               </Link>
             ))}
@@ -64,11 +74,7 @@ const Footer = () => {
               { label: "Privacy Policy", to: "#" },
               { label: "Terms of Service", to: "#" },
             ].map((item) => (
-              <Link
-                key={item.label}
-                to={item.to}
-                className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground"
-              >
+              <Link key={item.label} to={item.to} className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                 {item.label}
               </Link>
             ))}
@@ -80,18 +86,22 @@ const Footer = () => {
             <p className="text-sm text-primary-foreground/70">
               Get AI marketing tips and product updates.
             </p>
-            <form onSubmit={handleNewsletter} className="flex gap-2">
-              <Input
-                type="email"
-                placeholder="you@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-navy-light border-navy-lighter text-primary-foreground placeholder:text-primary-foreground/40"
-              />
-              <Button type="submit" size="sm" className="bg-accent text-accent-foreground hover:bg-gold-dark whitespace-nowrap">
-                Subscribe
-              </Button>
-            </form>
+            {success ? (
+              <p className="text-sm font-semibold text-gold">✓ Subscribed! Your AI nurture flow starts now.</p>
+            ) : (
+              <form onSubmit={handleNewsletter} className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="you@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-navy-light border-navy-lighter text-primary-foreground placeholder:text-primary-foreground/40"
+                />
+                <Button type="submit" size="sm" disabled={loading} className="bg-accent text-accent-foreground hover:bg-gold-dark whitespace-nowrap">
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Subscribe"}
+                </Button>
+              </form>
+            )}
             <p className="text-xs text-primary-foreground/50">
               <Mail className="mr-1 inline h-3 w-3" />
               support@nexusflo24.com
