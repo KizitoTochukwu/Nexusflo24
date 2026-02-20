@@ -5,6 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 const allowedOrigins = [
   "https://nexusflo24.lovable.app",
   "https://id-preview--83abe329-97fa-4834-9de4-67adac397517.lovable.app",
+  "https://83abe329-97fa-4834-9de4-67adac397517.lovableproject.com",
   "http://localhost:5173",
 ];
 
@@ -70,8 +71,9 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.error("[create-checkout-session] Error:", error);
-    return new Response(JSON.stringify({ error: "Unable to process request" }), {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[create-checkout-session] Error:", msg);
+    return new Response(JSON.stringify({ error: msg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });
