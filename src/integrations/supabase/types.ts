@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      lead_activities: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string
+          meta: Json | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id: string
+          meta?: Json | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string
+          meta?: Json | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          last_activity_at: string | null
+          notes: string | null
+          phone: string | null
+          score: number | null
+          source: string | null
+          status: string | null
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          last_activity_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          score?: number | null
+          source?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          last_activity_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          score?: number | null
+          source?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_events: {
         Row: {
           created_at: string
