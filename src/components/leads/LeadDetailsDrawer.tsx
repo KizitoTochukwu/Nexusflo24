@@ -29,6 +29,7 @@ type Props = {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  workspaceId: string;
 };
 
 const activityLabel: Record<string, string> = {
@@ -41,7 +42,7 @@ const activityLabel: Record<string, string> = {
   sms_reply: "SMS Reply",
 };
 
-const LeadDetailsDrawer = ({ lead, open, onOpenChange }: Props) => {
+const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => {
   const { data: activities = [] } = useLeadActivities(lead?.id ?? null);
   const updateLead = useUpdateLead();
   const logActivity = useLogActivity();
@@ -52,17 +53,17 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange }: Props) => {
   if (!lead) return null;
 
   const handleStatusChange = (newStatus: string) => {
-    updateLead.mutate({ id: lead.id, status: newStatus, prev: { status: lead.status } });
+    updateLead.mutate({ id: lead.id, status: newStatus, prev: { status: lead.status }, workspace_id: workspaceId });
   };
 
   const handleScoreSave = () => {
-    updateLead.mutate({ id: lead.id, score: scoreVal, prev: {} });
+    updateLead.mutate({ id: lead.id, score: scoreVal, prev: {}, workspace_id: workspaceId });
     setEditingScore(false);
   };
 
   const handleLogNote = () => {
     if (!noteText.trim()) return;
-    logActivity.mutate({ leadId: lead.id, type: "manual_note", meta: { note: noteText.trim() } });
+    logActivity.mutate({ leadId: lead.id, type: "manual_note", meta: { note: noteText.trim() }, workspaceId });
     setNoteText("");
   };
 
@@ -77,40 +78,23 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange }: Props) => {
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
-          {/* Info */}
           <div className="grid gap-3 text-sm">
-            {lead.email && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="h-4 w-4" /> {lead.email}
-              </div>
-            )}
-            {lead.phone && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Phone className="h-4 w-4" /> {lead.phone}
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <FileText className="h-4 w-4" /> Source: {lead.source}
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" /> Created {format(new Date(lead.created_at), "MMM d, yyyy")}
-            </div>
+            {lead.email && <div className="flex items-center gap-2 text-muted-foreground"><Mail className="h-4 w-4" /> {lead.email}</div>}
+            {lead.phone && <div className="flex items-center gap-2 text-muted-foreground"><Phone className="h-4 w-4" /> {lead.phone}</div>}
+            <div className="flex items-center gap-2 text-muted-foreground"><FileText className="h-4 w-4" /> Source: {lead.source}</div>
+            <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-4 w-4" /> Created {format(new Date(lead.created_at), "MMM d, yyyy")}</div>
           </div>
 
           <Separator />
 
-          {/* Status */}
           <div>
             <p className="mb-1 text-xs font-medium text-muted-foreground">Status</p>
             <Select value={lead.status} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
+              <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
           </div>
 
-          {/* Score */}
           <div>
             <p className="mb-1 text-xs font-medium text-muted-foreground">Score</p>
             {editingScore ? (
@@ -126,19 +110,15 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange }: Props) => {
             )}
           </div>
 
-          {/* Tags */}
           {lead.tags && lead.tags.length > 0 && (
             <div>
               <p className="mb-1 text-xs font-medium text-muted-foreground">Tags</p>
               <div className="flex flex-wrap gap-1">
-                {lead.tags.map((t) => (
-                  <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
-                ))}
+                {lead.tags.map((t) => <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>)}
               </div>
             </div>
           )}
 
-          {/* Notes */}
           {lead.notes && (
             <div>
               <p className="mb-1 text-xs font-medium text-muted-foreground">Notes</p>
@@ -148,32 +128,18 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange }: Props) => {
 
           <Separator />
 
-          {/* Log activity */}
           <div>
-            <p className="mb-2 text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Plus className="h-3 w-3" /> Log Activity
-            </p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground flex items-center gap-1"><Plus className="h-3 w-3" /> Log Activity</p>
             <div className="flex gap-2">
-              <Textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Add a note…"
-                rows={2}
-                className="flex-1"
-              />
-              <Button size="sm" onClick={handleLogNote} disabled={!noteText.trim()} className="bg-accent text-accent-foreground self-end">
-                Add
-              </Button>
+              <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note…" rows={2} className="flex-1" />
+              <Button size="sm" onClick={handleLogNote} disabled={!noteText.trim()} className="bg-accent text-accent-foreground self-end">Add</Button>
             </div>
           </div>
 
           <Separator />
 
-          {/* Activity timeline */}
           <div>
-            <p className="mb-3 text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Activity className="h-3 w-3" /> Activity Timeline
-            </p>
+            <p className="mb-3 text-xs font-medium text-muted-foreground flex items-center gap-1"><Activity className="h-3 w-3" /> Activity Timeline</p>
             {activities.length === 0 ? (
               <p className="text-xs text-muted-foreground">No activities yet.</p>
             ) : (
@@ -185,9 +151,7 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange }: Props) => {
                       <p className="font-medium">{activityLabel[a.type] || a.type}</p>
                       {(a.meta as any)?.note && <p className="text-xs text-muted-foreground">{(a.meta as any).note}</p>}
                       {(a.meta as any)?.old_status && (
-                        <p className="text-xs text-muted-foreground">
-                          {(a.meta as any).old_status} → {(a.meta as any).new_status}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{(a.meta as any).old_status} → {(a.meta as any).new_status}</p>
                       )}
                       <p className="text-xs text-muted-foreground">{format(new Date(a.created_at), "MMM d, yyyy h:mm a")}</p>
                     </div>

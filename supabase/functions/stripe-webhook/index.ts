@@ -51,6 +51,7 @@ serve(async (req) => {
         const userId = session.metadata?.userId;
         const plan = session.metadata?.plan || "pro";
         const billingCycle = session.metadata?.billingCycle || "monthly";
+        const workspaceId = session.metadata?.workspaceId;
         if (!userId) { log("No userId in metadata"); break; }
 
         const subId = typeof session.subscription === "string"
@@ -63,16 +64,29 @@ serve(async (req) => {
           status = sub.status;
         }
 
-        await supabase.from("subscriptions").upsert({
-          user_id: userId,
-          stripe_customer_id: typeof session.customer === "string" ? session.customer : (session.customer as any)?.id,
-          stripe_subscription_id: subId,
-          plan,
-          billing_cycle: billingCycle,
-          status,
-        }, { onConflict: "user_id" });
+        // Upsert by workspace_id if available, else by user_id
+        if (workspaceId) {
+          await supabase.from("subscriptions").upsert({
+            user_id: userId,
+            workspace_id: workspaceId,
+            stripe_customer_id: typeof session.customer === "string" ? session.customer : (session.customer as any)?.id,
+            stripe_subscription_id: subId,
+            plan,
+            billing_cycle: billingCycle,
+            status,
+          }, { onConflict: "user_id" });
+        } else {
+          await supabase.from("subscriptions").upsert({
+            user_id: userId,
+            stripe_customer_id: typeof session.customer === "string" ? session.customer : (session.customer as any)?.id,
+            stripe_subscription_id: subId,
+            plan,
+            billing_cycle: billingCycle,
+            status,
+          }, { onConflict: "user_id" });
+        }
 
-        log("Subscription created/updated for user", { userId, plan, status });
+        log("Subscription created/updated for user", { userId, plan, status, workspaceId });
         break;
       }
 

@@ -52,11 +52,29 @@ Deno.serve(async (req) => {
       ownerId = firstProfile.id;
     }
 
-    // Check for existing lead with same email for this owner
+    // Get the owner's first workspace
+    const { data: membership } = await supabase
+      .from("workspace_members")
+      .select("workspace_id")
+      .eq("user_id", ownerId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!membership) {
+      return new Response(JSON.stringify({ error: "No workspace found" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const workspaceId = membership.workspace_id;
+
+    // Check for existing lead with same email within workspace
     const { data: existing } = await supabase
       .from("leads")
       .select("id, tags")
-      .eq("user_id", ownerId)
+      .eq("workspace_id", workspaceId)
       .eq("email", email.trim().toLowerCase())
       .maybeSingle();
 
@@ -65,7 +83,6 @@ Deno.serve(async (req) => {
     const newTags = tags || ["website-signup"];
 
     if (existing) {
-      // Merge tags
       const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
       const { error } = await supabase
         .from("leads")
@@ -75,7 +92,7 @@ Deno.serve(async (req) => {
           tags: mergedTags,
           ...(full_name ? { full_name } : {}),
           ...(phone ? { phone } : {}),
-          ...(notes ? { notes: notes } : {}),
+          ...(notes ? { notes } : {}),
         })
         .eq("id", existing.id);
       if (error) throw error;
@@ -85,6 +102,7 @@ Deno.serve(async (req) => {
         .from("leads")
         .insert({
           user_id: ownerId,
+          workspace_id: workspaceId,
           full_name: full_name || null,
           email: email.trim().toLowerCase(),
           phone: phone || null,
@@ -105,6 +123,7 @@ Deno.serve(async (req) => {
     await supabase.from("lead_activities").insert({
       lead_id: leadId,
       user_id: ownerId,
+      workspace_id: workspaceId,
       type: "form_submit",
       meta: meta || {},
     });

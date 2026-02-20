@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useLeadStats } from "@/hooks/useLeads";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useMemo } from "react";
 import { format, subDays } from "date-fns";
 
@@ -34,12 +35,13 @@ const workflowNodes = [
 ];
 
 const Dashboard = () => {
+  const workspaceId = useWorkspaceId();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, subscription, refreshSubscription } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const { data: leadStats } = useLeadStats();
+  const { data: leadStats } = useLeadStats(workspaceId);
 
   useEffect(() => {
     const isNewSignup = localStorage.getItem("nexusflo_new_signup");
@@ -72,7 +74,6 @@ const Dashboard = () => {
   const planLabel = subscription?.plan === "agency" ? "Agency" : subscription?.plan === "pro" ? "Pro" : "Free";
   const statusLabel = subscription?.status === "trialing" ? "Trial" : subscription?.status === "active" ? "Active" : subscription?.status || "—";
 
-  // Build leads over time chart from real data
   const leadsChartData = useMemo(() => {
     if (!leadStats?.leads) {
       return Array.from({ length: 7 }, (_, i) => ({
@@ -93,14 +94,13 @@ const Dashboard = () => {
   }, [leadStats]);
 
   const stats = [
-    { label: "New Leads", value: leadStats?.newCount?.toString() ?? "0", change: `${leadStats?.total ?? 0} total`, icon: Users, color: "text-accent", to: "/dashboard/leads?status=New" },
-    { label: "Open Rate", value: "42.8%", change: "+3.2%", icon: Mail, color: "text-accent", to: "/dashboard/analytics" },
-    { label: "Click Rate", value: "18.4%", change: "+1.5%", icon: MousePointerClick, color: "text-accent", to: "/dashboard/analytics" },
-    { label: "Revenue", value: "$34,520", change: "+22%", icon: DollarSign, color: "text-accent", to: "/dashboard/analytics" },
-    { label: "Tasks Due", value: "8", change: "Today", icon: ListChecks, color: "text-accent", to: "/dashboard/automations" },
+    { label: "New Leads", value: leadStats?.newCount?.toString() ?? "0", change: `${leadStats?.total ?? 0} total`, icon: Users, color: "text-accent", to: `/dashboard/${workspaceId}/leads?status=New` },
+    { label: "Open Rate", value: "42.8%", change: "+3.2%", icon: Mail, color: "text-accent", to: `/dashboard/${workspaceId}/analytics` },
+    { label: "Click Rate", value: "18.4%", change: "+1.5%", icon: MousePointerClick, color: "text-accent", to: `/dashboard/${workspaceId}/analytics` },
+    { label: "Revenue", value: "$34,520", change: "+22%", icon: DollarSign, color: "text-accent", to: `/dashboard/${workspaceId}/analytics` },
+    { label: "Tasks Due", value: "8", change: "Today", icon: ListChecks, color: "text-accent", to: `/dashboard/${workspaceId}/automations` },
   ];
 
-  // Recent leads from real data
   const recentLeads = useMemo(() => {
     if (!leadStats?.leads) return [];
     return [...leadStats.leads]
@@ -116,12 +116,8 @@ const Dashboard = () => {
       {showWelcome && (
         <div className="mt-4 rounded-xl border border-accent/30 bg-accent/10 p-4">
           <p className="text-sm font-semibold text-accent">🎉 Welcome to NexusFlo24!</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Your account is all set. Explore your dashboard, set up automations, and start growing!
-          </p>
-          <button onClick={() => setShowWelcome(false)} className="mt-2 text-xs font-medium text-accent hover:underline">
-            Dismiss
-          </button>
+          <p className="mt-1 text-xs text-muted-foreground">Your account is all set. Explore your dashboard, set up automations, and start growing!</p>
+          <button onClick={() => setShowWelcome(false)} className="mt-2 text-xs font-medium text-accent hover:underline">Dismiss</button>
         </div>
       )}
 
@@ -134,9 +130,7 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm font-semibold">
                   Plan: <span className="text-accent">{planLabel}</span>
-                  {subscription?.status && (
-                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">{statusLabel}</span>
-                  )}
+                  {subscription?.status && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">{statusLabel}</span>}
                 </p>
                 {subscription?.current_period_end && (
                   <p className="text-xs text-muted-foreground">
@@ -149,9 +143,7 @@ const Dashboard = () => {
             <div className="flex gap-2">
               {(!subscription || subscription.plan === "free" || subscription.status === "canceled") && (
                 <Link to="/pricing">
-                  <Button size="sm" className="bg-accent text-accent-foreground hover:bg-gold-dark">
-                    Upgrade
-                  </Button>
+                  <Button size="sm" className="bg-accent text-accent-foreground hover:bg-gold-dark">Upgrade</Button>
                 </Link>
               )}
               {subscription?.stripe_customer_id && (
@@ -164,23 +156,16 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Stats - clickable KPI cards */}
+      {/* Stats */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s) => (
-          <Link
-            key={s.label}
-            to={s.to}
-            className="rounded-xl border bg-card p-4 shadow-card transition-shadow hover:shadow-md cursor-pointer"
-          >
+          <Link key={s.label} to={s.to} className="rounded-xl border bg-card p-4 shadow-card transition-shadow hover:shadow-md cursor-pointer">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
               <s.icon className={`h-4 w-4 ${s.color}`} />
             </div>
             <p className="mt-1 text-2xl font-bold">{s.value}</p>
-            <p className="flex items-center gap-1 text-xs text-accent">
-              <TrendingUp className="h-3 w-3" />
-              {s.change}
-            </p>
+            <p className="flex items-center gap-1 text-xs text-accent"><TrendingUp className="h-3 w-3" />{s.change}</p>
           </Link>
         ))}
       </div>
@@ -219,14 +204,14 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recent leads table - from real DB */}
+      {/* Recent leads */}
       <div className="mt-8 rounded-xl border bg-card p-6 shadow-card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Recent Leads</h3>
-          <Link to="/dashboard/leads" className="text-xs text-accent hover:underline">View all →</Link>
+          <Link to={`/dashboard/${workspaceId}/leads`} className="text-xs text-accent hover:underline">View all →</Link>
         </div>
         {recentLeads.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">No leads yet. <Link to="/dashboard/leads" className="text-accent hover:underline">Add your first lead</Link>.</p>
+          <p className="text-sm text-muted-foreground text-center py-6">No leads yet. <Link to={`/dashboard/${workspaceId}/leads`} className="text-accent hover:underline">Add your first lead</Link>.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -244,9 +229,7 @@ const Dashboard = () => {
                     <td className="px-3 py-3 font-medium">{lead.full_name || lead.email || "—"}</td>
                     <td className="px-3 py-3 text-muted-foreground">{lead.source || "—"}</td>
                     <td className="px-3 py-3">
-                      <span className={`font-semibold ${lead.score >= 80 ? "text-accent" : lead.score >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>
-                        {lead.score ?? 0}
-                      </span>
+                      <span className={`font-semibold ${lead.score >= 80 ? "text-accent" : lead.score >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>{lead.score ?? 0}</span>
                     </td>
                     <td className="px-3 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -254,9 +237,7 @@ const Dashboard = () => {
                         lead.status === "Warm" ? "bg-amber-100 text-amber-700" :
                         lead.status === "Won" ? "bg-green-100 text-green-700" :
                         "bg-muted text-muted-foreground"
-                      }`}>
-                        {lead.status}
-                      </span>
+                      }`}>{lead.status}</span>
                     </td>
                   </tr>
                 ))}
@@ -276,12 +257,8 @@ const Dashboard = () => {
                 node.type === "trigger" ? "border-accent bg-accent/10 text-accent" :
                 node.type === "condition" ? "border-amber-600 bg-amber-50 text-amber-700" :
                 "border-border bg-muted"
-              }`}>
-                {node.label}
-              </div>
-              {i < workflowNodes.length - 1 && (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              )}
+              }`}>{node.label}</div>
+              {i < workflowNodes.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
             </div>
           ))}
         </div>

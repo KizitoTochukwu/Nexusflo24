@@ -6,6 +6,7 @@ import { toast } from "sonner";
 export type Lead = {
   id: string;
   user_id: string;
+  workspace_id: string;
   full_name: string | null;
   email: string | null;
   phone: string | null;
@@ -23,6 +24,7 @@ export type LeadActivity = {
   id: string;
   lead_id: string;
   user_id: string;
+  workspace_id: string;
   type: string;
   meta: Record<string, unknown>;
   created_at: string;
@@ -35,13 +37,13 @@ export type LeadFilters = {
   sort?: "newest" | "oldest" | "highest_score";
 };
 
-export function useLeads(filters: LeadFilters = {}) {
+export function useLeads(workspaceId: string, filters: LeadFilters = {}) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["leads", filters],
+    queryKey: ["leads", workspaceId, filters],
     queryFn: async () => {
-      let query = supabase.from("leads").select("*");
+      let query = supabase.from("leads").select("*").eq("workspace_id", workspaceId);
 
       if (filters.search) {
         query = query.or(
@@ -67,17 +69,20 @@ export function useLeads(filters: LeadFilters = {}) {
       if (error) throw error;
       return (data ?? []) as Lead[];
     },
-    enabled: !!user,
+    enabled: !!user && !!workspaceId,
   });
 }
 
-export function useLeadStats() {
+export function useLeadStats(workspaceId: string) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["lead-stats"],
+    queryKey: ["lead-stats", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("leads").select("status, created_at");
+      const { data, error } = await supabase
+        .from("leads")
+        .select("status, created_at, score")
+        .eq("workspace_id", workspaceId);
       if (error) throw error;
       const leads = data ?? [];
       const total = leads.length;
@@ -87,7 +92,7 @@ export function useLeadStats() {
       const won = leads.filter((l: any) => l.status === "Won").length;
       return { total, newCount, warm, hot, won, leads };
     },
-    enabled: !!user,
+    enabled: !!user && !!workspaceId,
   });
 }
 
@@ -113,7 +118,7 @@ export function useCreateLead() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (lead: Partial<Lead>) => {
+    mutationFn: async (lead: Partial<Lead> & { workspace_id: string }) => {
       const { data, error } = await supabase
         .from("leads")
         .insert({ ...lead, user_id: user!.id } as any)
@@ -121,10 +126,10 @@ export function useCreateLead() {
         .single();
       if (error) throw error;
 
-      // Log activity
       await supabase.from("lead_activities").insert({
         lead_id: data.id,
         user_id: user!.id,
+        workspace_id: lead.workspace_id,
         type: "stage_change",
         meta: { new_status: lead.status || "New", note: "Lead created" },
       } as any);
@@ -145,7 +150,7 @@ export function useUpdateLead() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, prev, ...updates }: Partial<Lead> & { id: string; prev?: Partial<Lead> }) => {
+    mutationFn: async ({ id, prev, workspace_id, ...updates }: Partial<Lead> & { id: string; prev?: Partial<Lead>; workspace_id?: string }) => {
       const { data, error } = await supabase
         .from("leads")
         .update(updates as any)
@@ -154,11 +159,11 @@ export function useUpdateLead() {
         .single();
       if (error) throw error;
 
-      // Log status change
-      if (prev?.status && updates.status && prev.status !== updates.status) {
+      if (prev?.status && updates.status && prev.status !== updates.status && workspace_id) {
         await supabase.from("lead_activities").insert({
           lead_id: id,
           user_id: user!.id,
+          workspace_id,
           type: "stage_change",
           meta: { old_status: prev.status, new_status: updates.status },
         } as any);
@@ -197,10 +202,11 @@ export function useLogActivity() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ leadId, type, meta }: { leadId: string; type: string; meta?: Record<string, unknown> }) => {
+    mutationFn: async ({ leadId, type, meta, workspaceId }: { leadId: string; type: string; meta?: Record<string, unknown>; workspaceId: string }) => {
       const { error } = await supabase.from("lead_activities").insert({
         lead_id: leadId,
         user_id: user!.id,
+        workspace_id: workspaceId,
         type,
         meta: meta || {},
       } as any);
