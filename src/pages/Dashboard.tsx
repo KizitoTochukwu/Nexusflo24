@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import logo from "@/assets/logo.png";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate,
@@ -112,7 +113,7 @@ const Dashboard = () => {
         <div className="flex h-14 items-center justify-between px-3">
           {sidebarOpen && (
             <Link to="/" className="flex items-center gap-2 text-sm font-bold text-primary-foreground">
-              <Zap className="h-4 w-4 text-accent" />
+              <img src={logo} alt="NexusFlo24 Logo" className="h-4 w-4 rounded object-cover" />
               NexusFlo24
             </Link>
           )}

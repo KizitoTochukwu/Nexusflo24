@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,9 +35,7 @@ const Login = () => {
       <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-card">
         <div className="mb-8 text-center">
           <Link to="/" className="inline-flex items-center gap-2 text-xl font-bold">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Zap className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img src={logo} alt="NexusFlo24 Logo" className="h-8 w-8 rounded-lg object-cover" />
             <span className="text-primary">Nexus</span>
             <span className="text-gradient-gold">Flo24</span>
           </Link>
