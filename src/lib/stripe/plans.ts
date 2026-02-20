@@ -4,15 +4,15 @@ export const CURRENCY = "usd";
 export const PLANS = {
   pro: {
     name: "Pro",
-    monthlyPriceId: "price_PRO_MONTHLY",    // Replace with your actual Stripe price ID
-    yearlyPriceId: "price_PRO_YEARLY",      // Replace with your actual Stripe price ID
-    productId: "prod_PRO",                   // Replace with your actual Stripe product ID
+    monthlyPriceId: "price_1T330cE524oup9rkXd8yIRMD",
+    yearlyPriceId: "price_1T330cE524oup9rk9ThXa6CW",
+    productId: "prod_PRO",
   },
   agency: {
     name: "Agency",
-    monthlyPriceId: "price_AGENCY_MONTHLY",  // Replace with your actual Stripe price ID
-    yearlyPriceId: "price_AGENCY_YEARLY",    // Replace with your actual Stripe price ID
-    productId: "prod_AGENCY",                // Replace with your actual Stripe product ID
+    monthlyPriceId: "price_1T330VE524oup9rk6E7jpbtd",
+    yearlyPriceId: "price_1T330VE524oup9rkoV6iFdnE",
+    productId: "prod_AGENCY",
   },
 } as const;
 
