@@ -20,6 +20,7 @@ import DashboardAutomations from "./pages/dashboard/DashboardAutomations";
 import DashboardFunnels from "./pages/dashboard/DashboardFunnels";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics";
 import DashboardSettings from "./pages/dashboard/DashboardSettings";
+import DashboardProfileSettings from "./pages/dashboard/DashboardProfileSettings";
 import NotFound from "./pages/NotFound";
 import ChatbotWidget from "./components/ChatbotWidget";
 
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/dashboard/funnels" element={<ProtectedRoute><DashboardFunnels /></ProtectedRoute>} />
             <Route path="/dashboard/analytics" element={<ProtectedRoute><DashboardAnalytics /></ProtectedRoute>} />
             <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
+            <Route path="/dashboard/settings/profile" element={<ProtectedRoute><DashboardProfileSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <ChatbotWidget />
