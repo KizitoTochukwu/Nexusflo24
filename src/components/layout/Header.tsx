@@ -20,7 +20,7 @@ const Header = () => {
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-          <img alt="NexusFlo24 Logo" className="h-8 w-8 rounded-lg border-0 shadow-none object-fill border-background" src="/lovable-uploads/d1b71a0e-bdde-491a-89f5-ac215ff09568.png" />
+          <img alt="NexusFlo24 Logo" className="h-8 w-8 border-0 shadow-none object-fill border-background rounded-full" src="/lovable-uploads/d1b71a0e-bdde-491a-89f5-ac215ff09568.png" />
           <span className="text-primary">Nexus</span>
           <span className="text-gradient-gold">Flo24</span>
         </Link>
