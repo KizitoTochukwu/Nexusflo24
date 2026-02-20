@@ -1,0 +1,218 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
+} from "lucide-react";
+import { CONDITION_OPTIONS, ACTION_OPTIONS } from "@/hooks/useAutomations";
+
+export type StepData = {
+  step_type: "trigger" | "condition" | "action" | "delay";
+  config: Record<string, unknown>;
+};
+
+const STEP_TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  trigger: { label: "Trigger", icon: <Zap className="h-4 w-4" />, color: "bg-amber-100 text-amber-800 border-amber-200" },
+  condition: { label: "Condition", icon: <Filter className="h-4 w-4" />, color: "bg-blue-100 text-blue-800 border-blue-200" },
+  action: { label: "Action", icon: <Play className="h-4 w-4" />, color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  delay: { label: "Delay", icon: <Clock className="h-4 w-4" />, color: "bg-purple-100 text-purple-800 border-purple-200" },
+};
+
+const ACTION_ICONS: Record<string, React.ReactNode> = {
+  send_email: <Mail className="h-4 w-4" />,
+  send_whatsapp: <MessageCircle className="h-4 w-4" />,
+  send_sms: <Smartphone className="h-4 w-4" />,
+  add_tag: <Tag className="h-4 w-4" />,
+  remove_tag: <XCircle className="h-4 w-4" />,
+  update_status: <RefreshCw className="h-4 w-4" />,
+  notify_sales: <Bell className="h-4 w-4" />,
+  delay: <Clock className="h-4 w-4" />,
+};
+
+interface Props {
+  steps: StepData[];
+  onChange: (steps: StepData[]) => void;
+  triggerType: string;
+}
+
+export default function AutomationStepEditor({ steps, onChange, triggerType }: Props) {
+  const addStep = (type: StepData["step_type"]) => {
+    const newStep: StepData = { step_type: type, config: {} };
+    if (type === "delay") newStep.config = { duration: 60, unit: "minutes" };
+    onChange([...steps, newStep]);
+  };
+
+  const updateStep = (index: number, config: Record<string, unknown>) => {
+    const updated = [...steps];
+    updated[index] = { ...updated[index], config: { ...updated[index].config, ...config } };
+    onChange(updated);
+  };
+
+  const removeStep = (index: number) => {
+    onChange(steps.filter((_, i) => i !== index));
+  };
+
+  const moveStep = (from: number, to: number) => {
+    if (to < 0 || to >= steps.length) return;
+    const updated = [...steps];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(to, 0, moved);
+    onChange(updated);
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Visual trigger block */}
+      <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <Zap className="h-5 w-5 text-amber-600" />
+        <span className="text-sm font-medium text-amber-800">
+          When: <span className="font-semibold">{triggerType.replace(/_/g, " ")}</span>
+        </span>
+      </div>
+
+      {steps.map((step, i) => {
+        const meta = STEP_TYPE_META[step.step_type];
+        return (
+          <div key={i}>
+            <div className="flex justify-center py-1">
+              <ArrowDown className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className={`rounded-lg border p-3 ${meta.color}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => moveStep(i, i - 1)} className="cursor-grab opacity-50 hover:opacity-100">
+                    <GripVertical className="h-4 w-4" />
+                  </button>
+                  {meta.icon}
+                  <Badge variant="outline" className={meta.color}>{meta.label}</Badge>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(i)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+
+              {step.step_type === "condition" && (
+                <div className="flex flex-wrap gap-2">
+                  <Select
+                    value={(step.config.condition as string) || ""}
+                    onValueChange={(v) => updateStep(i, { condition: v })}
+                  >
+                    <SelectTrigger className="w-[200px] bg-background">
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONDITION_OPTIONS.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Value"
+                    className="w-[140px] bg-background"
+                    value={(step.config.value as string) || ""}
+                    onChange={(e) => updateStep(i, { value: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {step.step_type === "action" && (
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Select
+                    value={(step.config.action as string) || ""}
+                    onValueChange={(v) => updateStep(i, { action: v })}
+                  >
+                    <SelectTrigger className="w-[200px] bg-background">
+                      <SelectValue placeholder="Select action" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTION_OPTIONS.map((a) => (
+                        <SelectItem key={a.value} value={a.value}>
+                          <span className="flex items-center gap-2">{ACTION_ICONS[a.value]} {a.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {((step.config.action as string) === "add_tag" || (step.config.action as string) === "remove_tag") && (
+                    <Input
+                      placeholder="Tag name"
+                      className="w-[140px] bg-background"
+                      value={(step.config.tag as string) || ""}
+                      onChange={(e) => updateStep(i, { tag: e.target.value })}
+                    />
+                  )}
+                  {(step.config.action as string) === "update_status" && (
+                    <Select
+                      value={(step.config.new_status as string) || ""}
+                      onValueChange={(v) => updateStep(i, { new_status: v })}
+                    >
+                      <SelectTrigger className="w-[140px] bg-background">
+                        <SelectValue placeholder="New status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["New", "Warm", "Hot", "Won", "Lost"].map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
+                    <Input
+                      placeholder="Message template"
+                      className="w-[200px] bg-background"
+                      value={(step.config.message as string) || ""}
+                      onChange={(e) => updateStep(i, { message: e.target.value })}
+                    />
+                  )}
+                </div>
+              )}
+
+              {step.step_type === "delay" && (
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="number"
+                    min={1}
+                    className="w-[80px] bg-background"
+                    value={(step.config.duration as number) || 60}
+                    onChange={(e) => updateStep(i, { duration: parseInt(e.target.value) || 1 })}
+                  />
+                  <Select
+                    value={(step.config.unit as string) || "minutes"}
+                    onValueChange={(v) => updateStep(i, { unit: v })}
+                  >
+                    <SelectTrigger className="w-[120px] bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutes">Minutes</SelectItem>
+                      <SelectItem value="hours">Hours</SelectItem>
+                      <SelectItem value="days">Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Add step buttons */}
+      <div className="flex justify-center py-1">
+        <ArrowDown className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="flex flex-wrap gap-2 justify-center">
+        <Button variant="outline" size="sm" onClick={() => addStep("condition")} className="gap-1.5">
+          <Filter className="h-3.5 w-3.5" /> Add Condition
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => addStep("action")} className="gap-1.5">
+          <Play className="h-3.5 w-3.5" /> Add Action
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => addStep("delay")} className="gap-1.5">
+          <Clock className="h-3.5 w-3.5" /> Add Delay
+        </Button>
+      </div>
+    </div>
+  );
+}
