@@ -143,7 +143,7 @@ const Index = () => {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-8">
           {integrations.map((name) => (
-            <span key={name} className="text-lg md:text-2xl font-semibold text-muted-foreground/60 transition-colors hover:text-muted-foreground">
+            <span key={name} className="text-sm font-semibold text-muted-foreground/60 transition-colors hover:text-muted-foreground">
               {name}
             </span>
           ))}
