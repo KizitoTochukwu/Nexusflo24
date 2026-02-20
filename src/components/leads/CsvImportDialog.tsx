@@ -3,7 +3,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import { Upload, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -87,6 +87,28 @@ const CsvImportDialog = ({ open, onOpenChange }: Props) => {
           CSV should have headers: <code className="text-xs">full_name, email, phone, source, status, score, tags, notes</code>.<br />
           Tags should be separated by semicolons.
         </p>
+        <div className="mt-2">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              const url = "https://docs.google.com/spreadsheets/d/1uXh5Tzm-4WkW3YK5t5Hy7XIQlfgVHB53nD7X-CdRrZ4/export?format=csv";
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = "nexusflo24_leads_import_template.csv";
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="inline-flex items-center gap-1 text-sm font-medium text-[hsl(var(--primary))] underline-offset-4 hover:underline"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download sample CSV template
+          </a>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Use this template to format your leads correctly before importing.
+          </p>
+        </div>
         <div className="mt-4">
           <input type="file" accept=".csv" ref={inputRef} onChange={handleFile} className="hidden" />
           <Button variant="outline" onClick={() => inputRef.current?.click()}>
