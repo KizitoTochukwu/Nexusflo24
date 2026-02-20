@@ -47,31 +47,31 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-primary transition-all duration-300 ${
-          sidebarOpen ? "w-[28rem]" : "w-16"
+          sidebarOpen ? "w-56" : "w-14"
         }`}
       >
-        <div className="flex h-16 items-center justify-between px-5">
+        <div className="flex h-14 items-center justify-between px-3">
           <Link to="/" className="flex items-center">
             <SidebarLogo collapsed={!sidebarOpen} />
           </Link>
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded p-1.5 text-primary-foreground/60 hover:text-primary-foreground">
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded p-1 text-primary-foreground/60 hover:text-primary-foreground">
+            {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
-        <nav className="flex-1 space-y-1.5 px-4 py-5">
+        <nav className="flex-1 space-y-1 px-2 py-4">
           {sidebarItems.map((item) => {
             const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
             return (
               <Link
                 key={item.label}
                 to={item.to}
-                className={`flex w-full items-center gap-4 rounded-lg px-4 py-3 text-base font-medium transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-primary-foreground/60 hover:bg-sidebar-accent/50 hover:text-primary-foreground"
                 }`}
               >
-                <item.icon className="h-5 w-5 shrink-0" />
+                <item.icon className="h-4 w-4 shrink-0" />
                 {sidebarOpen && <span>{item.label}</span>}
               </Link>
             );
@@ -79,19 +79,19 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         </nav>
 
         {/* Sidebar logout */}
-        <div className="border-t border-sidebar-border px-4 py-4">
+        <div className="border-t border-sidebar-border px-2 py-3">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-4 rounded-lg px-4 py-3 text-base font-medium text-primary-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-primary-foreground"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-primary-foreground"
           >
-            <LogOut className="h-5 w-5 shrink-0" />
+            <LogOut className="h-4 w-4 shrink-0" />
             {sidebarOpen && <span>Log Out</span>}
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-[28rem]" : "ml-16"}`}>
+      <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-56" : "ml-14"}`}>
         {/* Top bar */}
         <header className="flex h-14 items-center justify-between border-b bg-background px-6">
           {/* Workspace switcher */}
