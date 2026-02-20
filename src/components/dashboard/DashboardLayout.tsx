@@ -1,5 +1,5 @@
 import { useState } from "react";
-import logo from "@/assets/logo.png";
+import SidebarLogo from "@/components/brand/SidebarLogo";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -51,12 +51,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         }`}
       >
         <div className="flex h-14 items-center justify-between px-3">
-          {sidebarOpen && (
-            <Link to="/" className="flex items-center gap-2 text-sm font-bold text-primary-foreground">
-              <img src={logo} alt="NexusFlo24 Logo" className="h-4 w-4 rounded object-cover" />
-              NexusFlo24
-            </Link>
-          )}
+          <Link to="/" className="flex items-center">
+            <SidebarLogo collapsed={!sidebarOpen} />
+          </Link>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded p-1 text-primary-foreground/60 hover:text-primary-foreground">
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
