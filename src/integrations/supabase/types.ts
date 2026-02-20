@@ -78,9 +78,11 @@ export type Database = {
       campaigns: {
         Row: {
           audience_filter: Json | null
+          campaign_mode: string
           click_rate: number
           conversion_rate: number
           created_at: string
+          fallback_settings: Json | null
           id: string
           message_content: Json | null
           name: string
@@ -89,6 +91,7 @@ export type Database = {
           scheduled_at: string | null
           sent_count: number
           status: string
+          trigger_config: Json | null
           type: string
           updated_at: string
           user_id: string
@@ -96,9 +99,11 @@ export type Database = {
         }
         Insert: {
           audience_filter?: Json | null
+          campaign_mode?: string
           click_rate?: number
           conversion_rate?: number
           created_at?: string
+          fallback_settings?: Json | null
           id?: string
           message_content?: Json | null
           name: string
@@ -107,6 +112,7 @@ export type Database = {
           scheduled_at?: string | null
           sent_count?: number
           status?: string
+          trigger_config?: Json | null
           type?: string
           updated_at?: string
           user_id: string
@@ -114,9 +120,11 @@ export type Database = {
         }
         Update: {
           audience_filter?: Json | null
+          campaign_mode?: string
           click_rate?: number
           conversion_rate?: number
           created_at?: string
+          fallback_settings?: Json | null
           id?: string
           message_content?: Json | null
           name?: string
@@ -125,6 +133,7 @@ export type Database = {
           scheduled_at?: string | null
           sent_count?: number
           status?: string
+          trigger_config?: Json | null
           type?: string
           updated_at?: string
           user_id?: string
