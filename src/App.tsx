@@ -57,10 +57,7 @@ const App = () => (
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
-                <Route path="settings/profile" element={<DashboardProfileSettings />} />
-                <Route path="settings/workspace" element={<DashboardSettings />} />
-                <Route path="settings/members" element={<DashboardSettings />} />
-                <Route path="settings/billing" element={<DashboardSettings />} />
+                <Route path="settings/*" element={<DashboardSettings />} />
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
 
