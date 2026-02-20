@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_messages: {
+        Row: {
+          campaign_id: string
+          channel: string
+          clicked: boolean
+          created_at: string
+          delivery_status: string
+          id: string
+          lead_id: string | null
+          opened: boolean
+          replied: boolean
+          workspace_id: string
+        }
+        Insert: {
+          campaign_id: string
+          channel?: string
+          clicked?: boolean
+          created_at?: string
+          delivery_status?: string
+          id?: string
+          lead_id?: string | null
+          opened?: boolean
+          replied?: boolean
+          workspace_id: string
+        }
+        Update: {
+          campaign_id?: string
+          channel?: string
+          clicked?: boolean
+          created_at?: string
+          delivery_status?: string
+          id?: string
+          lead_id?: string | null
+          opened?: boolean
+          replied?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          audience_filter: Json | null
+          click_rate: number
+          conversion_rate: number
+          created_at: string
+          id: string
+          message_content: Json | null
+          name: string
+          objective: string
+          open_rate: number
+          scheduled_at: string | null
+          sent_count: number
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          audience_filter?: Json | null
+          click_rate?: number
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          message_content?: Json | null
+          name: string
+          objective?: string
+          open_rate?: number
+          scheduled_at?: string | null
+          sent_count?: number
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          audience_filter?: Json | null
+          click_rate?: number
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          message_content?: Json | null
+          name?: string
+          objective?: string
+          open_rate?: number
+          scheduled_at?: string | null
+          sent_count?: number
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           created_at: string
