@@ -104,7 +104,7 @@ const Contact = () => {
               {[
                 { icon: Mail, title: "Email", desc: "admin@nexusflo24.com", sub: "We respond within 24 hours." },
                 { icon: MessageCircle, title: "WhatsApp", desc: "+447517327597", sub: "Chat with our team live." },
-                { icon: MapPin, title: "Office", desc: "123 Innovation Way, San Francisco, CA 94105", sub: "By appointment only." },
+                { icon: MapPin, title: "Office", desc: "123 Innovation Way, Bury Road, Greater Manchester, United Kingdom. BL2", sub: "By appointment only." },
               ].map((c) => (
                 <div key={c.title} className="flex gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-accent/10">
