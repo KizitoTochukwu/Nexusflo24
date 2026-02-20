@@ -102,7 +102,7 @@ const Contact = () => {
 
             <div className="space-y-8">
               {[
-                { icon: Mail, title: "Email", desc: "admin@nexusflo24.com", sub: "We respond within 24 hours." },
+                { icon: Mail, title: "Email", desc: "admin@nexusflo24.com\nkizitom.de@gmail.com", sub: "We respond within 24 hours." },
                 { icon: MessageCircle, title: "WhatsApp", desc: "+447517327597", sub: "Chat with our team live." },
                 { icon: MapPin, title: "Office", desc: "123 Innovation Way, Bury Road, Greater Manchester, United Kingdom. BL2", sub: "By appointment only." },
               ].map((c) => (
@@ -112,7 +112,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold">{c.title}</h3>
-                    <p className="text-sm font-medium">{c.desc}</p>
+                    <p className="text-sm font-medium whitespace-pre-line">{c.desc}</p>
                     <p className="text-xs text-muted-foreground">{c.sub}</p>
                   </div>
                 </div>
