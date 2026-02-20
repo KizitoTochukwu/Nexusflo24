@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-type Props = { open: boolean; onOpenChange: (v: boolean) => void };
+type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: string };
 
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter(Boolean);
@@ -23,7 +23,7 @@ function parseCsv(text: string): Record<string, string>[] {
   });
 }
 
-const CsvImportDialog = ({ open, onOpenChange }: Props) => {
+const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,6 +51,7 @@ const CsvImportDialog = ({ open, onOpenChange }: Props) => {
       const rows = parseCsv(text);
       const leads = rows.map((r) => ({
         user_id: user.id,
+        workspace_id: workspaceId,
         full_name: r.full_name || r.name || null,
         email: r.email || null,
         phone: r.phone || null,
@@ -105,9 +106,7 @@ const CsvImportDialog = ({ open, onOpenChange }: Props) => {
             <Download className="h-3.5 w-3.5" />
             Download sample CSV template
           </a>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Use this template to format your leads correctly before importing.
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Use this template to format your leads correctly before importing.</p>
         </div>
         <div className="mt-4">
           <input type="file" accept=".csv" ref={inputRef} onChange={handleFile} className="hidden" />

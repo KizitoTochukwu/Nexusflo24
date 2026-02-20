@@ -87,22 +87,15 @@ const DashboardProfileSettings = () => {
         <p className="mt-1 text-sm text-muted-foreground">Manage your personal information and account preferences.</p>
 
         {loading ? (
-          <div className="mt-12 flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <div className="mt-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <div className="mt-8 space-y-6">
-            {/* Profile Information */}
             <Card>
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-accent" />
-                  <CardTitle className="text-lg">Profile Information</CardTitle>
-                </div>
+                <div className="flex items-center gap-2"><User className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Profile Information</CardTitle></div>
                 <CardDescription>Update your personal details.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Avatar placeholder */}
                 <div className="flex items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-bold">
                     {profile.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?"}
@@ -112,45 +105,24 @@ const DashboardProfileSettings = () => {
                     <p className="text-xs text-muted-foreground">Avatar upload coming soon.</p>
                   </div>
                 </div>
-
                 <Separator />
-
                 <div className="space-y-1">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    value={profile.full_name}
-                    onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
-                    placeholder="Your full name"
-                  />
+                  <Input id="fullName" value={profile.full_name} onChange={(e) => setProfile({ ...profile, full_name: e.target.value })} placeholder="Your full name" />
                 </div>
-
                 <div className="space-y-1">
                   <Label htmlFor="email">Email Address</Label>
                   <Input id="email" value={user?.email || ""} disabled className="bg-muted" />
                   <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
                 </div>
-
                 <div className="space-y-1">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    placeholder="+1 (555) 000-0000"
-                  />
+                  <Input id="phone" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
                 </div>
-
                 <div className="space-y-1">
                   <Label htmlFor="company">Company / Brand Name</Label>
-                  <Input
-                    id="company"
-                    value={profile.company}
-                    onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                    placeholder="Your company name"
-                  />
+                  <Input id="company" value={profile.company} onChange={(e) => setProfile({ ...profile, company: e.target.value })} placeholder="Your company name" />
                 </div>
-
                 <Button onClick={handleSave} disabled={saving} className="bg-accent text-accent-foreground hover:bg-accent/90">
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Save Changes
@@ -158,43 +130,22 @@ const DashboardProfileSettings = () => {
               </CardContent>
             </Card>
 
-            {/* Account Info */}
             <Card>
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-accent" />
-                  <CardTitle className="text-lg">Account Information</CardTitle>
-                </div>
+                <div className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Account Information</CardTitle></div>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Current Plan</span>
-                  <span className="font-medium">{planLabel}</span>
-                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Current Plan</span><span className="font-medium">{planLabel}</span></div>
                 <Separator />
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Account Created</span>
-                  <span className="font-medium">
-                    {user?.created_at ? format(new Date(user.created_at), "MMM d, yyyy") : "—"}
-                  </span>
-                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Account Created</span><span className="font-medium">{user?.created_at ? format(new Date(user.created_at), "MMM d, yyyy") : "—"}</span></div>
                 <Separator />
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Email Verified</span>
-                  <span className="font-medium">
-                    {user?.email_confirmed_at ? "Verified ✓" : "Not verified"}
-                  </span>
-                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Email Verified</span><span className="font-medium">{user?.email_confirmed_at ? "Verified ✓" : "Not verified"}</span></div>
               </CardContent>
             </Card>
 
-            {/* Security */}
             <Card>
               <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-accent" />
-                  <CardTitle className="text-lg">Security</CardTitle>
-                </div>
+                <div className="flex items-center gap-2"><Shield className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Security</CardTitle></div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -202,17 +153,12 @@ const DashboardProfileSettings = () => {
                     <p className="text-sm font-medium">Password</p>
                     <p className="text-xs text-muted-foreground">Send a password reset link to your email.</p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handlePasswordReset}>
-                    Change Password
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={handlePasswordReset}>Change Password</Button>
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <Bell className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">Email Notifications</p>
-                    </div>
+                    <div className="flex items-center gap-2"><Bell className="h-4 w-4 text-muted-foreground" /><p className="text-sm font-medium">Email Notifications</p></div>
                     <p className="text-xs text-muted-foreground">Receive email updates about your account.</p>
                   </div>
                   <Switch checked={emailNotifs} onCheckedChange={setEmailNotifs} />

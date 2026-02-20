@@ -35,7 +35,7 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
-    const { plan, billingCycle, priceId } = await req.json();
+    const { plan, billingCycle, priceId, workspaceId } = await req.json();
     if (!priceId) throw new Error("Missing priceId");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -49,6 +49,9 @@ serve(async (req) => {
     }
 
     const origin = req.headers.get("origin") || "https://nexusflo24.lovable.app";
+    const successUrl = workspaceId
+      ? `${origin}/dashboard/${workspaceId}/overview?checkout=success`
+      : `${origin}/dashboard?checkout=success`;
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -57,9 +60,9 @@ serve(async (req) => {
       mode: "subscription",
       subscription_data: { trial_period_days: 14 },
       allow_promotion_codes: true,
-      success_url: `${origin}/dashboard?checkout=success`,
+      success_url: successUrl,
       cancel_url: `${origin}/pricing?checkout=cancel`,
-      metadata: { userId: user.id, plan, billingCycle },
+      metadata: { userId: user.id, plan, billingCycle, workspaceId: workspaceId || "" },
     });
 
     return new Response(JSON.stringify({ url: session.url }), {

@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-workspace-id",
 };
 
 Deno.serve(async (req) => {
@@ -47,6 +47,41 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Workspace-aware: prefer X-Workspace-Id header, fallback to owner's first workspace
+    let workspaceId = req.headers.get("X-Workspace-Id");
+
+    if (workspaceId) {
+      // Validate workspace exists
+      const { data: ws } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      if (!ws) {
+        return new Response(JSON.stringify({ error: "Invalid workspace_id" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      // Fallback: get owner's first workspace
+      console.warn("[ingest-leads] No X-Workspace-Id header provided, falling back to owner's first workspace");
+      const { data: membership } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", ownerId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!membership) {
+        return new Response(JSON.stringify({ error: "No workspace found for owner" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      workspaceId = membership.workspace_id;
+    }
+
     const trimmedEmail = email?.trim().toLowerCase() || "";
     const trimmedPhone = phone?.trim() || "";
 
@@ -60,14 +95,14 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString();
     const newTags: string[] = tags || [];
 
-    // Try to find existing lead by email or phone
+    // Try to find existing lead by email or phone within workspace
     let existing: { id: string; tags: string[] | null } | null = null;
 
     if (trimmedEmail) {
       const { data } = await supabase
         .from("leads")
         .select("id, tags")
-        .eq("user_id", ownerId)
+        .eq("workspace_id", workspaceId)
         .ilike("email", trimmedEmail)
         .maybeSingle();
       existing = data;
@@ -77,7 +112,7 @@ Deno.serve(async (req) => {
       const { data } = await supabase
         .from("leads")
         .select("id, tags")
-        .eq("user_id", ownerId)
+        .eq("workspace_id", workspaceId)
         .eq("phone", trimmedPhone)
         .maybeSingle();
       existing = data;
@@ -87,7 +122,6 @@ Deno.serve(async (req) => {
     let action: string;
 
     if (existing) {
-      // Update existing lead
       const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
       const updates: Record<string, unknown> = {
         updated_at: now,
@@ -110,11 +144,11 @@ Deno.serve(async (req) => {
       leadId = existing.id;
       action = "updated";
     } else {
-      // Create new lead
       const { data: newLead, error } = await supabase
         .from("leads")
         .insert({
           user_id: ownerId,
+          workspace_id: workspaceId,
           full_name: full_name || null,
           email: trimmedEmail || null,
           phone: trimmedPhone || null,
@@ -139,17 +173,19 @@ Deno.serve(async (req) => {
     if (utm) activityMeta.utm = utm;
     if (event) activityMeta.event = event;
     if (source) activityMeta.source = source;
+    if (!workspaceId) activityMeta.warning = "X-Workspace-Id not provided, used fallback";
 
     await supabase.from("lead_activities").insert({
       lead_id: leadId,
       user_id: ownerId,
+      workspace_id: workspaceId,
       type: event?.type || "opt_in",
       meta: activityMeta,
       ...(event?.timestamp ? { created_at: event.timestamp } : {}),
     });
 
     return new Response(
-      JSON.stringify({ ok: true, action, lead_id: leadId }),
+      JSON.stringify({ ok: true, action, lead_id: leadId, workspace_id: workspaceId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

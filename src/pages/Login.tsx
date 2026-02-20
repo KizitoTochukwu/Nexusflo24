@@ -20,13 +20,27 @@ const Login = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       toast.error(error.message);
       return;
     }
     toast.success("Login successful!");
+
+    // Fetch user's first workspace to redirect
+    if (authData.user) {
+      const { data: memberships } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", authData.user.id)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      if (memberships && memberships.length > 0) {
+        navigate(`/dashboard/${memberships[0].workspace_id}/overview`);
+        return;
+      }
+    }
     navigate("/dashboard");
   };
 

@@ -2,34 +2,42 @@ import { useState } from "react";
 import logo from "@/assets/logo.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger
+  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
-
-const sidebarItems = [
-  { icon: LayoutDashboard, label: "Overview", to: "/dashboard" },
-  { icon: Users, label: "Leads", to: "/dashboard/leads" },
-  { icon: Megaphone, label: "Campaigns", to: "/dashboard/campaigns" },
-  { icon: Workflow, label: "Automations", to: "/dashboard/automations" },
-  { icon: LayoutTemplate, label: "Funnels", to: "/dashboard/funnels" },
-  { icon: BarChart3, label: "Analytics", to: "/dashboard/analytics" },
-  { icon: Settings, label: "Settings", to: "/dashboard/settings" },
-];
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { workspaces, currentWorkspace } = useWorkspace();
+  const workspaceId = useWorkspaceId();
+
+  const sidebarItems = [
+    { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
+    { icon: Users, label: "Leads", to: `/dashboard/${workspaceId}/leads` },
+    { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
+    { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
+    { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
+    { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
+    { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
+  ];
 
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
+  };
+
+  const handleSwitchWorkspace = (wsId: string) => {
+    navigate(`/dashboard/${wsId}/overview`);
   };
 
   const initials = user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?";
@@ -88,7 +96,32 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Main */}
       <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-56" : "ml-14"}`}>
         {/* Top bar */}
-        <header className="flex h-14 items-center justify-end border-b bg-background px-6">
+        <header className="flex h-14 items-center justify-between border-b bg-background px-6">
+          {/* Workspace switcher */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-foreground transition-colors hover:bg-muted">
+                <Building2 className="h-4 w-4 text-accent" />
+                <span className="max-w-[200px] truncate">{currentWorkspace?.name || "Workspace"}</span>
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Workspaces</DropdownMenuLabel>
+              {workspaces.map((ws) => (
+                <DropdownMenuItem
+                  key={ws.id}
+                  onClick={() => handleSwitchWorkspace(ws.id)}
+                  className="flex items-center justify-between"
+                >
+                  <span className="truncate">{ws.name}</span>
+                  {ws.id === workspaceId && <Check className="h-4 w-4 text-accent" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* User dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
@@ -100,10 +133,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => navigate("/dashboard/settings/profile")}>
+              <DropdownMenuItem onClick={() => navigate(`/dashboard/${workspaceId}/settings/profile`)}>
                 <UserCircle className="mr-2 h-4 w-4" /> Profile Settings
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/dashboard/settings")}>
+              <DropdownMenuItem onClick={() => navigate(`/dashboard/${workspaceId}/settings`)}>
                 <Settings className="mr-2 h-4 w-4" /> Account Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />

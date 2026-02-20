@@ -18,6 +18,7 @@ import AddLeadDialog from "@/components/leads/AddLeadDialog";
 import LeadDetailsDrawer from "@/components/leads/LeadDetailsDrawer";
 import CsvImportDialog from "@/components/leads/CsvImportDialog";
 import { useSearchParams } from "react-router-dom";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 const STATUSES = ["All", "New", "Warm", "Hot", "Won", "Lost"];
 const SOURCES = ["All", "Landing Page", "WhatsApp", "Facebook Ad", "Referral", "Organic", "Other"];
@@ -36,6 +37,7 @@ const statusColor: Record<string, string> = {
 };
 
 const DashboardLeads = () => {
+  const workspaceId = useWorkspaceId();
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get("status") || "All";
 
@@ -51,7 +53,7 @@ const DashboardLeads = () => {
     sort,
   }), [search, status, source, sort]);
 
-  const { data: leads = [], isLoading } = useLeads(filters);
+  const { data: leads = [], isLoading } = useLeads(workspaceId, filters);
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
@@ -63,13 +65,13 @@ const DashboardLeads = () => {
   const [csvOpen, setCsvOpen] = useState(false);
 
   const handleCreate = (values: Partial<Lead>) => {
-    createLead.mutate(values, { onSuccess: () => setAddOpen(false) });
+    createLead.mutate({ ...values, workspace_id: workspaceId } as any, { onSuccess: () => setAddOpen(false) });
   };
 
   const handleUpdate = (values: Partial<Lead>) => {
     if (!editLead) return;
     updateLead.mutate(
-      { ...values, id: editLead.id, prev: { status: editLead.status } },
+      { ...values, id: editLead.id, prev: { status: editLead.status }, workspace_id: workspaceId },
       { onSuccess: () => setEditLead(null) }
     );
   };
@@ -102,30 +104,19 @@ const DashboardLeads = () => {
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or email…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-32"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
+          <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={source} onValueChange={setSource}>
           <SelectTrigger className="w-36"><SelectValue placeholder="Source" /></SelectTrigger>
-          <SelectContent>
-            {SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
+          <SelectContent>{SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={sort} onValueChange={(v) => setSort(v as LeadFilters["sort"])}>
           <SelectTrigger className="w-36"><SelectValue placeholder="Sort" /></SelectTrigger>
-          <SelectContent>
-            {SORTS.map((s) => <SelectItem key={s.value} value={s.value!}>{s.label}</SelectItem>)}
-          </SelectContent>
+          <SelectContent>{SORTS.map((s) => <SelectItem key={s.value} value={s.value!}>{s.label}</SelectItem>)}</SelectContent>
         </Select>
       </div>
 
@@ -154,11 +145,7 @@ const DashboardLeads = () => {
             </TableHeader>
             <TableBody>
               {leads.map((lead) => (
-                <TableRow
-                  key={lead.id}
-                  className="cursor-pointer"
-                  onClick={() => setDetailLead(lead)}
-                >
+                <TableRow key={lead.id} className="cursor-pointer" onClick={() => setDetailLead(lead)}>
                   <TableCell className="font-medium">{lead.full_name || "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.email || "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.source}</TableCell>
@@ -168,27 +155,17 @@ const DashboardLeads = () => {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className={statusColor[lead.status] || ""}>
-                      {lead.status}
-                    </Badge>
+                    <Badge variant="secondary" className={statusColor[lead.status] || ""}>{lead.status}</Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {lead.last_activity_at ? format(new Date(lead.last_activity_at), "MMM d, h:mm a") : "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {format(new Date(lead.created_at), "MMM d, yyyy")}
-                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{format(new Date(lead.created_at), "MMM d, yyyy")}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                      <Button size="icon" variant="ghost" onClick={() => setDetailLead(lead)} title="View">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setEditLead(lead)} title="Edit">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(lead.id)} title="Delete" className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => setDetailLead(lead)} title="View"><Eye className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => setEditLead(lead)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => setDeleteId(lead.id)} title="Delete" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -198,42 +175,20 @@ const DashboardLeads = () => {
         )}
       </div>
 
-      {/* Add dialog */}
       <AddLeadDialog open={addOpen} onOpenChange={setAddOpen} onSubmit={handleCreate} loading={createLead.isPending} />
+      <AddLeadDialog open={!!editLead} onOpenChange={(v) => { if (!v) setEditLead(null); }} onSubmit={handleUpdate} defaultValues={editLead || undefined} loading={updateLead.isPending} />
+      <LeadDetailsDrawer lead={detailLead} open={!!detailLead} onOpenChange={(v) => { if (!v) setDetailLead(null); }} workspaceId={workspaceId} />
+      <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} workspaceId={workspaceId} />
 
-      {/* Edit dialog */}
-      <AddLeadDialog
-        open={!!editLead}
-        onOpenChange={(v) => { if (!v) setEditLead(null); }}
-        onSubmit={handleUpdate}
-        defaultValues={editLead || undefined}
-        loading={updateLead.isPending}
-      />
-
-      {/* Details drawer */}
-      <LeadDetailsDrawer
-        lead={detailLead}
-        open={!!detailLead}
-        onOpenChange={(v) => { if (!v) setDetailLead(null); }}
-      />
-
-      {/* CSV import */}
-      <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} />
-
-      {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Lead</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this lead and all its activities. This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>This will permanently delete this lead and all its activities. This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
