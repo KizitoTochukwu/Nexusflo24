@@ -103,7 +103,7 @@ const Contact = () => {
             <div className="space-y-8">
               {[
                 { icon: Mail, title: "Email", desc: "admin@nexusflo24.com", sub: "We respond within 24 hours." },
-                { icon: MessageCircle, title: "WhatsApp", desc: "+1 (555) 000-0000", sub: "Chat with our team live." },
+                { icon: MessageCircle, title: "WhatsApp", desc: "+447517327597", sub: "Chat with our team live." },
                 { icon: MapPin, title: "Office", desc: "123 Innovation Way, San Francisco, CA 94105", sub: "By appointment only." },
               ].map((c) => (
                 <div key={c.title} className="flex gap-4">
