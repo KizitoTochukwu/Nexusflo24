@@ -11,8 +11,11 @@ export type Campaign = {
   type: string;
   objective: string;
   status: string;
+  campaign_mode: string;
   audience_filter: Record<string, unknown>;
   message_content: Record<string, unknown>;
+  trigger_config: Record<string, unknown>;
+  fallback_settings: Record<string, unknown>;
   scheduled_at: string | null;
   sent_count: number;
   open_rate: number;
@@ -38,10 +41,23 @@ export type CampaignMessage = {
 export const CAMPAIGN_TYPES = ["email", "whatsapp", "sms", "multi-channel"] as const;
 export const CAMPAIGN_OBJECTIVES = ["lead generation", "promotion", "nurture", "event", "broadcast"] as const;
 export const CAMPAIGN_STATUSES = ["draft", "scheduled", "active", "paused", "completed"] as const;
+export const CAMPAIGN_MODES = ["broadcast", "triggered"] as const;
+
+export const TRIGGER_TYPES = [
+  { value: "new_lead", label: "New lead created / Form submission" },
+  { value: "tag_added", label: "Lead tag added" },
+  { value: "tag_removed", label: "Lead tag removed" },
+  { value: "score_threshold", label: "Lead score threshold reached" },
+  { value: "email_opened", label: "Email opened" },
+  { value: "link_clicked", label: "Link clicked" },
+  { value: "whatsapp_reply", label: "WhatsApp reply received" },
+  { value: "purchase_event", label: "Purchase event (placeholder)" },
+] as const;
+
+export const TONE_OPTIONS = ["professional", "friendly", "urgent"] as const;
 
 export function useCampaigns(workspaceId: string) {
   const { user } = useAuth();
-
   return useQuery({
     queryKey: ["campaigns", workspaceId],
     queryFn: async () => {
@@ -94,7 +110,6 @@ export function useCampaignMessages(campaignId: string | null) {
 export function useCreateCampaign() {
   const qc = useQueryClient();
   const { user } = useAuth();
-
   return useMutation({
     mutationFn: async (campaign: Partial<Campaign> & { workspace_id: string }) => {
       const { data, error } = await supabase
@@ -115,7 +130,6 @@ export function useCreateCampaign() {
 
 export function useUpdateCampaign() {
   const qc = useQueryClient();
-
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Campaign> & { id: string }) => {
       const { data, error } = await supabase
@@ -137,7 +151,6 @@ export function useUpdateCampaign() {
 
 export function useDeleteCampaign() {
   const qc = useQueryClient();
-
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("campaigns").delete().eq("id", id);
@@ -148,5 +161,19 @@ export function useDeleteCampaign() {
       toast.success("Campaign deleted");
     },
     onError: (e: any) => toast.error(e.message || "Failed to delete campaign"),
+  });
+}
+
+export function useGenerateCampaignCopy() {
+  return useMutation({
+    mutationFn: async (params: { channel: string; objective: string; tone: string; context?: string }) => {
+      const { data, error } = await supabase.functions.invoke("generate-campaign-copy", {
+        body: params,
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { variants: Array<{ subject: string; body: string; cta: string }> };
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to generate copy"),
   });
 }

@@ -19,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Eye, Copy, Pause, Play, Trash2, Mail, MessageSquare, Phone, Layers } from "lucide-react";
+import { MoreHorizontal, Eye, Copy, Pause, Play, Trash2, Mail, MessageSquare, Phone, Layers, Zap, Radio } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -96,6 +96,7 @@ const DashboardCampaigns = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Channel</TableHead>
+                    <TableHead>Mode</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Sent</TableHead>
                     <TableHead className="hidden md:table-cell">Open Rate</TableHead>
@@ -116,6 +117,12 @@ const DashboardCampaigns = () => {
                         <div className="flex items-center gap-1.5 capitalize">
                           {channelIcons[c.type]} {c.type}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize flex items-center gap-1 w-fit">
+                          {(c as any).campaign_mode === "triggered" ? <Zap className="h-3 w-3" /> : <Radio className="h-3 w-3" />}
+                          {(c as any).campaign_mode || "broadcast"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className={`${statusColors[c.status] || ""} capitalize`}>{c.status}</Badge>
