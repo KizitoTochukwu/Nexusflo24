@@ -68,6 +68,15 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const { user, subscription, subLoading, refreshSubscription } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    const isNewSignup = localStorage.getItem("nexusflo_new_signup");
+    if (isNewSignup) {
+      setShowWelcome(true);
+      localStorage.removeItem("nexusflo_new_signup");
+    }
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("checkout") === "success") {
@@ -94,14 +103,9 @@ const Dashboard = () => {
 
   return (
     <div className="flex min-h-screen bg-surface">
-      {/* Demo banner */}
+      {/* Top banner */}
       <div className="fixed left-0 right-0 top-0 z-50 bg-accent py-2 text-center text-xs font-semibold text-accent-foreground">
-        {user ? (
-          <>👋 Welcome, {user.email}</>
-        ) : (
-          <>🎯 Demo Dashboard — Viewing sample data.{" "}
-          <Link to="/register" className="underline">Start your free trial</Link></>
-        )}
+        👋 Welcome, {user?.user_metadata?.full_name || user?.email}
       </div>
 
       {/* Sidebar */}
@@ -143,6 +147,18 @@ const Dashboard = () => {
         <div className="p-6 lg:p-8">
           <h1 className="text-2xl font-bold">Dashboard Overview</h1>
           <p className="text-sm text-muted-foreground">Welcome back! Here's what's happening today.</p>
+
+          {showWelcome && (
+            <div className="mt-4 rounded-xl border border-accent/30 bg-accent/10 p-4">
+              <p className="text-sm font-semibold text-accent">🎉 Welcome to NexusFlo24!</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Your account is all set. Explore your dashboard, set up automations, and start growing!
+              </p>
+              <button onClick={() => setShowWelcome(false)} className="mt-2 text-xs font-medium text-accent hover:underline">
+                Dismiss
+              </button>
+            </div>
+          )}
 
           {/* Billing Card */}
           {user && (
