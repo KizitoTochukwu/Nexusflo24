@@ -90,7 +90,7 @@ const About = () => (
         <h2 className="mb-12 text-3xl font-bold">Leadership</h2>
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { name: "Alex Rivera", role: "CEO & Co-Founder", initials: "AR" },
+            { name: "Kizito Tochukwu", role: "CEO & Co-Founder", initials: "KT" },
             { name: "Mia Thompson", role: "CTO & Co-Founder", initials: "MT" },
             { name: "James Park", role: "VP of Product", initials: "JP" },
           ].map((l) => (
