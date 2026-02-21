@@ -92,7 +92,7 @@ const About = () => (
           {[
             { name: "Kizito Tochukwu", role: "CEO & Co-Founder", initials: "KT", image: "/lovable-uploads/kizito-tochukwu.png" },
             { name: "Mia Thompson", role: "CTO & Co-Founder", initials: "MT", image: "/lovable-uploads/mia-thompson.jpeg" },
-            { name: "James Park", role: "VP of Product", initials: "JP" },
+            { name: "James Park", role: "VP of Product", initials: "JP", image: "/lovable-uploads/james-park.jpeg" },
           ].map((l) => (
             <div key={l.name} className="rounded-xl border bg-card p-6 shadow-card">
               {l.image ? (
