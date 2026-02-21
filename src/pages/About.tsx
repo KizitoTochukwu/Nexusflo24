@@ -90,14 +90,18 @@ const About = () => (
         <h2 className="mb-12 text-3xl font-bold">Leadership</h2>
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { name: "Kizito Tochukwu", role: "CEO & Co-Founder", initials: "KT" },
+            { name: "Kizito Tochukwu", role: "CEO & Co-Founder", initials: "KT", image: "/lovable-uploads/kizito-tochukwu.png" },
             { name: "Mia Thompson", role: "CTO & Co-Founder", initials: "MT" },
             { name: "James Park", role: "VP of Product", initials: "JP" },
           ].map((l) => (
             <div key={l.name} className="rounded-xl border bg-card p-6 shadow-card">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
-                {l.initials}
-              </div>
+              {l.image ? (
+                <img src={l.image} alt={l.name} className="mx-auto mb-4 h-16 w-16 rounded-full object-cover" />
+              ) : (
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
+                  {l.initials}
+                </div>
+              )}
               <h3 className="font-semibold">{l.name}</h3>
               <p className="text-sm text-muted-foreground">{l.role}</p>
             </div>
