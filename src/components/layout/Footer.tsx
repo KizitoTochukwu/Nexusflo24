@@ -36,7 +36,7 @@ const Footer = () => {
   return (
     <footer className="border-t bg-primary text-primary-foreground">
       <div className="container py-16">
-        <div className="grid gap-12 md:grid-cols-4">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2 text-xl font-bold">
@@ -89,28 +89,6 @@ const Footer = () => {
             ))}
           </div>
 
-          {/* Legal (replaces Newsletter column at md, add Newsletter below legal at lg) */}
-        </div>
-
-        {/* Legal Links Row */}
-        <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
-          {[
-            { label: "Privacy Policy", to: "/privacy-policy" },
-            { label: "Terms of Service", to: "/terms-of-service" },
-            { label: "Cookies", to: "/cookie-policy" },
-            { label: "Refund Policy", to: "/refund-policy" },
-            { label: "Security", to: "/security" },
-            { label: "Acceptable Use", to: "/acceptable-use" },
-            { label: "DPA", to: "/data-processing-addendum" },
-            { label: "Disclaimer", to: "/disclaimer" },
-            { label: "Anti-Spam", to: "/anti-spam-policy" },
-            { label: "GDPR Rights", to: "/gdpr-rights" },
-          ].map((item) => (
-            <Link key={item.label} to={item.to} className="transition-colors hover:text-primary-foreground">
-              {item.label}
-            </Link>
-          ))}
-
           {/* Newsletter */}
           <div className="space-y-3">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-accent">Stay Updated</h4>
@@ -138,6 +116,26 @@ const Footer = () => {
               support@nexusflo24.com
             </p>
           </div>
+        </div>
+
+        {/* Legal Links Row */}
+        <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
+          {[
+            { label: "Privacy Policy", to: "/privacy-policy" },
+            { label: "Terms of Service", to: "/terms-of-service" },
+            { label: "Cookies", to: "/cookie-policy" },
+            { label: "Refund Policy", to: "/refund-policy" },
+            { label: "Security", to: "/security" },
+            { label: "Acceptable Use", to: "/acceptable-use" },
+            { label: "DPA", to: "/data-processing-addendum" },
+            { label: "Disclaimer", to: "/disclaimer" },
+            { label: "Anti-Spam", to: "/anti-spam-policy" },
+            { label: "GDPR Rights", to: "/gdpr-rights" },
+          ].map((item) => (
+            <Link key={item.label} to={item.to} className="transition-colors hover:text-primary-foreground">
+              {item.label}
+            </Link>
+          ))}
         </div>
 
         <div className="mt-12 border-t border-navy-light pt-6 text-center text-xs text-primary-foreground/50">
