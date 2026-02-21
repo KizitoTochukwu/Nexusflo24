@@ -551,6 +551,87 @@ export type Database = {
           },
         ]
       }
+      lead_folder_leads: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          lead_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          lead_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          lead_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_folder_leads_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "lead_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_folder_leads_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_folder_leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_folders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           created_at: string
