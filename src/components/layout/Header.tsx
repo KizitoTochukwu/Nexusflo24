@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
 
 const navLinks = [
-{ label: "Dashboard", to: "/dashboard" },
-{ label: "Features", to: "/features" },
-{ label: "Pricing", to: "/pricing" },
-{ label: "About", to: "/about" },
-{ label: "Contact", to: "/contact" }];
+  { label: "Dashboard", to: "/dashboard" },
+  { label: "Features", to: "/features" },
+  { label: "Pricing", to: "/pricing" },
+  { label: "Academy", to: "/academy" },
+  { label: "Blog", to: "/blog" },
+  { label: "Referral", to: "/referral" },
+];
 
 
 const Header = () => {
