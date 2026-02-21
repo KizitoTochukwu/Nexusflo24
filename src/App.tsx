@@ -25,6 +25,10 @@ import DashboardProfileSettings from "./pages/dashboard/DashboardProfileSettings
 import NotFound from "./pages/NotFound";
 import ChatbotWidget from "./components/ChatbotWidget";
 import DashboardRedirect from "./pages/DashboardRedirect";
+import Referral from "./pages/Referral";
+import Academy from "./pages/Academy";
+import Blog from "./pages/Blog";
+import BlogArticle from "./pages/BlogArticle";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +46,10 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/referral" element={<Referral />} />
+              <Route path="/academy" element={<Academy />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogArticle />} />
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
               <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
 
