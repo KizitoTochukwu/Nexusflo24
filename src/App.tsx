@@ -24,11 +24,22 @@ import DashboardSettings from "./pages/dashboard/DashboardSettings";
 import DashboardProfileSettings from "./pages/dashboard/DashboardProfileSettings";
 import NotFound from "./pages/NotFound";
 import ChatbotWidget from "./components/ChatbotWidget";
+import CookieConsentBanner from "./components/CookieConsentBanner";
 import DashboardRedirect from "./pages/DashboardRedirect";
 import Referral from "./pages/Referral";
 import Academy from "./pages/Academy";
 import Blog from "./pages/Blog";
 import BlogArticle from "./pages/BlogArticle";
+import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
+import TermsOfService from "./pages/legal/TermsOfService";
+import CookiePolicy from "./pages/legal/CookiePolicy";
+import AcceptableUse from "./pages/legal/AcceptableUse";
+import DataProcessingAddendum from "./pages/legal/DataProcessingAddendum";
+import RefundPolicy from "./pages/legal/RefundPolicy";
+import SecurityPage from "./pages/legal/Security";
+import Disclaimer from "./pages/legal/Disclaimer";
+import AntiSpamPolicy from "./pages/legal/AntiSpamPolicy";
+import GdprRights from "./pages/legal/GdprRights";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +63,16 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogArticle />} />
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
               <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/cookie-policy" element={<CookiePolicy />} />
+              <Route path="/acceptable-use" element={<AcceptableUse />} />
+              <Route path="/data-processing-addendum" element={<DataProcessingAddendum />} />
+              <Route path="/refund-policy" element={<RefundPolicy />} />
+              <Route path="/security" element={<SecurityPage />} />
+              <Route path="/disclaimer" element={<Disclaimer />} />
+              <Route path="/anti-spam-policy" element={<AntiSpamPolicy />} />
+              <Route path="/gdpr-rights" element={<GdprRights />} />
 
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
@@ -72,6 +93,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <ChatbotWidget />
+            <CookieConsentBanner />
           </WorkspaceProvider>
         </AuthProvider>
       </BrowserRouter>
