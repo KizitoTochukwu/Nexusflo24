@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Twitter, Linkedin, Instagram, Loader2 } from "lucide-react";
+import { Mail, Facebook, Linkedin, Instagram, Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,9 +47,20 @@ const Footer = () => {
               Automate your marketing. Convert smarter. Grow faster — with AI.
             </p>
             <div className="flex gap-3">
-              {[Twitter, Linkedin, Instagram].map((Icon, i) => (
-                <a key={i} href="#" className="rounded-md p-2 transition-colors hover:bg-navy-light">
-                  <Icon className="h-4 w-4" />
+              {[
+                { Icon: Facebook, href: "https://www.facebook.com/nexusflo24", label: "Facebook" },
+                { Icon: Instagram, href: "https://www.instagram.com/nexusflo24", label: "Instagram" },
+                { Icon: Linkedin, href: "https://linkedin.com/company/nexusflo24", label: "LinkedIn" },
+              ].map(({ Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="rounded-md p-2 transition-all hover:bg-navy-light hover:text-accent hover:-translate-y-0.5"
+                >
+                  <Icon className="h-5 w-5" />
                 </a>
               ))}
             </div>
