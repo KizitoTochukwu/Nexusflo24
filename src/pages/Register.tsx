@@ -159,9 +159,9 @@ const Register = () => {
             />
             <Label htmlFor="terms" className="text-xs text-muted-foreground leading-relaxed font-normal cursor-pointer">
               I agree to the{" "}
-              <Link to="/terms" className="text-accent hover:underline">Terms of Service</Link>{" "}
+              <Link to="/terms-of-service" className="text-accent hover:underline">Terms of Service</Link>{" "}
               and{" "}
-              <Link to="/privacy" className="text-accent hover:underline">Privacy Policy</Link>
+              <Link to="/privacy-policy" className="text-accent hover:underline">Privacy Policy</Link>
             </Label>
           </div>
 

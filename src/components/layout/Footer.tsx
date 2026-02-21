@@ -71,14 +71,34 @@ const Footer = () => {
             {[
               { label: "About", to: "/about" },
               { label: "Contact", to: "/contact" },
-              { label: "Privacy Policy", to: "#" },
-              { label: "Terms of Service", to: "#" },
             ].map((item) => (
               <Link key={item.label} to={item.to} className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                 {item.label}
               </Link>
             ))}
           </div>
+
+          {/* Legal (replaces Newsletter column at md, add Newsletter below legal at lg) */}
+        </div>
+
+        {/* Legal Links Row */}
+        <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
+          {[
+            { label: "Privacy Policy", to: "/privacy-policy" },
+            { label: "Terms of Service", to: "/terms-of-service" },
+            { label: "Cookies", to: "/cookie-policy" },
+            { label: "Refund Policy", to: "/refund-policy" },
+            { label: "Security", to: "/security" },
+            { label: "Acceptable Use", to: "/acceptable-use" },
+            { label: "DPA", to: "/data-processing-addendum" },
+            { label: "Disclaimer", to: "/disclaimer" },
+            { label: "Anti-Spam", to: "/anti-spam-policy" },
+            { label: "GDPR Rights", to: "/gdpr-rights" },
+          ].map((item) => (
+            <Link key={item.label} to={item.to} className="transition-colors hover:text-primary-foreground">
+              {item.label}
+            </Link>
+          ))}
 
           {/* Newsletter */}
           <div className="space-y-3">
