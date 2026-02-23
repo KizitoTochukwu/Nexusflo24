@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { usePlanGating } from "@/hooks/usePlanGating";
 
 export type Lead = {
   id: string;
@@ -116,9 +117,19 @@ export function useLeadActivities(leadId: string | null) {
 export function useCreateLead() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { checkLimit } = usePlanGating();
 
   return useMutation({
     mutationFn: async (lead: Partial<Lead> & { workspace_id: string }) => {
+      // Check lead count limit
+      const { count } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", lead.workspace_id);
+      const { allowed, limit } = checkLimit("maxLeads", count || 0);
+      if (!allowed) {
+        throw new Error(`Lead limit reached (${limit}). Upgrade your plan for more.`);
+      }
       const { data, error } = await supabase
         .from("leads")
         .insert({ ...lead, user_id: user!.id } as any)

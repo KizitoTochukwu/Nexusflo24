@@ -13,6 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import LockedFeature from "@/components/billing/LockedFeature";
+import { usePlanGating } from "@/hooks/usePlanGating";
 import { useLeadStats } from "@/hooks/useLeads";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useMemo } from "react";
@@ -42,6 +44,7 @@ const Dashboard = () => {
   const [portalLoading, setPortalLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const { data: leadStats } = useLeadStats(workspaceId);
+  const { isPro, isAgency, isFree } = usePlanGating();
 
   useEffect(() => {
     const isNewSignup = localStorage.getItem("nexusflo_new_signup");
@@ -248,21 +251,41 @@ const Dashboard = () => {
       </div>
 
       {/* Workflow preview */}
-      <div className="mt-8 rounded-xl border bg-card p-6 shadow-card">
-        <h3 className="mb-4 font-semibold">Automation Workflow Preview</h3>
-        <div className="flex flex-wrap items-center gap-2">
-          {workflowNodes.map((node, i) => (
-            <div key={node.label} className="flex items-center gap-2">
-              <div className={`rounded-lg border px-4 py-2 text-xs font-medium ${
-                node.type === "trigger" ? "border-accent bg-accent/10 text-accent" :
-                node.type === "condition" ? "border-amber-600 bg-amber-50 text-amber-700" :
-                "border-border bg-muted"
-              }`}>{node.label}</div>
-              {i < workflowNodes.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-            </div>
-          ))}
+      <LockedFeature locked={isFree} featureName="Automation Workflows">
+        <div className="mt-8 rounded-xl border bg-card p-6 shadow-card">
+          <h3 className="mb-4 font-semibold">Automation Workflow Preview</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            {workflowNodes.map((node, i) => (
+              <div key={node.label} className="flex items-center gap-2">
+                <div className={`rounded-lg border px-4 py-2 text-xs font-medium ${
+                  node.type === "trigger" ? "border-accent bg-accent/10 text-accent" :
+                  node.type === "condition" ? "border-amber-600 bg-amber-50 text-amber-700" :
+                  "border-border bg-muted"
+                }`}>{node.label}</div>
+                {i < workflowNodes.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </LockedFeature>
+
+      {/* Agency-only: Advanced metrics placeholder */}
+      <LockedFeature locked={!isAgency} featureName="Advanced Analytics" requiredPlan="agency">
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border bg-card p-6 shadow-card">
+            <h4 className="text-sm font-medium text-muted-foreground">Client Revenue</h4>
+            <p className="mt-1 text-2xl font-bold text-accent">$0</p>
+          </div>
+          <div className="rounded-xl border bg-card p-6 shadow-card">
+            <h4 className="text-sm font-medium text-muted-foreground">Team Activity</h4>
+            <p className="mt-1 text-2xl font-bold">0 actions</p>
+          </div>
+          <div className="rounded-xl border bg-card p-6 shadow-card">
+            <h4 className="text-sm font-medium text-muted-foreground">Automation ROI</h4>
+            <p className="mt-1 text-2xl font-bold text-accent">—</p>
+          </div>
+        </div>
+      </LockedFeature>
     </DashboardLayout>
   );
 };

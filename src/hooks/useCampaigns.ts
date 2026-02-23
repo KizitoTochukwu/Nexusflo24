@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { usePlanGating } from "@/hooks/usePlanGating";
 
 export type Campaign = {
   id: string;
@@ -110,8 +111,18 @@ export function useCampaignMessages(campaignId: string | null) {
 export function useCreateCampaign() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { checkLimit } = usePlanGating();
   return useMutation({
     mutationFn: async (campaign: Partial<Campaign> & { workspace_id: string }) => {
+      // Check campaign limit
+      const { count } = await supabase
+        .from("campaigns")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", campaign.workspace_id);
+      const { allowed, limit } = checkLimit("maxCampaigns", count || 0);
+      if (!allowed) {
+        throw new Error(`Campaign limit reached (${limit}). Upgrade your plan for more.`);
+      }
       const { data, error } = await supabase
         .from("campaigns")
         .insert({ ...campaign, user_id: user!.id } as any)
