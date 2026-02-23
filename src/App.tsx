@@ -42,6 +42,7 @@ import AntiSpamPolicy from "./pages/legal/AntiSpamPolicy";
 import GdprRights from "./pages/legal/GdprRights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminGuard from "./components/admin/AdminGuard";
+import AuthCallback from "./pages/AuthCallback";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogArticle />} />
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
               <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
