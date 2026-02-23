@@ -40,7 +40,8 @@ import SecurityPage from "./pages/legal/Security";
 import Disclaimer from "./pages/legal/Disclaimer";
 import AntiSpamPolicy from "./pages/legal/AntiSpamPolicy";
 import GdprRights from "./pages/legal/GdprRights";
-
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminGuard from "./components/admin/AdminGuard";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
+                <Route path="admin" element={<AdminDashboard />} />
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
 

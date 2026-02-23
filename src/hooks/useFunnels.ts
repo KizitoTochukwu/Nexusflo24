@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { usePlanGating } from "@/hooks/usePlanGating";
 
 export type Funnel = {
   id: string;
@@ -112,6 +113,7 @@ export function useFunnelVisits(funnelId: string | null) {
 export function useCreateFunnel() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { checkLimit } = usePlanGating();
   return useMutation({
     mutationFn: async (input: {
       workspace_id: string;
@@ -120,6 +122,16 @@ export function useCreateFunnel() {
       objective: string;
       steps: { step_type: string; page_content?: Record<string, unknown> }[];
     }) => {
+      // Check funnel limit
+      const { count } = await supabase
+        .from("funnels")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", input.workspace_id);
+      const { allowed, limit } = checkLimit("maxFunnels", count || 0);
+      if (!allowed) {
+        throw new Error(`Funnel limit reached (${limit}). Upgrade your plan for more.`);
+      }
+
       const { steps, ...funnelData } = input;
       const { data, error } = await supabase
         .from("funnels")

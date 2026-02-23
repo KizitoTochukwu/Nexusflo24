@@ -6,8 +6,12 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield
 } from "lucide-react";
+import PlanBadge from "@/components/billing/PlanBadge";
+import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
+import FreePlanBanner from "@/components/billing/FreePlanBanner";
+import { useIsAdmin } from "@/hooks/useAdminRole";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel
@@ -20,6 +24,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, signOut } = useAuth();
   const { workspaces, currentWorkspace } = useWorkspace();
   const workspaceId = useWorkspaceId();
+  const { data: isAdmin } = useIsAdmin();
 
   const sidebarItems = [
     { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
@@ -29,6 +34,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
     { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
     { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
+    ...(isAdmin ? [{ icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` }] : []),
   ];
 
   const handleLogout = async () => {
@@ -100,6 +106,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               <button className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-foreground transition-colors hover:bg-muted">
                 <Building2 className="h-4 w-4 text-accent" />
                 <span className="max-w-[200px] truncate">{currentWorkspace?.name || "Workspace"}</span>
+                <PlanBadge />
                 <ChevronDown className="h-3 w-3 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
@@ -145,6 +152,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         </header>
 
         <div className="p-6 lg:p-8">
+          <BillingWarningBanner />
+          <FreePlanBanner />
           {children}
         </div>
       </main>
