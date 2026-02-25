@@ -17,6 +17,22 @@ function getCorsHeaders(req: Request) {
   };
 }
 
+// Build allowed price IDs from environment variables
+function getAllowedPriceIds(): Set<string> {
+  const ids = new Set<string>();
+  const envKeys = [
+    "STRIPE_PRICE_PRO_MONTHLY",
+    "STRIPE_PRICE_PRO_YEARLY",
+    "STRIPE_PRICE_AGENCY_MONTHLY",
+    "STRIPE_PRICE_AGENCY_YEARLY",
+  ];
+  for (const key of envKeys) {
+    const val = Deno.env.get(key);
+    if (val) ids.add(val);
+  }
+  return ids;
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -38,6 +54,12 @@ serve(async (req) => {
 
     const { plan, billingCycle, priceId, workspaceId } = await req.json();
     if (!priceId) throw new Error("Missing priceId");
+
+    // Validate priceId against allowed values from env
+    const allowedPrices = getAllowedPriceIds();
+    if (allowedPrices.size > 0 && !allowedPrices.has(priceId)) {
+      throw new Error("Invalid priceId");
+    }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -63,7 +85,7 @@ serve(async (req) => {
       allow_promotion_codes: true,
       success_url: successUrl,
       cancel_url: `${origin}/pricing?checkout=cancel`,
-      metadata: { userId: user.id, plan, billingCycle, workspaceId: workspaceId || "" },
+      metadata: { userId: user.id, plan, billingCycle, priceId, workspaceId: workspaceId || "" },
     });
 
     return new Response(JSON.stringify({ url: session.url }), {

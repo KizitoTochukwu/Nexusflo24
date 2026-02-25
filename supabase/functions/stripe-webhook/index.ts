@@ -104,6 +104,8 @@ serve(async (req) => {
           status = sub.status;
         }
 
+        const priceId = session.metadata?.priceId || null;
+
         const upsertData = {
           user_id: userId,
           workspace_id: workspaceId || null,
@@ -112,6 +114,7 @@ serve(async (req) => {
           plan,
           billing_cycle: billingCycle,
           status,
+          price_id: priceId,
         };
 
         const { error: upsertErr } = await supabase
