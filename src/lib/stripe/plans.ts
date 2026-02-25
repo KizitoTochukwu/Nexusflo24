@@ -4,13 +4,13 @@ export const CURRENCY = "usd";
 export const PLANS = {
   pro: {
     name: "Pro",
-    monthlyPriceId: import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY || "price_1T330cE524oup9rkXd8yIRMD",
-    yearlyPriceId: import.meta.env.VITE_STRIPE_PRICE_PRO_YEARLY || "price_1T330cE524oup9rk9ThXa6CW",
+    monthlyPriceId: "price_1T4h1KCvKm9Paj6GBs96jHy6",
+    yearlyPriceId: "price_1T4h27CvKm9Paj6G8ZvTmFDa",
   },
   agency: {
     name: "Agency",
-    monthlyPriceId: import.meta.env.VITE_STRIPE_PRICE_AGENCY_MONTHLY || "price_1T330VE524oup9rk6E7jpbtd",
-    yearlyPriceId: import.meta.env.VITE_STRIPE_PRICE_AGENCY_YEARLY || "price_1T330VE524oup9rkoV6iFdnE",
+    monthlyPriceId: "price_1T4h2OCvKm9Paj6G1kflWmD5",
+    yearlyPriceId: "price_1T4h2fCvKm9Paj6GqSvHB58N",
   },
 } as const;
 
