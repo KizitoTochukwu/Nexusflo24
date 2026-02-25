@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { supabase } from "@/integrations/supabase/client";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -540,13 +540,20 @@ function NotificationsTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
+const VALID_TABS = ["profile", "billing", "integrations", "automations", "notifications", "security"] as const;
+
 const DashboardSettings = () => {
+  const location = useLocation();
+  const pathParts = location.pathname.split("/");
+  const lastSegment = pathParts[pathParts.length - 1];
+  const initialTab = (VALID_TABS as readonly string[]).includes(lastSegment) ? lastSegment : "profile";
+
   return (
     <DashboardLayout>
       <h1 className="text-2xl font-bold">Settings</h1>
       <p className="mt-1 text-sm text-muted-foreground">Manage your account, billing, integrations, and preferences.</p>
 
-      <Tabs defaultValue="profile" className="mt-6">
+      <Tabs defaultValue={initialTab} className="mt-6">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="profile" className="gap-1.5"><User className="h-3.5 w-3.5" />Profile</TabsTrigger>
           <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
