@@ -94,9 +94,13 @@ serve(async (req) => {
           ? session.customer
           : (session.customer as any)?.id;
 
-        const subId = typeof session.subscription === "string"
-          ? session.subscription
-          : (session.subscription as any)?.id;
+        let subId: string | null = null;
+        if (typeof session.subscription === "string") {
+          subId = session.subscription;
+        } else if ((session.subscription as any)?.id) {
+          subId = (session.subscription as any).id;
+        }
+        log("Checkout session subscription ID", { subId });
 
         let status = "active";
         if (subId) {
@@ -186,6 +190,18 @@ serve(async (req) => {
           ? invoice.customer
           : (invoice.customer as any)?.id;
 
+        // Extract subscription ID — handle both legacy and new API (2025-08-27.basil)
+        // In new API, subscription moved to parent.subscription_details.subscription
+        let invoiceSubId: string | null = null;
+        if (typeof invoice.subscription === "string") {
+          invoiceSubId = invoice.subscription;
+        } else if ((invoice.subscription as any)?.id) {
+          invoiceSubId = (invoice.subscription as any).id;
+        } else if ((invoice as any).parent?.subscription_details?.subscription) {
+          invoiceSubId = (invoice as any).parent.subscription_details.subscription;
+        }
+        log("Extracted subscription ID from invoice", { invoiceSubId, customerId });
+
         // Check if a subscription row already exists for this customer
         const { data: existingSub } = await supabase
           .from("subscriptions")
@@ -204,9 +220,7 @@ serve(async (req) => {
           // FALLBACK: No subscription row yet — create one from Stripe data
           log("No subscription row found, attempting fallback creation", { customerId });
 
-          const subId = typeof invoice.subscription === "string"
-            ? invoice.subscription
-            : (invoice.subscription as any)?.id;
+          const subId = invoiceSubId;
 
           if (subId) {
             const stripeSub = await stripe.subscriptions.retrieve(subId);
