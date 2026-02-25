@@ -190,19 +190,6 @@ serve(async (req) => {
           ? invoice.customer
           : (invoice.customer as any)?.id;
 
-        // Extract subscription ID — handle both legacy and new API (2025-08-27.basil)
-        // In new API, subscription moved to parent.subscription_details.subscription
-        let invoiceSubId: string | null = null;
-        if (typeof invoice.subscription === "string") {
-          invoiceSubId = invoice.subscription;
-        } else if ((invoice.subscription as any)?.id) {
-          invoiceSubId = (invoice.subscription as any).id;
-        } else if ((invoice as any).parent?.subscription_details?.subscription) {
-          invoiceSubId = (invoice as any).parent.subscription_details.subscription;
-        }
-        log("Extracted subscription ID from invoice", { invoiceSubId, customerId });
-
-        // Check if a subscription row already exists for this customer
         const { data: existingSub } = await supabase
           .from("subscriptions")
           .select("id")
@@ -210,82 +197,13 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existingSub) {
-          // Existing row — just mark active
           const { error } = await supabase.from("subscriptions").update({
             status: "active",
           }).eq("stripe_customer_id", customerId);
           if (error) log("ERROR on payment_succeeded update", error);
           else log("Payment succeeded, status set to active", { customerId });
         } else {
-          // FALLBACK: No subscription row yet — create one from Stripe data
-          log("No subscription row found, attempting fallback creation", { customerId });
-
-          const subId = invoiceSubId;
-
-          if (subId) {
-            const stripeSub = await stripe.subscriptions.retrieve(subId);
-            const priceId = stripeSub.items?.data?.[0]?.price?.id || null;
-
-            // Determine plan from price ID using env vars
-            let plan = "pro";
-            const agencyMonthly = Deno.env.get("STRIPE_PRICE_AGENCY_MONTHLY");
-            const agencyYearly = Deno.env.get("STRIPE_PRICE_AGENCY_YEARLY");
-            if (priceId && (priceId === agencyMonthly || priceId === agencyYearly)) {
-              plan = "agency";
-            }
-
-            const proYearly = Deno.env.get("STRIPE_PRICE_PRO_YEARLY");
-            const agencyYearlyAlt = Deno.env.get("STRIPE_PRICE_AGENCY_YEARLY");
-            const billingCycle = (priceId === proYearly || priceId === agencyYearlyAlt) ? "yearly" : "monthly";
-
-            // Look up userId: find the Stripe customer email, then match to profiles
-            const stripeCustomer = await stripe.customers.retrieve(customerId);
-            const customerEmail = (stripeCustomer as any).email;
-            let userId: string | null = null;
-
-            if (customerEmail) {
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("id")
-                .eq("email", customerEmail)
-                .maybeSingle();
-              userId = profile?.id || null;
-            }
-
-            if (!userId) {
-              // Also check checkout session metadata as last resort
-              const sessions = await stripe.checkout.sessions.list({
-                subscription: subId,
-                limit: 1,
-              });
-              if (sessions.data.length > 0) {
-                userId = sessions.data[0].metadata?.userId || null;
-              }
-            }
-
-            if (userId) {
-              const { error: upsertErr } = await supabase.from("subscriptions").upsert({
-                user_id: userId,
-                stripe_customer_id: customerId,
-                stripe_subscription_id: subId,
-                plan,
-                billing_cycle: billingCycle,
-                status: stripeSub.status,
-                price_id: priceId,
-                current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
-              }, { onConflict: "user_id" });
-
-              if (upsertErr) {
-                log("ERROR fallback subscription upsert", upsertErr);
-              } else {
-                log("Fallback subscription created", { userId, plan, status: stripeSub.status });
-              }
-            } else {
-              log("WARNING: Could not determine userId for fallback", { customerId, customerEmail });
-            }
-          } else {
-            log("No subscription ID on invoice, skipping fallback", { customerId });
-          }
+          log("No subscription row found for customer, skipping", { customerId });
         }
         break;
       }
