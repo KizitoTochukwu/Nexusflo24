@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Mail, Facebook, Linkedin, Instagram, Loader2 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/nexusflo24-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";

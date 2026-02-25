@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ReactNode } from "react";
 import { Bot, Zap, TrendingUp, BarChart3 } from "lucide-react";
+import nexusLogo from "@/assets/nexusflo24-logo.png";
 
 const features = [
   { icon: Bot, text: "AI-Powered Lead Scoring & Nurturing" },
@@ -23,20 +24,10 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
 
         <div className="relative z-10">
           <Link to="/" className="inline-flex items-center gap-2.5">
-            <svg viewBox="0 0 300 80" className="h-10 w-auto" aria-label="NexusFlo24 Logo">
-              <defs>
-                <linearGradient id="auth-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#D4A843" />
-                  <stop offset="100%" stopColor="#B8912E" />
-                </linearGradient>
-              </defs>
-              <text x="0" y="55" fontFamily="Inter, system-ui, sans-serif" fontWeight="800" fontSize="48" fill="white">
-                Nexus
-              </text>
-              <text x="148" y="55" fontFamily="Inter, system-ui, sans-serif" fontWeight="800" fontSize="48" fill="url(#auth-gold-grad)">
-                Flo24
-              </text>
-            </svg>
+            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-10 w-10 rounded-lg object-cover" />
+            <span className="text-2xl font-extrabold text-primary-foreground">
+              Nexus<span className="text-gradient-gold">Flo24</span>
+            </span>
           </Link>
         </div>
 
