@@ -117,7 +117,7 @@ Respond with valid JSON using this exact structure:
     });
   } catch (e) {
     console.error("generate-campaign-copy error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Failed to generate campaign copy. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

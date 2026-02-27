@@ -105,7 +105,10 @@ serve(async (req) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[create-checkout-session] Error:", msg);
-    return new Response(JSON.stringify({ error: msg }), {
+    // Return safe messages for known client errors, generic for others
+    const safeMessages = ["User not authenticated", "Missing priceId", "Invalid priceId"];
+    const clientMsg = safeMessages.includes(msg) ? msg : "Unable to create checkout session.";
+    return new Response(JSON.stringify({ error: clientMsg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });

@@ -90,7 +90,9 @@ const App = () => (
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
-                <Route path="admin" element={<AdminDashboard />} />
+                <Route element={<AdminGuard />}>
+                  <Route path="admin" element={<AdminDashboard />} />
+                </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
 

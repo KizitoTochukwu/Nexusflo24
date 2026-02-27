@@ -6,11 +6,10 @@ const log = (step: string, details?: unknown) =>
   console.log(`[STRIPE-WEBHOOK] ${step}`, details ? JSON.stringify(details) : "");
 
 serve(async (req) => {
-  // Log every incoming request
+  // Log incoming request (omit sensitive headers)
   log("Request received", {
     method: req.method,
     url: req.url,
-    headers: Object.fromEntries(req.headers.entries()),
   });
 
   // Detect Stripe mode
