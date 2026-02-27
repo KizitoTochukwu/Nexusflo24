@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sanitizeString, isValidEmail, sanitizeTags, safeErrorResponse } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,14 +18,22 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const { full_name, email, phone, source, tags, notes, meta } = body;
 
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    // Validate and sanitize inputs
+    const email = sanitizeString(body.email, 255);
+    if (!email || !isValidEmail(email)) {
       return new Response(JSON.stringify({ error: "Valid email is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const full_name = sanitizeString(body.full_name, 100);
+    const phone = sanitizeString(body.phone, 20);
+    const source = sanitizeString(body.source, 100);
+    const notes = sanitizeString(body.notes, 1000);
+    const tags = sanitizeTags(body.tags);
+    const meta = typeof body.meta === "object" && body.meta !== null ? body.meta : {};
 
     // Determine owner: use auth user if present, otherwise pick the first admin/profile
     let ownerId: string | null = null;
@@ -69,18 +78,19 @@ Deno.serve(async (req) => {
     }
 
     const workspaceId = membership.workspace_id;
+    const normalizedEmail = email.toLowerCase();
 
     // Check for existing lead with same email within workspace
     const { data: existing } = await supabase
       .from("leads")
       .select("id, tags")
       .eq("workspace_id", workspaceId)
-      .eq("email", email.trim().toLowerCase())
+      .eq("email", normalizedEmail)
       .maybeSingle();
 
     let leadId: string;
     const now = new Date().toISOString();
-    const newTags = tags || ["website-signup"];
+    const newTags = tags.length > 0 ? tags : ["website-signup"];
 
     if (existing) {
       const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
@@ -104,7 +114,7 @@ Deno.serve(async (req) => {
           user_id: ownerId,
           workspace_id: workspaceId,
           full_name: full_name || null,
-          email: email.trim().toLowerCase(),
+          email: normalizedEmail,
           phone: phone || null,
           source: source || "Landing Page",
           status: "New",
@@ -125,14 +135,14 @@ Deno.serve(async (req) => {
       user_id: ownerId,
       workspace_id: workspaceId,
       type: "form_submit",
-      meta: meta || {},
+      meta: meta,
     });
 
     return new Response(JSON.stringify({ ok: true, leadId, updated: !!existing }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: safeErrorResponse(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

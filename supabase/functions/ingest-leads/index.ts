@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sanitizeString, isValidEmail, isValidPhone, sanitizeTags, safeErrorResponse } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,14 +35,47 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const {
-      full_name, email, phone, source, status, score, tags,
-      notes, meta, utm, event,
-    } = body;
+
+    // Validate and sanitize inputs
+    const full_name = sanitizeString(body.full_name, 100);
+    const email = sanitizeString(body.email, 255);
+    const phone = sanitizeString(body.phone, 20);
+    const source = sanitizeString(body.source, 100);
+    const status = sanitizeString(body.status, 50);
+    const notes = sanitizeString(body.notes, 1000);
+    const tags = sanitizeTags(body.tags);
+    const score = typeof body.score === "number" ? Math.max(0, Math.min(100, Math.round(body.score))) : undefined;
+    const meta = typeof body.meta === "object" && body.meta !== null ? body.meta : undefined;
+    const utm = typeof body.utm === "object" && body.utm !== null ? body.utm : undefined;
+    const event = typeof body.event === "object" && body.event !== null ? body.event : undefined;
+
+    const trimmedEmail = email?.toLowerCase() || "";
+    const trimmedPhone = phone || "";
+
+    if (!trimmedEmail && !trimmedPhone) {
+      return new Response(JSON.stringify({ error: "At least email or phone is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+      return new Response(JSON.stringify({ error: "Invalid email format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (trimmedPhone && !isValidPhone(trimmedPhone)) {
+      return new Response(JSON.stringify({ error: "Invalid phone format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const ownerId = Deno.env.get("OWNER_USER_ID");
     if (!ownerId) {
-      return new Response(JSON.stringify({ error: "OWNER_USER_ID not configured" }), {
+      return new Response(JSON.stringify({ error: "Owner not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -51,7 +85,6 @@ Deno.serve(async (req) => {
     let workspaceId = req.headers.get("X-Workspace-Id");
 
     if (workspaceId) {
-      // Validate workspace exists
       const { data: ws } = await supabase
         .from("workspaces")
         .select("id")
@@ -64,7 +97,6 @@ Deno.serve(async (req) => {
         });
       }
     } else {
-      // Fallback: get owner's first workspace
       console.warn("[ingest-leads] No X-Workspace-Id header provided, falling back to owner's first workspace");
       const { data: membership } = await supabase
         .from("workspace_members")
@@ -82,18 +114,7 @@ Deno.serve(async (req) => {
       workspaceId = membership.workspace_id;
     }
 
-    const trimmedEmail = email?.trim().toLowerCase() || "";
-    const trimmedPhone = phone?.trim() || "";
-
-    if (!trimmedEmail && !trimmedPhone) {
-      return new Response(JSON.stringify({ error: "At least email or phone is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const now = new Date().toISOString();
-    const newTags: string[] = tags || [];
 
     // Try to find existing lead by email or phone within workspace
     let existing: { id: string; tags: string[] | null } | null = null;
@@ -122,7 +143,7 @@ Deno.serve(async (req) => {
     let action: string;
 
     if (existing) {
-      const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
+      const mergedTags = Array.from(new Set([...(existing.tags || []), ...tags]));
       const updates: Record<string, unknown> = {
         updated_at: now,
         last_activity_at: now,
@@ -132,7 +153,7 @@ Deno.serve(async (req) => {
       if (trimmedPhone) updates.phone = trimmedPhone;
       if (source) updates.source = source;
       if (status) updates.status = status;
-      if (score !== undefined && score !== null) updates.score = score;
+      if (score !== undefined) updates.score = score;
       if (notes) updates.notes = notes;
 
       const { error } = await supabase
@@ -155,7 +176,7 @@ Deno.serve(async (req) => {
           source: source || "Make.com",
           status: status || "New",
           score: score ?? 10,
-          tags: newTags.length ? newTags : ["make-ingest"],
+          tags: tags.length ? tags : ["make-ingest"],
           notes: notes || null,
           last_activity_at: now,
         })
@@ -173,15 +194,14 @@ Deno.serve(async (req) => {
     if (utm) activityMeta.utm = utm;
     if (event) activityMeta.event = event;
     if (source) activityMeta.source = source;
-    if (!workspaceId) activityMeta.warning = "X-Workspace-Id not provided, used fallback";
 
     await supabase.from("lead_activities").insert({
       lead_id: leadId,
       user_id: ownerId,
       workspace_id: workspaceId,
-      type: event?.type || "opt_in",
+      type: (event as any)?.type || "opt_in",
       meta: activityMeta,
-      ...(event?.timestamp ? { created_at: event.timestamp } : {}),
+      ...((event as any)?.timestamp ? { created_at: (event as any).timestamp } : {}),
     });
 
     return new Response(
@@ -189,7 +209,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: safeErrorResponse(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
