@@ -137,8 +137,9 @@ export function useCreateFunnel() {
         .from("funnels")
         .insert({ ...funnelData, user_id: user!.id } as any)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Funnel created but could not be read back. Check workspace permissions.");
       if (steps.length > 0) {
         const stepsToInsert = steps.map((s, i) => ({
           funnel_id: data.id,
@@ -178,8 +179,9 @@ export function useUpdateFunnel() {
         .update(updates as any)
         .eq("id", id)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Funnel updated but could not be read back. Check workspace permissions.");
       if (steps !== undefined) {
         await supabase.from("funnel_steps").delete().eq("funnel_id", id);
         if (steps.length > 0) {
@@ -214,7 +216,7 @@ export function useUpdateFunnelStep() {
         .update(updates as any)
         .eq("id", id)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
