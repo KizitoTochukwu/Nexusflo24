@@ -52,9 +52,13 @@ function ProfileTab() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) { toast.error("Only JPG, PNG, GIF, or WebP images are allowed."); return; }
     if (file.size > 2 * 1024 * 1024) { toast.error("Max file size is 2MB"); return; }
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!ext || !["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) { toast.error("Invalid file extension."); return; }
     setUploading(true);
-    const path = `${user.id}/avatar.${file.name.split(".").pop()}`;
+    const path = `${user.id}/avatar.${ext}`;
     const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
     if (upErr) { toast.error("Upload failed"); setUploading(false); return; }
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
