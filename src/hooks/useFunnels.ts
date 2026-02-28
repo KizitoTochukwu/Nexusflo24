@@ -174,14 +174,30 @@ export function useUpdateFunnel() {
       workspace_id: string;
       steps?: { step_type: string; page_content?: Record<string, unknown> }[];
     }) => {
-      const { data, error } = await supabase
-        .from("funnels")
-        .update(updates as any)
-        .eq("id", id)
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) throw new Error("Funnel updated but could not be read back. Check workspace permissions.");
+      // Only call update if there are actual field changes
+      const hasFieldUpdates = Object.keys(updates).length > 0;
+      let data: any = null;
+      if (hasFieldUpdates) {
+        const { data: updated, error } = await supabase
+          .from("funnels")
+          .update({ ...updates, updated_at: new Date().toISOString() } as any)
+          .eq("id", id)
+          .select()
+          .maybeSingle();
+        if (error) throw error;
+        if (!updated) throw new Error("Funnel updated but could not be read back. Check workspace permissions.");
+        data = updated;
+      } else {
+        // Touch updated_at so read-back succeeds even when only steps change
+        const { data: touched, error } = await supabase
+          .from("funnels")
+          .update({ updated_at: new Date().toISOString() } as any)
+          .eq("id", id)
+          .select()
+          .maybeSingle();
+        if (error) throw error;
+        data = touched;
+      }
       if (steps !== undefined) {
         await supabase.from("funnel_steps").delete().eq("funnel_id", id);
         if (steps.length > 0) {
