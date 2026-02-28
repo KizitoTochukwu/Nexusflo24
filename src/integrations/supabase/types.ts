@@ -870,6 +870,8 @@ export type Database = {
       workspaces: {
         Row: {
           created_at: string
+          demo_mode_enabled: boolean
+          demo_seed_variant: string
           id: string
           name: string
           owner_user_id: string
@@ -877,6 +879,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          demo_mode_enabled?: boolean
+          demo_seed_variant?: string
           id?: string
           name: string
           owner_user_id: string
@@ -884,6 +888,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          demo_mode_enabled?: boolean
+          demo_seed_variant?: string
           id?: string
           name?: string
           owner_user_id?: string

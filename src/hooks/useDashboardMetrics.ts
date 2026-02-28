@@ -2,13 +2,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { subDays, startOfDay, format } from "date-fns";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { generateDemoMetrics } from "@/lib/demo/demoData";
 
 export function useDashboardMetrics(workspaceId: string) {
   const { user } = useAuth();
+  const { data: demoSettings } = useDemoMode(workspaceId);
 
   return useQuery({
-    queryKey: ["dashboard-metrics", workspaceId],
+    queryKey: ["dashboard-metrics", workspaceId, demoSettings?.demo_mode_enabled, demoSettings?.demo_seed_variant],
     queryFn: async () => {
+      // If demo mode is on, return deterministic demo data
+      if (demoSettings?.demo_mode_enabled) {
+        return generateDemoMetrics(workspaceId, demoSettings.demo_seed_variant);
+      }
+
       const now = new Date();
       const todayStart = startOfDay(now).toISOString();
 
@@ -79,8 +87,10 @@ export function useDashboardMetrics(workspaceId: string) {
         recentLeads,
         campaignChartData,
         hasCampaignData: campaignChartData.length > 0,
+        revenue: null as number | null,
+        isDemo: false,
       };
     },
-    enabled: !!user && !!workspaceId,
+    enabled: !!user && !!workspaceId && demoSettings !== undefined,
   });
 }

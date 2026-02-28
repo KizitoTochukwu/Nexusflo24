@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Users, Mail, MousePointerClick, DollarSign,
-  TrendingUp, CreditCard, Loader2, ChevronRight, Zap, Rocket, FileDown, Send
+  TrendingUp, CreditCard, Loader2, ChevronRight, Zap, Rocket, FileDown, Send, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip, ResponsiveContainer,
   BarChart, Bar
 } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +19,7 @@ import LockedFeature from "@/components/billing/LockedFeature";
 import { usePlanGating } from "@/hooks/usePlanGating";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { useDemoMode } from "@/hooks/useDemoMode";
 
 const workflowNodes = [
   { label: "Form Submitted", type: "trigger" },
@@ -34,7 +37,10 @@ const Dashboard = () => {
   const [portalLoading, setPortalLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const { data: metrics, isLoading } = useDashboardMetrics(workspaceId);
+  const { data: demoSettings } = useDemoMode(workspaceId);
   const { isPro, isAgency, isFree } = usePlanGating();
+
+  const isDemoMode = demoSettings?.demo_mode_enabled ?? false;
 
   useEffect(() => {
     const isNewSignup = localStorage.getItem("nexusflo_new_signup");
@@ -67,7 +73,12 @@ const Dashboard = () => {
   const planLabel = subscription?.plan === "agency" ? "Agency" : subscription?.plan === "pro" ? "Pro" : "Free";
   const statusLabel = subscription?.status === "trialing" ? "Trial" : subscription?.status === "active" ? "Active" : subscription?.status || "—";
 
-  const hasNoData = metrics && metrics.totalLeads === 0 && !metrics.hasCampaignData;
+  const hasNoData = metrics && !metrics.isDemo && metrics.totalLeads === 0 && !metrics.hasCampaignData;
+
+  const formatRevenue = (val: number | null | undefined) => {
+    if (val == null) return "—";
+    return `$${val.toLocaleString()}`;
+  };
 
   const stats = [
     {
@@ -96,8 +107,8 @@ const Dashboard = () => {
     },
     {
       label: "Revenue",
-      value: "—",
-      change: "Connect payments to track revenue",
+      value: formatRevenue(metrics?.revenue),
+      change: metrics?.revenue != null ? "Total tracked" : "Connect payments to track revenue",
       icon: DollarSign,
       color: "text-accent",
       to: `/dashboard/${workspaceId}/analytics`,
@@ -106,7 +117,24 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold">Dashboard Overview</h1>
+        {isDemoMode && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="border-amber-500 bg-amber-50 text-amber-700 gap-1 cursor-help">
+                  <Info className="h-3 w-3" />
+                  Demo Data
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs max-w-[200px]">Analytics are simulated for demo purposes. Disable Demo Mode in Settings to see real data.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
       <p className="text-sm text-muted-foreground">Welcome back! Here's what's happening today.</p>
 
       {showWelcome && (
@@ -169,7 +197,7 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Getting Started - shown when no data */}
+      {/* Getting Started - shown when no data and not demo */}
       {hasNoData && (
         <div className="mt-8 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-6">
           <h3 className="font-semibold flex items-center gap-2"><Rocket className="h-5 w-5 text-accent" /> Getting Started</h3>
@@ -190,16 +218,15 @@ const Dashboard = () => {
 
       {/* Charts */}
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        {/* Leads Over Time */}
         <div className="rounded-xl border bg-card p-6 shadow-card overflow-hidden">
           <h3 className="mb-4 font-semibold">Leads Over Time</h3>
-          {metrics && metrics.totalLeads > 0 ? (
+          {metrics && (metrics.totalLeads > 0 || metrics.isDemo) ? (
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={metrics.leadsChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="day" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip />
+                <RechartTooltip />
                 <Line type="monotone" dataKey="leads" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ fill: "hsl(var(--accent))" }} />
               </LineChart>
             </ResponsiveContainer>
@@ -210,7 +237,6 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Campaign Performance */}
         <div className="rounded-xl border bg-card p-6 shadow-card overflow-hidden">
           <h3 className="mb-4 font-semibold">Campaign Performance</h3>
           {metrics?.hasCampaignData ? (
@@ -219,7 +245,7 @@ const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                <Tooltip />
+                <RechartTooltip />
                 <Bar dataKey="sent" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="opened" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="clicked" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
@@ -295,7 +321,7 @@ const Dashboard = () => {
         </div>
       </LockedFeature>
 
-      {/* Agency-only: Advanced metrics placeholder */}
+      {/* Agency-only */}
       <LockedFeature locked={!isAgency} featureName="Advanced Analytics" requiredPlan="agency">
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border bg-card p-6 shadow-card">
