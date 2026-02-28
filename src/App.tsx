@@ -19,6 +19,7 @@ import DashboardLeads from "./pages/dashboard/DashboardLeads";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
 import DashboardAutomations from "./pages/dashboard/DashboardAutomations";
 import DashboardFunnels from "./pages/dashboard/DashboardFunnels";
+import FunnelDetailPage from "./pages/dashboard/FunnelDetailPage";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics";
 import DashboardSettings from "./pages/dashboard/DashboardSettings";
 import DashboardProfileSettings from "./pages/dashboard/DashboardProfileSettings";
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
+                <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
