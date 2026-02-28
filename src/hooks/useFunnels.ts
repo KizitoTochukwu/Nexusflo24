@@ -12,6 +12,7 @@ export type Funnel = {
   description: string;
   objective: string;
   status: string;
+  slug: string | null;
   created_at: string;
   updated_at: string;
 };

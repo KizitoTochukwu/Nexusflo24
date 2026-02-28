@@ -44,6 +44,7 @@ import GdprRights from "./pages/legal/GdprRights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminGuard from "./components/admin/AdminGuard";
 import AuthCallback from "./pages/AuthCallback";
+import PublicFunnel from "./pages/PublicFunnel";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -97,6 +98,10 @@ const App = () => (
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
+
+              {/* Public funnel routes */}
+              <Route path="/f/:slug" element={<PublicFunnel />} />
+              <Route path="/f/:slug/:stepPath" element={<PublicFunnel />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
