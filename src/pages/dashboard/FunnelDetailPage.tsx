@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,11 +15,13 @@ import {
   Play, Pause, ExternalLink,
 } from "lucide-react";
 import {
-  useFunnels, useFunnelSteps, useFunnelVisits, useUpdateFunnel,
-  OBJECTIVE_OPTIONS, STEP_TYPE_OPTIONS, type Funnel,
+  useFunnels, useFunnelSteps, useFunnelVisits, useUpdateFunnel, useUpdateFunnelStep,
+  OBJECTIVE_OPTIONS, STEP_TYPE_OPTIONS, type Funnel, type FunnelStep,
 } from "@/hooks/useFunnels";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import FunnelStepEditor from "@/components/funnels/FunnelStepEditor";
+import StepPageBuilder from "@/components/funnels/builder/StepPageBuilder";
+import type { Block } from "@/components/funnels/builder/blockTypes";
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -37,8 +39,13 @@ export default function FunnelDetailPage() {
   const { data: steps = [] } = useFunnelSteps(funnelId ?? null);
   const { data: visits = [] } = useFunnelVisits(funnelId ?? null);
   const updateFunnel = useUpdateFunnel();
+  const updateStep = useUpdateFunnelStep();
 
   const defaultTab = searchParams.get("tab") || "builder";
+  const stepIdParam = searchParams.get("stepId");
+
+  // Track which step is being edited in the visual builder
+  const [editingStepId, setEditingStepId] = useState<string | null>(stepIdParam);
 
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -157,15 +164,50 @@ export default function FunnelDetailPage() {
         </TabsList>
 
         {/* Builder Tab */}
-        <TabsContent value="builder">
+        <TabsContent value="builder" className="space-y-4">
+          {/* Step cards row */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg">Funnel Steps</CardTitle>
+              <p className="text-xs text-muted-foreground">Click a step card to open the visual page builder below.</p>
             </CardHeader>
             <CardContent>
-              <FunnelStepEditor steps={steps} onReorder={handleStepsUpdate} />
+              <FunnelStepEditor
+                steps={steps}
+                onReorder={handleStepsUpdate}
+                onStepClick={(step) => setEditingStepId(step.id)}
+                activeStepId={editingStepId}
+              />
             </CardContent>
           </Card>
+
+          {/* Visual page builder for selected step */}
+          {editingStepId && (() => {
+            const activeStep = steps.find((s) => s.id === editingStepId);
+            if (!activeStep) return null;
+            const stepLabel = `${STEP_TYPE_OPTIONS.find((o) => o.value === activeStep.step_type)?.label || activeStep.step_type} — Step ${activeStep.step_order + 1}`;
+            const initialBlocks = Array.isArray(activeStep.page_content?.blocks) ? activeStep.page_content.blocks as Block[] : [];
+            return (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Editing: {stepLabel}</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setEditingStepId(null)}>Close Editor</Button>
+                </div>
+                <StepPageBuilder
+                  key={editingStepId}
+                  initialBlocks={initialBlocks}
+                  stepLabel={stepLabel}
+                  saving={updateStep.isPending}
+                  onSave={(blocks) => {
+                    updateStep.mutate({
+                      id: activeStep.id,
+                      page_content: { ...activeStep.page_content, blocks } as Record<string, unknown>,
+                    });
+                  }}
+                />
+              </div>
+            );
+          })()}
         </TabsContent>
 
         {/* Analytics Tab */}

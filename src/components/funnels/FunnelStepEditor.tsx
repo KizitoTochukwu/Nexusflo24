@@ -42,9 +42,11 @@ interface Props {
   steps: FunnelStep[];
   onReorder: (steps: { step_type: string; page_content: Record<string, unknown> }[]) => void;
   readOnly?: boolean;
+  onStepClick?: (step: FunnelStep) => void;
+  activeStepId?: string | null;
 }
 
-export default function FunnelStepEditor({ steps, onReorder, readOnly }: Props) {
+export default function FunnelStepEditor({ steps, onReorder, readOnly, onStepClick, activeStepId }: Props) {
   const [editingStep, setEditingStep] = useState<FunnelStep | null>(null);
   const [pageContent, setPageContent] = useState<PageContent>({});
   const [mobilePreview, setMobilePreview] = useState(false);
@@ -138,8 +140,8 @@ export default function FunnelStepEditor({ steps, onReorder, readOnly }: Props) 
               <Card
                 className={`flex min-w-[120px] cursor-pointer flex-col items-center gap-1 p-3 transition-colors hover:border-accent ${
                   readOnly ? "" : "hover:shadow-card-hover"
-                }`}
-                onClick={() => !readOnly && openEditor(step)}
+                } ${activeStepId === step.id ? "border-accent ring-2 ring-accent/20" : ""}`}
+                onClick={() => !readOnly && (onStepClick ? onStepClick(step) : openEditor(step))}
               >
                 <div className="flex w-full items-center justify-between">
                   {!readOnly && (
