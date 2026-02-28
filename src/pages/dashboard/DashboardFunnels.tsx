@@ -1,4 +1,3 @@
-import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,22 +12,19 @@ import {
   OBJECTIVE_OPTIONS, type Funnel,
 } from "@/hooks/useFunnels";
 import CreateFunnelDialog from "@/components/funnels/CreateFunnelDialog";
-import FunnelDetailsDrawer from "@/components/funnels/FunnelDetailsDrawer";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 const DashboardFunnels = () => {
   const workspaceId = useWorkspaceId();
+  const navigate = useNavigate();
   const { data: funnels, isLoading } = useFunnels(workspaceId);
   const deleteFunnel = useDeleteFunnel();
   const updateFunnel = useUpdateFunnel();
   const createFunnel = useCreateFunnel();
 
-  const [selectedFunnel, setSelectedFunnel] = useState<Funnel | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
   const openDetails = (f: Funnel) => {
-    setSelectedFunnel(f);
-    setDrawerOpen(true);
+    navigate(`/dashboard/${workspaceId}/funnels/${f.id}`);
   };
 
   const handleDuplicate = (f: Funnel) => {
@@ -125,12 +121,6 @@ const DashboardFunnels = () => {
           </Table>
         )}
       </div>
-
-      <FunnelDetailsDrawer
-        funnel={selectedFunnel}
-        open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setSelectedFunnel(null); }}
-      />
     </DashboardLayout>
   );
 };
