@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
-  Users, Mail, MousePointerClick, DollarSign, ListChecks,
-  TrendingUp, CreditCard, Loader2, ChevronRight, Zap
+  Users, Mail, MousePointerClick, DollarSign,
+  TrendingUp, CreditCard, Loader2, ChevronRight, Zap, Rocket, FileDown, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,17 +15,8 @@ import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import LockedFeature from "@/components/billing/LockedFeature";
 import { usePlanGating } from "@/hooks/usePlanGating";
-import { useLeadStats } from "@/hooks/useLeads";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useMemo } from "react";
-import { format, subDays } from "date-fns";
-
-const campaignData = [
-  { name: "Email Blast", sent: 4500, opened: 1890, clicked: 720 },
-  { name: "WhatsApp Promo", sent: 2100, opened: 1470, clicked: 630 },
-  { name: "SMS Flash", sent: 3200, opened: 2240, clicked: 480 },
-  { name: "Newsletter", sent: 5800, opened: 2610, clicked: 870 },
-];
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 
 const workflowNodes = [
   { label: "Form Submitted", type: "trigger" },
@@ -39,11 +30,10 @@ const workflowNodes = [
 const Dashboard = () => {
   const workspaceId = useWorkspaceId();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { user, subscription, refreshSubscription } = useAuth();
   const [portalLoading, setPortalLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const { data: leadStats } = useLeadStats(workspaceId);
+  const { data: metrics, isLoading } = useDashboardMetrics(workspaceId);
   const { isPro, isAgency, isFree } = usePlanGating();
 
   useEffect(() => {
@@ -77,39 +67,42 @@ const Dashboard = () => {
   const planLabel = subscription?.plan === "agency" ? "Agency" : subscription?.plan === "pro" ? "Pro" : "Free";
   const statusLabel = subscription?.status === "trialing" ? "Trial" : subscription?.status === "active" ? "Active" : subscription?.status || "—";
 
-  const leadsChartData = useMemo(() => {
-    if (!leadStats?.leads) {
-      return Array.from({ length: 7 }, (_, i) => ({
-        day: format(subDays(new Date(), 6 - i), "EEE"),
-        leads: 0,
-      }));
-    }
-    const days: Record<string, number> = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = format(subDays(new Date(), i), "EEE");
-      days[d] = 0;
-    }
-    leadStats.leads.forEach((l: any) => {
-      const d = format(new Date(l.created_at), "EEE");
-      if (d in days) days[d]++;
-    });
-    return Object.entries(days).map(([day, leads]) => ({ day, leads }));
-  }, [leadStats]);
+  const hasNoData = metrics && metrics.totalLeads === 0 && !metrics.hasCampaignData;
 
   const stats = [
-    { label: "New Leads", value: leadStats?.newCount?.toString() ?? "0", change: `${leadStats?.total ?? 0} total`, icon: Users, color: "text-accent", to: `/dashboard/${workspaceId}/leads?status=New` },
-    { label: "Open Rate", value: "42.8%", change: "+3.2%", icon: Mail, color: "text-accent", to: `/dashboard/${workspaceId}/analytics` },
-    { label: "Click Rate", value: "18.4%", change: "+1.5%", icon: MousePointerClick, color: "text-accent", to: `/dashboard/${workspaceId}/analytics` },
-    { label: "Revenue", value: "$34,520", change: "+22%", icon: DollarSign, color: "text-accent", to: `/dashboard/${workspaceId}/analytics` },
-    { label: "Tasks Due", value: "8", change: "Today", icon: ListChecks, color: "text-accent", to: `/dashboard/${workspaceId}/automations` },
+    {
+      label: "New Leads (Today)",
+      value: metrics?.newLeadsToday?.toString() ?? "0",
+      change: `${metrics?.totalLeads ?? 0} total`,
+      icon: Users,
+      color: "text-accent",
+      to: `/dashboard/${workspaceId}/leads?status=New`,
+    },
+    {
+      label: "Open Rate",
+      value: metrics?.hasEmailData ? `${metrics.openRate}%` : "—",
+      change: metrics?.hasEmailData ? "From delivered messages" : "Connect email to unlock",
+      icon: Mail,
+      color: "text-accent",
+      to: `/dashboard/${workspaceId}/analytics`,
+    },
+    {
+      label: "Click Rate",
+      value: metrics?.hasEmailData ? `${metrics.clickRate}%` : "—",
+      change: metrics?.hasEmailData ? "From delivered messages" : "Connect email to unlock",
+      icon: MousePointerClick,
+      color: "text-accent",
+      to: `/dashboard/${workspaceId}/analytics`,
+    },
+    {
+      label: "Revenue",
+      value: "—",
+      change: "Connect payments to track revenue",
+      icon: DollarSign,
+      color: "text-accent",
+      to: `/dashboard/${workspaceId}/analytics`,
+    },
   ];
-
-  const recentLeads = useMemo(() => {
-    if (!leadStats?.leads) return [];
-    return [...leadStats.leads]
-      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 5);
-  }, [leadStats]);
 
   return (
     <DashboardLayout>
@@ -160,7 +153,7 @@ const Dashboard = () => {
       )}
 
       {/* Stats */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Link key={s.label} to={s.to} className="rounded-xl border bg-card p-4 shadow-card transition-shadow hover:shadow-md cursor-pointer">
             <div className="flex items-center justify-between">
@@ -168,42 +161,75 @@ const Dashboard = () => {
               <s.icon className={`h-4 w-4 ${s.color}`} />
             </div>
             <p className="mt-1 text-2xl font-bold">{s.value}</p>
-            <p className="flex items-center gap-1 text-xs text-accent"><TrendingUp className="h-3 w-3" />{s.change}</p>
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              {s.value !== "—" && <TrendingUp className="h-3 w-3 text-accent" />}
+              {s.change}
+            </p>
           </Link>
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <div className="relative rounded-xl border bg-card p-6 shadow-card overflow-hidden">
-          <h3 className="mb-4 font-semibold">Leads Over Time</h3>
-          <div className="pointer-events-auto">
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={leadsChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214 20% 90%)" />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="leads" stroke="hsl(46 67% 52%)" strokeWidth={2} dot={{ fill: "hsl(46 67% 52%)" }} />
-              </LineChart>
-            </ResponsiveContainer>
+      {/* Getting Started - shown when no data */}
+      {hasNoData && (
+        <div className="mt-8 rounded-xl border border-dashed border-accent/40 bg-accent/5 p-6">
+          <h3 className="font-semibold flex items-center gap-2"><Rocket className="h-5 w-5 text-accent" /> Getting Started</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Your workspace is empty. Start by adding data to see real metrics here.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link to={`/dashboard/${workspaceId}/funnels`}>
+              <Button size="sm" variant="outline" className="gap-1"><Zap className="h-3.5 w-3.5" /> Create Funnel</Button>
+            </Link>
+            <Link to={`/dashboard/${workspaceId}/leads`}>
+              <Button size="sm" variant="outline" className="gap-1"><FileDown className="h-3.5 w-3.5" /> Import Leads</Button>
+            </Link>
+            <Link to={`/dashboard/${workspaceId}/campaigns`}>
+              <Button size="sm" variant="outline" className="gap-1"><Send className="h-3.5 w-3.5" /> Send First Campaign</Button>
+            </Link>
           </div>
         </div>
-        <div className="relative rounded-xl border bg-card p-6 shadow-card overflow-hidden">
-          <h3 className="mb-4 font-semibold">Campaign Performance</h3>
-          <div className="pointer-events-auto">
+      )}
+
+      {/* Charts */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        {/* Leads Over Time */}
+        <div className="rounded-xl border bg-card p-6 shadow-card overflow-hidden">
+          <h3 className="mb-4 font-semibold">Leads Over Time</h3>
+          {metrics && metrics.totalLeads > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={campaignData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214 20% 90%)" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+              <LineChart data={metrics.leadsChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="sent" fill="hsl(213 70% 14%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="opened" fill="hsl(213 50% 25%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="clicked" fill="hsl(46 67% 52%)" radius={[4, 4, 0, 0]} />
+                <Line type="monotone" dataKey="leads" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ fill: "hsl(var(--accent))" }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[250px] items-center justify-center">
+              <p className="text-sm text-muted-foreground">No leads yet. <Link to={`/dashboard/${workspaceId}/leads`} className="text-accent hover:underline">Add your first lead</Link>.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Campaign Performance */}
+        <div className="rounded-xl border bg-card p-6 shadow-card overflow-hidden">
+          <h3 className="mb-4 font-semibold">Campaign Performance</h3>
+          {metrics?.hasCampaignData ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={metrics.campaignChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="sent" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="opened" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="clicked" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          ) : (
+            <div className="flex h-[250px] items-center justify-center">
+              <p className="text-sm text-muted-foreground text-center">Campaign analytics will appear here once you send campaigns.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -213,7 +239,7 @@ const Dashboard = () => {
           <h3 className="font-semibold">Recent Leads</h3>
           <Link to={`/dashboard/${workspaceId}/leads`} className="text-xs text-accent hover:underline">View all →</Link>
         </div>
-        {recentLeads.length === 0 ? (
+        {!metrics?.recentLeads?.length ? (
           <p className="text-sm text-muted-foreground text-center py-6">No leads yet. <Link to={`/dashboard/${workspaceId}/leads`} className="text-accent hover:underline">Add your first lead</Link>.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -227,12 +253,12 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentLeads.map((lead: any) => (
-                  <tr key={lead.created_at} className="border-b last:border-0">
+                {metrics.recentLeads.map((lead: any) => (
+                  <tr key={lead.id} className="border-b last:border-0">
                     <td className="px-3 py-3 font-medium">{lead.full_name || lead.email || "—"}</td>
                     <td className="px-3 py-3 text-muted-foreground">{lead.source || "—"}</td>
                     <td className="px-3 py-3">
-                      <span className={`font-semibold ${lead.score >= 80 ? "text-accent" : lead.score >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>{lead.score ?? 0}</span>
+                      <span className={`font-semibold ${(lead.score ?? 0) >= 80 ? "text-accent" : (lead.score ?? 0) >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>{lead.score ?? 0}</span>
                     </td>
                     <td className="px-3 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
