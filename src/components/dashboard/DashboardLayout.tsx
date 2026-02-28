@@ -6,7 +6,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, BookTemplate
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield
 } from "lucide-react";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
@@ -32,7 +32,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
     { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
     { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
-    { icon: BookTemplate, label: "Templates", to: `/dashboard/${workspaceId}/templates` },
     { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
     { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
     ...(isAdmin ? [{ icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` }] : []),
