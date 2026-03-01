@@ -14,30 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      admin_allowlist: {
-        Row: {
-          added_by_user_id: string | null
-          created_at: string
-          email: string
-          id: string
-          notes: string | null
-        }
-        Insert: {
-          added_by_user_id?: string | null
-          created_at?: string
-          email: string
-          id?: string
-          notes?: string | null
-        }
-        Update: {
-          added_by_user_id?: string | null
-          created_at?: string
-          email?: string
-          id?: string
-          notes?: string | null
-        }
-        Relationships: []
-      }
       automation_logs: {
         Row: {
           automation_id: string
@@ -933,10 +909,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_email_in_admin_allowlist: {
-        Args: { _email: string }
-        Returns: boolean
-      }
       is_workspace_admin: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -945,7 +917,6 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
-      sync_admin_role: { Args: never; Returns: undefined }
       user_workspace_ids: { Args: { _user_id: string }; Returns: string[] }
     }
     Enums: {

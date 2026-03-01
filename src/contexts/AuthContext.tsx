@@ -54,14 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSubscription(null);
   };
 
-  const syncAdminRole = async () => {
-    try {
-      await supabase.rpc("sync_admin_role");
-    } catch {
-      // Fail silently — default to user role
-    }
-  };
-
   useEffect(() => {
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -69,7 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
         if (session?.user) {
-          await syncAdminRole();
           setTimeout(() => fetchSubscription(session.user.id), 0);
         } else {
           setSubscription(null);
@@ -78,12 +69,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
-        await syncAdminRole();
         fetchSubscription(session.user.id);
       } else {
         setSubLoading(false);
