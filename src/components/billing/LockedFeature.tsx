@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Lock } from "lucide-react";
 import UpgradeModal from "./UpgradeModal";
 import type { PlanTier } from "@/lib/billing/planLimits";
+import { usePlanGating } from "@/hooks/usePlanGating";
 
 interface LockedFeatureProps {
   locked: boolean;
@@ -12,8 +13,10 @@ interface LockedFeatureProps {
 
 export default function LockedFeature({ locked, featureName, requiredPlan = "pro", children }: LockedFeatureProps) {
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const { isAdmin } = usePlanGating();
 
-  if (!locked) return <>{children}</>;
+  // Admins are never locked out
+  if (!locked || isAdmin) return <>{children}</>;
 
   return (
     <>

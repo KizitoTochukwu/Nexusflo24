@@ -1,14 +1,55 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { getPlanTier, getPlanLimits, type PlanTier, type PlanLimits } from "@/lib/billing/planLimits";
+import { useIsAdmin } from "@/hooks/useAdminRole";
+import { getPlanTier, getPlanLimits, PLAN_LIMITS, type PlanTier, type PlanLimits } from "@/lib/billing/planLimits";
+
+const ADMIN_LIMITS: PlanLimits = {
+  maxLeads: Infinity,
+  maxFunnels: Infinity,
+  maxCampaigns: Infinity,
+  whatsappAutomation: true,
+  smsAutomation: true,
+  aiCopyUnlimited: true,
+  aiCopyDailyLimit: Infinity,
+  behaviourTriggeredAutomation: true,
+  advancedAnalytics: true,
+  multiWorkspace: true,
+  whiteLabelBranding: true,
+  teamInvites: true,
+  apiAccess: true,
+  watermarkedExports: false,
+};
 
 export function usePlanGating() {
   const { subscription, subLoading } = useAuth();
+  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
+
+  const loading = subLoading || adminLoading;
+
+  // Admin override — bypass all plan checks
+  if (isAdmin) {
+    return {
+      tier: "agency" as PlanTier,
+      limits: ADMIN_LIMITS,
+      isPro: true,
+      isAgency: true,
+      isFree: false,
+      isActive: true,
+      isAdmin: true,
+      isBillingWarning: false,
+      canAccess: (_feature: keyof PlanLimits) => true,
+      checkLimit: (_feature: "maxLeads" | "maxFunnels" | "maxCampaigns", _currentCount: number) => ({
+        allowed: true,
+        limit: Infinity,
+        remaining: Infinity,
+      }),
+      loading,
+    };
+  }
 
   const tier: PlanTier = getPlanTier(subscription?.plan);
   const limits: PlanLimits = getPlanLimits(subscription?.plan);
   const isActive = subscription ? ["active", "trialing"].includes(subscription.status) : false;
 
-  // If subscription is canceled/past_due, treat as free
   const effectiveTier: PlanTier = isActive ? tier : "free";
   const effectiveLimits = isActive ? limits : getPlanLimits("free");
 
@@ -27,7 +68,7 @@ export function usePlanGating() {
     return false;
   }
 
-  function checkLimit(feature: "maxLeads" | "maxFunnels" | "maxCampaigns", currentCount: number): { allowed: boolean; limit: number; remaining: number } {
+  function checkLimit(feature: "maxLeads" | "maxFunnels" | "maxCampaigns", currentCount: number) {
     const limit = effectiveLimits[feature];
     const remaining = Math.max(0, limit - currentCount);
     return { allowed: currentCount < limit, limit, remaining };
@@ -40,9 +81,10 @@ export function usePlanGating() {
     isAgency,
     isFree,
     isActive,
+    isAdmin: false,
     isBillingWarning,
     canAccess,
     checkLimit,
-    loading: subLoading,
+    loading,
   };
 }
