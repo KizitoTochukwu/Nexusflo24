@@ -3,9 +3,9 @@ import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function FreePlanBanner() {
-  const { isFree, loading } = usePlanGating();
+  const { isFree, isAdmin, loading } = usePlanGating();
 
-  if (loading || !isFree) return null;
+  if (loading || !isFree || isAdmin) return null;
 
   return (
     <div className="mb-4 flex items-center gap-3 rounded-lg border border-accent/20 bg-accent/5 px-4 py-3">

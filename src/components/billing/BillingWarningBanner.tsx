@@ -5,11 +5,11 @@ import { Link } from "react-router-dom";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 export default function BillingWarningBanner() {
-  const { isBillingWarning } = usePlanGating();
+  const { isBillingWarning, isAdmin } = usePlanGating();
   const { subscription } = useAuth();
   const workspaceId = useWorkspaceId();
 
-  if (!isBillingWarning || !subscription) return null;
+  if (isAdmin || !isBillingWarning || !subscription) return null;
 
   const message =
     subscription.status === "past_due"
