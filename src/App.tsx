@@ -43,6 +43,7 @@ import Disclaimer from "./pages/legal/Disclaimer";
 import AntiSpamPolicy from "./pages/legal/AntiSpamPolicy";
 import GdprRights from "./pages/legal/GdprRights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminAllowlist from "./pages/admin/AdminAllowlist";
 import AdminGuard from "./components/admin/AdminGuard";
 import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
@@ -96,6 +97,7 @@ const App = () => (
                 <Route path="settings/*" element={<DashboardSettings />} />
                 <Route element={<AdminGuard />}>
                   <Route path="admin" element={<AdminDashboard />} />
+                  <Route path="admin/access" element={<AdminAllowlist />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
