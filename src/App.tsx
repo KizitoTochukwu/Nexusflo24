@@ -26,6 +26,7 @@ import DashboardProfileSettings from "./pages/dashboard/DashboardProfileSettings
 import NotFound from "./pages/NotFound";
 import ChatbotWidget from "./components/ChatbotWidget";
 import CookieConsentBanner from "./components/CookieConsentBanner";
+import InactivityManager from "./components/auth/InactivityManager";
 import DashboardRedirect from "./pages/DashboardRedirect";
 import Referral from "./pages/Referral";
 import Academy from "./pages/Academy";
@@ -105,6 +106,7 @@ const App = () => (
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <InactivityManager />
             <ChatbotWidget />
             <CookieConsentBanner />
           </WorkspaceProvider>
