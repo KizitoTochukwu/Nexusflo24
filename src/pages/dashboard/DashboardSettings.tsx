@@ -204,20 +204,88 @@ function BillingTab() {
 /* ── Integrations Tab ────────────────────────────────────── */
 
 function IntegrationsTab() {
+  const workspaceId = useWorkspaceId();
   const [emailProvider, setEmailProvider] = useState("");
   const [emailApiKey, setEmailApiKey] = useState("");
   const [whatsappToken, setWhatsappToken] = useState("");
   const [whatsappPhoneId, setWhatsappPhoneId] = useState("");
-  const [smsGateway, setSmsGateway] = useState("");
-  const [smsApiKey, setSmsApiKey] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+
+  // SMS state
+  const [smsProvider, setSmsProvider] = useState("twilio");
+  const [smsAccountSid, setSmsAccountSid] = useState("");
+  const [smsAuthToken, setSmsAuthToken] = useState("");
+  const [smsFromNumber, setSmsFromNumber] = useState("");
+  const [smsSaving, setSmsSaving] = useState(false);
+  const [smsConnected, setSmsConnected] = useState(false);
+  const [smsLoading, setSmsLoading] = useState(true);
+  const [testPhone, setTestPhone] = useState("");
+  const [testSending, setTestSending] = useState(false);
 
   const toggle = (key: string) => setShowKeys((p) => ({ ...p, [key]: !p[key] }));
   const mask = (val: string) => val ? "•".repeat(Math.min(val.length, 20)) + val.slice(-4) : "";
 
   const handleSaveIntegration = (name: string) => {
     toast.success(`${name} settings saved locally. Backend integration coming soon.`);
+  };
+
+  // Fetch SMS settings on load
+  useEffect(() => {
+    if (!workspaceId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("sms_settings" as any)
+        .select("provider, account_sid, from_number, is_active")
+        .eq("workspace_id", workspaceId)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setSmsConnected(true);
+        setSmsProvider((data as any).provider || "twilio");
+        setSmsAccountSid((data as any).account_sid || "");
+        setSmsFromNumber((data as any).from_number || "");
+      }
+      setSmsLoading(false);
+    })();
+  }, [workspaceId]);
+
+  const handleSaveSms = async () => {
+    if (!smsAuthToken) { toast.error("Auth Token is required"); return; }
+    if (smsProvider === "twilio" && !smsAccountSid) { toast.error("Account SID is required for Twilio"); return; }
+    setSmsSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sms-save-settings", {
+        body: { workspaceId, provider: smsProvider, accountSid: smsAccountSid, authToken: smsAuthToken, fromNumber: smsFromNumber },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setSmsConnected(true);
+      setSmsAuthToken("");
+      toast.success("SMS Connected Successfully ✅");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save SMS settings");
+    } finally {
+      setSmsSaving(false);
+    }
+  };
+
+  const handleTestSms = async () => {
+    if (!testPhone) { toast.error("Enter a test phone number"); return; }
+    setTestSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sms-send", {
+        body: { workspaceId, to: testPhone, message: "NexusFlo24 Test SMS ✅ Your SMS integration is working!" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Test SMS sent successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send test SMS");
+    } finally {
+      setTestSending(false);
+    }
   };
 
   return (
@@ -277,28 +345,75 @@ function IntegrationsTab() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-accent" /><CardTitle className="text-lg">SMS Gateway</CardTitle></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-accent" /><CardTitle className="text-lg">SMS Gateway</CardTitle></div>
+            {!smsLoading && (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${smsConnected ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}>
+                {smsConnected ? "✓ Connected" : "Not Connected"}
+              </span>
+            )}
+          </div>
           <CardDescription>Connect your SMS provider (Twilio, Vonage, etc.)</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>Provider</Label>
-              <Select value={smsGateway} onValueChange={setSmsGateway}>
+              <Select value={smsProvider} onValueChange={setSmsProvider}>
                 <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="twilio">Twilio</SelectItem>
-                  <SelectItem value="vonage">Vonage</SelectItem>
-                  <SelectItem value="messagebird">MessageBird</SelectItem>
+                  <SelectItem value="vonage">Vonage (coming soon)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {smsProvider === "twilio" && (
+              <div className="space-y-1">
+                <Label>Account SID</Label>
+                <Input value={smsAccountSid} onChange={(e) => setSmsAccountSid(e.target.value)} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" maxLength={40} />
+              </div>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label>API Key / Auth Token</Label>
-              <Input value={showKeys.sms ? smsApiKey : mask(smsApiKey)} onChange={(e) => setSmsApiKey(e.target.value)} placeholder="Enter API key" type={showKeys.sms ? "text" : "password"} />
+              <Label>Auth Token</Label>
+              <div className="relative">
+                <Input
+                  value={showKeys.sms ? smsAuthToken : mask(smsAuthToken)}
+                  onChange={(e) => setSmsAuthToken(e.target.value)}
+                  placeholder={smsConnected ? "Enter new token to update" : "Enter auth token"}
+                  type={showKeys.sms ? "text" : "password"}
+                />
+                <button onClick={() => toggle("sms")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
+                  {showKeys.sms ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>From Number</Label>
+              <Input value={smsFromNumber} onChange={(e) => setSmsFromNumber(e.target.value)} placeholder="+15551234567" maxLength={20} />
             </div>
           </div>
-          <Button size="sm" onClick={() => handleSaveIntegration("SMS")} className="bg-accent text-accent-foreground hover:bg-accent/90"><Save className="h-4 w-4 mr-1" />Save</Button>
+          <Button size="sm" onClick={handleSaveSms} disabled={smsSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+            {smsSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+            {smsConnected ? "Update SMS Settings" : "Connect SMS"}
+          </Button>
+
+          {smsConnected && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Send Test SMS</Label>
+                <div className="flex gap-2">
+                  <Input value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="+15551234567" className="max-w-[220px]" maxLength={20} />
+                  <Button variant="outline" size="sm" onClick={handleTestSms} disabled={testSending}>
+                    {testSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Smartphone className="h-4 w-4 mr-1" />}
+                    Send Test
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
