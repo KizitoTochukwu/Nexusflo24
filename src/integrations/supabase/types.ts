@@ -775,6 +775,97 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          from_number: string | null
+          id: string
+          message: string
+          provider: string
+          provider_message_id: string | null
+          status: string
+          to_number: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          from_number?: string | null
+          id?: string
+          message: string
+          provider: string
+          provider_message_id?: string | null
+          status?: string
+          to_number: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          from_number?: string | null
+          id?: string
+          message?: string
+          provider?: string
+          provider_message_id?: string | null
+          status?: string
+          to_number?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_settings: {
+        Row: {
+          account_sid: string | null
+          auth_token_encrypted: string
+          created_at: string
+          from_number: string | null
+          id: string
+          is_active: boolean
+          provider: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_sid?: string | null
+          auth_token_encrypted: string
+          created_at?: string
+          from_number?: string | null
+          id?: string
+          is_active?: boolean
+          provider?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_sid?: string | null
+          auth_token_encrypted?: string
+          created_at?: string
+          from_number?: string | null
+          id?: string
+          is_active?: boolean
+          provider?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           billing_cycle: string | null
