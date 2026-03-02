@@ -183,8 +183,13 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* ignore logging errors */ }
 
-    const errMsg = err?.message || "Failed to send SMS";
-    const isClientError = /Invalid 'To' Phone Number|Invalid 'From' Phone Number|cannot be the same/i.test(errMsg);
+    const errMsgRaw = err?.message || "Failed to send SMS";
+    const isTwilioPairError = /current combination of 'To'.*'From'|and\/or 'From' parameters/i.test(errMsgRaw);
+    const isClientError = /Invalid 'To' Phone Number|Invalid 'From' Phone Number|cannot be the same/i.test(errMsgRaw) || isTwilioPairError;
+    const errMsg = isTwilioPairError
+      ? "Twilio rejected this To/From combination. If your account is in trial mode, verify the recipient number in Twilio and ensure SMS permissions are enabled for that destination country."
+      : errMsgRaw;
+
     return new Response(JSON.stringify({ success: false, error: errMsg }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
