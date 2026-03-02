@@ -27,50 +27,86 @@ async function decrypt(encryptedBase64: string, secret: string): Promise<string>
 }
 
 Deno.serve(async (req) => {
-  // GET = webhook verification from Meta
+  // OPTIONS = CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // GET = Meta webhook verification challenge
   if (req.method === "GET") {
     const url = new URL(req.url);
     const mode = url.searchParams.get("hub.mode");
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
+    console.log("Webhook GET verification request:", { mode, hasToken: !!token, hasChallenge: !!challenge });
+
     if (mode !== "subscribe" || !token || !challenge) {
+      console.log("Missing or invalid params — returning 400");
       return new Response("Bad request", { status: 400 });
     }
 
-    // We need to find the workspace that owns this verify token
     const encryptionKey = Deno.env.get("WHATSAPP_SETTINGS_ENCRYPTION_KEY");
     if (!encryptionKey) {
-      console.error("WHATSAPP_SETTINGS_ENCRYPTION_KEY not configured");
+      console.error("WHATSAPP_SETTINGS_ENCRYPTION_KEY not set");
       return new Response("Server error", { status: 500 });
     }
 
-    const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: allSettings } = await adminClient
-      .from("whatsapp_settings")
-      .select("verify_token_encrypted")
-      .eq("is_active", true);
+    try {
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
 
-    let verified = false;
-    for (const s of allSettings || []) {
-      try {
-        const decryptedToken = await decrypt(s.verify_token_encrypted, encryptionKey);
-        if (decryptedToken === token) { verified = true; break; }
-      } catch { /* skip */ }
+      const { data: allSettings, error: fetchErr } = await adminClient
+        .from("whatsapp_settings")
+        .select("verify_token_encrypted")
+        .eq("is_active", true);
+
+      if (fetchErr) {
+        console.error("DB fetch error:", fetchErr.message);
+        return new Response("Server error", { status: 500 });
+      }
+
+      console.log(`Found ${allSettings?.length ?? 0} active whatsapp_settings rows`);
+
+      let verified = false;
+      for (const s of allSettings || []) {
+        try {
+          const decryptedToken = await decrypt(s.verify_token_encrypted, encryptionKey);
+          if (decryptedToken === token) {
+            verified = true;
+            break;
+          }
+        } catch (decErr) {
+          console.error("Decryption failed for a row:", decErr);
+        }
+      }
+
+      if (!verified) {
+        console.log("No matching verify token found — returning 403");
+        return new Response("Forbidden", { status: 403 });
+      }
+
+      console.log("Verify token matched — returning challenge");
+      return new Response(challenge, {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      });
+    } catch (err) {
+      console.error("Unexpected error during GET verification:", err);
+      return new Response("Server error", { status: 500 });
     }
-
-    if (!verified) {
-      return new Response("Forbidden", { status: 403 });
-    }
-
-    return new Response(challenge, { status: 200, headers: { "Content-Type": "text/plain" } });
   }
 
-  // POST = inbound messages + status updates
+  // POST = inbound messages + status updates from Meta
   if (req.method === "POST") {
     try {
       const payload = await req.json();
-      const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
 
       const entries = payload?.entry || [];
       for (const entry of entries) {
@@ -128,6 +164,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   return new Response("Method not allowed", { status: 405 });
 });

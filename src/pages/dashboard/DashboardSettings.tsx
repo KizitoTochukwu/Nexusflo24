@@ -462,7 +462,7 @@ function IntegrationsTab() {
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Paste this into Meta Developer Console → WhatsApp → Configuration.</p>
+              <p className="text-xs text-muted-foreground">Paste this into Meta Developer Console → WhatsApp → Configuration. Keep <strong>"Attach a client certificate"</strong> OFF.</p>
             </div>
           </div>
           <Button size="sm" onClick={handleSaveWhatsApp} disabled={waSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
