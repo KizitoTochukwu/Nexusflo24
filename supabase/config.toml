@@ -1,28 +1,23 @@
 project_id = "stuaikfyuwcjmchcvfie"
 
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.ingest-leads]
-verify_jwt = false
-
-[functions.capture-lead]
-verify_jwt = false
-
-[functions.generate-campaign-copy]
-verify_jwt = false
-
-[functions.sms-save-settings]
-verify_jwt = false
-
-[functions.sms-send]
-verify_jwt = false
-
-[functions.whatsapp-save-settings]
-verify_jwt = false
-
-[functions.whatsapp-send]
-verify_jwt = false
-
-[functions.whatsapp-webhook]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.capture-lead]
+    verify_jwt = false
+  [functions.generate-campaign-copy]
+    verify_jwt = false
+  [functions.ingest-leads]
+    verify_jwt = false
+  [functions.sms-save-settings]
+    verify_jwt = false
+  [functions.sms-send]
+    verify_jwt = false
+  [functions.stripe-webhook]
+    verify_jwt = false
+  [functions.whatsapp-save-settings]
+    verify_jwt = false
+  [functions.whatsapp-send]
+    verify_jwt = false
+  [functions.whatsapp-webhook]
+    verify_jwt = false
