@@ -26,6 +26,31 @@ async function decrypt(encryptedBase64: string, secret: string): Promise<string>
   return new TextDecoder().decode(decrypted);
 }
 
+function normalizePhoneNumber(raw: string): string | null {
+  const cleaned = raw.replace(/[\s\-()]/g, "");
+
+  if (cleaned.startsWith("+")) {
+    return /^\+[1-9]\d{7,14}$/.test(cleaned) ? cleaned : null;
+  }
+
+  if (cleaned.startsWith("00")) {
+    const intl = `+${cleaned.slice(2)}`;
+    return /^\+[1-9]\d{7,14}$/.test(intl) ? intl : null;
+  }
+
+  // UK local fallback (e.g., 07xxxxxxxxx -> +447xxxxxxxxx)
+  if (/^0\d{10}$/.test(cleaned)) {
+    return `+44${cleaned.slice(1)}`;
+  }
+
+  // If country code is provided without plus, normalize it
+  if (/^[1-9]\d{7,14}$/.test(cleaned)) {
+    return `+${cleaned}`;
+  }
+
+  return null;
+}
+
 async function sendTwilioSms(accountSid: string, authToken: string, from: string, to: string, body: string) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
   const auth = btoa(`${accountSid}:${authToken}`);
@@ -68,10 +93,12 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, message" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Validate phone number format (allow local formats like 07xxx, international +44xxx, etc.)
-    const cleanedTo = to.replace(/[\s\-()]/g, "");
-    if (!/^\+?\d{7,15}$/.test(cleanedTo)) {
-      return new Response(JSON.stringify({ error: "Invalid phone number format. Use international format like +447517327597" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const normalizedTo = normalizePhoneNumber(to);
+    if (!normalizedTo) {
+      return new Response(
+        JSON.stringify({ error: "Invalid phone number format. Use international format like +447517327597." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -103,12 +130,23 @@ Deno.serve(async (req) => {
     const authToken = await decrypt(settings.auth_token_encrypted, encryptionKey);
 
     let result: { providerMessageId: string; status: string };
+    let normalizedFrom: string | null = null;
 
     if (settings.provider === "twilio") {
       if (!settings.account_sid || !settings.from_number) {
         return new Response(JSON.stringify({ error: "Twilio Account SID and From Number are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      result = await sendTwilioSms(settings.account_sid, authToken, settings.from_number, to, message);
+
+      normalizedFrom = normalizePhoneNumber(settings.from_number);
+      if (!normalizedFrom) {
+        return new Response(JSON.stringify({ error: "Configured Twilio From Number is invalid. Please re-save SMS settings with a valid E.164 number." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (normalizedTo === normalizedFrom) {
+        return new Response(JSON.stringify({ error: "'To' and 'From' number cannot be the same" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      result = await sendTwilioSms(settings.account_sid, authToken, normalizedFrom, normalizedTo, message);
     } else {
       return new Response(JSON.stringify({ error: `Provider '${settings.provider}' not yet implemented` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -117,8 +155,8 @@ Deno.serve(async (req) => {
     await adminClient.from("sms_logs").insert({
       workspace_id: workspaceId,
       provider: settings.provider,
-      to_number: to,
-      from_number: settings.from_number,
+      to_number: normalizedTo,
+      from_number: normalizedFrom,
       message,
       status: "sent",
       provider_message_id: result.providerMessageId,
@@ -145,6 +183,8 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* ignore logging errors */ }
 
-    return new Response(JSON.stringify({ success: false, error: err.message || "Failed to send SMS" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const errMsg = err?.message || "Failed to send SMS";
+    const isClientError = /Invalid 'To' Phone Number|Invalid 'From' Phone Number|cannot be the same/i.test(errMsg);
+    return new Response(JSON.stringify({ success: false, error: errMsg }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
