@@ -159,12 +159,17 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                     </Select>
                   )}
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
-                    <Input
-                      placeholder="Message template"
-                      className="w-[200px] bg-background"
-                      value={(step.config.message as string) || ""}
-                      onChange={(e) => updateStep(i, { message: e.target.value })}
-                    />
+                    <div className="space-y-1 w-full">
+                      <Input
+                        placeholder="Message template (e.g. Hi {{first_name}}, thanks for signing up!)"
+                        className="w-full bg-background"
+                        value={(step.config.message as string) || ""}
+                        onChange={(e) => updateStep(i, { message: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Variables: {"{{first_name}}"}, {"{{email}}"}, {"{{phone}}"}, {"{{source}}"}
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
