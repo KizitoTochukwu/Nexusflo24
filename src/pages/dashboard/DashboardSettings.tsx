@@ -207,8 +207,6 @@ function IntegrationsTab() {
   const workspaceId = useWorkspaceId();
   const [emailProvider, setEmailProvider] = useState("");
   const [emailApiKey, setEmailApiKey] = useState("");
-  const [whatsappToken, setWhatsappToken] = useState("");
-  const [whatsappPhoneId, setWhatsappPhoneId] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
 
@@ -223,11 +221,29 @@ function IntegrationsTab() {
   const [testPhone, setTestPhone] = useState("");
   const [testSending, setTestSending] = useState(false);
 
+  // WhatsApp state
+  const [waAccessToken, setWaAccessToken] = useState("");
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState("");
+  const [waVerifyToken, setWaVerifyToken] = useState("");
+  const [waSaving, setWaSaving] = useState(false);
+  const [waConnected, setWaConnected] = useState(false);
+  const [waLoading, setWaLoading] = useState(true);
+  const [waTestPhone, setWaTestPhone] = useState("");
+  const [waTestMessage, setWaTestMessage] = useState("");
+  const [waTestSending, setWaTestSending] = useState(false);
+
   const toggle = (key: string) => setShowKeys((p) => ({ ...p, [key]: !p[key] }));
   const mask = (val: string) => val ? "•".repeat(Math.min(val.length, 20)) + val.slice(-4) : "";
 
   const handleSaveIntegration = (name: string) => {
     toast.success(`${name} settings saved locally. Backend integration coming soon.`);
+  };
+
+  const generateVerifyToken = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const token = Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    setWaVerifyToken(token);
+    toast.success("Verify token generated. Save settings to apply.");
   };
 
   // Fetch SMS settings on load
@@ -248,6 +264,25 @@ function IntegrationsTab() {
         setSmsFromNumber((data as any).from_number || "");
       }
       setSmsLoading(false);
+    })();
+  }, [workspaceId]);
+
+  // Fetch WhatsApp settings on load
+  useEffect(() => {
+    if (!workspaceId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("whatsapp_settings" as any)
+        .select("phone_number_id, is_active")
+        .eq("workspace_id", workspaceId)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setWaConnected(true);
+        setWaPhoneNumberId((data as any).phone_number_id || "");
+      }
+      setWaLoading(false);
     })();
   }, [workspaceId]);
 
@@ -288,6 +323,48 @@ function IntegrationsTab() {
     }
   };
 
+  const handleSaveWhatsApp = async () => {
+    if (!waAccessToken) { toast.error("Access Token is required"); return; }
+    if (!waPhoneNumberId) { toast.error("Phone Number ID is required"); return; }
+    if (!waVerifyToken) { toast.error("Verify Token is required"); return; }
+    setWaSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-save-settings", {
+        body: { workspaceId, phoneNumberId: waPhoneNumberId, accessToken: waAccessToken, verifyToken: waVerifyToken },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setWaConnected(true);
+      setWaAccessToken("");
+      setWaVerifyToken("");
+      toast.success("WhatsApp Connected Successfully ✅");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save WhatsApp settings");
+    } finally {
+      setWaSaving(false);
+    }
+  };
+
+  const handleTestWhatsApp = async () => {
+    if (!waTestPhone) { toast.error("Enter a test phone number"); return; }
+    if (!waTestMessage) { toast.error("Enter a test message"); return; }
+    setWaTestSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+        body: { workspaceId, to: waTestPhone, type: "text", body: waTestMessage },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`WhatsApp sent! ID: ${data.waMessageId || "—"}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send WhatsApp message");
+    } finally {
+      setWaTestSending(false);
+    }
+  };
+
+  const webhookCallbackUrl = `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/whatsapp-webhook`;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -323,26 +400,104 @@ function IntegrationsTab() {
         </CardContent>
       </Card>
 
+      {/* WhatsApp Cloud API Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-accent" /><CardTitle className="text-lg">WhatsApp Cloud API</CardTitle></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-accent" /><CardTitle className="text-lg">WhatsApp Cloud API</CardTitle></div>
+            {!waLoading && (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${waConnected ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}>
+                {waConnected ? "✓ Connected" : "Not Connected"}
+              </span>
+            )}
+          </div>
           <CardDescription>Connect your Meta WhatsApp Business account.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>Access Token</Label>
-              <Input value={showKeys.wa ? whatsappToken : mask(whatsappToken)} onChange={(e) => setWhatsappToken(e.target.value)} placeholder="Enter access token" type={showKeys.wa ? "text" : "password"} />
+              <div className="relative">
+                <Input
+                  value={showKeys.wa ? waAccessToken : mask(waAccessToken)}
+                  onChange={(e) => setWaAccessToken(e.target.value)}
+                  placeholder={waConnected ? "Enter new token to update" : "Enter access token"}
+                  type={showKeys.wa ? "text" : "password"}
+                />
+                <button onClick={() => toggle("wa")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
+                  {showKeys.wa ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <div className="space-y-1">
               <Label>Phone Number ID</Label>
-              <Input value={whatsappPhoneId} onChange={(e) => setWhatsappPhoneId(e.target.value)} placeholder="e.g. 1234567890" />
+              <Input value={waPhoneNumberId} onChange={(e) => setWaPhoneNumberId(e.target.value)} placeholder="e.g. 1234567890" />
             </div>
           </div>
-          <Button size="sm" onClick={() => handleSaveIntegration("WhatsApp")} className="bg-accent text-accent-foreground hover:bg-accent/90"><Save className="h-4 w-4 mr-1" />Save</Button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Verify Token</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    value={showKeys.waVerify ? waVerifyToken : mask(waVerifyToken)}
+                    onChange={(e) => setWaVerifyToken(e.target.value)}
+                    placeholder={waConnected ? "Enter new verify token" : "Generate or enter verify token"}
+                    type={showKeys.waVerify ? "text" : "password"}
+                  />
+                  <button onClick={() => toggle("waVerify")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
+                    {showKeys.waVerify ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button variant="outline" size="sm" onClick={generateVerifyToken} className="shrink-0">
+                  <RefreshCw className="h-4 w-4 mr-1" />Generate
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Webhook Callback URL</Label>
+              <div className="flex gap-2">
+                <Input value={webhookCallbackUrl} readOnly className="bg-muted font-mono text-xs" />
+                <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(webhookCallbackUrl); toast.success("Copied!"); }}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Paste this into Meta Developer Console → WhatsApp → Configuration.</p>
+            </div>
+          </div>
+          <Button size="sm" onClick={handleSaveWhatsApp} disabled={waSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+            {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+            {waConnected ? "Update WhatsApp Settings" : "Connect WhatsApp"}
+          </Button>
+
+          {waConnected && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Send Test WhatsApp</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input value={waTestPhone} onChange={(e) => setWaTestPhone(e.target.value)} placeholder="+447517327597 (E.164)" maxLength={20} />
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={waTestMessage}
+                      onChange={(e) => setWaTestMessage(e.target.value)}
+                      placeholder="Hello from NexusFlo24!"
+                      className="min-h-[60px]"
+                      maxLength={1000}
+                    />
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleTestWhatsApp} disabled={waTestSending}>
+                  {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <MessageCircle className="h-4 w-4 mr-1" />}
+                  Send Test
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
+      {/* SMS Gateway Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
