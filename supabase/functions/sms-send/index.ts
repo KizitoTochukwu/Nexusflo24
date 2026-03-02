@@ -68,9 +68,10 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, message" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Validate phone number format
-    if (!/^\+?[1-9]\d{1,14}$/.test(to.replace(/[\s\-()]/g, ""))) {
-      return new Response(JSON.stringify({ error: "Invalid phone number format" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Validate phone number format (allow local formats like 07xxx, international +44xxx, etc.)
+    const cleanedTo = to.replace(/[\s\-()]/g, "");
+    if (!/^\+?\d{7,15}$/.test(cleanedTo)) {
+      return new Response(JSON.stringify({ error: "Invalid phone number format. Use international format like +447517327597" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
