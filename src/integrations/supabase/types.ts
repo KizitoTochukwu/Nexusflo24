@@ -950,6 +950,104 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_messages: {
+        Row: {
+          body: string | null
+          created_at: string
+          direction: string
+          error: string | null
+          id: string
+          lead_id: string | null
+          message_type: string
+          phone_number: string
+          status: string
+          wa_message_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: string
+          lead_id?: string | null
+          message_type?: string
+          phone_number: string
+          status?: string
+          wa_message_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          direction?: string
+          error?: string | null
+          id?: string
+          lead_id?: string | null
+          message_type?: string
+          phone_number?: string
+          status?: string
+          wa_message_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_settings: {
+        Row: {
+          access_token_encrypted: string
+          created_at: string
+          id: string
+          is_active: boolean
+          phone_number_id: string
+          updated_at: string
+          verify_token_encrypted: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token_encrypted: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number_id: string
+          updated_at?: string
+          verify_token_encrypted: string
+          workspace_id: string
+        }
+        Update: {
+          access_token_encrypted?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phone_number_id?: string
+          updated_at?: string
+          verify_token_encrypted?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
