@@ -91,7 +91,11 @@ Deno.serve(async (req) => {
     }
 
     const accessToken = await decrypt(settings.access_token_encrypted, encryptionKey);
-    const phoneNumberId = settings.phone_number_id;
+    const phoneNumberId = String(settings.phone_number_id || "").trim();
+
+    if (!phoneNumberId) {
+      return new Response(JSON.stringify({ error: "WhatsApp Phone Number ID is missing. Re-save WhatsApp settings." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Strip leading + for WhatsApp API
     const waTo = normalizedTo.startsWith("+") ? normalizedTo.slice(1) : normalizedTo;
@@ -103,7 +107,7 @@ Deno.serve(async (req) => {
       text: { body: msgBody },
     };
 
-    const waRes = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
+    const waRes = await fetch(`https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}/messages`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -115,8 +119,12 @@ Deno.serve(async (req) => {
     const waData = await waRes.json();
 
     if (!waRes.ok) {
-      const errMsg = waData?.error?.message || `WhatsApp API error: ${waRes.status}`;
-      const errCode = waData?.error?.code;
+      const graphMessage = waData?.error?.message || `WhatsApp API error: ${waRes.status}`;
+      const graphCode = Number(waData?.error?.code ?? 0);
+      const isCredentialMismatch = graphCode === 100 || /Unsupported post request|does not exist|missing permissions/i.test(graphMessage);
+      const errMsg = isCredentialMismatch
+        ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked (or token lacks whatsapp_business_messaging). Reconnect WhatsApp in Settings with the exact Phone Number ID from Meta API Setup and a permanent system user token."
+        : graphMessage;
 
       // Log failed message
       await adminClient.from("whatsapp_messages").insert({
@@ -129,7 +137,7 @@ Deno.serve(async (req) => {
         error: errMsg,
       });
 
-      const isClientError = [190, 100, 131000, 131026, 131047, 131051].includes(errCode) || waRes.status === 400 || waRes.status === 401;
+      const isClientError = [190, 100, 131000, 131026, 131047, 131051].includes(graphCode) || waRes.status === 400 || waRes.status === 401;
       return new Response(JSON.stringify({ success: false, error: errMsg }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
