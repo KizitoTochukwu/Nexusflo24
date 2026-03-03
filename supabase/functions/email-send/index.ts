@@ -1,0 +1,143 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+async function deriveKey(secret: string, usage: KeyUsage[]): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: enc.encode("nexusflo24-email"), iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    usage,
+  );
+}
+
+async function decrypt(encryptedBase64: string, secret: string): Promise<string> {
+  const key = await deriveKey(secret, ["decrypt"]);
+  const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+  return new TextDecoder().decode(decrypted);
+}
+
+async function sendResend(apiKey: string, from: string, to: string, subject: string, html: string) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: [to], subject, html }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || `Resend error: ${res.status}`);
+  return { messageId: data.id };
+}
+
+async function sendSendGrid(apiKey: string, from: string, to: string, subject: string, html: string) {
+  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: from },
+      subject,
+      content: [{ type: "text/html", value: html }],
+    }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.errors?.[0]?.message || `SendGrid error: ${res.status}`);
+  }
+  return { messageId: res.headers.get("x-message-id") || "sent" };
+}
+
+async function sendMailgun(apiKey: string, domain: string, from: string, to: string, subject: string, html: string) {
+  const params = new URLSearchParams({ from, to, subject, html });
+  const res = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${btoa(`api:${apiKey}`)}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || `Mailgun error: ${res.status}`);
+  return { messageId: data.id };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(authHeader.replace("Bearer ", ""));
+    if (claimsErr || !claims?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const userId = claims.claims.sub as string;
+
+    const body = await req.json();
+    const { workspaceId, to, subject, html, mailgunDomain } = body;
+
+    if (!workspaceId || !to || !subject || !html) {
+      return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, subject, html" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const { data: isMember } = await adminClient.rpc("is_workspace_member", { _user_id: userId, _workspace_id: workspaceId });
+    if (!isMember) {
+      return new Response(JSON.stringify({ error: "Access denied" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const { data: settings, error: settingsErr } = await adminClient
+      .from("email_settings")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (settingsErr || !settings) {
+      return new Response(JSON.stringify({ error: "Email not configured. Go to Settings → Integrations to set up your email provider." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const encryptionKey = Deno.env.get("EMAIL_SETTINGS_ENCRYPTION_KEY");
+    if (!encryptionKey) {
+      return new Response(JSON.stringify({ error: "Server encryption not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const apiKey = await decrypt(settings.api_key_encrypted, encryptionKey);
+    const fromEmail = settings.from_email || "noreply@nexusflo24.com";
+    const fromName = settings.from_name || "NexusFlo24";
+    const from = `${fromName} <${fromEmail}>`;
+
+    let result: { messageId: string };
+
+    if (settings.provider === "resend") {
+      result = await sendResend(apiKey, from, to, subject, html);
+    } else if (settings.provider === "sendgrid") {
+      result = await sendSendGrid(apiKey, fromEmail, to, subject, html);
+    } else if (settings.provider === "mailgun") {
+      const domain = mailgunDomain || fromEmail.split("@")[1];
+      result = await sendMailgun(apiKey, domain, from, to, subject, html);
+    } else {
+      return new Response(JSON.stringify({ error: `Provider '${settings.provider}' send not yet implemented` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (err: any) {
+    console.error("email-send error:", err);
+    return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send email" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+});
