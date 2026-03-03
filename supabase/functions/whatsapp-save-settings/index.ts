@@ -28,6 +28,47 @@ async function encrypt(text: string, secret: string): Promise<string> {
   return btoa(String.fromCharCode(...combined));
 }
 
+type ValidationResult = { ok: true } | { ok: false; message: string };
+
+async function validateWhatsAppCredentials(phoneNumberId: string, accessToken: string): Promise<ValidationResult> {
+  const graphUrl = `https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}?fields=id,display_phone_number,verified_name`;
+
+  try {
+    const res = await fetch(graphUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const payload = await res.json().catch(() => ({} as any));
+
+    if (!res.ok) {
+      const graphMessage = payload?.error?.message || "Failed to verify WhatsApp credentials";
+      const graphCode = Number(payload?.error?.code ?? 0);
+
+      if (graphCode === 190) {
+        return { ok: false, message: "Meta Access Token is invalid or expired. Generate a Permanent System User token and try again." };
+      }
+
+      if (graphCode === 100 || /does not exist|missing permissions|Unsupported post request/i.test(graphMessage)) {
+        return {
+          ok: false,
+          message: "Phone Number ID or token permissions are invalid. Use the exact Phone Number ID from Meta WhatsApp API Setup and a token with whatsapp_business_messaging permission.",
+        };
+      }
+
+      return { ok: false, message: graphMessage };
+    }
+
+    if (String(payload?.id || "") !== phoneNumberId) {
+      return { ok: false, message: "Phone Number ID verification failed. Please confirm you pasted the WhatsApp Phone Number ID (not WABA ID)." };
+    }
+
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Could not reach Meta Graph API. Please try again in a moment." };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -48,10 +89,22 @@ Deno.serve(async (req) => {
     const userId = claims.claims.sub as string;
 
     const body = await req.json();
-    const { workspaceId, phoneNumberId, accessToken, verifyToken } = body;
+    const normalizedWorkspaceId = String(body?.workspaceId || "").trim();
+    const normalizedPhoneNumberId = String(body?.phoneNumberId || "").trim();
+    const normalizedAccessToken = String(body?.accessToken || "").trim();
+    const normalizedVerifyToken = String(body?.verifyToken || "").trim();
 
-    if (!workspaceId || !phoneNumberId || !accessToken || !verifyToken) {
+    if (!normalizedWorkspaceId || !normalizedPhoneNumberId || !normalizedAccessToken || !normalizedVerifyToken) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (!/^\d{8,25}$/.test(normalizedPhoneNumberId)) {
+      return new Response(JSON.stringify({ error: "Invalid Phone Number ID format. Paste the numeric Phone Number ID from Meta API Setup." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const validation = await validateWhatsAppCredentials(normalizedPhoneNumberId, normalizedAccessToken);
+    if (!validation.ok) {
+      return new Response(JSON.stringify({ error: validation.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const encryptionKey = Deno.env.get("WHATSAPP_SETTINGS_ENCRYPTION_KEY");
@@ -60,23 +113,23 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp encryption not configured on server" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const encryptedAccessToken = await encrypt(accessToken, encryptionKey);
-    const encryptedVerifyToken = await encrypt(verifyToken, encryptionKey);
+    const encryptedAccessToken = await encrypt(normalizedAccessToken, encryptionKey);
+    const encryptedVerifyToken = await encrypt(normalizedVerifyToken, encryptionKey);
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { data: isAdmin } = await adminClient.rpc("is_workspace_admin", { _user_id: userId, _workspace_id: workspaceId });
+    const { data: isAdmin } = await adminClient.rpc("is_workspace_admin", { _user_id: userId, _workspace_id: normalizedWorkspaceId });
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Only workspace admins can manage WhatsApp settings" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Deactivate existing
-    await adminClient.from("whatsapp_settings").update({ is_active: false }).eq("workspace_id", workspaceId);
+    await adminClient.from("whatsapp_settings").update({ is_active: false }).eq("workspace_id", normalizedWorkspaceId);
 
     // Insert new
     const { error: insertErr } = await adminClient.from("whatsapp_settings").insert({
-      workspace_id: workspaceId,
-      phone_number_id: phoneNumberId,
+      workspace_id: normalizedWorkspaceId,
+      phone_number_id: normalizedPhoneNumberId,
       access_token_encrypted: encryptedAccessToken,
       verify_token_encrypted: encryptedVerifyToken,
       is_active: true,

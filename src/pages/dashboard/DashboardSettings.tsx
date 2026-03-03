@@ -324,22 +324,38 @@ function IntegrationsTab() {
   };
 
   const handleSaveWhatsApp = async () => {
-    if (!waAccessToken) { toast.error("Access Token is required"); return; }
-    if (!waPhoneNumberId) { toast.error("Phone Number ID is required"); return; }
-    if (!waVerifyToken) { toast.error("Verify Token is required"); return; }
+    const normalizedAccessToken = waAccessToken.trim();
+    const normalizedPhoneNumberId = waPhoneNumberId.trim();
+    const normalizedVerifyToken = waVerifyToken.trim();
+
+    if (!normalizedAccessToken) { toast.error("Access Token is required"); return; }
+    if (!normalizedPhoneNumberId) { toast.error("Phone Number ID is required"); return; }
+    if (!/^\d{8,25}$/.test(normalizedPhoneNumberId)) { toast.error("Use a valid numeric Phone Number ID from Meta API Setup"); return; }
+    if (!normalizedVerifyToken) { toast.error("Verify Token is required"); return; }
+
     setWaSaving(true);
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-save-settings", {
-        body: { workspaceId, phoneNumberId: waPhoneNumberId, accessToken: waAccessToken, verifyToken: waVerifyToken },
+        body: { workspaceId, phoneNumberId: normalizedPhoneNumberId, accessToken: normalizedAccessToken, verifyToken: normalizedVerifyToken },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setWaConnected(true);
+      setWaPhoneNumberId(normalizedPhoneNumberId);
       setWaAccessToken("");
       setWaVerifyToken("");
       toast.success("WhatsApp Connected Successfully ✅");
     } catch (err: any) {
-      toast.error(err.message || "Failed to save WhatsApp settings");
+      let message = err?.message || "Failed to save WhatsApp settings";
+      if (err?.context && typeof err.context.json === "function") {
+        try {
+          const payload = await err.context.json();
+          if (payload?.error) message = payload.error;
+        } catch {
+          // ignore parse failures
+        }
+      }
+      toast.error(message);
     } finally {
       setWaSaving(false);
     }
@@ -357,7 +373,16 @@ function IntegrationsTab() {
       if (data?.error) throw new Error(data.error);
       toast.success(`WhatsApp sent! ID: ${data.waMessageId || "—"}`);
     } catch (err: any) {
-      toast.error(err.message || "Failed to send WhatsApp message");
+      let message = err?.message || "Failed to send WhatsApp message";
+      if (err?.context && typeof err.context.json === "function") {
+        try {
+          const payload = await err.context.json();
+          if (payload?.error) message = payload.error;
+        } catch {
+          // ignore parse failures
+        }
+      }
+      toast.error(message);
     } finally {
       setWaTestSending(false);
     }
@@ -432,6 +457,7 @@ function IntegrationsTab() {
             <div className="space-y-1">
               <Label>Phone Number ID</Label>
               <Input value={waPhoneNumberId} onChange={(e) => setWaPhoneNumberId(e.target.value)} placeholder="e.g. 1234567890" />
+              <p className="text-xs text-muted-foreground">Use the numeric Phone Number ID from Meta → WhatsApp → API Setup (not the Business Account ID).</p>
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
