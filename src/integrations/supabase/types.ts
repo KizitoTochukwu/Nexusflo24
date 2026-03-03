@@ -326,6 +326,50 @@ export type Database = {
           },
         ]
       }
+      email_settings: {
+        Row: {
+          api_key_encrypted: string
+          created_at: string | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          is_active: boolean | null
+          provider: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          api_key_encrypted: string
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          api_key_encrypted?: string
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funnel_steps: {
         Row: {
           conversion_rate: number
