@@ -207,6 +207,13 @@ function IntegrationsTab() {
   const workspaceId = useWorkspaceId();
   const [emailProvider, setEmailProvider] = useState("");
   const [emailApiKey, setEmailApiKey] = useState("");
+  const [emailFromEmail, setEmailFromEmail] = useState("");
+  const [emailFromName, setEmailFromName] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailConnected, setEmailConnected] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(true);
+  const [emailTestTo, setEmailTestTo] = useState("");
+  const [emailTestSending, setEmailTestSending] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
 
@@ -234,10 +241,6 @@ function IntegrationsTab() {
 
   const toggle = (key: string) => setShowKeys((p) => ({ ...p, [key]: !p[key] }));
   const mask = (val: string) => val ? "•".repeat(Math.min(val.length, 20)) + val.slice(-4) : "";
-
-  const handleSaveIntegration = (name: string) => {
-    toast.success(`${name} settings saved locally. Backend integration coming soon.`);
-  };
 
   const generateVerifyToken = () => {
     const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -285,6 +288,69 @@ function IntegrationsTab() {
       setWaLoading(false);
     })();
   }, [workspaceId]);
+
+  // Fetch Email settings on load
+  useEffect(() => {
+    if (!workspaceId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("email_settings" as any)
+        .select("provider, from_email, from_name, is_active")
+        .eq("workspace_id", workspaceId)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setEmailConnected(true);
+        setEmailProvider((data as any).provider || "");
+        setEmailFromEmail((data as any).from_email || "");
+        setEmailFromName((data as any).from_name || "");
+      }
+      setEmailLoading(false);
+    })();
+  }, [workspaceId]);
+
+  const handleSaveEmail = async () => {
+    if (!emailProvider) { toast.error("Select an email provider"); return; }
+    if (!emailApiKey) { toast.error("API Key is required"); return; }
+    setEmailSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("email-save-settings", {
+        body: { workspaceId, provider: emailProvider, apiKey: emailApiKey, fromEmail: emailFromEmail, fromName: emailFromName },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setEmailConnected(true);
+      setEmailApiKey("");
+      toast.success("Email Provider Connected ✅");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save email settings");
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!emailTestTo) { toast.error("Enter a test email address"); return; }
+    setEmailTestSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("email-send", {
+        body: {
+          workspaceId,
+          to: emailTestTo,
+          subject: "NexusFlo24 Test Email ✅",
+          html: "<h2>Test Email from NexusFlo24</h2><p>Your email integration is working correctly!</p>",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Test email sent successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send test email");
+    } finally {
+      setEmailTestSending(false);
+    }
+  };
 
   const handleSaveSms = async () => {
     if (!smsAuthToken) { toast.error("Auth Token is required"); return; }
@@ -394,10 +460,17 @@ function IntegrationsTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2"><Mail className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Email Provider</CardTitle></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2"><Mail className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Email Provider</CardTitle></div>
+            {!emailLoading && (
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${emailConnected ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}>
+                {emailConnected ? "✓ Connected" : "Not Connected"}
+              </span>
+            )}
+          </div>
           <CardDescription>Connect your email sending service (SendGrid, Mailgun, Resend, etc.)</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>Provider</Label>
@@ -414,14 +487,43 @@ function IntegrationsTab() {
             <div className="space-y-1">
               <Label>API Key</Label>
               <div className="relative">
-                <Input value={showKeys.email ? emailApiKey : mask(emailApiKey)} onChange={(e) => setEmailApiKey(e.target.value)} placeholder="Enter API key" type={showKeys.email ? "text" : "password"} />
+                <Input value={showKeys.email ? emailApiKey : mask(emailApiKey)} onChange={(e) => setEmailApiKey(e.target.value)} placeholder={emailConnected ? "Enter new key to update" : "Enter API key"} type={showKeys.email ? "text" : "password"} />
                 <button onClick={() => toggle("email")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
                   {showKeys.email ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
           </div>
-          <Button size="sm" onClick={() => handleSaveIntegration("Email")} className="bg-accent text-accent-foreground hover:bg-accent/90"><Save className="h-4 w-4 mr-1" />Save</Button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>From Email</Label>
+              <Input value={emailFromEmail} onChange={(e) => setEmailFromEmail(e.target.value)} placeholder="hello@yourdomain.com" maxLength={255} />
+            </div>
+            <div className="space-y-1">
+              <Label>From Name</Label>
+              <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} placeholder="NexusFlo24" maxLength={100} />
+            </div>
+          </div>
+          <Button size="sm" onClick={handleSaveEmail} disabled={emailSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
+            {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+            {emailConnected ? "Update Email Settings" : "Connect Email"}
+          </Button>
+
+          {emailConnected && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Send Test Email</Label>
+                <div className="flex gap-2">
+                  <Input value={emailTestTo} onChange={(e) => setEmailTestTo(e.target.value)} placeholder="test@example.com" className="max-w-[280px]" maxLength={255} />
+                  <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={emailTestSending}>
+                    {emailTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Mail className="h-4 w-4 mr-1" />}
+                    Send Test
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
