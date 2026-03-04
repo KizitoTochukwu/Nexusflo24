@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     }
     const userId = claims.claims.sub as string;
 
-    // Admin role check
+    // Admin check
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: adminRole } = await adminClient
       .from("user_roles")
@@ -34,12 +34,18 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!adminRole) {
-      return new Response(JSON.stringify({ error: "Forbidden — only platform admins can manage email settings" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ success: true, message: "Email credentials are now platform-managed via environment variables. No per-workspace save needed." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (err) {
-    console.error("email-save-settings error:", err);
-    return new Response(JSON.stringify({ error: "An internal error occurred" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const status = {
+      resend: !!Deno.env.get("RESEND_API_KEY"),
+      twilio: !!Deno.env.get("TWILIO_ACCOUNT_SID") && !!Deno.env.get("TWILIO_AUTH_TOKEN"),
+      whatsapp: !!Deno.env.get("WHATSAPP_ACCESS_TOKEN") && !!Deno.env.get("WHATSAPP_PHONE_NUMBER_ID"),
+    };
+
+    return new Response(JSON.stringify(status), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (err: any) {
+    console.error("integration-status error:", err);
+    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

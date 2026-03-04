@@ -17,12 +17,14 @@ import { toast } from "sonner";
 import {
   User, Shield, Bell, CreditCard, Loader2, Save, Upload, Key,
   Mail, MessageCircle, Smartphone, Webhook, Settings2, Clock,
-  Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor
+  Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor,
+  CheckCircle2, XCircle, ShieldAlert
 } from "lucide-react";
 import { useDemoMode, useUpdateDemoMode } from "@/hooks/useDemoMode";
 import type { DemoVariant } from "@/lib/demo/demoData";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
+import { useIsAdmin } from "@/hooks/useAdminRole";
 
 /* ── Profile Tab ─────────────────────────────────────────── */
 
@@ -201,146 +203,38 @@ function BillingTab() {
   );
 }
 
-/* ── Integrations Tab ────────────────────────────────────── */
+/* ── Integrations Tab (Admin Only) ───────────────────────── */
 
 function IntegrationsTab() {
   const workspaceId = useWorkspaceId();
-  const [emailProvider, setEmailProvider] = useState("");
-  const [emailApiKey, setEmailApiKey] = useState("");
-  const [emailFromEmail, setEmailFromEmail] = useState("");
-  const [emailFromName, setEmailFromName] = useState("");
-  const [emailSaving, setEmailSaving] = useState(false);
-  const [emailConnected, setEmailConnected] = useState(false);
-  const [emailLoading, setEmailLoading] = useState(true);
+  const [status, setStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  // Test state
   const [emailTestTo, setEmailTestTo] = useState("");
   const [emailTestSending, setEmailTestSending] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("");
-  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
-
-  // SMS state
-  const [smsProvider, setSmsProvider] = useState("twilio");
-  const [smsAccountSid, setSmsAccountSid] = useState("");
-  const [smsAuthToken, setSmsAuthToken] = useState("");
-  const [smsFromNumber, setSmsFromNumber] = useState("");
-  const [smsSaving, setSmsSaving] = useState(false);
-  const [smsConnected, setSmsConnected] = useState(false);
-  const [smsLoading, setSmsLoading] = useState(true);
   const [testPhone, setTestPhone] = useState("");
   const [testSending, setTestSending] = useState(false);
-
-  // WhatsApp state
-  const [waAccessToken, setWaAccessToken] = useState("");
-  const [waPhoneNumberId, setWaPhoneNumberId] = useState("");
-  const [waVerifyToken, setWaVerifyToken] = useState("");
-  const [waSaving, setWaSaving] = useState(false);
-  const [waConnected, setWaConnected] = useState(false);
-  const [waLoading, setWaLoading] = useState(true);
   const [waTestPhone, setWaTestPhone] = useState("");
   const [waTestMessage, setWaTestMessage] = useState("");
   const [waTestSending, setWaTestSending] = useState(false);
 
-  const toggle = (key: string) => setShowKeys((p) => ({ ...p, [key]: !p[key] }));
-  const mask = (val: string) => val ? "•".repeat(Math.min(val.length, 20)) + val.slice(-4) : "";
-
-  const generateVerifyToken = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    const token = Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    setWaVerifyToken(token);
-    toast.success("Verify token generated. Save settings to apply.");
-  };
-
-  // Fetch SMS settings on load
   useEffect(() => {
-    if (!workspaceId) return;
     (async () => {
-      const { data } = await supabase
-        .from("sms_settings" as any)
-        .select("provider, account_sid, from_number, is_active")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setSmsConnected(true);
-        setSmsProvider((data as any).provider || "twilio");
-        setSmsAccountSid((data as any).account_sid || "");
-        setSmsFromNumber((data as any).from_number || "");
-      }
-      setSmsLoading(false);
+      try {
+        const { data, error } = await supabase.functions.invoke("integration-status");
+        if (!error && data) setStatus(data);
+      } catch { /* ignore */ }
+      setStatusLoading(false);
     })();
-  }, [workspaceId]);
-
-  // Fetch WhatsApp settings on load
-  useEffect(() => {
-    if (!workspaceId) return;
-    (async () => {
-      const { data } = await supabase
-        .from("whatsapp_settings" as any)
-        .select("phone_number_id, is_active")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setWaConnected(true);
-        setWaPhoneNumberId((data as any).phone_number_id || "");
-      }
-      setWaLoading(false);
-    })();
-  }, [workspaceId]);
-
-  // Fetch Email settings on load
-  useEffect(() => {
-    if (!workspaceId) return;
-    (async () => {
-      const { data } = await supabase
-        .from("email_settings" as any)
-        .select("provider, from_email, from_name, is_active")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        setEmailConnected(true);
-        setEmailProvider((data as any).provider || "");
-        setEmailFromEmail((data as any).from_email || "");
-        setEmailFromName((data as any).from_name || "");
-      }
-      setEmailLoading(false);
-    })();
-  }, [workspaceId]);
-
-  const handleSaveEmail = async () => {
-    if (!emailProvider) { toast.error("Select an email provider"); return; }
-    if (!emailApiKey) { toast.error("API Key is required"); return; }
-    setEmailSaving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("email-save-settings", {
-        body: { workspaceId, provider: emailProvider, apiKey: emailApiKey, fromEmail: emailFromEmail, fromName: emailFromName },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setEmailConnected(true);
-      setEmailApiKey("");
-      toast.success("Email Provider Connected ✅");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save email settings");
-    } finally {
-      setEmailSaving(false);
-    }
-  };
+  }, []);
 
   const handleTestEmail = async () => {
     if (!emailTestTo) { toast.error("Enter a test email address"); return; }
     setEmailTestSending(true);
     try {
       const { data, error } = await supabase.functions.invoke("email-send", {
-        body: {
-          workspaceId,
-          to: emailTestTo,
-          subject: "NexusFlo24 Test Email ✅",
-          html: "<h2>Test Email from NexusFlo24</h2><p>Your email integration is working correctly!</p>",
-        },
+        body: { workspaceId, to: emailTestTo, subject: "NexusFlo24 Test Email ✅", html: "<h2>Test Email from NexusFlo24</h2><p>Your email integration is working correctly!</p>" },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -349,26 +243,6 @@ function IntegrationsTab() {
       toast.error(err.message || "Failed to send test email");
     } finally {
       setEmailTestSending(false);
-    }
-  };
-
-  const handleSaveSms = async () => {
-    if (!smsAuthToken) { toast.error("Auth Token is required"); return; }
-    if (smsProvider === "twilio" && !smsAccountSid) { toast.error("Account SID is required for Twilio"); return; }
-    setSmsSaving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sms-save-settings", {
-        body: { workspaceId, provider: smsProvider, accountSid: smsAccountSid, authToken: smsAuthToken, fromNumber: smsFromNumber },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setSmsConnected(true);
-      setSmsAuthToken("");
-      toast.success("SMS Connected Successfully ✅");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save SMS settings");
-    } finally {
-      setSmsSaving(false);
     }
   };
 
@@ -389,44 +263,6 @@ function IntegrationsTab() {
     }
   };
 
-  const handleSaveWhatsApp = async () => {
-    const normalizedAccessToken = waAccessToken.trim();
-    const normalizedPhoneNumberId = waPhoneNumberId.trim();
-    const normalizedVerifyToken = waVerifyToken.trim();
-
-    if (!normalizedAccessToken) { toast.error("Access Token is required"); return; }
-    if (!normalizedPhoneNumberId) { toast.error("Phone Number ID is required"); return; }
-    if (!/^\d{8,25}$/.test(normalizedPhoneNumberId)) { toast.error("Use a valid numeric Phone Number ID from Meta API Setup"); return; }
-    if (!normalizedVerifyToken) { toast.error("Verify Token is required"); return; }
-
-    setWaSaving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-save-settings", {
-        body: { workspaceId, phoneNumberId: normalizedPhoneNumberId, accessToken: normalizedAccessToken, verifyToken: normalizedVerifyToken },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setWaConnected(true);
-      setWaPhoneNumberId(normalizedPhoneNumberId);
-      setWaAccessToken("");
-      setWaVerifyToken("");
-      toast.success("WhatsApp Connected Successfully ✅");
-    } catch (err: any) {
-      let message = err?.message || "Failed to save WhatsApp settings";
-      if (err?.context && typeof err.context.json === "function") {
-        try {
-          const payload = await err.context.json();
-          if (payload?.error) message = payload.error;
-        } catch {
-          // ignore parse failures
-        }
-      }
-      toast.error(message);
-    } finally {
-      setWaSaving(false);
-    }
-  };
-
   const handleTestWhatsApp = async () => {
     if (!waTestPhone) { toast.error("Enter a test phone number"); return; }
     if (!waTestMessage) { toast.error("Enter a test message"); return; }
@@ -439,267 +275,105 @@ function IntegrationsTab() {
       if (data?.error) throw new Error(data.error);
       toast.success(`WhatsApp sent! ID: ${data.waMessageId || "—"}`);
     } catch (err: any) {
-      let message = err?.message || "Failed to send WhatsApp message";
-      if (err?.context && typeof err.context.json === "function") {
-        try {
-          const payload = await err.context.json();
-          if (payload?.error) message = payload.error;
-        } catch {
-          // ignore parse failures
-        }
-      }
-      toast.error(message);
+      toast.error(err.message || "Failed to send WhatsApp message");
     } finally {
       setWaTestSending(false);
     }
   };
 
-  const webhookCallbackUrl = `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/whatsapp-webhook`;
+  const StatusBadge = ({ configured, label }: { configured: boolean; label: string }) => (
+    <div className="flex items-center gap-2 rounded-lg border p-3">
+      {configured ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : <XCircle className="h-5 w-5 text-destructive" />}
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{configured ? "Configured" : "Not configured"}</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
+      {/* Platform Integration Status */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2"><Mail className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Email Provider</CardTitle></div>
-            {!emailLoading && (
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${emailConnected ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}>
-                {emailConnected ? "✓ Connected" : "Not Connected"}
-              </span>
-            )}
-          </div>
-          <CardDescription>Connect your email sending service (SendGrid, Mailgun, Resend, etc.)</CardDescription>
+          <div className="flex items-center gap-2"><Settings2 className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Platform Integration Status</CardTitle></div>
+          <CardDescription>Provider credentials are managed at the platform level via environment variables.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>Provider</Label>
-              <Select value={emailProvider} onValueChange={setEmailProvider}>
-                <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sendgrid">SendGrid</SelectItem>
-                  <SelectItem value="mailgun">Mailgun</SelectItem>
-                  <SelectItem value="resend">Resend</SelectItem>
-                  <SelectItem value="smtp">Custom SMTP</SelectItem>
-                </SelectContent>
-              </Select>
+        <CardContent>
+          {statusLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : status ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <StatusBadge configured={status.resend} label="Resend (Email)" />
+              <StatusBadge configured={status.twilio} label="Twilio (SMS)" />
+              <StatusBadge configured={status.whatsapp} label="WhatsApp Cloud API" />
             </div>
-            <div className="space-y-1">
-              <Label>API Key</Label>
-              <div className="relative">
-                <Input value={showKeys.email ? emailApiKey : mask(emailApiKey)} onChange={(e) => setEmailApiKey(e.target.value)} placeholder={emailConnected ? "Enter new key to update" : "Enter API key"} type={showKeys.email ? "text" : "password"} />
-                <button onClick={() => toggle("email")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
-                  {showKeys.email ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>From Email</Label>
-              <Input value={emailFromEmail} onChange={(e) => setEmailFromEmail(e.target.value)} placeholder="hello@yourdomain.com" maxLength={255} />
-            </div>
-            <div className="space-y-1">
-              <Label>From Name</Label>
-              <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} placeholder="NexusFlo24" maxLength={100} />
-            </div>
-          </div>
-          <Button size="sm" onClick={handleSaveEmail} disabled={emailSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
-            {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-            {emailConnected ? "Update Email Settings" : "Connect Email"}
-          </Button>
-
-          {emailConnected && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Send Test Email</Label>
-                <div className="flex gap-2">
-                  <Input value={emailTestTo} onChange={(e) => setEmailTestTo(e.target.value)} placeholder="test@example.com" className="max-w-[280px]" maxLength={255} />
-                  <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={emailTestSending}>
-                    {emailTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Mail className="h-4 w-4 mr-1" />}
-                    Send Test
-                  </Button>
-                </div>
-              </div>
-            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Unable to load integration status.</p>
           )}
         </CardContent>
       </Card>
 
-      {/* WhatsApp Cloud API Card */}
+      {/* Test Email */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-accent" /><CardTitle className="text-lg">WhatsApp Cloud API</CardTitle></div>
-            {!waLoading && (
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${waConnected ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}>
-                {waConnected ? "✓ Connected" : "Not Connected"}
-              </span>
-            )}
-          </div>
-          <CardDescription>Connect your Meta WhatsApp Business account.</CardDescription>
+          <div className="flex items-center gap-2"><Mail className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Email Provider (Resend)</CardTitle></div>
+          <CardDescription>Send a test email to verify the platform email integration.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>Access Token</Label>
-              <div className="relative">
-                <Input
-                  value={showKeys.wa ? waAccessToken : mask(waAccessToken)}
-                  onChange={(e) => setWaAccessToken(e.target.value)}
-                  placeholder={waConnected ? "Enter new token to update" : "Enter access token"}
-                  type={showKeys.wa ? "text" : "password"}
-                />
-                <button onClick={() => toggle("wa")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
-                  {showKeys.wa ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Phone Number ID</Label>
-              <Input value={waPhoneNumberId} onChange={(e) => setWaPhoneNumberId(e.target.value)} placeholder="e.g. 1234567890" />
-              <p className="text-xs text-muted-foreground">Use the numeric Phone Number ID from Meta → WhatsApp → API Setup (not the Business Account ID).</p>
-            </div>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={emailTestTo} onChange={(e) => setEmailTestTo(e.target.value)} placeholder="test@example.com" className="max-w-[280px]" maxLength={255} />
+            <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={emailTestSending}>
+              {emailTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Mail className="h-4 w-4 mr-1" />}Send Test
+            </Button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>Verify Token</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    value={showKeys.waVerify ? waVerifyToken : mask(waVerifyToken)}
-                    onChange={(e) => setWaVerifyToken(e.target.value)}
-                    placeholder={waConnected ? "Enter new verify token" : "Generate or enter verify token"}
-                    type={showKeys.waVerify ? "text" : "password"}
-                  />
-                  <button onClick={() => toggle("waVerify")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
-                    {showKeys.waVerify ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <Button variant="outline" size="sm" onClick={generateVerifyToken} className="shrink-0">
-                  <RefreshCw className="h-4 w-4 mr-1" />Generate
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Webhook Callback URL</Label>
-              <div className="flex gap-2">
-                <Input value={webhookCallbackUrl} readOnly className="bg-muted font-mono text-xs" />
-                <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(webhookCallbackUrl); toast.success("Copied!"); }}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Paste this into Meta Developer Console → WhatsApp → Configuration. Keep <strong>"Attach a client certificate"</strong> OFF.</p>
-            </div>
-          </div>
-          <Button size="sm" onClick={handleSaveWhatsApp} disabled={waSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
-            {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-            {waConnected ? "Update WhatsApp Settings" : "Connect WhatsApp"}
-          </Button>
-
-          {waConnected && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Send Test WhatsApp</Label>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Input value={waTestPhone} onChange={(e) => setWaTestPhone(e.target.value)} placeholder="+447517327597 (E.164)" maxLength={20} />
-                  <div className="flex gap-2">
-                    <Textarea
-                      value={waTestMessage}
-                      onChange={(e) => setWaTestMessage(e.target.value)}
-                      placeholder="Hello from NexusFlo24!"
-                      className="min-h-[60px]"
-                      maxLength={1000}
-                    />
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={handleTestWhatsApp} disabled={waTestSending}>
-                  {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <MessageCircle className="h-4 w-4 mr-1" />}
-                  Send Test
-                </Button>
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
 
-      {/* SMS Gateway Card */}
+      {/* Test SMS */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-accent" /><CardTitle className="text-lg">SMS Gateway</CardTitle></div>
-            {!smsLoading && (
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${smsConnected ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}>
-                {smsConnected ? "✓ Connected" : "Not Connected"}
-              </span>
-            )}
-          </div>
-          <CardDescription>Connect your SMS provider (Twilio, Vonage, etc.)</CardDescription>
+          <div className="flex items-center gap-2"><Smartphone className="h-5 w-5 text-accent" /><CardTitle className="text-lg">SMS Gateway (Twilio)</CardTitle></div>
+          <CardDescription>Send a test SMS to verify the platform SMS integration.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>Provider</Label>
-              <Select value={smsProvider} onValueChange={setSmsProvider}>
-                <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="twilio">Twilio</SelectItem>
-                  <SelectItem value="vonage">Vonage (coming soon)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {smsProvider === "twilio" && (
-              <div className="space-y-1">
-                <Label>Account SID</Label>
-                <Input value={smsAccountSid} onChange={(e) => setSmsAccountSid(e.target.value)} placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" maxLength={40} />
-              </div>
-            )}
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="+15551234567" className="max-w-[220px]" maxLength={20} />
+            <Button variant="outline" size="sm" onClick={handleTestSms} disabled={testSending}>
+              {testSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Smartphone className="h-4 w-4 mr-1" />}Send Test
+            </Button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>Auth Token</Label>
-              <div className="relative">
-                <Input
-                  value={showKeys.sms ? smsAuthToken : mask(smsAuthToken)}
-                  onChange={(e) => setSmsAuthToken(e.target.value)}
-                  placeholder={smsConnected ? "Enter new token to update" : "Enter auth token"}
-                  type={showKeys.sms ? "text" : "password"}
-                />
-                <button onClick={() => toggle("sms")} className="absolute right-2 top-2 text-muted-foreground hover:text-foreground">
-                  {showKeys.sms ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>From Number</Label>
-              <Input value={smsFromNumber} onChange={(e) => setSmsFromNumber(e.target.value)} placeholder="+15551234567" maxLength={20} />
-            </div>
-          </div>
-          <Button size="sm" onClick={handleSaveSms} disabled={smsSaving} className="bg-accent text-accent-foreground hover:bg-accent/90">
-            {smsSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-            {smsConnected ? "Update SMS Settings" : "Connect SMS"}
-          </Button>
-
-          {smsConnected && (
-            <>
-              <Separator />
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Send Test SMS</Label>
-                <div className="flex gap-2">
-                  <Input value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="+15551234567" className="max-w-[220px]" maxLength={20} />
-                  <Button variant="outline" size="sm" onClick={handleTestSms} disabled={testSending}>
-                    {testSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Smartphone className="h-4 w-4 mr-1" />}
-                    Send Test
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
 
+      {/* Test WhatsApp */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-accent" /><CardTitle className="text-lg">WhatsApp Cloud API</CardTitle></div>
+          <CardDescription>Send a test WhatsApp message to verify the platform integration.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input value={waTestPhone} onChange={(e) => setWaTestPhone(e.target.value)} placeholder="+447517327597 (E.164)" maxLength={20} />
+            <Textarea value={waTestMessage} onChange={(e) => setWaTestMessage(e.target.value)} placeholder="Hello from NexusFlo24!" className="min-h-[60px]" maxLength={1000} />
+          </div>
+          <Button variant="outline" size="sm" onClick={handleTestWhatsApp} disabled={waTestSending}>
+            {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <MessageCircle className="h-4 w-4 mr-1" />}Send Test
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ── Webhooks Tab (Customer Accessible) ──────────────────── */
+
+function WebhooksTab() {
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/ingest-leads`;
+  const whatsappWebhookUrl = `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/whatsapp-webhook`;
+
+  return (
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2"><Webhook className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Webhook Settings</CardTitle></div>
@@ -709,16 +383,41 @@ function IntegrationsTab() {
           <div className="space-y-1">
             <Label>Lead Ingest Endpoint</Label>
             <div className="flex gap-2">
-              <Input value={`${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/ingest-leads`} readOnly className="bg-muted font-mono text-xs" />
-              <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/ingest-leads`); toast.success("Copied!"); }}>
+              <Input value={webhookUrl} readOnly className="bg-muted font-mono text-xs" />
+              <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("Copied!"); }}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">Send POST requests with Authorization: Bearer &lt;token&gt; and X-Workspace-Id header.</p>
           </div>
+          <Separator />
+          <div className="space-y-1">
+            <Label>WhatsApp Webhook Callback URL</Label>
+            <div className="flex gap-2">
+              <Input value={whatsappWebhookUrl} readOnly className="bg-muted font-mono text-xs" />
+              <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(whatsappWebhookUrl); toast.success("Copied!"); }}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Paste this into Meta Developer Console → WhatsApp → Configuration. Keep <strong>"Attach a client certificate"</strong> OFF.</p>
+          </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* ── Access Denied Card ──────────────────────────────────── */
+
+function AccessDeniedCard() {
+  return (
+    <Card>
+      <CardContent className="py-12 text-center space-y-3">
+        <ShieldAlert className="h-10 w-10 text-destructive mx-auto" />
+        <h3 className="text-lg font-semibold">Access Denied</h3>
+        <p className="text-sm text-muted-foreground">Platform integrations are managed by administrators only.</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1030,40 +729,61 @@ function DemoModeTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "integrations", "automations", "notifications", "security", "demo"] as const;
+const VALID_TABS = ["profile", "billing", "integrations", "webhooks", "automations", "notifications", "security", "demo"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
+  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const pathParts = location.pathname.split("/");
   const lastSegment = pathParts[pathParts.length - 1];
-  const initialTab = (VALID_TABS as readonly string[]).includes(lastSegment) ? lastSegment : "profile";
+
+  // If customer navigates to integrations, redirect to webhooks
+  const getInitialTab = () => {
+    if ((VALID_TABS as readonly string[]).includes(lastSegment)) {
+      if (lastSegment === "integrations" && !isAdmin) return "webhooks";
+      return lastSegment;
+    }
+    return "profile";
+  };
+
+  const initialTab = getInitialTab();
 
   return (
     <DashboardLayout>
       <h1 className="text-2xl font-bold">Settings</h1>
       <p className="mt-1 text-sm text-muted-foreground">Manage your account, billing, integrations, and preferences.</p>
 
-      <Tabs defaultValue={initialTab} className="mt-6">
-        <TabsList className="flex flex-wrap h-auto gap-1">
-          <TabsTrigger value="profile" className="gap-1.5"><User className="h-3.5 w-3.5" />Profile</TabsTrigger>
-          <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-1.5"><Webhook className="h-3.5 w-3.5" />Integrations</TabsTrigger>
-          <TabsTrigger value="automations" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Automation</TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
-          <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
-          <TabsTrigger value="demo" className="gap-1.5"><Monitor className="h-3.5 w-3.5" />Demo Mode</TabsTrigger>
-        </TabsList>
+      {adminLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : (
+        <Tabs defaultValue={initialTab} className="mt-6">
+          <TabsList className="flex flex-wrap h-auto gap-1">
+            <TabsTrigger value="profile" className="gap-1.5"><User className="h-3.5 w-3.5" />Profile</TabsTrigger>
+            <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="integrations" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" />Integrations</TabsTrigger>
+            )}
+            <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" />Webhooks</TabsTrigger>
+            <TabsTrigger value="automations" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Automation</TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
+            <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
+            <TabsTrigger value="demo" className="gap-1.5"><Monitor className="h-3.5 w-3.5" />Demo Mode</TabsTrigger>
+          </TabsList>
 
-        <div className="mt-6 max-w-3xl">
-          <TabsContent value="profile"><ProfileTab /></TabsContent>
-          <TabsContent value="billing"><BillingTab /></TabsContent>
-          <TabsContent value="integrations"><IntegrationsTab /></TabsContent>
-          <TabsContent value="automations"><AutomationPrefsTab /></TabsContent>
-          <TabsContent value="notifications"><NotificationsTab /></TabsContent>
-          <TabsContent value="security"><SecurityTab /></TabsContent>
-          <TabsContent value="demo"><DemoModeTab /></TabsContent>
-        </div>
-      </Tabs>
+          <div className="mt-6 max-w-3xl">
+            <TabsContent value="profile"><ProfileTab /></TabsContent>
+            <TabsContent value="billing"><BillingTab /></TabsContent>
+            <TabsContent value="integrations">
+              {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
+            </TabsContent>
+            <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
+            <TabsContent value="automations"><AutomationPrefsTab /></TabsContent>
+            <TabsContent value="notifications"><NotificationsTab /></TabsContent>
+            <TabsContent value="security"><SecurityTab /></TabsContent>
+            <TabsContent value="demo"><DemoModeTab /></TabsContent>
+          </div>
+        </Tabs>
+      )}
     </DashboardLayout>
   );
 };

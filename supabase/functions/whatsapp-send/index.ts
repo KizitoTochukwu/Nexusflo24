@@ -5,27 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function deriveKey(secret: string): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("nexusflo24-whatsapp"), iterations: 100000, hash: "SHA-256" },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["decrypt"],
-  );
-}
-
-async function decrypt(encryptedBase64: string, secret: string): Promise<string> {
-  const key = await deriveKey(secret);
-  const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
-  const iv = combined.slice(0, 12);
-  const ciphertext = combined.slice(12);
-  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-  return new TextDecoder().decode(decrypted);
-}
-
 function normalizePhone(raw: string): string | null {
   const cleaned = raw.replace(/[\s\-()]/g, "");
   if (cleaned.startsWith("+") && /^\+[1-9]\d{7,14}$/.test(cleaned)) return cleaned;
@@ -73,31 +52,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Access denied" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: settings } = await adminClient
-      .from("whatsapp_settings")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
+    // Platform-managed credentials from ENV
+    const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
-    if (!settings) {
-      return new Response(JSON.stringify({ error: "WhatsApp not configured. Go to Settings → Integrations to set up WhatsApp." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!accessToken || !phoneNumberId) {
+      return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const encryptionKey = Deno.env.get("WHATSAPP_SETTINGS_ENCRYPTION_KEY");
-    if (!encryptionKey) {
-      return new Response(JSON.stringify({ error: "Server encryption not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const accessToken = await decrypt(settings.access_token_encrypted, encryptionKey);
-    const phoneNumberId = String(settings.phone_number_id || "").trim();
-
-    if (!phoneNumberId) {
-      return new Response(JSON.stringify({ error: "WhatsApp Phone Number ID is missing. Re-save WhatsApp settings." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Strip leading + for WhatsApp API
     const waTo = normalizedTo.startsWith("+") ? normalizedTo.slice(1) : normalizedTo;
 
     const waPayload: Record<string, unknown> = {
@@ -123,10 +85,9 @@ Deno.serve(async (req) => {
       const graphCode = Number(waData?.error?.code ?? 0);
       const isCredentialMismatch = graphCode === 100 || /Unsupported post request|does not exist|missing permissions/i.test(graphMessage);
       const errMsg = isCredentialMismatch
-        ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked (or token lacks whatsapp_business_messaging). Reconnect WhatsApp in Settings with the exact Phone Number ID from Meta API Setup and a permanent system user token."
+        ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Contact platform admin."
         : graphMessage;
 
-      // Log failed message
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
         direction: "outbound",
