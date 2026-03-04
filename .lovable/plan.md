@@ -1,77 +1,103 @@
 
 
-## Plan: Wire Email Provider Integration to Backend
+## Plan: Platform-Managed Integrations Access Control
 
-### Problem
-The Email Provider card in Settings > Integrations only saves locally with a placeholder toast ("saved locally. Backend integration coming soon."). There is no database table, no edge function, and no actual persistence — unlike WhatsApp and SMS which are fully wired.
+### Context
+
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
 ### Changes
 
-#### 1. Database Migration: Create `email_settings` table
-Following the same pattern as `sms_settings` and `whatsapp_settings`:
+#### 1. Frontend: Split Settings Tabs by Role
 
-```sql
-CREATE TABLE public.email_settings (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-  provider text NOT NULL,            -- sendgrid, mailgun, resend, smtp
-  api_key_encrypted text NOT NULL,
-  from_email text,                   -- e.g. hello@yourdomain.com
-  from_name text,                    -- e.g. NexusFlo24
-  is_active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+**DashboardSettings.tsx** — Major restructure:
 
-ALTER TABLE public.email_settings ENABLE ROW LEVEL SECURITY;
--- RLS: workspace members can read, workspace admins can write (enforced in edge function via service role)
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
+
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
 ```
 
-Also add `EMAIL_SETTINGS_ENCRYPTION_KEY` secret for AES-GCM encryption of the API key.
+#### 2. Move Provider Credentials to Platform ENV Secrets
 
-#### 2. Edge Function: `email-save-settings`
-- Authenticate user via JWT
-- Validate workspace admin role
-- Encrypt API key with PBKDF2 + AES-GCM (same pattern as SMS/WhatsApp)
-- Validate credentials by making a lightweight API call to the selected provider (e.g., Resend `GET /api-keys`, SendGrid `GET /v3/user/profile`)
-- Deactivate old settings, insert new row
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
 
-#### 3. Edge Function: `email-send`
-- Authenticate user, verify workspace membership
-- Decrypt API key from `email_settings`
-- Route to the correct provider SDK (Resend, SendGrid, Mailgun, or SMTP)
-- Send email and log result
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
 
-#### 4. Frontend: Wire `IntegrationsTab` Email Provider card
-- Add state for `emailConnected`, `emailLoading`, `emailSaving`, `fromEmail`, `fromName`
-- Fetch existing `email_settings` on mount (same pattern as SMS/WhatsApp)
-- Replace `handleSaveIntegration("Email")` with real save via `supabase.functions.invoke("email-save-settings")`
-- Add connected status badge (matching WhatsApp/SMS pattern)
-- Add "From Email" and "From Name" fields
-- Add "Send Test Email" section when connected
-- Add test email functionality via `email-send` edge function
+#### 3. Update Edge Functions for Platform Credentials
 
-#### 5. Config Updates
-- Add `email-save-settings` and `email-send` to `supabase/config.toml` with `verify_jwt = false` (auth handled in function)
-- Request `EMAIL_SETTINGS_ENCRYPTION_KEY` secret
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
 
-### Technical Details
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
 
-The encryption pattern mirrors WhatsApp/SMS exactly:
-- PBKDF2 key derivation with salt `"nexusflo24-email"`
-- AES-GCM encryption with random 12-byte IV
-- Base64-encoded IV+ciphertext stored in DB
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
 
-Provider validation on save:
-- **Resend**: `GET https://api.resend.com/api-keys` with `Authorization: Bearer {key}`
-- **SendGrid**: `GET https://api.sendgrid.com/v3/user/profile` with `Authorization: Bearer {key}`
-- **Mailgun**: `GET https://api.mailgun.net/v3/domains` with basic auth
-- **SMTP**: Skip validation (user responsible)
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+
+#### 4. Backend Admin Authorization
+
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
+```
+
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+
+#### 5. Admin Integrations Status Widget
+
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
+
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
+
+#### 6. Webhooks Tab (Customer-Accessible)
+
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
+
+This tab is workspace-scoped and visible to all authenticated users.
 
 ### Files to Create/Edit
-- **New**: `supabase/migrations/...email_settings.sql`
-- **New**: `supabase/functions/email-save-settings/index.ts`
-- **New**: `supabase/functions/email-send/index.ts`
-- **Edit**: `supabase/config.toml` (add function entries)
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` (wire Email Provider card)
+
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+### Execution Order
+
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 
