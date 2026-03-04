@@ -5,49 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function deriveKey(secret: string, usage: KeyUsage[]): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: enc.encode("nexusflo24-sms"), iterations: 100000, hash: "SHA-256" },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    usage,
-  );
-}
-
-async function decrypt(encryptedBase64: string, secret: string): Promise<string> {
-  const key = await deriveKey(secret, ["decrypt"]);
-  const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
-  const iv = combined.slice(0, 12);
-  const ciphertext = combined.slice(12);
-  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-  return new TextDecoder().decode(decrypted);
-}
-
 function normalizePhoneNumber(raw: string): string | null {
   const cleaned = raw.replace(/[\s\-()]/g, "");
-
-  if (cleaned.startsWith("+")) {
-    return /^\+[1-9]\d{7,14}$/.test(cleaned) ? cleaned : null;
-  }
-
-  if (cleaned.startsWith("00")) {
-    const intl = `+${cleaned.slice(2)}`;
-    return /^\+[1-9]\d{7,14}$/.test(intl) ? intl : null;
-  }
-
-  // UK local fallback (e.g., 07xxxxxxxxx -> +447xxxxxxxxx)
-  if (/^0\d{10}$/.test(cleaned)) {
-    return `+44${cleaned.slice(1)}`;
-  }
-
-  // If country code is provided without plus, normalize it
-  if (/^[1-9]\d{7,14}$/.test(cleaned)) {
-    return `+${cleaned}`;
-  }
-
+  if (cleaned.startsWith("+")) return /^\+[1-9]\d{7,14}$/.test(cleaned) ? cleaned : null;
+  if (cleaned.startsWith("00")) { const intl = `+${cleaned.slice(2)}`; return /^\+[1-9]\d{7,14}$/.test(intl) ? intl : null; }
+  if (/^0\d{10}$/.test(cleaned)) return `+44${cleaned.slice(1)}`;
+  if (/^[1-9]\d{7,14}$/.test(cleaned)) return `+${cleaned}`;
   return null;
 }
 
@@ -95,66 +58,40 @@ Deno.serve(async (req) => {
 
     const normalizedTo = normalizePhoneNumber(to);
     if (!normalizedTo) {
-      return new Response(
-        JSON.stringify({ error: "Invalid phone number format. Use international format like +447517327597." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Invalid phone number format. Use international format like +447517327597." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Verify workspace membership
     const { data: isMember } = await adminClient.rpc("is_workspace_member", { _user_id: userId, _workspace_id: workspaceId });
     if (!isMember) {
       return new Response(JSON.stringify({ error: "Access denied" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get active SMS settings
-    const { data: settings, error: settingsErr } = await adminClient
-      .from("sms_settings")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
+    // Platform-managed credentials from ENV
+    const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+    const fromNumber = Deno.env.get("TWILIO_FROM_NUMBER");
 
-    if (settingsErr || !settings) {
-      return new Response(JSON.stringify({ error: "SMS not configured. Go to Settings → Integrations to set up your SMS provider." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!accountSid || !authToken || !fromNumber) {
+      return new Response(JSON.stringify({ error: "SMS provider not configured. Contact platform admin." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const encryptionKey = Deno.env.get("SMS_SETTINGS_ENCRYPTION_KEY");
-    if (!encryptionKey) {
-      return new Response(JSON.stringify({ error: "Server encryption not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const normalizedFrom = normalizePhoneNumber(fromNumber);
+    if (!normalizedFrom) {
+      return new Response(JSON.stringify({ error: "Platform SMS From Number is invalid." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const authToken = await decrypt(settings.auth_token_encrypted, encryptionKey);
-
-    let result: { providerMessageId: string; status: string };
-    let normalizedFrom: string | null = null;
-
-    if (settings.provider === "twilio") {
-      if (!settings.account_sid || !settings.from_number) {
-        return new Response(JSON.stringify({ error: "Twilio Account SID and From Number are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      normalizedFrom = normalizePhoneNumber(settings.from_number);
-      if (!normalizedFrom) {
-        return new Response(JSON.stringify({ error: "Configured Twilio From Number is invalid. Please re-save SMS settings with a valid E.164 number." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      if (normalizedTo === normalizedFrom) {
-        return new Response(JSON.stringify({ error: "'To' and 'From' number cannot be the same" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      result = await sendTwilioSms(settings.account_sid, authToken, normalizedFrom, normalizedTo, message);
-    } else {
-      return new Response(JSON.stringify({ error: `Provider '${settings.provider}' not yet implemented` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (normalizedTo === normalizedFrom) {
+      return new Response(JSON.stringify({ error: "'To' and 'From' number cannot be the same" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    const result = await sendTwilioSms(accountSid, authToken, normalizedFrom, normalizedTo, message);
 
     // Log success
     await adminClient.from("sms_logs").insert({
       workspace_id: workspaceId,
-      provider: settings.provider,
+      provider: "twilio",
       to_number: normalizedTo,
       from_number: normalizedFrom,
       message,
@@ -166,14 +103,13 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("sms-send error:", err);
 
-    // Try to log failure
     try {
       const body = await req.clone().json().catch(() => ({}));
       if (body.workspaceId) {
         const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         await adminClient.from("sms_logs").insert({
           workspace_id: body.workspaceId,
-          provider: "unknown",
+          provider: "twilio",
           to_number: body.to || "unknown",
           from_number: null,
           message: body.message || "",
