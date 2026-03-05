@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Block, BLOCK_LABELS } from "./blockTypes";
-import { ArrowUp, ArrowDown, Copy, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Copy, Trash2, GripVertical } from "lucide-react";
 import { parseVideoUrl, buildEmbedParams } from "./videoUtils";
 
 interface Props {
