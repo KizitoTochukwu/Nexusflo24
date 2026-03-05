@@ -61,6 +61,13 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     updateBlocks(next);
   };
 
+  const reorderBlock = (fromIndex: number, toIndex: number) => {
+    const next = [...blocks];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    updateBlocks(next);
+  };
+
   const duplicateBlock = (index: number) => {
     const original = blocks[index];
     const copy: Block = { ...original, id: generateId(), props: { ...original.props } };
