@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { Block, BlockType, BLOCK_LABELS, BLOCK_DEFAULTS } from "./blockTypes";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -5,7 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, RotateCcw } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Plus, Trash2, RotateCcw, Upload, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   block: Block | null;
@@ -42,46 +46,19 @@ export default function PropertiesPanel({ block, onChange }: Props) {
         </Button>
       </div>
 
-      {/* Section */}
       {block.type === "section" && <SectionProps p={p} update={update} />}
-
-      {/* Columns */}
       {(block.type === "columns2" || block.type === "columns3") && <ColumnsProps p={p} update={update} type={block.type} />}
-
-      {/* Heading */}
       {block.type === "heading" && <HeadingProps p={p} update={update} />}
-
-      {/* Text */}
       {block.type === "text" && <TextProps p={p} update={update} />}
-
-      {/* Image */}
       {block.type === "image" && <ImageProps p={p} update={update} />}
-
-      {/* Button */}
       {block.type === "button" && <ButtonProps p={p} update={update} />}
-
-      {/* Divider */}
       {block.type === "divider" && <DividerProps p={p} update={update} />}
-
-      {/* Spacer */}
       {block.type === "spacer" && <SpacerProps p={p} update={update} />}
-
-      {/* Form */}
       {block.type === "form" && <FormProps p={p} update={update} />}
-
-      {/* Testimonials */}
       {block.type === "testimonials" && <TestimonialsProps p={p} update={update} />}
-
-      {/* Pricing */}
       {block.type === "pricing" && <PricingProps p={p} update={update} />}
-
-      {/* FAQ */}
       {block.type === "faq" && <FaqProps p={p} update={update} />}
-
-      {/* Embed */}
       {block.type === "embed" && <EmbedProps p={p} update={update} />}
-
-      {/* Video */}
       {block.type === "video" && <VideoProps p={p} update={update} />}
     </div>
   );
@@ -152,6 +129,46 @@ function SectionProps({ p, update }: { p: Record<string, unknown>; update: (k: s
       {bgType === "image" && (
         <>
           <Field label="Background Image URL"><Input value={(p.backgroundImage as string) || ""} onChange={(e) => update("backgroundImage", e.target.value)} placeholder="https://…" /></Field>
+          <ImageUploadButton onUploaded={(url) => update("backgroundImage", url)} label="Upload Background" />
+          <Field label="Position">
+            <Select value={(p.backgroundPosition as string) || "center"} onValueChange={(v) => update("backgroundPosition", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="top">Top</SelectItem>
+                <SelectItem value="bottom">Bottom</SelectItem>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+                <SelectItem value="top left">Top Left</SelectItem>
+                <SelectItem value="top right">Top Right</SelectItem>
+                <SelectItem value="bottom left">Bottom Left</SelectItem>
+                <SelectItem value="bottom right">Bottom Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Size">
+            <Select value={(p.backgroundSize as string) || "cover"} onValueChange={(v) => update("backgroundSize", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cover">Cover</SelectItem>
+                <SelectItem value="contain">Contain</SelectItem>
+                <SelectItem value="auto">Auto</SelectItem>
+                <SelectItem value="100% 100%">Stretch</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Repeat">
+            <Select value={(p.backgroundRepeat as string) || "no-repeat"} onValueChange={(v) => update("backgroundRepeat", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="no-repeat">No Repeat</SelectItem>
+                <SelectItem value="repeat">Repeat</SelectItem>
+                <SelectItem value="repeat-x">Repeat X</SelectItem>
+                <SelectItem value="repeat-y">Repeat Y</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <ColorField label="Overlay Color" value={(p.overlayColor as string) || "#000000"} onChange={(v) => update("overlayColor", v)} />
           <Field label="Overlay Opacity (0-100)"><Input type="number" min={0} max={100} value={String(p.backgroundOverlay ?? 0)} onChange={(e) => update("backgroundOverlay", Number(e.target.value))} /></Field>
         </>
       )}
@@ -172,6 +189,7 @@ function SectionProps({ p, update }: { p: Record<string, unknown>; update: (k: s
             <SelectItem value="720px">720px</SelectItem>
             <SelectItem value="960px">960px</SelectItem>
             <SelectItem value="1100px">1100px</SelectItem>
+            <SelectItem value="1280px">1280px</SelectItem>
             <SelectItem value="100%">Full Width</SelectItem>
           </SelectContent>
         </Select>
@@ -183,6 +201,18 @@ function SectionProps({ p, update }: { p: Record<string, unknown>; update: (k: s
         <ColorField label="Border Color" value={(p.borderColor as string) || "#e5e7eb"} onChange={(v) => update("borderColor", v)} />
       </div>
       <SwitchField label="Shadow" checked={!!p.shadow} onChange={(v) => update("shadow", v)} />
+      {!!p.shadow && (
+        <Field label="Shadow Intensity">
+          <Select value={(p.shadowIntensity as string) || "medium"} onValueChange={(v) => update("shadowIntensity", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">Light</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="heavy">Heavy</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
       <div className="space-y-1 pt-1">
         <p className="text-[11px] font-medium text-muted-foreground">Visibility</p>
         <SwitchField label="Hide on Mobile" checked={!!p.hideOnMobile} onChange={(v) => update("hideOnMobile", v)} />
@@ -198,17 +228,29 @@ function ColumnsProps({ p, update, type }: { p: Record<string, unknown>; update:
   const presets = type === "columns2"
     ? ["50/50", "60/40", "40/60", "70/30", "30/70"]
     : ["33/33/33", "50/25/25", "25/50/25", "25/25/50"];
+  const [useCustom, setUseCustom] = useState(!presets.includes((p.columnWidths as string) || presets[0]));
+  
   return (
     <>
       <Field label="Gap"><Input value={(p.gap as string) || "24px"} onChange={(e) => update("gap", e.target.value)} /></Field>
-      <Field label="Column Widths">
-        <Select value={(p.columnWidths as string) || presets[0]} onValueChange={(v) => update("columnWidths", v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {presets.map((pr) => <SelectItem key={pr} value={pr}>{pr}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </Field>
+      <SwitchField label="Custom Widths" checked={useCustom} onChange={(v) => {
+        setUseCustom(v);
+        if (!v) update("columnWidths", presets[0]);
+      }} />
+      {!useCustom ? (
+        <Field label="Column Widths">
+          <Select value={(p.columnWidths as string) || presets[0]} onValueChange={(v) => update("columnWidths", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {presets.map((pr) => <SelectItem key={pr} value={pr}>{pr}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : (
+        <Field label="Custom Widths (e.g. 40/60)">
+          <Input value={(p.columnWidths as string) || presets[0]} onChange={(e) => update("columnWidths", e.target.value)} placeholder="40/60" className="h-8 text-xs" />
+        </Field>
+      )}
       <Field label="Vertical Align">
         <Select value={(p.verticalAlign as string) || "top"} onValueChange={(v) => update("verticalAlign", v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
@@ -278,6 +320,7 @@ function ImageProps({ p, update }: { p: Record<string, unknown>; update: (k: str
   return (
     <>
       <Field label="Image URL"><Input value={(p.src as string) || ""} onChange={(e) => update("src", e.target.value)} placeholder="https://…" /></Field>
+      <ImageUploadButton onUploaded={(url) => update("src", url)} label="Upload Image" />
       <Field label="Alt Text"><Input value={(p.alt as string) || ""} onChange={(e) => update("alt", e.target.value)} /></Field>
       <Field label="Width"><Input value={(p.width as string) || "100%"} onChange={(e) => update("width", e.target.value)} /></Field>
       <Field label="Border Radius"><Input value={(p.borderRadius as string) || "8px"} onChange={(e) => update("borderRadius", e.target.value)} /></Field>
@@ -295,6 +338,57 @@ function ImageProps({ p, update }: { p: Record<string, unknown>; update: (k: str
       <SwitchField label="Shadow" checked={!!p.shadow} onChange={(v) => update("shadow", v)} />
       <Field label="Link URL"><Input value={(p.linkUrl as string) || ""} onChange={(e) => update("linkUrl", e.target.value)} placeholder="Optional link wrap" /></Field>
     </>
+  );
+}
+
+/* ─── Image Upload Button ─── */
+function ImageUploadButton({ onUploaded, label }: { onUploaded: (url: string) => void; label: string }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Only JPG, PNG, GIF, and WEBP images are allowed");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Please sign in to upload"); return; }
+
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("funnel-assets").upload(path, file);
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage.from("funnel-assets").getPublicUrl(path);
+      onUploaded(publicUrl);
+      toast.success("Image uploaded");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleUpload} />
+      <Button variant="outline" size="sm" className="h-8 w-full text-xs" onClick={() => fileRef.current?.click()} disabled={uploading}>
+        {uploading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
+        {uploading ? "Uploading…" : label}
+      </Button>
+    </div>
   );
 }
 
@@ -469,6 +563,12 @@ function EmbedProps({ p, update }: { p: Record<string, unknown>; update: (k: str
           </Select>
         </Field>
       )}
+      <Field label="Max Width"><Input value={(p.maxWidth as string) || ""} onChange={(e) => update("maxWidth", e.target.value)} placeholder="e.g. 800px" /></Field>
+      <AlignField value={(p.alignment as string) || "center"} onChange={(v) => update("alignment", v)} />
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Margin Top"><Input value={String(p.marginTop ?? "0")} onChange={(e) => update("marginTop", e.target.value)} className="h-8 text-xs" /></Field>
+        <Field label="Margin Bottom"><Input value={String(p.marginBottom ?? "0")} onChange={(e) => update("marginBottom", e.target.value)} className="h-8 text-xs" /></Field>
+      </div>
     </>
   );
 }

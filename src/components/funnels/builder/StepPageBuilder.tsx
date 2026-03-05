@@ -1,11 +1,21 @@
 import { useState, useCallback, useEffect } from "react";
 import { Block, BlockType, createBlock, generateId } from "./blockTypes";
+import {
+  findBlockById,
+  updateBlockInTree,
+  deleteBlockInTree,
+  addBlockToTree,
+  duplicateBlockInTree,
+  reorderBlockInTree,
+  isContainer,
+  getBlockPath,
+  cloneBlocks,
+} from "./blockTreeUtils";
 import BlockLibrary from "./BlockLibrary";
 import BlockCanvas from "./BlockCanvas";
 import PropertiesPanel from "./PropertiesPanel";
 import { Button } from "@/components/ui/button";
 import { Save, Undo2 } from "lucide-react";
-import { toast } from "sonner";
 
 interface Props {
   initialBlocks: Block[];
@@ -20,7 +30,6 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
   const [history, setHistory] = useState<Block[][]>([initialBlocks]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
-  // Sync when initialBlocks change (step switch)
   useEffect(() => {
     setBlocks(initialBlocks);
     setHistory([initialBlocks]);
@@ -46,49 +55,73 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     }
   };
 
+  // Add block — if a container is selected, add inside it; otherwise add at root
   const addBlock = (type: BlockType) => {
     const b = createBlock(type);
-    const next = [...blocks, b];
+    // Initialize children array for containers
+    if (isContainer(type)) {
+      b.children = [];
+    }
+    
+    let parentId: string | null = null;
+    if (selectedId) {
+      const selected = findBlockById(blocks, selectedId);
+      if (selected && isContainer(selected.type)) {
+        parentId = selectedId;
+      }
+    }
+    
+    const next = addBlockToTree(blocks, b, parentId);
     updateBlocks(next);
     setSelectedId(b.id);
   };
 
-  const moveBlock = (index: number, direction: "up" | "down") => {
-    const next = [...blocks];
-    const target = direction === "up" ? index - 1 : index + 1;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
+  const moveBlock = (id: string, direction: "up" | "down") => {
+    // Find the block's sibling list and move within it
+    const findAndMove = (list: Block[]): Block[] | null => {
+      const idx = list.findIndex((b) => b.id === id);
+      if (idx !== -1) {
+        const target = direction === "up" ? idx - 1 : idx + 1;
+        if (target < 0 || target >= list.length) return null;
+        const next = [...list];
+        [next[idx], next[target]] = [next[target], next[idx]];
+        return next;
+      }
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].children) {
+          const result = findAndMove(list[i].children!);
+          if (result) return list.map((b, j) => j === i ? { ...b, children: result } : b);
+        }
+      }
+      return null;
+    };
+    const next = findAndMove(blocks);
+    if (next) updateBlocks(next);
+  };
+
+  const reorderBlock = (fromId: string, toIndex: number, parentId: string | null) => {
+    const next = reorderBlockInTree(blocks, fromId, toIndex, parentId);
     updateBlocks(next);
   };
 
-  const reorderBlock = (fromIndex: number, toIndex: number) => {
-    const next = [...blocks];
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
+  const duplicateBlock = (id: string) => {
+    const next = duplicateBlockInTree(blocks, id);
     updateBlocks(next);
   };
 
-  const duplicateBlock = (index: number) => {
-    const original = blocks[index];
-    const copy: Block = { ...original, id: generateId(), props: { ...original.props } };
-    const next = [...blocks];
-    next.splice(index + 1, 0, copy);
-    updateBlocks(next);
-  };
-
-  const deleteBlock = (index: number) => {
-    const id = blocks[index].id;
-    const next = blocks.filter((_, i) => i !== index);
+  const deleteBlock = (id: string) => {
+    const next = deleteBlockInTree(blocks, id);
     updateBlocks(next);
     if (selectedId === id) setSelectedId(null);
   };
 
   const updateBlockProps = (id: string, props: Record<string, unknown>) => {
-    const next = blocks.map((b) => (b.id === id ? { ...b, props } : b));
+    const next = updateBlockInTree(blocks, id, props);
     updateBlocks(next);
   };
 
-  const selectedBlock = blocks.find((b) => b.id === selectedId) ?? null;
+  const selectedBlock = selectedId ? findBlockById(blocks, selectedId) : null;
+  const blockPath = selectedId ? getBlockPath(blocks, selectedId) : null;
 
   return (
     <div className="flex h-[calc(100vh-220px)] min-h-[500px] overflow-hidden rounded-lg border bg-background">
@@ -100,7 +133,14 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
       {/* Center: Canvas */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b px-4 py-2">
-          <span className="text-sm font-medium text-muted-foreground">{stepLabel || "Page Builder"}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">{stepLabel || "Page Builder"}</span>
+            {blockPath && blockPath.length > 1 && (
+              <span className="text-[10px] text-muted-foreground/60">
+                {blockPath.join(" › ")}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={undo} disabled={historyIndex === 0}>
               <Undo2 className="mr-1 h-4 w-4" /> Undo
@@ -120,6 +160,14 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
               onDuplicate={duplicateBlock}
               onDelete={deleteBlock}
               onReorder={reorderBlock}
+              onDropIntoContainer={(blockId, containerId, index) => {
+                // Move a block into a container
+                const block = findBlockById(blocks, blockId);
+                if (!block) return;
+                let next = deleteBlockInTree(blocks, blockId);
+                next = addBlockToTree(next, { ...block }, containerId, index);
+                updateBlocks(next);
+              }}
             />
           </div>
         </div>
