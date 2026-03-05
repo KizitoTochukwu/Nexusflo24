@@ -110,20 +110,32 @@ function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; on
         borderColor: (p.borderColor as string) || undefined,
         borderStyle: Number(p.borderWidth ?? 0) > 0 ? "solid" : undefined,
         position: "relative",
+        overflow: "hidden",
       };
       if (bgType === "solid") style.backgroundColor = (p.backgroundColor as string) || "#ffffff";
       if (bgType === "gradient") style.background = `linear-gradient(135deg, ${p.gradientFrom || "#ffffff"}, ${p.gradientTo || "#f0f0f0"})`;
       if (bgType === "image") {
         style.backgroundImage = `url(${p.backgroundImage})`;
-        style.backgroundSize = "cover";
-        style.backgroundPosition = "center";
+        style.backgroundSize = (p.backgroundSize as string) || "cover";
+        style.backgroundPosition = (p.backgroundPosition as string) || "center";
+        style.backgroundRepeat = (p.backgroundRepeat as string) || "no-repeat";
       }
-      if (p.shadow) style.boxShadow = "0 4px 20px rgba(0,0,0,0.12)";
+      const intensity = (p.shadowIntensity as string) || "medium";
+      const shadowMap: Record<string, string> = {
+        light: "0 2px 10px rgba(0,0,0,0.06)",
+        medium: "0 4px 20px rgba(0,0,0,0.12)",
+        heavy: "0 8px 40px rgba(0,0,0,0.2)",
+      };
+      if (p.shadow) style.boxShadow = shadowMap[intensity] || shadowMap.medium;
 
       return (
         <div style={style}>
           {bgType === "image" && Number(p.backgroundOverlay ?? 0) > 0 && (
-            <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${Number(p.backgroundOverlay) / 100})`, borderRadius: `${p.borderRadius ?? 0}px` }} />
+            <div className="absolute inset-0" style={{
+              backgroundColor: (p.overlayColor as string) || "#000000",
+              opacity: Number(p.backgroundOverlay) / 100,
+              borderRadius: `${p.borderRadius ?? 0}px`,
+            }} />
           )}
           <div style={{ maxWidth: (p.maxWidth as string) || "960px", position: "relative" }} className="mx-auto">
             {block.children?.map((child) => (
@@ -136,15 +148,26 @@ function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; on
     case "columns2":
     case "columns3": {
       const widths = ((p.columnWidths as string) || (block.type === "columns2" ? "50/50" : "33/33/33")).split("/");
-      const cols = widths.map((w) => `${w.trim()}%`).join(" ");
+      const cols = widths.map((w) => `${w.trim()}%`);
       const vAlign = p.verticalAlign === "center" ? "center" : p.verticalAlign === "bottom" ? "flex-end" : "flex-start";
+      const colCount = widths.length;
+      // Split children into columns
+      const childrenPerCol: Block[][] = Array.from({ length: colCount }, () => []);
+      (block.children || []).forEach((child, i) => {
+        childrenPerCol[i % colCount].push(child);
+      });
+
       return (
         <div
-          className={p.stackOnMobile !== false ? "grid grid-cols-1 md:grid-auto" : "grid"}
-          style={{ gridTemplateColumns: cols.split(" ").map(() => "1fr").join(" "), gap: p.gap as string, alignItems: vAlign }}
+          className={p.stackOnMobile !== false ? "flex flex-col md:grid" : "grid"}
+          style={{ gridTemplateColumns: cols.join(" "), gap: p.gap as string, alignItems: vAlign }}
         >
-          {block.children?.map((child) => (
-            <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+          {childrenPerCol.map((colChildren, colIdx) => (
+            <div key={colIdx} className="space-y-4">
+              {colChildren.map((child) => (
+                <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+              ))}
+            </div>
           ))}
         </div>
       );
@@ -192,16 +215,26 @@ function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; on
       );
     }
     case "embed": {
+      const wrapStyle: React.CSSProperties = {
+        maxWidth: (p.maxWidth as string) || undefined,
+        marginTop: p.marginTop ? `${p.marginTop}px` : undefined,
+        marginBottom: p.marginBottom ? `${p.marginBottom}px` : undefined,
+      };
+      if ((p.alignment as string) === "center") { wrapStyle.marginLeft = "auto"; wrapStyle.marginRight = "auto"; }
+      else if ((p.alignment as string) === "right") { wrapStyle.marginLeft = "auto"; }
+
       if (p.useAspectRatio && p.src) {
         const pad = ASPECT_MAP[(p.aspectRatio as string) || "16:9"] || "56.25%";
         return (
-          <div className="relative w-full" style={{ paddingBottom: pad }}>
-            <iframe src={p.src as string} className="absolute inset-0 h-full w-full rounded-lg border" title="Embed" />
+          <div style={wrapStyle}>
+            <div className="relative w-full" style={{ paddingBottom: pad }}>
+              <iframe src={p.src as string} className="absolute inset-0 h-full w-full rounded-lg border" title="Embed" />
+            </div>
           </div>
         );
       }
       return (p.src as string) ? (
-        <iframe src={p.src as string} style={{ height: p.height as string }} className="w-full rounded-lg border" title="Embed" />
+        <div style={wrapStyle}><iframe src={p.src as string} style={{ height: p.height as string }} className="w-full rounded-lg border" title="Embed" /></div>
       ) : null;
     }
     case "video": {
