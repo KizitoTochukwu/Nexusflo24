@@ -9,6 +9,7 @@ interface Props {
   onMove: (index: number, direction: "up" | "down") => void;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
+  onReorder?: (fromIndex: number, toIndex: number) => void;
 }
 
 function getSectionStyle(p: Record<string, unknown>): React.CSSProperties {
