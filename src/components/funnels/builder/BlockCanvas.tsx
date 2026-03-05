@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Block, BLOCK_LABELS } from "./blockTypes";
-import { ArrowUp, ArrowDown, Copy, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Copy, Trash2, GripVertical } from "lucide-react";
 import { parseVideoUrl, buildEmbedParams } from "./videoUtils";
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   onMove: (index: number, direction: "up" | "down") => void;
   onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
+  onReorder?: (fromIndex: number, toIndex: number) => void;
 }
 
 function getSectionStyle(p: Record<string, unknown>): React.CSSProperties {
@@ -245,7 +247,36 @@ function renderBlockPreview(block: Block) {
   }
 }
 
-export default function BlockCanvas({ blocks, selectedId, onSelect, onMove, onDuplicate, onDelete }: Props) {
+export default function BlockCanvas({ blocks, selectedId, onSelect, onMove, onDuplicate, onDelete, onReorder }: Props) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setOverIndex(index);
+  };
+
+  const handleDrop = (e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    if (dragIndex !== null && dragIndex !== toIndex && onReorder) {
+      onReorder(dragIndex, toIndex);
+    }
+    setDragIndex(null);
+    setOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setOverIndex(null);
+  };
+
   if (blocks.length === 0) {
     return (
       <div className="flex h-96 flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted-foreground/20 text-muted-foreground">
@@ -260,15 +291,25 @@ export default function BlockCanvas({ blocks, selectedId, onSelect, onMove, onDu
       {blocks.map((block, i) => (
         <div
           key={block.id}
+          draggable
+          onDragStart={(e) => handleDragStart(e, i)}
+          onDragOver={(e) => handleDragOver(e, i)}
+          onDrop={(e) => handleDrop(e, i)}
+          onDragEnd={handleDragEnd}
           onClick={() => onSelect(block.id)}
-          className={`group relative cursor-pointer rounded-lg border p-4 transition-all ${
+          className={`group relative cursor-grab rounded-lg border p-4 transition-all ${
             selectedId === block.id
               ? "border-accent ring-2 ring-accent/20"
               : "border-border hover:border-muted-foreground/40"
+          } ${dragIndex === i ? "opacity-40" : ""} ${
+            overIndex === i && dragIndex !== i
+              ? "border-t-4 border-t-accent"
+              : ""
           }`}
         >
-          {/* Type badge */}
-          <span className="absolute -top-2.5 left-2 z-10 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          {/* Type badge + drag handle */}
+          <span className="absolute -top-2.5 left-2 z-10 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+            <GripVertical className="h-3 w-3 opacity-50" />
             {BLOCK_LABELS[block.type]?.label || block.type}
           </span>
           {/* Toolbar */}
