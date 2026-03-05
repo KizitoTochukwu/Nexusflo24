@@ -1,103 +1,83 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+## Plan: Complete Funnel Builder — Nesting, Image Upload, and Extended Properties
 
-### Context
+### Current State Assessment
+The builder already has comprehensive property panels for all 15 block types. The main gaps are:
+1. **No nesting support in the builder** — Sections and Columns can't contain child blocks (PublicBlockRenderer supports it, but the builder canvas treats everything as flat)
+2. **No image upload** — Image block only accepts URLs
+3. **Missing Section properties** — background position/size/repeat, overlay color, shadow intensity, 1280px max-width option
+4. **Missing Columns features** — per-column background/padding/border, custom width input, mobile order
+5. **Missing Embed properties** — max width, alignment, margin
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+### Architecture Change: Nested Block Support
+This is the most significant change. Currently `StepPageBuilder` manages a flat `Block[]`. We need to support `block.children` for Section and Column blocks in the builder, not just in the public renderer.
 
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
-
-### Changes
-
-#### 1. Frontend: Split Settings Tabs by Role
-
-**DashboardSettings.tsx** — Major restructure:
-
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
-
-Tab layout:
-```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+```text
+Current:  [Section, Heading, Columns2, Text, Button]  (flat)
+Target:   [Section { children: [Heading, Columns2 { children: [Text, Button] }] }]  (nested)
 ```
 
-#### 2. Move Provider Credentials to Platform ENV Secrets
+### Files to Modify
 
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+**1. `blockTypes.ts`** — Add 1280px to Section defaults, add `backgroundPosition`, `backgroundSize`, `backgroundRepeat`, `overlayColor`, `shadowIntensity` to Section defaults. Add `funnel-assets` storage bucket reference for image uploads.
 
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+**2. `PropertiesPanel.tsx`** — Extend:
+- **Section**: add background position/size/repeat selectors, overlay color picker, shadow intensity slider, add 1280px to max-width options
+- **Columns**: add custom width input field, per-column background color, per-column padding, per-column border radius/color
+- **Embed**: add max width, alignment, margin top/bottom fields
+- **Image**: add file upload button (using Supabase Storage)
 
-#### 3. Update Edge Functions for Platform Credentials
+**3. `BlockCanvas.tsx`** — Major refactor:
+- Make `renderBlockPreview` recursive — Section and Column blocks render their `children` as nested droppable zones
+- Add drop zones inside Section/Column containers that accept blocks
+- Support selecting nested blocks and showing breadcrumb path (e.g., "Section > Column 1 > Image")
+- Nested blocks get their own toolbar (move/duplicate/delete within parent)
 
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+**4. `StepPageBuilder.tsx`** — Refactor block management:
+- `addBlock` needs a `parentId` parameter to insert into a parent's children array
+- `moveBlock`, `deleteBlock`, `duplicateBlock`, `updateBlockProps` must traverse the tree recursively
+- `reorderBlock` must work within nested children
+- Helper: `findBlockById(blocks, id)` and `updateBlockInTree(blocks, id, updater)`
 
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+**5. `PublicBlockRenderer.tsx`** — Minor: add overlay color support, background position/size/repeat for Section
 
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+**6. Database migration** — Create `funnel-assets` storage bucket for image uploads with RLS policies scoped to workspace members
 
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+### Implementation Tasks (6 tasks)
 
-#### 4. Backend Admin Authorization
+1. **Extend block defaults and Section/Embed properties** — Update `blockTypes.ts` with new props; update `PropertiesPanel.tsx` Section panel (bg position/size/repeat, overlay color, shadow intensity, 1280px); update Embed panel (max width, alignment, margin); update Columns panel (per-column bg/padding/border, custom widths)
 
-All save-settings and test-send edge functions must verify admin role:
-```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
+2. **Create funnel-assets storage bucket + image upload** — DB migration for `funnel-assets` bucket with workspace-scoped RLS. Add upload button to Image block properties panel that uploads to storage and sets the URL.
+
+3. **Refactor block tree for nesting** — Add tree traversal helpers to `StepPageBuilder.tsx`. Update `addBlock`, `moveBlock`, `deleteBlock`, `duplicateBlock`, `updateBlockProps` to operate on nested tree structure.
+
+4. **Nested canvas rendering** — Refactor `BlockCanvas.tsx` so Section and Column blocks render their children as interactive, selectable, drag-droppable nested blocks. Add breadcrumb path display for selected nested block.
+
+5. **Update PublicBlockRenderer** — Add overlay color, background position/size/repeat for Section. Add max-width/alignment/margin for Embed.
+
+6. **QA pass** — Ensure block duplication preserves children, undo/redo works with nested changes, drag-drop works inside columns, no console errors.
+
+### Storage Bucket Migration SQL
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('funnel-assets', 'funnel-assets', true);
+
+CREATE POLICY "Workspace members can upload funnel assets"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'funnel-assets');
+
+CREATE POLICY "Anyone can view funnel assets"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'funnel-assets');
+
+CREATE POLICY "Workspace members can delete own funnel assets"
+ON storage.objects FOR DELETE TO authenticated
+USING (bucket_id = 'funnel-assets' AND (auth.uid())::text = (storage.foldername(name))[1]);
 ```
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
-
-#### 5. Admin Integrations Status Widget
-
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
-
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
-
-#### 6. Webhooks Tab (Customer-Accessible)
-
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+### Risks
+- Nesting adds complexity to undo/redo (history stores full tree snapshots, so it should work as-is)
+- Existing saved funnels with flat blocks will continue to work — they just won't have children
+- Image upload requires the storage bucket to be created first
 
