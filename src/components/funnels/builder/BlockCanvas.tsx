@@ -1,5 +1,6 @@
-import { Block } from "./blockTypes";
-import { ArrowUp, ArrowDown, Copy, Trash2, GripVertical } from "lucide-react";
+import { Block, BLOCK_LABELS } from "./blockTypes";
+import { ArrowUp, ArrowDown, Copy, Trash2 } from "lucide-react";
+import { parseVideoUrl, buildEmbedParams } from "./videoUtils";
 
 interface Props {
   blocks: Block[];
@@ -10,59 +11,147 @@ interface Props {
   onDelete: (index: number) => void;
 }
 
+function getSectionStyle(p: Record<string, unknown>): React.CSSProperties {
+  const bgType = (p.backgroundType as string) || "solid";
+  const style: React.CSSProperties = {
+    padding: `${p.paddingTop ?? 40}px ${p.paddingRight ?? 20}px ${p.paddingBottom ?? 40}px ${p.paddingLeft ?? 20}px`,
+    marginTop: `${p.marginTop ?? 0}px`,
+    marginBottom: `${p.marginBottom ?? 0}px`,
+    borderRadius: `${p.borderRadius ?? 0}px`,
+    borderWidth: `${p.borderWidth ?? 0}px`,
+    borderColor: (p.borderColor as string) || "#e5e7eb",
+    borderStyle: Number(p.borderWidth ?? 0) > 0 ? "solid" : "none",
+  };
+  if (bgType === "solid") style.backgroundColor = (p.backgroundColor as string) || "#ffffff";
+  if (bgType === "gradient") style.background = `linear-gradient(135deg, ${p.gradientFrom || "#ffffff"}, ${p.gradientTo || "#f0f0f0"})`;
+  if (bgType === "image") {
+    style.backgroundImage = `url(${p.backgroundImage})`;
+    style.backgroundSize = "cover";
+    style.backgroundPosition = "center";
+  }
+  if (p.shadow) style.boxShadow = "0 4px 20px rgba(0,0,0,0.12)";
+  return style;
+}
+
+function getColumnWidths(widthStr: string): string[] {
+  return (widthStr || "50/50").split("/").map((w) => `${w.trim()}%`);
+}
+
+const ASPECT_MAP: Record<string, string> = { "16:9": "56.25%", "4:3": "75%", "1:1": "100%", "21:9": "42.86%" };
+
 function renderBlockPreview(block: Block) {
   const p = block.props;
   switch (block.type) {
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
-      const sizes: Record<string, string> = { h1: "text-3xl", h2: "text-2xl", h3: "text-xl" };
+      const defaultSizes: Record<string, string> = { h1: "text-3xl", h2: "text-2xl", h3: "text-xl" };
       return (
-        <Tag className={`${sizes[p.level as string] || "text-2xl"} font-bold`} style={{ color: p.color as string, textAlign: p.align as any }}>
+        <Tag
+          className={`${!p.fontSize ? defaultSizes[p.level as string] || "text-2xl" : ""} leading-tight`}
+          style={{
+            color: p.color as string,
+            textAlign: p.align as any,
+            fontSize: (p.fontSize as string) || undefined,
+            fontWeight: (p.fontWeight as string) || "bold",
+            lineHeight: (p.lineHeight as string) || undefined,
+            maxWidth: (p.maxWidth as string) || undefined,
+          }}
+        >
           {(p.text as string) || "Heading"}
         </Tag>
       );
     }
     case "text":
-      return <p className="text-sm leading-relaxed" style={{ color: p.color as string, textAlign: p.align as any }}>{(p.text as string) || "Text block"}</p>;
-    case "image":
-      return (p.src as string) ? (
-        <img src={p.src as string} alt={p.alt as string} style={{ width: p.width as string, borderRadius: p.borderRadius as string }} className="mx-auto" />
+      return (
+        <p
+          className="text-sm leading-relaxed"
+          style={{
+            color: p.color as string,
+            textAlign: p.align as any,
+            fontSize: (p.fontSize as string) || undefined,
+            lineHeight: (p.lineHeight as string) || undefined,
+          }}
+        >
+          {(p.text as string) || "Text block"}
+        </p>
+      );
+    case "image": {
+      const imgEl = (p.src as string) ? (
+        <img
+          src={p.src as string}
+          alt={p.alt as string}
+          style={{
+            width: p.width as string,
+            borderRadius: p.borderRadius as string,
+            objectFit: (p.objectFit as any) || "cover",
+            boxShadow: p.shadow ? "0 4px 12px rgba(0,0,0,0.15)" : undefined,
+          }}
+          className="mx-auto"
+        />
       ) : (
         <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 text-sm text-muted-foreground">Image placeholder</div>
       );
+      return <div style={{ textAlign: (p.alignment as any) || "center" }}>{imgEl}</div>;
+    }
     case "button":
       return (
         <div style={{ textAlign: p.align as any }}>
-          <span className={`inline-block rounded-lg px-6 py-3 font-medium ${p.size === "sm" ? "text-sm px-4 py-2" : "text-base"}`} style={{ backgroundColor: p.backgroundColor as string, color: p.textColor as string, borderRadius: p.borderRadius as string }}>
+          <span
+            className="inline-block font-medium"
+            style={{
+              backgroundColor: p.backgroundColor as string,
+              color: p.textColor as string,
+              borderRadius: (p.borderRadius as string) || "8px",
+              padding: `${p.paddingY ?? 12}px ${p.paddingX ?? 32}px`,
+              fontSize: p.size === "sm" ? "14px" : "16px",
+            }}
+          >
             {(p.text as string) || "Button"}
           </span>
         </div>
       );
     case "divider":
-      return <hr style={{ borderColor: p.color as string, borderTopWidth: p.thickness as string, margin: p.margin as string }} />;
+      return (
+        <hr style={{
+          borderColor: p.color as string,
+          borderTopWidth: p.thickness as string,
+          borderStyle: (p.style as string) || "solid",
+          width: (p.width as string) || "100%",
+          margin: p.margin as string,
+        }} />
+      );
     case "spacer":
       return <div style={{ height: p.height as string }} className="flex items-center justify-center text-[10px] text-muted-foreground/40">{p.height as string}</div>;
     case "section":
       return (
-        <div className="rounded-lg border border-dashed border-muted-foreground/20 p-4 text-center text-xs text-muted-foreground">
-          Section Container
+        <div style={getSectionStyle(p)}>
+          <div style={{ maxWidth: (p.maxWidth as string) || "960px", margin: "0 auto" }}>
+            <div className="text-center text-xs text-muted-foreground">Section Container</div>
+          </div>
         </div>
       );
-    case "columns2":
+    case "columns2": {
+      const widths = getColumnWidths((p.columnWidths as string) || "50/50");
+      const vAlign = p.verticalAlign === "center" ? "center" : p.verticalAlign === "bottom" ? "flex-end" : "flex-start";
       return (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded border border-dashed border-muted-foreground/20 p-6 text-center text-xs text-muted-foreground">Column 1</div>
-          <div className="rounded border border-dashed border-muted-foreground/20 p-6 text-center text-xs text-muted-foreground">Column 2</div>
-        </div>
-      );
-    case "columns3":
-      return (
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="rounded border border-dashed border-muted-foreground/20 p-6 text-center text-xs text-muted-foreground">Column {n}</div>
+        <div className="grid" style={{ gridTemplateColumns: widths.map((w) => `minmax(0, ${w.replace("%", "fr").replace("fr", "")}fr)`).join(" "), gap: p.gap as string, alignItems: vAlign }}>
+          {widths.map((_, i) => (
+            <div key={i} className="rounded border border-dashed border-muted-foreground/20 p-6 text-center text-xs text-muted-foreground">Column {i + 1}</div>
           ))}
         </div>
       );
+    }
+    case "columns3": {
+      const widths = getColumnWidths((p.columnWidths as string) || "33/33/33");
+      const vAlign = p.verticalAlign === "center" ? "center" : p.verticalAlign === "bottom" ? "flex-end" : "flex-start";
+      return (
+        <div className="grid" style={{ gridTemplateColumns: widths.map((w) => `minmax(0, ${w.replace("%", "fr").replace("fr", "")}fr)`).join(" "), gap: p.gap as string, alignItems: vAlign }}>
+          {widths.map((_, i) => (
+            <div key={i} className="rounded border border-dashed border-muted-foreground/20 p-6 text-center text-xs text-muted-foreground">Column {i + 1}</div>
+          ))}
+        </div>
+      );
+    }
     case "form": {
       const fields = (p.fields as string[]) || ["email"];
       return (
@@ -116,12 +205,41 @@ function renderBlockPreview(block: Block) {
         </div>
       );
     }
-    case "embed":
+    case "embed": {
+      if (p.useAspectRatio && p.src) {
+        const pad = ASPECT_MAP[(p.aspectRatio as string) || "16:9"] || "56.25%";
+        return (
+          <div className="relative w-full" style={{ paddingBottom: pad }}>
+            <iframe src={p.src as string} className="absolute inset-0 h-full w-full rounded border" title="Embed" />
+          </div>
+        );
+      }
       return (p.src as string) ? (
         <iframe src={p.src as string} style={{ height: p.height as string }} className="w-full rounded border" title="Embed" />
       ) : (
         <div className="flex items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 p-8 text-sm text-muted-foreground" style={{ height: p.height as string }}>Embed URL not set</div>
       );
+    }
+    case "video": {
+      const info = parseVideoUrl((p.src as string) || "");
+      if (!info) {
+        return <div className="flex items-center justify-center rounded border-2 border-dashed border-muted-foreground/30 p-8 text-sm text-muted-foreground">Video URL not set</div>;
+      }
+      const pad = ASPECT_MAP[(p.aspectRatio as string) || "16:9"] || "56.25%";
+      if (info.provider === "mp4") {
+        return (
+          <div className="relative w-full" style={{ paddingBottom: pad }}>
+            <video src={info.embedUrl} controls={p.controls !== false} muted={!!p.mute} loop={!!p.loop} autoPlay={!!p.autoplay} className="absolute inset-0 h-full w-full rounded object-cover" />
+          </div>
+        );
+      }
+      const params = buildEmbedParams({ autoplay: !!p.autoplay, mute: !!p.mute, loop: !!p.loop });
+      return (
+        <div className="relative w-full" style={{ paddingBottom: pad }}>
+          <iframe src={`${info.embedUrl}${params}`} className="absolute inset-0 h-full w-full rounded" title="Video" allow="autoplay; fullscreen" allowFullScreen />
+        </div>
+      );
+    }
     default:
       return <div className="p-2 text-xs text-muted-foreground">Unknown block: {block.type}</div>;
   }
@@ -149,6 +267,10 @@ export default function BlockCanvas({ blocks, selectedId, onSelect, onMove, onDu
               : "border-border hover:border-muted-foreground/40"
           }`}
         >
+          {/* Type badge */}
+          <span className="absolute -top-2.5 left-2 z-10 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {BLOCK_LABELS[block.type]?.label || block.type}
+          </span>
           {/* Toolbar */}
           <div className={`absolute -top-3 right-2 z-10 flex items-center gap-0.5 rounded-md border bg-background px-1 py-0.5 shadow-sm transition-opacity ${
             selectedId === block.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"

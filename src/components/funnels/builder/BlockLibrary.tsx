@@ -1,21 +1,21 @@
 import {
   LayoutTemplate, Columns2, Columns3, Type, AlignLeft, ImageIcon,
   MousePointerClick, Minus, MoveVertical, FormInput, Quote,
-  DollarSign, HelpCircle, Code,
+  DollarSign, HelpCircle, Code, Video,
 } from "lucide-react";
 import { BlockType, BLOCK_LABELS } from "./blockTypes";
 
 const ICONS: Record<string, React.ElementType> = {
   LayoutTemplate, Columns2, Columns3, Type, AlignLeft, ImageIcon,
   MousePointerClick, Minus, MoveVertical, FormInput, Quote,
-  DollarSign, HelpCircle, Code,
+  DollarSign, HelpCircle, Code, Video,
 };
 
 const GROUPS = [
   { label: "Layout", types: ["section", "columns2", "columns3", "divider", "spacer"] as BlockType[] },
   { label: "Content", types: ["heading", "text", "image", "button"] as BlockType[] },
   { label: "Conversion", types: ["form", "testimonials", "pricing", "faq"] as BlockType[] },
-  { label: "Advanced", types: ["embed"] as BlockType[] },
+  { label: "Advanced", types: ["embed", "video"] as BlockType[] },
 ];
 
 interface Props {
