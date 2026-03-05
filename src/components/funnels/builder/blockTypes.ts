@@ -58,14 +58,18 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
   columns2: () => ({
     gap: "24px",
     columnWidths: "50/50",
+    customWidths: "",
     verticalAlign: "top",
     stackOnMobile: true,
+    columnStyles: [{}, {}],
   }),
   columns3: () => ({
     gap: "24px",
     columnWidths: "33/33/33",
+    customWidths: "",
     verticalAlign: "top",
     stackOnMobile: true,
+    columnStyles: [{}, {}. {}],
   }),
   heading: () => ({
     text: "Your Headline Here",
