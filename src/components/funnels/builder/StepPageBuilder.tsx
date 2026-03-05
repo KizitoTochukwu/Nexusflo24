@@ -119,6 +119,7 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
               onMove={moveBlock}
               onDuplicate={duplicateBlock}
               onDelete={deleteBlock}
+              onReorder={reorderBlock}
             />
           </div>
         </div>
