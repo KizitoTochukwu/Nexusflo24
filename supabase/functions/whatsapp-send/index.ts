@@ -52,12 +52,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Access denied" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Platform-managed credentials from ENV
-    const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    // Platform-managed credentials from ENV (trim/sanitize to avoid copy/paste formatting issues)
+    const accessToken = (Deno.env.get("WHATSAPP_ACCESS_TOKEN") ?? "").trim();
+    const rawPhoneNumberId = (Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "").trim();
+    const phoneNumberId = rawPhoneNumberId.replace(/[^\d]/g, "");
 
     if (!accessToken || !phoneNumberId) {
       return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (phoneNumberId.length < 6) {
+      return new Response(JSON.stringify({ error: "WhatsApp configuration error: invalid Phone Number ID format." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const waTo = normalizedTo.startsWith("+") ? normalizedTo.slice(1) : normalizedTo;
@@ -83,10 +88,20 @@ Deno.serve(async (req) => {
     if (!waRes.ok) {
       const graphMessage = waData?.error?.message || `WhatsApp API error: ${waRes.status}`;
       const graphCode = Number(waData?.error?.code ?? 0);
-      const isCredentialMismatch = graphCode === 100 || /Unsupported post request|does not exist|missing permissions/i.test(graphMessage);
+      const graphSubcode = Number(waData?.error?.error_subcode ?? 0);
+      const graphType = String(waData?.error?.type ?? "GraphMethodException");
+
+      const isCredentialMismatch =
+        /Unsupported post request|does not exist|missing permissions/i.test(graphMessage) ||
+        (graphCode === 100 && /object with id|cannot find|not found/i.test(graphMessage));
+
+      const isTokenOrPermissionError = graphCode === 190 || graphCode === 10 || graphCode === 200;
+
       const errMsg = isCredentialMismatch
         ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Contact platform admin."
-        : graphMessage;
+        : isTokenOrPermissionError
+          ? "WhatsApp token is invalid, expired, or missing required permissions (whatsapp_business_messaging). Contact platform admin."
+          : `[${graphType} ${graphCode}${graphSubcode ? `/${graphSubcode}` : ""}] ${graphMessage}`;
 
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
@@ -98,8 +113,8 @@ Deno.serve(async (req) => {
         error: errMsg,
       });
 
-      const isClientError = [190, 100, 131000, 131026, 131047, 131051].includes(graphCode) || waRes.status === 400 || waRes.status === 401;
-      return new Response(JSON.stringify({ success: false, error: errMsg }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const isClientError = [190, 100, 10, 200, 131000, 131026, 131047, 131051].includes(graphCode) || waRes.status === 400 || waRes.status === 401;
+      return new Response(JSON.stringify({ success: false, error: errMsg, graphCode, graphSubcode }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const waMessageId = waData?.messages?.[0]?.id || null;
