@@ -12,7 +12,8 @@ export type BlockType =
   | "testimonials"
   | "pricing"
   | "faq"
-  | "embed";
+  | "embed"
+  | "video";
 
 export interface Block {
   id: string;
@@ -27,19 +28,93 @@ export function generateId() {
 
 export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = {
   section: () => ({
+    backgroundType: "solid",
     backgroundColor: "#ffffff",
-    padding: "40px 20px",
+    gradientFrom: "#ffffff",
+    gradientTo: "#f0f0f0",
+    backgroundImage: "",
+    backgroundOverlay: 0,
+    paddingTop: "40",
+    paddingRight: "20",
+    paddingBottom: "40",
+    paddingLeft: "20",
+    marginTop: "0",
+    marginBottom: "0",
     maxWidth: "960px",
+    alignment: "center",
+    borderRadius: "0",
+    borderWidth: "0",
+    borderColor: "#e5e7eb",
+    shadow: false,
+    hideOnMobile: false,
+    hideOnTablet: false,
+    hideOnDesktop: false,
   }),
-  columns2: () => ({ gap: "24px" }),
-  columns3: () => ({ gap: "24px" }),
-  heading: () => ({ text: "Your Headline Here", level: "h2", align: "center", color: "#0B1F3B" }),
-  text: () => ({ text: "Add your text content here. Describe your offer, benefits, or story.", align: "left", color: "#333333" }),
-  image: () => ({ src: "", alt: "Image", width: "100%", borderRadius: "8px" }),
-  button: () => ({ text: "Get Started", link: "#", backgroundColor: "#D4AF37", textColor: "#ffffff", align: "center", size: "lg", borderRadius: "8px" }),
-  divider: () => ({ color: "#e5e7eb", thickness: "1px", margin: "24px 0" }),
+  columns2: () => ({
+    gap: "24px",
+    columnWidths: "50/50",
+    verticalAlign: "top",
+    stackOnMobile: true,
+  }),
+  columns3: () => ({
+    gap: "24px",
+    columnWidths: "33/33/33",
+    verticalAlign: "top",
+    stackOnMobile: true,
+  }),
+  heading: () => ({
+    text: "Your Headline Here",
+    level: "h2",
+    align: "center",
+    color: "#0B1F3B",
+    fontSize: "",
+    fontWeight: "bold",
+    lineHeight: "",
+    maxWidth: "",
+  }),
+  text: () => ({
+    text: "Add your text content here. Describe your offer, benefits, or story.",
+    align: "left",
+    color: "#333333",
+    fontSize: "",
+    lineHeight: "",
+  }),
+  image: () => ({
+    src: "",
+    alt: "Image",
+    width: "100%",
+    borderRadius: "8px",
+    objectFit: "cover",
+    shadow: false,
+    alignment: "center",
+    linkUrl: "",
+  }),
+  button: () => ({
+    text: "Get Started",
+    link: "#",
+    backgroundColor: "#D4AF37",
+    textColor: "#ffffff",
+    align: "center",
+    size: "lg",
+    borderRadius: "8px",
+    openNewTab: false,
+    paddingX: "32",
+    paddingY: "12",
+  }),
+  divider: () => ({
+    color: "#e5e7eb",
+    thickness: "1px",
+    margin: "24px 0",
+    style: "solid",
+    width: "100%",
+  }),
   spacer: () => ({ height: "40px" }),
-  form: () => ({ fields: ["email"], buttonText: "Submit", buttonColor: "#D4AF37", redirectNext: true }),
+  form: () => ({
+    fields: ["email"],
+    buttonText: "Submit",
+    buttonColor: "#D4AF37",
+    redirectNext: true,
+  }),
   testimonials: () => ({
     items: [
       { name: "Sarah J.", text: "This changed everything for my business!", avatar: "", role: "Founder" },
@@ -60,7 +135,20 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
       { q: "Is there a free trial?", a: "Yes, you get a 14-day free trial." },
     ],
   }),
-  embed: () => ({ src: "", height: "400px" }),
+  embed: () => ({
+    src: "",
+    height: "400px",
+    aspectRatio: "16:9",
+    useAspectRatio: false,
+  }),
+  video: () => ({
+    src: "",
+    autoplay: false,
+    mute: false,
+    loop: false,
+    controls: true,
+    aspectRatio: "16:9",
+  }),
 };
 
 export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = {
@@ -78,6 +166,7 @@ export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = 
   pricing: { label: "Pricing", icon: "DollarSign" },
   faq: { label: "FAQ", icon: "HelpCircle" },
   embed: { label: "Embed", icon: "Code" },
+  video: { label: "Video", icon: "Video" },
 };
 
 export function createBlock(type: BlockType): Block {
