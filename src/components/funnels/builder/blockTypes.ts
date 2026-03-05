@@ -145,6 +145,10 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     height: "400px",
     aspectRatio: "16:9",
     useAspectRatio: false,
+    maxWidth: "",
+    alignment: "center",
+    marginTop: "0",
+    marginBottom: "0",
   }),
   video: () => ({
     src: "",
