@@ -69,7 +69,7 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     customWidths: "",
     verticalAlign: "top",
     stackOnMobile: true,
-    columnStyles: [{}, {}. {}],
+    columnStyles: [{}, {}, {}],
   }),
   heading: () => ({
     text: "Your Headline Here",
