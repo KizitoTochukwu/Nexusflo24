@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       try {
         switch (step.step_type) {
           case "action": {
-            const actionType = config.action_type || config.channel;
+            const actionType = config.action || config.action_type || config.channel;
 
             if (actionType === "send_email") {
               const apiKey = Deno.env.get("RESEND_API_KEY");
