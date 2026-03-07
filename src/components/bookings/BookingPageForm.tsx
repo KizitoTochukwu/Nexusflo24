@@ -192,7 +192,7 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">🗓 Google Calendar</span>
             {gcalStatus?.connected && (
-              <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
                 <Check className="h-3 w-3" /> Connected
               </span>
             )}
