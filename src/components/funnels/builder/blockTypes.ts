@@ -163,6 +163,11 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     controls: true,
     aspectRatio: "16:9",
   }),
+  booking: () => ({
+    booking_page_id: "",
+    buttonText: "Book a Call",
+    buttonColor: "#D4AF37",
+  }),
 };
 
 export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = {
