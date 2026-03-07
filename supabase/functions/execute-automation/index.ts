@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
               if (!lead.email) throw new Error("Lead has no email");
               const subject = interpolate(config.subject || "Hello", lead);
               const html = interpolate(config.body || config.message || "", lead);
-              const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html);
+              const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
               details = { messageId: res.id, channel: "email" };
             } else if (actionType === "send_sms") {
               const sid = Deno.env.get("TWILIO_ACCOUNT_SID");

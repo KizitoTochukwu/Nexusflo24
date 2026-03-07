@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    const result = await sendResend(apiKey, from, to, subject, trackedHtml);
+    const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
+    const result = await sendResend(apiKey, from, to, subject, trackedHtml, replyTo);
 
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
