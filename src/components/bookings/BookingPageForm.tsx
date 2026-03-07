@@ -224,9 +224,43 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
           )}
         </div>
         {gcalStatus?.connected && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            New bookings will create calendar events and busy times will block availability.
-          </p>
+          <div className="mt-2 space-y-1.5">
+            <Label className="text-xs">Sync to calendar</Label>
+            {calendarList?.calendars && calendarList.calendars.length > 0 ? (
+              <Select
+                value={calendarList.selected || "primary"}
+                onValueChange={(val) => {
+                  if (gcalStatus.tokenId) {
+                    selectCalendar.mutate({ tokenId: gcalStatus.tokenId, calendarId: val });
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select calendar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {calendarList.calendars.map((cal) => (
+                    <SelectItem key={cal.id} value={cal.id}>
+                      <span className="flex items-center gap-2">
+                        {cal.backgroundColor && (
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: cal.backgroundColor }}
+                          />
+                        )}
+                        {cal.summary}{cal.primary ? " (Primary)" : ""}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-xs text-muted-foreground">Loading calendars…</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              New bookings will create events here and busy times will block availability.
+            </p>
+          </div>
         )}
       </div>
 
