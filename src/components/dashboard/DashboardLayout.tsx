@@ -153,6 +153,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </header>
 
         <div className="p-6 lg:p-8">
