@@ -56,6 +56,8 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
 
   const { data: gcalStatus } = useGoogleCalendarStatus(initial?.id);
   const { connect, disconnect } = useGoogleCalendarConnect();
+  const { data: calendarList } = useGoogleCalendarList(gcalStatus?.connected ? gcalStatus.tokenId : null);
+  const selectCalendar = useSelectGoogleCalendar();
 
   const handleSlotChange = (day: string, idx: number, field: "start" | "end", value: string) => {
     setAvailability((prev) => {
