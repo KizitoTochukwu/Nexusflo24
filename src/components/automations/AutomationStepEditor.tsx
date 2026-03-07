@@ -164,6 +164,8 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                       message={(step.config.message as string) || ""}
                       onSubjectChange={(v) => updateStep(i, { subject: v })}
                       onMessageChange={(v) => updateStep(i, { message: v })}
+                      templateSettings={step.config.templateSettings as any}
+                      onTemplateSettingsChange={(ts) => updateStep(i, { templateSettings: ts })}
                     />
                   )}
                 </div>

@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     const userId = user.id;
 
     const body = await req.json();
-    const { workspaceId, to, subject, html } = body;
+    const { workspaceId, to, subject, html, templateSettings } = body;
 
     if (!workspaceId || !to || !subject || !html) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, subject, html" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -62,12 +62,20 @@ Deno.serve(async (req) => {
 
     // Inject tracking pixel and rewrite links for tracking
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
-    // Format and wrap in branded template
-    let trackedHtml = wrapEmailTemplate(formatEmailBody(html));
 
     // Try to extract lead_id and campaign_id from request body for tracking
     const leadId = body.leadId || body.lead_id || "";
     const campaignId = body.campaignId || body.campaign_id || "";
+
+    // Format and wrap in branded template with optional user settings
+    const ts = templateSettings as Record<string, any> | undefined;
+    const unsubUrl = leadId && workspaceId ? `${baseUrl}/functions/v1/unsubscribe?lid=${leadId}&wid=${workspaceId}` : undefined;
+    let trackedHtml = wrapEmailTemplate(formatEmailBody(html), {
+      logo: ts?.logo,
+      unsubscribe: ts?.unsubscribe,
+      footer: ts?.footer,
+      unsubUrl,
+    });
 
     if (leadId && workspaceId) {
       // Rewrite <a href="..."> links to go through track-click
@@ -87,14 +95,10 @@ Deno.serve(async (req) => {
       const pixelUrl = `${baseUrl}/functions/v1/track-open?lid=${leadId}&wid=${workspaceId}${campaignId ? `&cid=${campaignId}` : ""}`;
       const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;" />`;
 
-      // Build GDPR unsubscribe footer
-      const unsubUrl = `${baseUrl}/functions/v1/unsubscribe?lid=${leadId}&wid=${workspaceId}`;
-      const unsubFooter = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">You received this email because you subscribed to NexusFlo24. <a href="${unsubUrl}" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a></span></div>`;
-
       if (trackedHtml.includes("</body>")) {
-        trackedHtml = trackedHtml.replace("</body>", `${unsubFooter}${pixel}</body>`);
+        trackedHtml = trackedHtml.replace("</body>", `${pixel}</body>`);
       } else {
-        trackedHtml += unsubFooter + pixel;
+        trackedHtml += pixel;
       }
     }
 
