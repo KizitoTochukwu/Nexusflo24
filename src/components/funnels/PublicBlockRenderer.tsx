@@ -405,11 +405,11 @@ function FormBlock({ props: p, onSubmit, submitting }: { props: Record<string, u
   );
 }
 
-export default function PublicBlockRenderer({ blocks, onFormSubmit, formSubmitting }: Props) {
+export default function PublicBlockRenderer({ blocks, onFormSubmit, formSubmitting, leadData = {} }: Props) {
   return (
     <div className="space-y-6">
       {blocks.map((block) => (
-        <RenderBlock key={block.id} block={block} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+        <RenderBlock key={block.id} block={block} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
       ))}
     </div>
   );
