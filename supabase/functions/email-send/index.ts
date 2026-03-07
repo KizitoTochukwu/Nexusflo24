@@ -62,8 +62,13 @@ Deno.serve(async (req) => {
 
     // Inject tracking pixel and rewrite links for tracking
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
-    // Format and wrap in branded template
-    let trackedHtml = wrapEmailTemplate(formatEmailBody(html));
+    // Format and wrap in branded template with optional user settings
+    const ts = templateSettings as Record<string, any> | undefined;
+    let trackedHtml = wrapEmailTemplate(formatEmailBody(html), {
+      logo: ts?.logo,
+      unsubscribe: ts?.unsubscribe,
+      footer: ts?.footer,
+    });
 
     // Try to extract lead_id and campaign_id from request body for tracking
     const leadId = body.leadId || body.lead_id || "";

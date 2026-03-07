@@ -148,13 +148,16 @@ Deno.serve(async (req) => {
               }
               const subject = interpolate(config.subject || "Hello", lead);
               let html = interpolate(config.body || config.message || "", lead);
-              // Format content and wrap in branded template
-              html = wrapEmailTemplate(formatEmailBody(html));
-              // Append GDPR unsubscribe footer
+              // Format content and wrap in branded template with user settings
               const baseUrl = Deno.env.get("SUPABASE_URL")!;
               const unsubUrl = `${baseUrl}/functions/v1/unsubscribe?lid=${lead_id}&wid=${workspace_id}`;
-              const unsubFooter = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">You received this email because you subscribed to NexusFlo24. <a href="${unsubUrl}" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a></span></div>`;
-              html += unsubFooter;
+              const ts = config.templateSettings as Record<string, any> | undefined;
+              html = wrapEmailTemplate(formatEmailBody(html), {
+                logo: ts?.logo,
+                unsubscribe: ts?.unsubscribe,
+                footer: ts?.footer,
+                unsubUrl,
+              });
               const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
               details = { messageId: res.id, channel: "email" };
             } else if (actionType === "send_sms") {
