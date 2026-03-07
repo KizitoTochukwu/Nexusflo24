@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Block } from "@/components/funnels/builder/blockTypes";
 import { parseVideoUrl, buildEmbedParams } from "@/components/funnels/builder/videoUtils";
 
@@ -6,9 +6,60 @@ interface Props {
   blocks: Block[];
   onFormSubmit?: (data: Record<string, string>) => Promise<void>;
   formSubmitting?: boolean;
+  leadData?: Record<string, string>;
 }
 
 const ASPECT_MAP: Record<string, string> = { "16:9": "56.25%", "4:3": "75%", "1:1": "100%", "21:9": "42.86%" };
+
+/** Interpolate {{variable}} placeholders and process conditional blocks */
+function interpolate(text: string, data: Record<string, string>): string {
+  let result = text;
+  // Process conditionals: {{#if variable > value}}...{{/if}}
+  result = result.replace(
+    /\{\{#if\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*"?([^}"]*)"?\s*\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, varName, op, val, content) => {
+      const actual = data[`{{${varName}}}`] || "";
+      let show = false;
+      const numActual = Number(actual);
+      const numVal = Number(val);
+      if (!isNaN(numActual) && !isNaN(numVal)) {
+        switch (op) {
+          case ">": show = numActual > numVal; break;
+          case "<": show = numActual < numVal; break;
+          case ">=": show = numActual >= numVal; break;
+          case "<=": show = numActual <= numVal; break;
+          case "==": show = numActual === numVal; break;
+          case "!=": show = numActual !== numVal; break;
+        }
+      } else {
+        switch (op) {
+          case "==": show = actual.toLowerCase() === val.toLowerCase(); break;
+          case "!=": show = actual.toLowerCase() !== val.toLowerCase(); break;
+          default: show = false;
+        }
+      }
+      return show ? content : "";
+    }
+  );
+  // Simple existence conditional: {{#if variable}}...{{/if}}
+  result = result.replace(
+    /\{\{#if\s+(\w+)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, varName, content) => {
+      const actual = data[`{{${varName}}}`] || "";
+      return actual ? content : "";
+    }
+  );
+  // Replace variables
+  for (const [key, val] of Object.entries(data)) {
+    result = result.split(key).join(val);
+  }
+  return result;
+}
+
+/** Check if text has HTML tags */
+function hasHtml(text: string): boolean {
+  return /<[a-z][\s\S]*>/i.test(text);
+}
 
 function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; onFormSubmit?: Props["onFormSubmit"]; formSubmitting?: boolean }) {
   const p = block.props;
