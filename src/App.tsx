@@ -109,6 +109,7 @@ const App = () => (
 
               {/* Public booking routes */}
               <Route path="/book/:slug" element={<PublicBooking />} />
+              <Route path="/reschedule/:token" element={<RescheduleBooking />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
