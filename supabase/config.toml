@@ -41,3 +41,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.google-calendar-auth]
     verify_jwt = false
+  [functions.reschedule-booking]
+    verify_jwt = false
