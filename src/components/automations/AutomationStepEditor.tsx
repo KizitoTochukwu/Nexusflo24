@@ -158,7 +158,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                     </Select>
                   )}
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
-                    <MessageEditor
+                    <AutomationEmailEditor
                       isEmail={(step.config.action as string) === "send_email"}
                       subject={(step.config.subject as string) || ""}
                       message={(step.config.message as string) || ""}
