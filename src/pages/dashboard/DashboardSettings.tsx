@@ -369,8 +369,10 @@ function IntegrationsTab() {
 /* ── Webhooks Tab (Customer Accessible) ──────────────────── */
 
 function WebhooksTab() {
+  const workspaceId = useWorkspaceId();
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/ingest-leads`;
   const whatsappWebhookUrl = `${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/whatsapp-webhook`;
+  const trackingSnippet = `<script src="${import.meta.env.VITE_SUPABASE_URL || ""}/functions/v1/track-event?embed=1&wid=${workspaceId}"></script>`;
 
   return (
     <div className="space-y-6">
@@ -400,6 +402,39 @@ function WebhooksTab() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">Paste this into Meta Developer Console → WhatsApp → Configuration. Keep <strong>"Attach a client certificate"</strong> OFF.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2"><Globe className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Website Tracking</CardTitle></div>
+          <CardDescription>Add this script to your website to automatically track visits, page views, and pricing page engagement.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1">
+            <Label>Tracking Snippet</Label>
+            <div className="flex gap-2">
+              <Textarea value={trackingSnippet} readOnly className="bg-muted font-mono text-xs h-16 resize-none" />
+              <Button variant="outline" size="icon" className="shrink-0" onClick={() => { navigator.clipboard.writeText(trackingSnippet); toast.success("Tracking snippet copied!"); }}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Paste before <code className="bg-muted px-1 rounded">&lt;/body&gt;</code> on any page. Automatically tracks <strong>website_visit</strong> and <strong>pricing_page_visit</strong> events.
+            </p>
+          </div>
+          <Separator />
+          <div className="space-y-1">
+            <Label>Identify Known Leads (Optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              After a form submission, call <code className="bg-muted px-1 rounded">window.__nfIdentify(email)</code> to link future visits to the lead.
+            </p>
+          </div>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <p className="text-xs text-blue-800">
+              <strong>How it works:</strong> The script fires a single event per page load. If the visitor has been identified via <code>__nfIdentify</code>, the visit is logged to their lead profile and updates their engagement score automatically.
+            </p>
           </div>
         </CardContent>
       </Card>
