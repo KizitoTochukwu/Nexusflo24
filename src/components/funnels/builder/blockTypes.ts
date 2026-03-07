@@ -12,8 +12,9 @@ export type BlockType =
   | "testimonials"
   | "pricing"
   | "faq"
-  | "embed"
-  | "video";
+   | "embed"
+   | "video"
+   | "booking";
 
 export interface Block {
   id: string;
@@ -162,6 +163,11 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     controls: true,
     aspectRatio: "16:9",
   }),
+  booking: () => ({
+    booking_page_id: "",
+    buttonText: "Book a Call",
+    buttonColor: "#D4AF37",
+  }),
 };
 
 export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = {
@@ -180,6 +186,7 @@ export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = 
   faq: { label: "FAQ", icon: "HelpCircle" },
   embed: { label: "Embed", icon: "Code" },
   video: { label: "Video", icon: "Video" },
+  booking: { label: "Booking", icon: "CalendarDays" },
 };
 
 export function createBlock(type: BlockType): Block {

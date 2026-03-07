@@ -46,6 +46,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminGuard from "./components/admin/AdminGuard";
 import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
+import DashboardBookings from "./pages/dashboard/DashboardBookings";
+import PublicBooking from "./pages/PublicBooking";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -91,6 +93,7 @@ const App = () => (
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
+                <Route path="bookings" element={<DashboardBookings />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
@@ -103,6 +106,9 @@ const App = () => (
               {/* Public funnel routes */}
               <Route path="/f/:slug" element={<PublicFunnel />} />
               <Route path="/f/:slug/:stepPath" element={<PublicFunnel />} />
+
+              {/* Public booking routes */}
+              <Route path="/book/:slug" element={<PublicBooking />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

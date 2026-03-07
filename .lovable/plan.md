@@ -1,129 +1,103 @@
 
 
-## Plan: Appointment / Calendar Booking Feature
+## Plan: Platform-Managed Integrations Access Control
 
-### Overview
-Build a booking system where users create booking pages with availability settings, leads book time slots via a public page, and bookings sync to Google Calendar. Booking links can be embedded in funnels (new "booking" block) and automations (new "book_appointment" action).
+### Context
 
-### Database Changes (1 migration)
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-**Table: `booking_pages`**
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id | uuid | RLS scoped |
-| user_id | uuid | creator |
-| name | text | e.g. "30-Min Discovery Call" |
-| slug | text UNIQUE | public URL path |
-| duration_minutes | int | default 30 |
-| availability | jsonb | `{ mon: [{start:"09:00",end:"17:00"}], ... }` |
-| timezone | text | default 'UTC' |
-| buffer_minutes | int | default 15 (gap between bookings) |
-| max_days_ahead | int | default 30 |
-| description | text | shown on public page |
-| color | text | brand accent |
-| status | text | 'active' / 'inactive' |
-| google_calendar_id | text | nullable, for sync |
-| created_at / updated_at | timestamptz | |
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
-**Table: `bookings`**
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| booking_page_id | uuid FK | |
-| workspace_id | uuid | RLS scoped |
-| lead_id | uuid FK nullable | linked lead |
-| guest_name | text | |
-| guest_email | text | |
-| guest_phone | text nullable | |
-| start_time | timestamptz | |
-| end_time | timestamptz | |
-| status | text | 'confirmed' / 'cancelled' / 'completed' |
-| google_event_id | text nullable | |
-| notes | text nullable | |
-| created_at | timestamptz | |
+### Changes
 
-RLS: workspace members CRUD on both tables. Public SELECT on active `booking_pages` by slug. Public INSERT on `bookings` (for guest submissions).
+#### 1. Frontend: Split Settings Tabs by Role
 
-Auto-generate slug trigger similar to funnels.
+**DashboardSettings.tsx** — Major restructure:
 
-### Edge Functions
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
 
-**1. `book-appointment/index.ts`** (NEW, verify_jwt = false)
-- Public endpoint for guests to book
-- Input: `{ booking_page_id, guest_name, guest_email, guest_phone?, start_time, notes? }`
-- Validates slot is available (no overlapping bookings, within availability window)
-- Creates booking row
-- Looks up lead by email in workspace, links `lead_id` if found; otherwise creates lead via `capture-lead` pattern
-- Logs `call_booking` activity on the lead (triggers scoring: +50)
-- If `google_calendar_id` configured, creates Google Calendar event (placeholder — needs OAuth)
-- Returns confirmation
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+```
 
-**2. `booking-availability/index.ts`** (NEW, verify_jwt = false)
-- Public endpoint to fetch available slots for a booking page
-- Input: `{ booking_page_id, date }` (or date range)
-- Reads availability config, existing bookings, buffer, timezone
-- Returns array of available time slots for the requested date(s)
+#### 2. Move Provider Credentials to Platform ENV Secrets
 
-### Frontend Components
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
 
-**3. `src/pages/dashboard/DashboardBookings.tsx`** (NEW)
-- List of booking pages with create/edit/delete
-- Shows booking count, link to public page
-- Booking page form: name, duration, description, availability grid (day × time ranges), timezone picker, buffer, max days ahead
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
 
-**4. `src/components/bookings/BookingPageForm.tsx`** (NEW)
-- Availability editor: 7-day grid with add/remove time slots per day
-- Duration, buffer, timezone, max days ahead inputs
-- Preview link
+#### 3. Update Edge Functions for Platform Credentials
 
-**5. `src/components/bookings/BookingsList.tsx`** (NEW)
-- Table of upcoming bookings for the workspace
-- Filter by booking page, status
-- Cancel/reschedule actions
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
 
-**6. `src/hooks/useBookings.ts`** (NEW)
-- CRUD hooks for `booking_pages` and `bookings` tables
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
 
-**7. `src/pages/PublicBooking.tsx`** (NEW)
-- Route: `/book/:slug`
-- Fetches booking page by slug
-- Calendar date picker → available slots for selected date (via `booking-availability` EF)
-- Guest form: name, email, phone, notes
-- Confirmation screen after booking
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
 
-### Funnel Builder Integration
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
 
-**8. Add `"booking"` block type** to `blockTypes.ts` and `BlockLibrary.tsx`
-- Props: `booking_page_id`, display style
-- In `PublicBlockRenderer.tsx`: renders an embedded mini booking widget (date picker + slots + form)
+#### 4. Backend Admin Authorization
 
-### Automation Integration
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
+```
 
-**9. Add `"book_appointment"` trigger** to `useAutomations.ts` TRIGGER_OPTIONS
-- Fires when a booking is created (the `book-appointment` EF checks for matching automations)
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
 
-### Sidebar & Routing
+#### 5. Admin Integrations Status Widget
 
-**10. Update `DashboardLayout.tsx`**
-- Add Calendar icon + "Bookings" nav item between Funnels and Analytics
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
 
-**11. Update `App.tsx`**
-- Add route: `<Route path="bookings" element={<DashboardBookings />} />`
-- Add route: `<Route path="/book/:slug" element={<PublicBooking />} />`
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
 
-### Google Calendar Integration (Placeholder)
-- The `booking_pages.google_calendar_id` field and `bookings.google_event_id` field are created but Google Calendar OAuth is deferred to a follow-up (requires Google OAuth consent flow + token storage)
-- A "Connect Google Calendar" button is shown in the booking page settings but marked as "Coming Soon"
+#### 6. Webhooks Tab (Customer-Accessible)
 
-### Deliverables Summary
-| Component | What it does |
-|---|---|
-| 2 DB tables + RLS | `booking_pages`, `bookings` |
-| 2 Edge Functions | `book-appointment`, `booking-availability` |
-| Dashboard page | List/create/edit booking pages + view bookings |
-| Public booking page | `/book/:slug` with date picker and slot selection |
-| Funnel block | Embeddable booking widget in funnel pages |
-| Automation trigger | `call_booking` trigger fires on new booking |
-| Scoring | +50 via existing `call_booking` rule |
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
+
+This tab is workspace-scoped and visible to all authenticated users.
+
+### Files to Create/Edit
+
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+### Execution Order
+
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 

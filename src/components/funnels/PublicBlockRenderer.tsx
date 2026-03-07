@@ -255,6 +255,28 @@ function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; on
         </div>
       );
     }
+    case "booking": {
+      const bpId = p.booking_page_id as string;
+      if (!bpId) return (
+        <div className="mx-auto max-w-sm rounded-xl border bg-muted/50 p-6 text-center">
+          <p className="text-sm text-muted-foreground">No booking page selected.</p>
+        </div>
+      );
+      const bookUrl = `${window.location.origin}/book/${bpId}`;
+      return (
+        <div className="text-center">
+          <a
+            href={bookUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block rounded-lg px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: (p.buttonColor as string) || "#D4AF37" }}
+          >
+            {(p.buttonText as string) || "Book a Call"}
+          </a>
+        </div>
+      );
+    }
     default:
       return null;
   }

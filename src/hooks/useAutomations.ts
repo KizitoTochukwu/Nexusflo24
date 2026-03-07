@@ -48,6 +48,7 @@ export const TRIGGER_OPTIONS = [
   { value: "whatsapp_replied", label: "WhatsApp replied" },
   { value: "campaign_completed", label: "Campaign completed" },
   { value: "purchase_event", label: "Purchase event (placeholder)" },
+  { value: "book_appointment", label: "Appointment booked" },
 ] as const;
 
 export const CONDITION_OPTIONS = [

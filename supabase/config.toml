@@ -35,3 +35,7 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.track-event]
     verify_jwt = false
+  [functions.book-appointment]
+    verify_jwt = false
+  [functions.booking-availability]
+    verify_jwt = false
