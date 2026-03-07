@@ -1,103 +1,111 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+## Plan: Editable Email Template Components (Header, Footer, Unsubscribe)
 
-### Context
+### Overview
+Convert the hardcoded logo, unsubscribe text, and footer in the email editor into configurable fields that users can customize per automation step. Template settings are stored in the step's `config` object and passed through to both the preview renderer and the edge function at send time.
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+### Architecture
 
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
+The email template settings live in the step config alongside `subject`, `message`, etc. No database changes needed — the automation step's `config` JSON column already stores arbitrary data.
 
-### Changes
-
-#### 1. Frontend: Split Settings Tabs by Role
-
-**DashboardSettings.tsx** — Major restructure:
-
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
-
-Tab layout:
-```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
-```
-
-#### 2. Move Provider Credentials to Platform ENV Secrets
-
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
-
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-#### 3. Update Edge Functions for Platform Credentials
-
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
-
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
-
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
-
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
-
-#### 4. Backend Admin Authorization
-
-All save-settings and test-send edge functions must verify admin role:
-```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+```text
+step.config = {
+  action: "send_email",
+  subject: "...",
+  message: "...",
+  // NEW template settings:
+  templateSettings: {
+    logo: { url: string, alignment: "left"|"center"|"right", size: number, visible: boolean },
+    unsubscribe: { enabled: boolean, text: string },
+    footer: { text: string, color: string, alignment: "left"|"center"|"right" }
+  }
 }
 ```
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+### Changes
 
-#### 5. Admin Integrations Status Widget
+**1. New Component: `EmailTemplateSettings.tsx`**
+`src/components/automations/email-editor/EmailTemplateSettings.tsx`
 
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
+A collapsible "Template Settings" panel below the email body editor with three sections:
 
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
+- **Header Logo**: Toggle visibility, URL input (with file upload button to `email-assets` bucket), alignment select (left/center/right), size slider (32–120px)
+- **Unsubscribe Block**: Toggle on/off, editable text textarea (default: "You received this email because you subscribed to NexusFlo24.")
+- **Footer**: Editable text input (default: "© NexusFlo24 · AI-Powered Marketing Automation"), color picker (hex input), alignment select
 
-#### 6. Webhooks Tab (Customer-Accessible)
+Uses Collapsible from radix with a Settings icon trigger.
 
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
+**2. Update `AutomationEmailEditor.tsx`**
 
-This tab is workspace-scoped and visible to all authenticated users.
+- Accept new props: `templateSettings` and `onTemplateSettingsChange`
+- Render `<EmailTemplateSettings>` below the editor area (only for email)
+- Pass `templateSettings` to `buildPreviewHtml` so the preview reflects user customizations
+- Define default template settings constant
 
-### Files to Create/Edit
+**3. Update `AutomationStepEditor.tsx`**
 
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+- Pass `templateSettings` from `step.config.templateSettings` to `AutomationEmailEditor`
+- Wire `onTemplateSettingsChange` to call `updateStep(i, { templateSettings: ... })`
 
-### Execution Order
+**4. Update `emailPreviewRenderer.ts`**
 
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+- Update `buildPreviewHtml` signature to accept an optional `templateSettings` object
+- Replace hardcoded logo section with conditional rendering based on `logo.visible`, `logo.url`, `logo.alignment`, `logo.size`
+- Replace hardcoded unsubscribe footer with conditional block based on `unsubscribe.enabled` and `unsubscribe.text`
+- Replace hardcoded copyright footer with `footer.text`, `footer.color`, `footer.alignment`
+
+**5. Update `supabase/functions/execute-automation/index.ts`**
+
+- Read `config.templateSettings` from the step config
+- Pass settings to `wrapEmailTemplate` as options (logo, footer, unsubscribe text)
+- Update `wrapEmailTemplate` in `_shared/email-layout.ts` to accept these options
+
+**6. Update `supabase/functions/_shared/email-layout.ts`**
+
+- Extend `wrapEmailTemplate` options parameter:
+  ```typescript
+  interface TemplateOptions {
+    preheader?: string;
+    logo?: { url?: string; alignment?: string; size?: number; visible?: boolean };
+    unsubscribe?: { enabled?: boolean; text?: string };
+    footer?: { text?: string; color?: string; alignment?: string };
+    unsubUrl?: string; // injected by the edge function
+  }
+  ```
+- Use these options to conditionally render logo, footer, and unsubscribe sections
+- Keep current values as defaults when options are not provided
+
+**7. Update `supabase/functions/email-send/index.ts`**
+
+- Accept optional `templateSettings` from request body
+- Pass to `wrapEmailTemplate`
+
+### Default Values
+```typescript
+const DEFAULT_TEMPLATE_SETTINGS = {
+  logo: {
+    url: "https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png",
+    alignment: "center",
+    size: 56,
+    visible: true,
+  },
+  unsubscribe: {
+    enabled: true,
+    text: "You received this email because you subscribed to NexusFlo24.",
+  },
+  footer: {
+    text: "© NexusFlo24 · AI-Powered Marketing Automation",
+    color: "#C9A227",
+    alignment: "center",
+  },
+};
+```
+
+### Scope
+- 1 new component (`EmailTemplateSettings.tsx`)
+- 3 frontend files updated (`AutomationEmailEditor`, `AutomationStepEditor`, `emailPreviewRenderer`)
+- 2 edge functions updated (`execute-automation`, `email-send`)
+- 1 shared utility updated (`email-layout.ts`)
+- No database changes
 
