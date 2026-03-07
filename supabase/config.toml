@@ -27,3 +27,11 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.integration-status]
     verify_jwt = false
+  [functions.execute-automation]
+    verify_jwt = false
+  [functions.track-open]
+    verify_jwt = false
+  [functions.track-click]
+    verify_jwt = false
+  [functions.track-event]
+    verify_jwt = false

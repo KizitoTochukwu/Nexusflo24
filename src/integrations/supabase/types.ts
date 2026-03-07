@@ -1211,6 +1211,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_automation_run: {
+        Args: { _automation_id: string }
+        Returns: undefined
+      }
       is_email_in_admin_allowlist: {
         Args: { _email: string }
         Returns: boolean

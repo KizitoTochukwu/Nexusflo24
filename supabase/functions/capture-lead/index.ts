@@ -207,6 +207,38 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Trigger matching automations for new leads ---
+    if (!existing) {
+      try {
+        const { data: automations } = await supabase
+          .from("automations")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .eq("trigger_type", "new_lead")
+          .eq("status", "active");
+
+        if (automations && automations.length > 0) {
+          const execUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/execute-automation`;
+          for (const auto of automations) {
+            try {
+              await fetch(execUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({ automation_id: auto.id, lead_id: leadId, workspace_id: workspaceId }),
+              });
+            } catch (e) {
+              console.error(`Failed to trigger automation ${auto.id}:`, e);
+            }
+          }
+        }
+      } catch (autoErr) {
+        console.error("Automation trigger error:", autoErr);
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true, leadId, updated: !!existing }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
