@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Check, Unlink } from "lucide-react";
-import { useGoogleCalendarStatus, useGoogleCalendarConnect } from "@/hooks/useGoogleCalendar";
+import { useGoogleCalendarStatus, useGoogleCalendarConnect, useGoogleCalendarList, useSelectGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import type { BookingPage } from "@/hooks/useBookings";
 
 const DAYS = [

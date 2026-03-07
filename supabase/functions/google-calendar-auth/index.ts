@@ -239,6 +239,130 @@ Deno.serve(async (req) => {
       });
     }
 
+    // List calendars action
+    if (action === "calendars") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const body = await req.json();
+      const { token_id } = body;
+      if (!token_id) {
+        return new Response(JSON.stringify({ error: "Missing token_id" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const adminSb = createClient(supabaseUrl, serviceRoleKey);
+      const { data: tokenRow } = await adminSb
+        .from("google_calendar_tokens")
+        .select("*")
+        .eq("id", token_id)
+        .single();
+
+      if (!tokenRow) {
+        return new Response(JSON.stringify({ error: "Token not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Refresh if needed
+      let accessToken = tokenRow.access_token;
+      if (new Date(tokenRow.token_expires_at) <= new Date(Date.now() + 60000)) {
+        const res = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: tokenRow.refresh_token,
+            grant_type: "refresh_token",
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.access_token) {
+          accessToken = data.access_token;
+          await adminSb
+            .from("google_calendar_tokens")
+            .update({ access_token: data.access_token, token_expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString() })
+            .eq("id", token_id);
+        }
+      }
+
+      const calRes = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!calRes.ok) {
+        return new Response(JSON.stringify({ error: "Failed to fetch calendars" }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const calData = await calRes.json();
+      const calendars = (calData.items || []).map((c: any) => ({
+        id: c.id,
+        summary: c.summary,
+        primary: c.primary || false,
+        backgroundColor: c.backgroundColor,
+      }));
+
+      return new Response(JSON.stringify({ calendars, selected: tokenRow.calendar_id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Select calendar action
+    if (action === "select-calendar") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const body = await req.json();
+      const { token_id, calendar_id } = body;
+      if (!token_id || !calendar_id) {
+        return new Response(JSON.stringify({ error: "Missing token_id or calendar_id" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const adminSb = createClient(supabaseUrl, serviceRoleKey);
+      await adminSb
+        .from("google_calendar_tokens")
+        .update({ calendar_id })
+        .eq("id", token_id);
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
