@@ -62,17 +62,20 @@ Deno.serve(async (req) => {
 
     // Inject tracking pixel and rewrite links for tracking
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
-    // Format and wrap in branded template with optional user settings
-    const ts = templateSettings as Record<string, any> | undefined;
-    let trackedHtml = wrapEmailTemplate(formatEmailBody(html), {
-      logo: ts?.logo,
-      unsubscribe: ts?.unsubscribe,
-      footer: ts?.footer,
-    });
 
     // Try to extract lead_id and campaign_id from request body for tracking
     const leadId = body.leadId || body.lead_id || "";
     const campaignId = body.campaignId || body.campaign_id || "";
+
+    // Format and wrap in branded template with optional user settings
+    const ts = templateSettings as Record<string, any> | undefined;
+    const unsubUrl = leadId && workspaceId ? `${baseUrl}/functions/v1/unsubscribe?lid=${leadId}&wid=${workspaceId}` : undefined;
+    let trackedHtml = wrapEmailTemplate(formatEmailBody(html), {
+      logo: ts?.logo,
+      unsubscribe: ts?.unsubscribe,
+      footer: ts?.footer,
+      unsubUrl,
+    });
 
     if (leadId && workspaceId) {
       // Rewrite <a href="..."> links to go through track-click
