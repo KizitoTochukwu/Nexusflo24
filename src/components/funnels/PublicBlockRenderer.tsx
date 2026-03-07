@@ -97,20 +97,31 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         </Tag>
       );
     }
-    case "text":
+    case "text": {
+      const rawText = (p.text as string) || "";
+      const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
+      const useHtml = hasHtml(resolvedText);
+      const textStyle: React.CSSProperties = {
+        color: p.color as string,
+        textAlign: p.align as any,
+        fontSize: (p.fontSize as string) || undefined,
+        lineHeight: (p.lineHeight as string) || undefined,
+      };
+      if (useHtml) {
+        return (
+          <div
+            className="text-base md:text-lg leading-relaxed"
+            style={textStyle}
+            dangerouslySetInnerHTML={{ __html: resolvedText }}
+          />
+        );
+      }
       return (
-        <p
-          className="text-base md:text-lg leading-relaxed"
-          style={{
-            color: p.color as string,
-            textAlign: p.align as any,
-            fontSize: (p.fontSize as string) || undefined,
-            lineHeight: (p.lineHeight as string) || undefined,
-          }}
-        >
-          {(p.text as string) || ""}
+        <p className="text-base md:text-lg leading-relaxed" style={textStyle}>
+          {resolvedText}
         </p>
       );
+    }
     case "image": {
       const imgEl = (p.src as string) ? (
         <img
