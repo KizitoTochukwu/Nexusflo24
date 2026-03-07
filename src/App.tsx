@@ -48,6 +48,7 @@ import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
 import PublicBooking from "./pages/PublicBooking";
+import RescheduleBooking from "./pages/RescheduleBooking";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -109,6 +110,7 @@ const App = () => (
 
               {/* Public booking routes */}
               <Route path="/book/:slug" element={<PublicBooking />} />
+              <Route path="/reschedule/:token" element={<RescheduleBooking />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

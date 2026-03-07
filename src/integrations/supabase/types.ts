@@ -278,6 +278,7 @@ export type Database = {
           id: string
           lead_id: string | null
           notes: string | null
+          reschedule_token: string | null
           start_time: string
           status: string
           workspace_id: string
@@ -293,6 +294,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           notes?: string | null
+          reschedule_token?: string | null
           start_time: string
           status?: string
           workspace_id: string
@@ -308,6 +310,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           notes?: string | null
+          reschedule_token?: string | null
           start_time?: string
           status?: string
           workspace_id?: string
