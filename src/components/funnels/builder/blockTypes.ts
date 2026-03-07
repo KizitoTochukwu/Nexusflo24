@@ -12,8 +12,9 @@ export type BlockType =
   | "testimonials"
   | "pricing"
   | "faq"
-  | "embed"
-  | "video";
+   | "embed"
+   | "video"
+   | "booking";
 
 export interface Block {
   id: string;
