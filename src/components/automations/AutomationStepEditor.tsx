@@ -9,6 +9,28 @@ import {
 import { CONDITION_OPTIONS, ACTION_OPTIONS } from "@/hooks/useAutomations";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 
+export type StepData = {
+  step_type: "trigger" | "condition" | "action" | "delay";
+  config: Record<string, unknown>;
+};
+
+const STEP_TYPE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  trigger: { label: "Trigger", icon: <Zap className="h-4 w-4" />, color: "bg-amber-100 text-amber-800 border-amber-200" },
+  condition: { label: "Condition", icon: <Filter className="h-4 w-4" />, color: "bg-blue-100 text-blue-800 border-blue-200" },
+  action: { label: "Action", icon: <Play className="h-4 w-4" />, color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
+  delay: { label: "Delay", icon: <Clock className="h-4 w-4" />, color: "bg-purple-100 text-purple-800 border-purple-200" },
+};
+
+const ACTION_ICONS: Record<string, React.ReactNode> = {
+  send_email: <Mail className="h-4 w-4" />,
+  send_whatsapp: <MessageCircle className="h-4 w-4" />,
+  send_sms: <Smartphone className="h-4 w-4" />,
+  add_tag: <Tag className="h-4 w-4" />,
+  remove_tag: <XCircle className="h-4 w-4" />,
+  update_status: <RefreshCw className="h-4 w-4" />,
+  notify_sales: <Bell className="h-4 w-4" />,
+  delay: <Clock className="h-4 w-4" />,
+};
 interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
