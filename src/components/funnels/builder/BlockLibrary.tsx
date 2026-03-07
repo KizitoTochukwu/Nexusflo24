@@ -8,7 +8,7 @@ import { BlockType, BLOCK_LABELS } from "./blockTypes";
 const ICONS: Record<string, React.ElementType> = {
   LayoutTemplate, Columns2, Columns3, Type, AlignLeft, ImageIcon,
   MousePointerClick, Minus, MoveVertical, FormInput, Quote,
-  DollarSign, HelpCircle, Code, Video,
+  DollarSign, HelpCircle, Code, Video, CalendarDays,
 };
 
 const GROUPS = [
