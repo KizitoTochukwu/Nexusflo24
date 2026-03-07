@@ -9,6 +9,7 @@ import {
   BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
+import { useNotificationWatcher } from "@/hooks/useNotifications";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
 import FreePlanBanner from "@/components/billing/FreePlanBanner";
