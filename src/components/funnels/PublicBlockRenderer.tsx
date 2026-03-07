@@ -61,7 +61,7 @@ function hasHtml(text: string): boolean {
   return /<[a-z][\s\S]*>/i.test(text);
 }
 
-function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; onFormSubmit?: Props["onFormSubmit"]; formSubmitting?: boolean }) {
+function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { block: Block; onFormSubmit?: Props["onFormSubmit"]; formSubmitting?: boolean; leadData?: Record<string, string> }) {
   const p = block.props;
 
   switch (block.type) {
