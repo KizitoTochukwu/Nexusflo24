@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Check, Unlink } from "lucide-react";
+import { useGoogleCalendarStatus, useGoogleCalendarConnect } from "@/hooks/useGoogleCalendar";
 import type { BookingPage } from "@/hooks/useBookings";
 
 const DAYS = [
@@ -38,9 +39,10 @@ interface Props {
   onSubmit: (data: Partial<BookingPage>) => void;
   loading?: boolean;
   publicUrl?: string;
+  workspaceId?: string;
 }
 
-export default function BookingPageForm({ initial, onSubmit, loading, publicUrl }: Props) {
+export default function BookingPageForm({ initial, onSubmit, loading, publicUrl, workspaceId }: Props) {
   const [name, setName] = useState(initial?.name || "");
   const [description, setDescription] = useState(initial?.description || "");
   const [duration, setDuration] = useState(initial?.duration_minutes || 30);
@@ -51,6 +53,9 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl 
   const [availability, setAvailability] = useState<Record<string, { start: string; end: string }[]>>(
     (initial?.availability as any) || DEFAULT_AVAILABILITY
   );
+
+  const { data: gcalStatus } = useGoogleCalendarStatus(initial?.id);
+  const { connect, disconnect } = useGoogleCalendarConnect();
 
   const handleSlotChange = (day: string, idx: number, field: "start" | "end", value: string) => {
     setAvailability((prev) => {
@@ -181,9 +186,46 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl 
         </div>
       )}
 
-      <div className="rounded-lg border bg-muted/50 p-3 flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">🗓 Google Calendar sync</span>
-        <span className="ml-auto rounded bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Coming Soon</span>
+      {/* Google Calendar Integration */}
+      <div className="rounded-lg border bg-muted/50 p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">🗓 Google Calendar</span>
+            {gcalStatus?.connected && (
+              <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                <Check className="h-3 w-3" /> Connected
+              </span>
+            )}
+          </div>
+          {initial?.id && workspaceId ? (
+            gcalStatus?.connected ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => disconnect(initial.id!, gcalStatus.tokenId)}
+              >
+                <Unlink className="mr-1 h-3 w-3" /> Disconnect
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => connect(workspaceId, initial.id!)}
+              >
+                Connect Calendar
+              </Button>
+            )
+          ) : (
+            <span className="text-xs text-muted-foreground">Save first to connect</span>
+          )}
+        </div>
+        {gcalStatus?.connected && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            New bookings will create calendar events and busy times will block availability.
+          </p>
+        )}
       </div>
 
       <Button type="submit" disabled={loading || !name} className="w-full">
