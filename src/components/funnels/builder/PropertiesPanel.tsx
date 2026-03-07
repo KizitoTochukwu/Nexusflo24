@@ -271,7 +271,17 @@ function ColumnsProps({ p, update, type }: { p: Record<string, unknown>; update:
 function HeadingProps({ p, update }: { p: Record<string, unknown>; update: (k: string, v: unknown) => void }) {
   return (
     <>
-      <Field label="Text"><Input value={(p.text as string) || ""} onChange={(e) => update("text", e.target.value)} /></Field>
+      <div>
+        <Label className="text-xs">Text</Label>
+        <div className="mt-1">
+          <FunnelTextEditor
+            value={(p.text as string) || ""}
+            onChange={(v) => update("text", v)}
+            placeholder="Enter heading text…"
+            minHeight="80px"
+          />
+        </div>
+      </div>
       <Field label="Level">
         <Select value={(p.level as string) || "h2"} onValueChange={(v) => update("level", v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
