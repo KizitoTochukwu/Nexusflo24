@@ -165,8 +165,38 @@ export default function AutomationEmailEditor({
 
       {/* Toolbar row */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <InsertDropdown onInsert={insertAtCursor} />
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <InsertDropdown onInsert={insertAtCursor} />
+          {isEmail && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                  Presets
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                {EMAIL_PRESETS.map((preset) => (
+                  <DropdownMenuItem
+                    key={preset.id}
+                    onClick={() => {
+                      onSubjectChange(preset.subject);
+                      onMessageChange(preset.body);
+                    }}
+                    className="flex flex-col items-start gap-0.5 py-2"
+                  >
+                    <span className="font-medium text-sm">
+                      {preset.emoji} {preset.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {preset.description}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
           {preview && isEmail && (
             <div className="flex items-center border border-border rounded-md mr-1">
               <Button
