@@ -25,6 +25,14 @@ const statusColor: Record<string, string> = {
   Lost: "bg-muted text-muted-foreground",
 };
 
+function getScoreStage(score: number): { label: string; color: string } {
+  if (score > 100) return { label: "🔥 Hot Buyer", color: "bg-red-600 text-white" };
+  if (score >= 81) return { label: "Sales Qualified", color: "bg-orange-500 text-white" };
+  if (score >= 51) return { label: "Marketing Qualified", color: "bg-amber-500 text-white" };
+  if (score >= 21) return { label: "Warm Lead", color: "bg-yellow-100 text-yellow-800" };
+  return { label: "Cold Lead", color: "bg-blue-100 text-blue-700" };
+}
+
 type Props = {
   lead: Lead | null;
   open: boolean;
