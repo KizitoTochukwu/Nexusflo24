@@ -240,7 +240,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
           {childrenPerCol.map((colChildren, colIdx) => (
             <div key={colIdx} className="space-y-4">
               {colChildren.map((child) => (
-                <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+                <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
               ))}
             </div>
           ))}
