@@ -271,12 +271,22 @@ Deno.serve(async (req) => {
         </table>
       `;
 
+      // Build reschedule link
+      const siteUrl = Deno.env.get("SITE_URL") || "https://nexusflo24.lovable.app";
+      const rescheduleUrl = `${siteUrl}/reschedule/${booking.reschedule_token}`;
+
       // Guest confirmation email
       const guestHtml = emailLayout("Booking Confirmed!", `
         <p style="margin:0 0 16px;font-size:16px;color:${navyColor};">Hi ${guest_name},</p>
         <p style="margin:0 0 16px;font-size:14px;color:#374151;">Your appointment has been confirmed! Here are the details:</p>
         ${detailsBlock}
-        <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">If you need to make changes, please reply to this email or contact the organizer.</p>
+        <p style="margin:16px 0 0;font-size:13px;color:#374151;">Need to change the time?</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;">
+          <tr><td>
+            <a href="${rescheduleUrl}" style="display:inline-block;padding:10px 24px;background:${brandColor};color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Reschedule Booking</a>
+          </td></tr>
+        </table>
+        <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">Or copy this link: ${rescheduleUrl}</p>
       `);
 
       // Owner notification email
