@@ -58,7 +58,40 @@ Deno.serve(async (req) => {
     }
 
     const from = `NexusFlo24 <${fromEmail}>`;
-    const result = await sendResend(apiKey, from, to, subject, html);
+
+    // Inject tracking pixel and rewrite links for tracking
+    const baseUrl = Deno.env.get("SUPABASE_URL")!;
+    let trackedHtml = html;
+
+    // Try to extract lead_id and campaign_id from request body for tracking
+    const leadId = body.leadId || body.lead_id || "";
+    const campaignId = body.campaignId || body.campaign_id || "";
+
+    if (leadId && workspaceId) {
+      // Rewrite <a href="..."> links to go through track-click
+      trackedHtml = trackedHtml.replace(
+        /<a\s+([^>]*?)href=["']([^"']+)["']([^>]*?)>/gi,
+        (_match: string, before: string, href: string, after: string) => {
+          // Skip mailto: and tel: and tracking URLs
+          if (href.startsWith("mailto:") || href.startsWith("tel:") || href.includes("track-click") || href.includes("track-open")) {
+            return `<a ${before}href="${href}"${after}>`;
+          }
+          const trackUrl = `${baseUrl}/functions/v1/track-click?lid=${leadId}&wid=${workspaceId}&url=${encodeURIComponent(href)}${campaignId ? `&cid=${campaignId}` : ""}`;
+          return `<a ${before}href="${trackUrl}"${after}>`;
+        }
+      );
+
+      // Append tracking pixel before </body> or at end
+      const pixelUrl = `${baseUrl}/functions/v1/track-open?lid=${leadId}&wid=${workspaceId}${campaignId ? `&cid=${campaignId}` : ""}`;
+      const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;" />`;
+      if (trackedHtml.includes("</body>")) {
+        trackedHtml = trackedHtml.replace("</body>", `${pixel}</body>`);
+      } else {
+        trackedHtml += pixel;
+      }
+    }
+
+    const result = await sendResend(apiKey, from, to, subject, trackedHtml);
 
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
