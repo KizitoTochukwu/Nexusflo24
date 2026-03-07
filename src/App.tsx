@@ -93,6 +93,7 @@ const App = () => (
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
+                <Route path="bookings" element={<DashboardBookings />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
