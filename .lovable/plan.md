@@ -1,55 +1,103 @@
 
 
-## Plan: Consistent Branded Sender Identity for All Outbound Emails
+## Plan: Platform-Managed Integrations Access Control
 
-### What Changes
+### Context
 
-Update both email-sending edge functions and upload the new logo to the email-assets storage bucket so all outbound emails use a unified sender profile.
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-### 1. Upload New Logo
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
-Copy the uploaded logo to `public/` then upload to the `email-assets` storage bucket as `nexusflo24-logo-profile.png`. This will be used in email templates alongside the existing logo.
+### Changes
 
-### 2. Update `supabase/functions/email-send/index.ts`
+#### 1. Frontend: Split Settings Tabs by Role
 
-- Add `reply_to` to the `sendResend` function signature and Resend API payload
-- Set default reply-to: `NexusFlo24 Support <support@nexusflo24.com>`
-- Ensure `from` uses `NexusFlo24 <{EMAIL_FROM}>`
+**DashboardSettings.tsx** — Major restructure:
 
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
+
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+```
+
+#### 2. Move Provider Credentials to Platform ENV Secrets
+
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+#### 3. Update Edge Functions for Platform Credentials
+
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+
+#### 4. Backend Admin Authorization
+
+All save-settings and test-send edge functions must verify admin role:
 ```typescript
-async function sendResend(apiKey: string, from: string, to: string, subject: string, html: string, replyTo?: string) {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, html, reply_to: replyTo }),
-  });
-  // ...
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
 }
 ```
 
-Call it with: `sendResend(apiKey, from, to, subject, trackedHtml, "NexusFlo24 Support <support@nexusflo24.com>")`
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
 
-### 3. Update `supabase/functions/execute-automation/index.ts`
+#### 5. Admin Integrations Status Widget
 
-Same changes to the `sendResend` helper:
-- Add `replyTo` parameter
-- Pass `reply_to` in the Resend payload
-- Default reply-to on the `send_email` action call
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
 
-### 4. Update Auth Email Templates (6 files)
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
 
-Replace the current 48x48 logo with the new profile logo at a larger size (e.g., 56x56) in all templates:
-- `signup.tsx`, `recovery.tsx`, `magic-link.tsx`, `invite.tsx`, `email-change.tsx`, `reauthentication.tsx`
+#### 6. Webhooks Tab (Customer-Accessible)
 
-Update the `Img` src to point to the new uploaded logo in the `email-assets` bucket.
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
 
-### 5. Redeploy Edge Functions
+This tab is workspace-scoped and visible to all authenticated users.
 
-Deploy `email-send`, `execute-automation`, and `auth-email-hook` to pick up changes.
+### Files to Create/Edit
 
-### Scope
-- 2 edge functions modified (`email-send`, `execute-automation`)
-- 6 auth email templates updated (logo swap)
-- 1 asset uploaded to storage
-- No database changes
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+### Execution Order
+
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 

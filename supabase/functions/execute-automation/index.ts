@@ -27,11 +27,11 @@ function parseDelay(delay: string): number {
   return 0;
 }
 
-async function sendResend(apiKey: string, from: string, to: string, subject: string, html: string) {
+async function sendResend(apiKey: string, from: string, to: string, subject: string, html: string, replyTo?: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, html }),
+    body: JSON.stringify({ from, to: [to], subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.message || `Resend error: ${res.status}`);
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
               if (!lead.email) throw new Error("Lead has no email");
               const subject = interpolate(config.subject || "Hello", lead);
               const html = interpolate(config.body || config.message || "", lead);
-              const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html);
+              const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
               details = { messageId: res.id, channel: "email" };
             } else if (actionType === "send_sms") {
               const sid = Deno.env.get("TWILIO_ACCOUNT_SID");

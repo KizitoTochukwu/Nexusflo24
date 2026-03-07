@@ -5,11 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function sendResend(apiKey: string, from: string, to: string, subject: string, html: string) {
+async function sendResend(apiKey: string, from: string, to: string, subject: string, html: string, replyTo?: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, html }),
+    body: JSON.stringify({ from, to: [to], subject, html, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.message || `Resend error: ${res.status}`);
@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    const result = await sendResend(apiKey, from, to, subject, trackedHtml);
+    const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
+    const result = await sendResend(apiKey, from, to, subject, trackedHtml, replyTo);
 
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
