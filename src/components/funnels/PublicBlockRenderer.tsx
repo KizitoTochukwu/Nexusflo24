@@ -214,7 +214,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
           )}
           <div style={{ maxWidth: (p.maxWidth as string) || "960px", position: "relative" }} className="mx-auto">
             {block.children?.map((child) => (
-              <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+              <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
             ))}
           </div>
         </div>
