@@ -14,7 +14,7 @@ const ICONS: Record<string, React.ElementType> = {
 const GROUPS = [
   { label: "Layout", types: ["section", "columns2", "columns3", "divider", "spacer"] as BlockType[] },
   { label: "Content", types: ["heading", "text", "image", "button"] as BlockType[] },
-  { label: "Conversion", types: ["form", "testimonials", "pricing", "faq"] as BlockType[] },
+  { label: "Conversion", types: ["form", "testimonials", "pricing", "faq", "booking"] as BlockType[] },
   { label: "Advanced", types: ["embed", "video"] as BlockType[] },
 ];
 

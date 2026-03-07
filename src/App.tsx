@@ -107,6 +107,9 @@ const App = () => (
               <Route path="/f/:slug" element={<PublicFunnel />} />
               <Route path="/f/:slug/:stepPath" element={<PublicFunnel />} />
 
+              {/* Public booking routes */}
+              <Route path="/book/:slug" element={<PublicBooking />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
             <InactivityManager />
