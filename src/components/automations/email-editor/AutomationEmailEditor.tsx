@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Monitor, Smartphone } from "lucide-react";
+import { Eye, EyeOff, Monitor, Smartphone, LayoutTemplate } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import InsertDropdown from "./InsertDropdown";
 import FormattingToolbar from "./FormattingToolbar";
 import VariableAutocomplete from "./VariableAutocomplete";
@@ -10,6 +11,7 @@ import ButtonInsertDialog from "./ButtonInsertDialog";
 import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "./EmailTemplateSettings";
 import { VARIABLE_OPTIONS, PREVIEW_VALUES } from "./editorConstants";
 import { buildPreviewHtml } from "./emailPreviewRenderer";
+import { EMAIL_PRESETS } from "./emailPresets";
 
 interface AutomationEmailEditorProps {
   isEmail: boolean;
