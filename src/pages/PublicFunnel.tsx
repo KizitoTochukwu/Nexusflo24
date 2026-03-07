@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PublicBlockRenderer from "@/components/funnels/PublicBlockRenderer";
@@ -32,7 +32,6 @@ export default function PublicFunnel() {
     (async () => {
       setLoading(true);
 
-      // Fetch funnel by slug – the public SELECT policy only returns active funnels
       const { data: funnelRow, error } = await supabase
         .from("funnels")
         .select("id, name, status, workspace_id, slug")
@@ -40,8 +39,6 @@ export default function PublicFunnel() {
         .maybeSingle();
 
       if (error || !funnelRow) {
-        // Could be draft/paused – try without RLS by checking if ANY funnel with this slug exists
-        // Since the public policy only returns active, a null result means either not found or not active
         setNotFound(true);
         setLoading(false);
         return;
@@ -55,7 +52,6 @@ export default function PublicFunnel() {
 
       setFunnel(funnelRow as FunnelData);
 
-      // Fetch steps
       const { data: stepsData } = await supabase
         .from("funnel_steps")
         .select("id, step_order, step_type, page_content")
@@ -65,7 +61,6 @@ export default function PublicFunnel() {
       setSteps((stepsData ?? []) as StepData[]);
       setLoading(false);
 
-      // Track visit
       const firstStep = stepsData?.[0];
       if (firstStep) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -82,7 +77,26 @@ export default function PublicFunnel() {
     })();
   }, [slug]);
 
-  // Determine which step to show
+  // All hooks must be called unconditionally — before any early returns
+  const leadData = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const data: Record<string, string> = {};
+    const varMap: Record<string, string> = {
+      first_name: "{{first_name}}",
+      last_name: "{{last_name}}",
+      email: "{{email}}",
+      phone: "{{phone}}",
+      company: "{{company}}",
+      source: "{{source}}",
+      lead_score: "{{lead_score}}",
+    };
+    for (const [param, varKey] of Object.entries(varMap)) {
+      const val = params.get(param);
+      if (val) data[varKey] = val;
+    }
+    return data;
+  }, []);
+
   const currentStep = stepPath
     ? steps.find((s) => s.step_type === stepPath) || steps.find((_, i) => String(i + 1) === stepPath)
     : steps[0];
@@ -90,11 +104,10 @@ export default function PublicFunnel() {
   const currentStepIndex = currentStep ? steps.indexOf(currentStep) : 0;
   const nextStep = steps[currentStepIndex + 1] || null;
 
-  const handleFormSubmit = async (data: Record<string, string>) => {
+  const handleFormSubmit = useCallback(async (data: Record<string, string>) => {
     if (!funnel || !currentStep) return;
     setFormSubmitting(true);
     try {
-      // Call the capture-lead edge function
       await supabase.functions.invoke("capture-lead", {
         body: {
           full_name: [data.firstName, data.lastName].filter(Boolean).join(" ") || null,
@@ -111,7 +124,6 @@ export default function PublicFunnel() {
         },
       });
 
-      // Track conversion
       await supabase.from("funnel_visits").insert({
         funnel_id: funnel.id,
         step_id: currentStep.id,
@@ -120,7 +132,6 @@ export default function PublicFunnel() {
         device_type: /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop",
       } as any);
 
-      // Redirect to next step
       if (nextStep) {
         window.location.href = `/f/${slug}/${nextStep.step_type}`;
       }
@@ -129,8 +140,9 @@ export default function PublicFunnel() {
     } finally {
       setFormSubmitting(false);
     }
-  };
+  }, [funnel, currentStep, nextStep, slug]);
 
+  // Now safe to do early returns
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
@@ -165,26 +177,6 @@ export default function PublicFunnel() {
       </div>
     );
   }
-
-  // Build leadData from URL query params for variable interpolation
-  const leadData = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    const data: Record<string, string> = {};
-    const varMap: Record<string, string> = {
-      first_name: "{{first_name}}",
-      last_name: "{{last_name}}",
-      email: "{{email}}",
-      phone: "{{phone}}",
-      company: "{{company}}",
-      source: "{{source}}",
-      lead_score: "{{lead_score}}",
-    };
-    for (const [param, varKey] of Object.entries(varMap)) {
-      const val = params.get(param);
-      if (val) data[varKey] = val;
-    }
-    return data;
-  }, []);
 
   const blocks: Block[] = Array.isArray(currentStep.page_content?.blocks)
     ? (currentStep.page_content.blocks as Block[])
