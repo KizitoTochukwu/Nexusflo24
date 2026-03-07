@@ -16,7 +16,18 @@ function interpolate(template: string, lead: Record<string, any>): string {
     .replace(/\{\{status\}\}/gi, lead.status || "");
 }
 
-function parseDelay(delay: string): number {
+function parseDelayFromConfig(config: Record<string, any>): number {
+  // Support structured format: { duration: number, unit: "minutes"|"hours"|"days" }
+  if (config.duration && config.unit) {
+    const dur = parseInt(String(config.duration), 10) || 0;
+    const unit = String(config.unit).toLowerCase();
+    if (unit === "minutes") return dur;
+    if (unit === "hours") return dur * 60;
+    if (unit === "days") return dur * 1440;
+    if (unit === "weeks") return dur * 10080;
+  }
+  // Fallback: legacy string format e.g. "60m", "2h", "1d"
+  const delay = config.delay || "";
   const match = delay?.match(/^(\d+)\s*(m|min|h|hr|d|day|w|week)s?$/i);
   if (!match) return 0;
   const value = parseInt(match[1], 10);
