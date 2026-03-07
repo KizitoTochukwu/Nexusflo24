@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Block } from "@/components/funnels/builder/blockTypes";
 import { parseVideoUrl, buildEmbedParams } from "@/components/funnels/builder/videoUtils";
 
@@ -6,47 +6,122 @@ interface Props {
   blocks: Block[];
   onFormSubmit?: (data: Record<string, string>) => Promise<void>;
   formSubmitting?: boolean;
+  leadData?: Record<string, string>;
 }
 
 const ASPECT_MAP: Record<string, string> = { "16:9": "56.25%", "4:3": "75%", "1:1": "100%", "21:9": "42.86%" };
 
-function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; onFormSubmit?: Props["onFormSubmit"]; formSubmitting?: boolean }) {
+/** Interpolate {{variable}} placeholders and process conditional blocks */
+function interpolate(text: string, data: Record<string, string>): string {
+  let result = text;
+  // Process conditionals: {{#if variable > value}}...{{/if}}
+  result = result.replace(
+    /\{\{#if\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*"?([^}"]*)"?\s*\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, varName, op, val, content) => {
+      const actual = data[`{{${varName}}}`] || "";
+      let show = false;
+      const numActual = Number(actual);
+      const numVal = Number(val);
+      if (!isNaN(numActual) && !isNaN(numVal)) {
+        switch (op) {
+          case ">": show = numActual > numVal; break;
+          case "<": show = numActual < numVal; break;
+          case ">=": show = numActual >= numVal; break;
+          case "<=": show = numActual <= numVal; break;
+          case "==": show = numActual === numVal; break;
+          case "!=": show = numActual !== numVal; break;
+        }
+      } else {
+        switch (op) {
+          case "==": show = actual.toLowerCase() === val.toLowerCase(); break;
+          case "!=": show = actual.toLowerCase() !== val.toLowerCase(); break;
+          default: show = false;
+        }
+      }
+      return show ? content : "";
+    }
+  );
+  // Simple existence conditional: {{#if variable}}...{{/if}}
+  result = result.replace(
+    /\{\{#if\s+(\w+)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, varName, content) => {
+      const actual = data[`{{${varName}}}`] || "";
+      return actual ? content : "";
+    }
+  );
+  // Replace variables
+  for (const [key, val] of Object.entries(data)) {
+    result = result.split(key).join(val);
+  }
+  return result;
+}
+
+/** Check if text has HTML tags */
+function hasHtml(text: string): boolean {
+  return /<[a-z][\s\S]*>/i.test(text);
+}
+
+function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { block: Block; onFormSubmit?: Props["onFormSubmit"]; formSubmitting?: boolean; leadData?: Record<string, string> }) {
   const p = block.props;
 
   switch (block.type) {
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
       const sizes: Record<string, string> = { h1: "text-4xl md:text-5xl", h2: "text-3xl md:text-4xl", h3: "text-2xl md:text-3xl" };
+      const rawText = (p.text as string) || "Heading";
+      const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
+      const useHtml = hasHtml(resolvedText);
+      const baseStyle: React.CSSProperties = {
+        color: p.color as string,
+        textAlign: p.align as any,
+        fontSize: (p.fontSize as string) || undefined,
+        fontWeight: (p.fontWeight as string) || "bold",
+        lineHeight: (p.lineHeight as string) || undefined,
+        maxWidth: (p.maxWidth as string) || undefined,
+      };
+      if (useHtml) {
+        return (
+          <Tag
+            className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
+            style={baseStyle}
+            dangerouslySetInnerHTML={{ __html: resolvedText }}
+          />
+        );
+      }
       return (
         <Tag
           className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
-          style={{
-            color: p.color as string,
-            textAlign: p.align as any,
-            fontSize: (p.fontSize as string) || undefined,
-            fontWeight: (p.fontWeight as string) || "bold",
-            lineHeight: (p.lineHeight as string) || undefined,
-            maxWidth: (p.maxWidth as string) || undefined,
-          }}
+          style={baseStyle}
         >
-          {(p.text as string) || "Heading"}
+          {resolvedText}
         </Tag>
       );
     }
-    case "text":
+    case "text": {
+      const rawText = (p.text as string) || "";
+      const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
+      const useHtml = hasHtml(resolvedText);
+      const textStyle: React.CSSProperties = {
+        color: p.color as string,
+        textAlign: p.align as any,
+        fontSize: (p.fontSize as string) || undefined,
+        lineHeight: (p.lineHeight as string) || undefined,
+      };
+      if (useHtml) {
+        return (
+          <div
+            className="text-base md:text-lg leading-relaxed"
+            style={textStyle}
+            dangerouslySetInnerHTML={{ __html: resolvedText }}
+          />
+        );
+      }
       return (
-        <p
-          className="text-base md:text-lg leading-relaxed"
-          style={{
-            color: p.color as string,
-            textAlign: p.align as any,
-            fontSize: (p.fontSize as string) || undefined,
-            lineHeight: (p.lineHeight as string) || undefined,
-          }}
-        >
-          {(p.text as string) || ""}
+        <p className="text-base md:text-lg leading-relaxed" style={textStyle}>
+          {resolvedText}
         </p>
       );
+    }
     case "image": {
       const imgEl = (p.src as string) ? (
         <img
@@ -139,7 +214,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; on
           )}
           <div style={{ maxWidth: (p.maxWidth as string) || "960px", position: "relative" }} className="mx-auto">
             {block.children?.map((child) => (
-              <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+              <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
             ))}
           </div>
         </div>
@@ -165,7 +240,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting }: { block: Block; on
           {childrenPerCol.map((colChildren, colIdx) => (
             <div key={colIdx} className="space-y-4">
               {colChildren.map((child) => (
-                <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+                <RenderBlock key={child.id} block={child} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
               ))}
             </div>
           ))}
@@ -330,11 +405,11 @@ function FormBlock({ props: p, onSubmit, submitting }: { props: Record<string, u
   );
 }
 
-export default function PublicBlockRenderer({ blocks, onFormSubmit, formSubmitting }: Props) {
+export default function PublicBlockRenderer({ blocks, onFormSubmit, formSubmitting, leadData = {} }: Props) {
   return (
     <div className="space-y-6">
       {blocks.map((block) => (
-        <RenderBlock key={block.id} block={block} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} />
+        <RenderBlock key={block.id} block={block} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
       ))}
     </div>
   );

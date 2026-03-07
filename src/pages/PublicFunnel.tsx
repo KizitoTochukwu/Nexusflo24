@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PublicBlockRenderer from "@/components/funnels/PublicBlockRenderer";
@@ -166,6 +166,26 @@ export default function PublicFunnel() {
     );
   }
 
+  // Build leadData from URL query params for variable interpolation
+  const leadData = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const data: Record<string, string> = {};
+    const varMap: Record<string, string> = {
+      first_name: "{{first_name}}",
+      last_name: "{{last_name}}",
+      email: "{{email}}",
+      phone: "{{phone}}",
+      company: "{{company}}",
+      source: "{{source}}",
+      lead_score: "{{lead_score}}",
+    };
+    for (const [param, varKey] of Object.entries(varMap)) {
+      const val = params.get(param);
+      if (val) data[varKey] = val;
+    }
+    return data;
+  }, []);
+
   const blocks: Block[] = Array.isArray(currentStep.page_content?.blocks)
     ? (currentStep.page_content.blocks as Block[])
     : [];
@@ -173,7 +193,7 @@ export default function PublicFunnel() {
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-4xl px-4 py-12">
-        <PublicBlockRenderer blocks={blocks} onFormSubmit={handleFormSubmit} formSubmitting={formSubmitting} />
+        <PublicBlockRenderer blocks={blocks} onFormSubmit={handleFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
       </div>
     </div>
   );
