@@ -251,9 +251,9 @@ Deno.serve(async (req) => {
           }
 
           case "delay": {
-            const delayMinutes = parseDelay(config.delay || "");
+            const delayMinutes = parseDelayFromConfig(config);
             if (delayMinutes <= 0) {
-              details = { message: "Invalid delay value", delay: config.delay };
+              details = { message: "Invalid delay value", config: { duration: config.duration, unit: config.unit, delay: config.delay } };
               status = "error";
               break;
             }
