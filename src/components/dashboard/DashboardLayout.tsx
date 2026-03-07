@@ -126,8 +126,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* User dropdown */}
-          <DropdownMenu>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+
+            {/* User dropdown */}
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
