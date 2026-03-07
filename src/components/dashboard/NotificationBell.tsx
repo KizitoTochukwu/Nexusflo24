@@ -1,5 +1,6 @@
-import { Bell, CheckCheck, User, Mail } from "lucide-react";
+import { Bell, CheckCheck, User, Mail, BellRing, BellOff } from "lucide-react";
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllRead, Notification } from "@/hooks/useNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
