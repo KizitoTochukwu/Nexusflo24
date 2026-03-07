@@ -191,6 +191,141 @@ export type Database = {
           },
         ]
       }
+      booking_pages: {
+        Row: {
+          availability: Json
+          buffer_minutes: number
+          color: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          google_calendar_id: string | null
+          id: string
+          max_days_ahead: number
+          name: string
+          slug: string | null
+          status: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          availability?: Json
+          buffer_minutes?: number
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          google_calendar_id?: string | null
+          id?: string
+          max_days_ahead?: number
+          name: string
+          slug?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          availability?: Json
+          buffer_minutes?: number
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          google_calendar_id?: string | null
+          id?: string
+          max_days_ahead?: number
+          name?: string
+          slug?: string | null
+          status?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_pages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          booking_page_id: string
+          created_at: string
+          end_time: string
+          google_event_id: string | null
+          guest_email: string
+          guest_name: string
+          guest_phone: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          start_time: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          booking_page_id: string
+          created_at?: string
+          end_time: string
+          google_event_id?: string | null
+          guest_email: string
+          guest_name: string
+          guest_phone?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          start_time: string
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          booking_page_id?: string
+          created_at?: string
+          end_time?: string
+          google_event_id?: string | null
+          guest_email?: string
+          guest_name?: string
+          guest_phone?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          start_time?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_booking_page_id_fkey"
+            columns: ["booking_page_id"]
+            isOneToOne: false
+            referencedRelation: "booking_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_messages: {
         Row: {
           campaign_id: string
