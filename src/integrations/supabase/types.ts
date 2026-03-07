@@ -200,6 +200,7 @@ export type Database = {
           description: string | null
           duration_minutes: number
           google_calendar_id: string | null
+          google_token_id: string | null
           id: string
           max_days_ahead: number
           name: string
@@ -218,6 +219,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           google_calendar_id?: string | null
+          google_token_id?: string | null
           id?: string
           max_days_ahead?: number
           name: string
@@ -236,6 +238,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           google_calendar_id?: string | null
+          google_token_id?: string | null
           id?: string
           max_days_ahead?: number
           name?: string
@@ -247,6 +250,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "booking_pages_google_token_id_fkey"
+            columns: ["google_token_id"]
+            isOneToOne: false
+            referencedRelation: "google_calendar_tokens"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "booking_pages_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -664,6 +674,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "funnels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_tokens: {
+        Row: {
+          access_token: string
+          calendar_id: string
+          created_at: string
+          id: string
+          refresh_token: string
+          token_expires_at: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token: string
+          calendar_id?: string
+          created_at?: string
+          id?: string
+          refresh_token: string
+          token_expires_at?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string
+          calendar_id?: string
+          created_at?: string
+          id?: string
+          refresh_token?: string
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_tokens_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

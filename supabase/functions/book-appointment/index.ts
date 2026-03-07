@@ -5,6 +5,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function refreshGoogleToken(supabase: any, tokenRow: any, clientId: string, clientSecret: string) {
+  if (new Date(tokenRow.token_expires_at) > new Date(Date.now() + 60000)) {
+    return tokenRow.access_token;
+  }
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: tokenRow.refresh_token,
+      grant_type: "refresh_token",
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.access_token) return null;
+
+  const expiresAt = new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString();
+  await supabase
+    .from("google_calendar_tokens")
+    .update({ access_token: data.access_token, token_expires_at: expiresAt })
+    .eq("id", tokenRow.id);
+
+  return data.access_token;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -15,7 +41,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest_email)) {
       return new Response(JSON.stringify({ error: "Invalid email" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -25,7 +50,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Fetch booking page
     const { data: page, error: pageErr } = await supabase
       .from("booking_pages")
       .select("*")
@@ -105,6 +129,54 @@ Deno.serve(async (req) => {
       .single();
 
     if (bookErr) throw bookErr;
+
+    // Google Calendar event creation
+    if (page.google_token_id) {
+      const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+      const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+
+      if (clientId && clientSecret) {
+        const { data: tokenRow } = await supabase
+          .from("google_calendar_tokens")
+          .select("*")
+          .eq("id", page.google_token_id)
+          .single();
+
+        if (tokenRow) {
+          const accessToken = await refreshGoogleToken(supabase, tokenRow, clientId, clientSecret);
+          if (accessToken) {
+            try {
+              const calendarId = tokenRow.calendar_id || "primary";
+              const eventRes = await fetch(
+                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    summary: `${page.name} - ${guest_name}`,
+                    description: `Booking with ${guest_name} (${guest_email})${notes ? `\nNotes: ${notes}` : ""}`,
+                    start: { dateTime: startDt.toISOString(), timeZone: page.timezone },
+                    end: { dateTime: endDt.toISOString(), timeZone: page.timezone },
+                    attendees: [{ email: guest_email }],
+                  }),
+                }
+              );
+
+              if (eventRes.ok) {
+                const eventData = await eventRes.json();
+                await supabase
+                  .from("bookings")
+                  .update({ google_event_id: eventData.id })
+                  .eq("id", booking.id);
+              }
+            } catch (_) { /* best effort */ }
+          }
+        }
+      }
+    }
 
     // Log call_booking activity to trigger scoring (+50)
     if (leadId) {
