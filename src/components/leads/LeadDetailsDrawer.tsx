@@ -25,6 +25,14 @@ const statusColor: Record<string, string> = {
   Lost: "bg-muted text-muted-foreground",
 };
 
+function getScoreStage(score: number): { label: string; color: string } {
+  if (score > 100) return { label: "🔥 Hot Buyer", color: "bg-red-600 text-white" };
+  if (score >= 81) return { label: "Sales Qualified", color: "bg-orange-500 text-white" };
+  if (score >= 51) return { label: "Marketing Qualified", color: "bg-amber-500 text-white" };
+  if (score >= 21) return { label: "Warm Lead", color: "bg-yellow-100 text-yellow-800" };
+  return { label: "Cold Lead", color: "bg-blue-100 text-blue-700" };
+}
+
 type Props = {
   lead: Lead | null;
   open: boolean;
@@ -104,9 +112,14 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
                 <Button size="sm" variant="ghost" onClick={() => setEditingScore(false)}>Cancel</Button>
               </div>
             ) : (
-              <button onClick={() => { setScoreVal(lead.score); setEditingScore(true); }} className="text-lg font-bold text-accent hover:underline">
-                {lead.score}
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setScoreVal(lead.score); setEditingScore(true); }} className="text-lg font-bold text-accent hover:underline">
+                  {lead.score}
+                </button>
+                <Badge className={`${getScoreStage(lead.score).color} text-xs`}>
+                  {getScoreStage(lead.score).label}
+                </Badge>
+              </div>
             )}
           </div>
 
