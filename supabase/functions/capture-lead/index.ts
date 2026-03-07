@@ -138,6 +138,75 @@ Deno.serve(async (req) => {
       meta: meta,
     });
 
+    // --- New lead notification (only for brand-new leads) ---
+    if (!existing) {
+      const leadName = full_name || normalizedEmail;
+
+      // 1. In-app notification
+      await supabase.from("notifications").insert({
+        workspace_id: workspaceId,
+        user_id: ownerId,
+        title: `New lead: ${leadName}`,
+        body: `${normalizedEmail}${source ? ` via ${source}` : ""}`,
+        type: "new_lead",
+        meta: { lead_id: leadId, email: normalizedEmail, source },
+      });
+
+      // 2. Email notification to workspace owner
+      try {
+        const resendKey = Deno.env.get("RESEND_API_KEY");
+        const emailFrom = Deno.env.get("EMAIL_FROM") || "NexusFlo24 <noreply@nexusflo24.com>";
+
+        if (resendKey) {
+          // Get owner email
+          const { data: ownerProfile } = await supabase
+            .from("profiles")
+            .select("email, full_name")
+            .eq("id", ownerId)
+            .single();
+
+          if (ownerProfile?.email) {
+            const dashUrl = `https://nexusflo24.lovable.app/dashboard/${workspaceId}/leads`;
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${resendKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: emailFrom,
+                to: [ownerProfile.email],
+                subject: `🎯 New Lead: ${leadName}`,
+                html: `
+                  <div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fff;">
+                    <div style="text-align:center;margin-bottom:24px;">
+                      <h2 style="color:#0B1F3B;margin:0 0 4px;">New Lead Captured!</h2>
+                      <p style="color:#666;margin:0;font-size:14px;">Someone just signed up through your funnel.</p>
+                    </div>
+                    <div style="background:#f8f9fa;border-radius:8px;padding:16px;margin-bottom:24px;">
+                      <table style="width:100%;font-size:14px;color:#333;">
+                        <tr><td style="padding:4px 8px;font-weight:600;">Name</td><td style="padding:4px 8px;">${full_name || "—"}</td></tr>
+                        <tr><td style="padding:4px 8px;font-weight:600;">Email</td><td style="padding:4px 8px;">${normalizedEmail}</td></tr>
+                        ${phone ? `<tr><td style="padding:4px 8px;font-weight:600;">Phone</td><td style="padding:4px 8px;">${phone}</td></tr>` : ""}
+                        <tr><td style="padding:4px 8px;font-weight:600;">Source</td><td style="padding:4px 8px;">${source || "Landing Page"}</td></tr>
+                      </table>
+                    </div>
+                    <div style="text-align:center;">
+                      <a href="${dashUrl}" style="display:inline-block;background:#0B1F3B;color:#D4AF37;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">View in CRM →</a>
+                    </div>
+                    <p style="text-align:center;color:#999;font-size:12px;margin-top:24px;">NexusFlo24 • AI-Powered Marketing Automation</p>
+                  </div>
+                `,
+              }),
+            });
+          }
+        }
+      } catch (emailErr) {
+        // Email notification failure should never block lead capture
+        console.error("Email notification failed:", emailErr);
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true, leadId, updated: !!existing }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

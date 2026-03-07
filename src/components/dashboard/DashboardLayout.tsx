@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate,
   BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield
 } from "lucide-react";
+import NotificationBell from "@/components/dashboard/NotificationBell";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
 import FreePlanBanner from "@/components/billing/FreePlanBanner";
@@ -125,8 +126,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* User dropdown */}
-          <DropdownMenu>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+
+            {/* User dropdown */}
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
@@ -149,6 +153,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </header>
 
         <div className="p-6 lg:p-8">

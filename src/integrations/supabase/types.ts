@@ -762,6 +762,50 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          meta: Json | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_events: {
         Row: {
           created_at: string
