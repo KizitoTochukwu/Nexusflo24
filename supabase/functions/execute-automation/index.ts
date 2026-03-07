@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -147,6 +148,8 @@ Deno.serve(async (req) => {
               }
               const subject = interpolate(config.subject || "Hello", lead);
               let html = interpolate(config.body || config.message || "", lead);
+              // Format content and wrap in branded template
+              html = wrapEmailTemplate(formatEmailBody(html));
               // Append GDPR unsubscribe footer
               const baseUrl = Deno.env.get("SUPABASE_URL")!;
               const unsubUrl = `${baseUrl}/functions/v1/unsubscribe?lid=${lead_id}&wid=${workspace_id}`;
