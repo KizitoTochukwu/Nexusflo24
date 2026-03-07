@@ -146,6 +146,7 @@ export default function DashboardBookings() {
             onSubmit={editing ? handleUpdate : handleCreate}
             loading={createPage.isPending || updatePage.isPending}
             publicUrl={editing?.slug ? `${baseUrl}/book/${editing.slug}` : undefined}
+            workspaceId={workspaceId}
           />
         </DialogContent>
       </Dialog>
