@@ -122,7 +122,7 @@ export default function AutomationEmailEditor({
     (text: string) => {
       let result = text;
       for (const [key, val] of Object.entries(PREVIEW_VALUES)) {
-        result = result.replaceAll(key, `<span class="bg-accent/50 px-1 rounded font-semibold">${val}</span>`);
+        result = result.split(key).join(`<span class="bg-accent/50 px-1 rounded font-semibold">${val}</span>`);
       }
       // Replace remaining {{...}} with placeholder
       result = result.replace(/\{\{(\w+)\}\}/g, '<span class="bg-muted px-1 rounded text-muted-foreground">[$1]</span>');
