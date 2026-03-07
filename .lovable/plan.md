@@ -1,103 +1,39 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+## Diagnosis: Automation Not Triggering for New Leads
 
-### Context
+### What's Working
+- Form capture is fully functional -- leads are being created, `form_submit` activities logged, notifications sent.
+- The `capture-lead` function IS calling `execute-automation` for new leads.
+- The automation (42d1c97f) IS active with `trigger_type: new_lead`.
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+### Root Cause: Config Key Mismatch
+The automation steps store the action type as `config.action` (e.g., `{ "action": "send_email", "subject": "...", "message": "..." }`), but the `execute-automation` function reads `config.action_type || config.channel` on line 120:
 
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
-
-### Changes
-
-#### 1. Frontend: Split Settings Tabs by Role
-
-**DashboardSettings.tsx** — Major restructure:
-
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
-
-Tab layout:
 ```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+const actionType = config.action_type || config.channel;
 ```
 
-#### 2. Move Provider Credentials to Platform ENV Secrets
+This evaluates to `undefined`, causing every action step to hit the `else` branch: `"Unknown action type: undefined"` → status `skipped`.
 
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+Additionally, delay steps are logged as `skipped` because live delay execution isn't implemented, which means all subsequent steps after the first email would also need delay queue support -- but the immediate problem is that **not even the first email is sent**.
 
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+### Fix
 
-#### 3. Update Edge Functions for Platform Credentials
+**File: `supabase/functions/execute-automation/index.ts`** (line 120)
 
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
-
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
-
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
-
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
-
-#### 4. Backend Admin Authorization
-
-All save-settings and test-send edge functions must verify admin role:
+Change:
 ```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
+const actionType = config.action_type || config.channel;
+```
+To:
+```typescript
+const actionType = config.action || config.action_type || config.channel;
 ```
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+This single-line fix will resolve the entire issue -- the first email in the sequence will be sent immediately upon lead capture, and subsequent action steps will also execute (though delay steps will still be skipped/logged as unsupported).
 
-#### 5. Admin Integrations Status Widget
-
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
-
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
-
-#### 6. Webhooks Tab (Customer-Accessible)
-
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+### Scope
+- 1 file changed, 1 line modified
+- No database changes needed
 
