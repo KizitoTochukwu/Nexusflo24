@@ -68,19 +68,32 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
       const sizes: Record<string, string> = { h1: "text-4xl md:text-5xl", h2: "text-3xl md:text-4xl", h3: "text-2xl md:text-3xl" };
+      const rawText = (p.text as string) || "Heading";
+      const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
+      const useHtml = hasHtml(resolvedText);
+      const baseStyle: React.CSSProperties = {
+        color: p.color as string,
+        textAlign: p.align as any,
+        fontSize: (p.fontSize as string) || undefined,
+        fontWeight: (p.fontWeight as string) || "bold",
+        lineHeight: (p.lineHeight as string) || undefined,
+        maxWidth: (p.maxWidth as string) || undefined,
+      };
+      if (useHtml) {
+        return (
+          <Tag
+            className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
+            style={baseStyle}
+            dangerouslySetInnerHTML={{ __html: resolvedText }}
+          />
+        );
+      }
       return (
         <Tag
           className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
-          style={{
-            color: p.color as string,
-            textAlign: p.align as any,
-            fontSize: (p.fontSize as string) || undefined,
-            fontWeight: (p.fontWeight as string) || "bold",
-            lineHeight: (p.lineHeight as string) || undefined,
-            maxWidth: (p.maxWidth as string) || undefined,
-          }}
+          style={baseStyle}
         >
-          {(p.text as string) || "Heading"}
+          {resolvedText}
         </Tag>
       );
     }
