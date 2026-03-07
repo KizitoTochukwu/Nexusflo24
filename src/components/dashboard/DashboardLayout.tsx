@@ -27,6 +27,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { workspaces, currentWorkspace } = useWorkspace();
   const workspaceId = useWorkspaceId();
   const { data: isAdmin } = useIsAdmin();
+  useNotificationWatcher();
 
   const sidebarItems = [
     { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
