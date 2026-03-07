@@ -1,6 +1,4 @@
-import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +7,7 @@ import {
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
 } from "lucide-react";
 import { CONDITION_OPTIONS, ACTION_OPTIONS } from "@/hooks/useAutomations";
+import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 
 export type StepData = {
   step_type: "trigger" | "condition" | "action" | "delay";
@@ -32,91 +31,6 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   notify_sales: <Bell className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
 };
-
-const TEMPLATE_VARIABLES = [
-  { label: "first_name", value: "{{first_name}}" },
-  { label: "email", value: "{{email}}" },
-  { label: "phone", value: "{{phone}}" },
-  { label: "source", value: "{{source}}" },
-];
-
-function MessageEditor({
-  isEmail,
-  subject,
-  message,
-  onSubjectChange,
-  onMessageChange,
-}: {
-  isEmail: boolean;
-  subject: string;
-  message: string;
-  onSubjectChange: (v: string) => void;
-  onMessageChange: (v: string) => void;
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const insertVariable = useCallback((variable: string) => {
-    const el = textareaRef.current;
-    if (!el) {
-      onMessageChange(message + variable);
-      return;
-    }
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const newValue = message.slice(0, start) + variable + message.slice(end);
-    onMessageChange(newValue);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + variable.length, start + variable.length);
-    });
-  }, [message, onMessageChange]);
-
-  return (
-    <div className="space-y-3 w-full">
-      {isEmail && (
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground">Subject Line</label>
-          <Input
-            placeholder="Email subject line"
-            className="w-full bg-background"
-            value={subject}
-            onChange={(e) => onSubjectChange(e.target.value)}
-          />
-        </div>
-      )}
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
-          {isEmail ? "Email Body" : "Message Template"}
-        </label>
-        <Textarea
-          ref={textareaRef}
-          placeholder={isEmail
-            ? "Hi {{first_name}},\n\nThanks for signing up! We're excited to have you on board.\n\nBest regards,\nYour Team"
-            : "Hi {{first_name}}, thanks for signing up!"}
-          className="w-full min-h-[240px] bg-background text-base leading-relaxed border-muted rounded-lg p-4 resize-y"
-          value={message}
-          onChange={(e) => onMessageChange(e.target.value)}
-        />
-      </div>
-      <div className="space-y-1">
-        <span className="text-xs text-muted-foreground">Insert variable:</span>
-        <div className="flex flex-wrap gap-1.5">
-          {TEMPLATE_VARIABLES.map((v) => (
-            <Badge
-              key={v.label}
-              variant="secondary"
-              className="cursor-pointer hover:bg-accent transition-colors text-xs"
-              onClick={() => insertVariable(v.value)}
-            >
-              {v.value}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
@@ -244,7 +158,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                     </Select>
                   )}
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
-                    <MessageEditor
+                    <AutomationEmailEditor
                       isEmail={(step.config.action as string) === "send_email"}
                       subject={(step.config.subject as string) || ""}
                       message={(step.config.message as string) || ""}
