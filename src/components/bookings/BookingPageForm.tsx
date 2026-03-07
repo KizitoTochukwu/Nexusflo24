@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Check, Unlink } from "lucide-react";
-import { useGoogleCalendarStatus, useGoogleCalendarConnect } from "@/hooks/useGoogleCalendar";
+import { useGoogleCalendarStatus, useGoogleCalendarConnect, useGoogleCalendarList, useSelectGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import type { BookingPage } from "@/hooks/useBookings";
 
 const DAYS = [
@@ -56,6 +56,8 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
 
   const { data: gcalStatus } = useGoogleCalendarStatus(initial?.id);
   const { connect, disconnect } = useGoogleCalendarConnect();
+  const { data: calendarList } = useGoogleCalendarList(gcalStatus?.connected ? gcalStatus.tokenId : null);
+  const selectCalendar = useSelectGoogleCalendar();
 
   const handleSlotChange = (day: string, idx: number, field: "start" | "end", value: string) => {
     setAvailability((prev) => {
@@ -222,9 +224,43 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
           )}
         </div>
         {gcalStatus?.connected && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            New bookings will create calendar events and busy times will block availability.
-          </p>
+          <div className="mt-2 space-y-1.5">
+            <Label className="text-xs">Sync to calendar</Label>
+            {calendarList?.calendars && calendarList.calendars.length > 0 ? (
+              <Select
+                value={calendarList.selected || "primary"}
+                onValueChange={(val) => {
+                  if (gcalStatus.tokenId) {
+                    selectCalendar.mutate({ tokenId: gcalStatus.tokenId, calendarId: val });
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select calendar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {calendarList.calendars.map((cal) => (
+                    <SelectItem key={cal.id} value={cal.id}>
+                      <span className="flex items-center gap-2">
+                        {cal.backgroundColor && (
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: cal.backgroundColor }}
+                          />
+                        )}
+                        {cal.summary}{cal.primary ? " (Primary)" : ""}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-xs text-muted-foreground">Loading calendars…</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              New bookings will create events here and busy times will block availability.
+            </p>
+          </div>
         )}
       </div>
 
