@@ -3,8 +3,16 @@
  * Converts editor content into structured, branded HTML emails.
  */
 
-const LOGO_URL =
+const DEFAULT_LOGO_URL =
   "https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png";
+
+export interface TemplateOptions {
+  preheader?: string;
+  logo?: { url?: string; alignment?: string; size?: number; visible?: boolean };
+  unsubscribe?: { enabled?: boolean; text?: string };
+  footer?: { text?: string; color?: string; alignment?: string };
+  unsubUrl?: string;
+}
 
 /**
  * Converts raw editor content (plain text, \n, bullets, inline HTML) into
@@ -26,22 +34,13 @@ export function formatEmailBody(raw: string): string {
   while (i < lines.length) {
     const line = lines[i].trim();
 
-    // Empty line — skip (creates paragraph break)
-    if (!line) {
-      i++;
-      continue;
-    }
+    if (!line) { i++; continue; }
 
-    // Horizontal rule
     if (/^-{3,}$/.test(line)) {
-      blocks.push(
-        '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />'
-      );
-      i++;
-      continue;
+      blocks.push('<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />');
+      i++; continue;
     }
 
-    // Unordered list (• or - prefix)
     if (/^[•\-]\s+/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^[•\-]\s+/.test(lines[i].trim())) {
@@ -50,16 +49,12 @@ export function formatEmailBody(raw: string): string {
       }
       blocks.push(
         `<ul style="margin:0 0 16px;padding-left:24px;color:#0B1F3B;">${items
-          .map(
-            (it) =>
-              `<li style="margin-bottom:6px;line-height:1.6;font-size:15px;">${it}</li>`
-          )
+          .map((it) => `<li style="margin-bottom:6px;line-height:1.6;font-size:15px;">${it}</li>`)
           .join("")}</ul>`
       );
       continue;
     }
 
-    // Ordered list (1. 2. etc.)
     if (/^\d+\.\s+/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
@@ -68,16 +63,12 @@ export function formatEmailBody(raw: string): string {
       }
       blocks.push(
         `<ol style="margin:0 0 16px;padding-left:24px;color:#0B1F3B;">${items
-          .map(
-            (it) =>
-              `<li style="margin-bottom:6px;line-height:1.6;font-size:15px;">${it}</li>`
-          )
+          .map((it) => `<li style="margin-bottom:6px;line-height:1.6;font-size:15px;">${it}</li>`)
           .join("")}</ol>`
       );
       continue;
     }
 
-    // Heading detection (# ## ###)
     const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
     if (headingMatch) {
       const level = headingMatch[1].length;
@@ -85,11 +76,9 @@ export function formatEmailBody(raw: string): string {
       blocks.push(
         `<h${level} style="margin:0 0 12px;font-size:${sizes[level]};font-weight:bold;color:#0B1F3B;">${headingMatch[2]}</h${level}>`
       );
-      i++;
-      continue;
+      i++; continue;
     }
 
-    // Regular paragraph — collect consecutive non-empty, non-special lines
     const paragraphLines: string[] = [];
     while (
       i < lines.length &&
@@ -118,10 +107,46 @@ export function formatEmailBody(raw: string): string {
  */
 export function wrapEmailTemplate(
   body: string,
-  options?: { preheader?: string }
+  options?: TemplateOptions
 ): string {
+  const logo = {
+    url: DEFAULT_LOGO_URL,
+    alignment: "center",
+    size: 56,
+    visible: true,
+    ...options?.logo,
+  };
+  const unsub = {
+    enabled: true,
+    text: "You received this email because you subscribed to NexusFlo24.",
+    ...options?.unsubscribe,
+  };
+  const footer = {
+    text: "© NexusFlo24 · AI-Powered Marketing Automation",
+    color: "#C9A227",
+    alignment: "center",
+    ...options?.footer,
+  };
+
   const preheader = options?.preheader
     ? `<span style="display:none;font-size:1px;color:#f4f5f7;max-height:0;overflow:hidden;">${options.preheader}</span>`
+    : "";
+
+  const logoBlock = logo.visible && logo.url
+    ? `<tr><td align="${logo.alignment}" style="padding:0 0 24px;"><img src="${logo.url}" width="${logo.size}" height="${logo.size}" alt="NexusFlo24" style="border-radius:10px;display:block;" /></td></tr>`
+    : "";
+
+  // Unsubscribe footer inside the body card
+  let unsubBlock = "";
+  if (unsub.enabled) {
+    const unsubLink = options?.unsubUrl
+      ? `<a href="${options.unsubUrl}" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a>`
+      : `<a href="#" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a>`;
+    unsubBlock = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">${unsub.text} ${unsubLink}</span></div>`;
+  }
+
+  const footerBlock = footer.text
+    ? `<tr><td align="${footer.alignment}" style="padding:24px 0 0;"><p style="margin:0;font-size:12px;color:${footer.color};">${footer.text}</p></td></tr>`
     : "";
 
   return `<!DOCTYPE html>
@@ -148,24 +173,15 @@ ${preheader}
   <tr>
     <td align="center" class="email-container" style="padding:32px 24px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-        <!-- Logo -->
-        <tr>
-          <td align="center" style="padding:0 0 24px;">
-            <img src="${LOGO_URL}" width="56" height="56" alt="NexusFlo24" style="border-radius:10px;display:block;" />
-          </td>
-        </tr>
+        ${logoBlock}
         <!-- Body Card -->
         <tr>
           <td class="email-body" style="background-color:#ffffff;border-radius:16px;padding:32px 32px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
             ${body}
+            ${unsubBlock}
           </td>
         </tr>
-        <!-- Footer -->
-        <tr>
-          <td align="center" style="padding:24px 0 0;">
-            <p style="margin:0;font-size:12px;color:#C9A227;">© NexusFlo24 · AI-Powered Marketing Automation</p>
-          </td>
-        </tr>
+        ${footerBlock}
       </table>
     </td>
   </tr>

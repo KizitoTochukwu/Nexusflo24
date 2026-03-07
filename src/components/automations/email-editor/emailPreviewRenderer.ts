@@ -3,8 +3,8 @@
  * Used to render a realistic email preview in the automation builder.
  */
 
-const LOGO_URL =
-  "https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png";
+import type { TemplateSettings } from "./EmailTemplateSettings";
+import { DEFAULT_TEMPLATE_SETTINGS } from "./EmailTemplateSettings";
 
 export function formatEmailBody(raw: string): string {
   if (!raw) return "";
@@ -91,19 +91,38 @@ export function formatEmailBody(raw: string): string {
 export function buildPreviewHtml(
   rawBody: string,
   subject: string,
-  previewValues: Record<string, string>
+  previewValues: Record<string, string>,
+  templateSettings?: Partial<TemplateSettings>
 ): string {
+  const ts = {
+    logo: { ...DEFAULT_TEMPLATE_SETTINGS.logo, ...templateSettings?.logo },
+    unsubscribe: { ...DEFAULT_TEMPLATE_SETTINGS.unsubscribe, ...templateSettings?.unsubscribe },
+    footer: { ...DEFAULT_TEMPLATE_SETTINGS.footer, ...templateSettings?.footer },
+  };
+
   // Interpolate variables with preview values
   let content = rawBody;
   for (const [key, val] of Object.entries(previewValues)) {
     content = content.split(key).join(val);
   }
-  // Replace remaining {{...}} with placeholder text
   content = content.replace(/\{\{(\w+)\}\}/g, "[$1]");
 
   const formattedBody = formatEmailBody(content);
 
-  const unsubFooter = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">You received this email because you subscribed to NexusFlo24. <a href="#" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a></span></div>`;
+  // Build unsubscribe footer
+  const unsubFooter = ts.unsubscribe.enabled
+    ? `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">${ts.unsubscribe.text} <a href="#" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a></span></div>`
+    : "";
+
+  // Build logo block
+  const logoBlock = ts.logo.visible && ts.logo.url
+    ? `<tr><td align="${ts.logo.alignment}" style="padding:0 0 24px;"><img src="${ts.logo.url}" width="${ts.logo.size}" height="${ts.logo.size}" alt="Logo" style="border-radius:10px;display:block;" /></td></tr>`
+    : "";
+
+  // Build footer
+  const footerBlock = ts.footer.text
+    ? `<tr><td align="${ts.footer.alignment}" style="padding:24px 0 0;"><p style="margin:0;font-size:12px;color:${ts.footer.color};">${ts.footer.text}</p></td></tr>`
+    : "";
 
   let interpolatedSubject = subject;
   for (const [key, val] of Object.entries(previewValues)) {
@@ -138,12 +157,7 @@ export function buildPreviewHtml(
         </tr>
       </table>
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;margin-top:-12px;">
-        <!-- Logo -->
-        <tr>
-          <td align="center" style="padding:24px 0;">
-            <img src="${LOGO_URL}" width="56" height="56" alt="NexusFlo24" style="border-radius:10px;display:block;" />
-          </td>
-        </tr>
+        ${logoBlock}
         <!-- Body Card -->
         <tr>
           <td style="background-color:#ffffff;border-radius:16px;padding:32px 32px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
@@ -151,12 +165,7 @@ export function buildPreviewHtml(
             ${unsubFooter}
           </td>
         </tr>
-        <!-- Footer -->
-        <tr>
-          <td align="center" style="padding:24px 0 0;">
-            <p style="margin:0;font-size:12px;color:#C9A227;">&copy; NexusFlo24 &middot; AI-Powered Marketing Automation</p>
-          </td>
-        </tr>
+        ${footerBlock}
       </table>
     </td>
   </tr>

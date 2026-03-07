@@ -7,6 +7,7 @@ import InsertDropdown from "./InsertDropdown";
 import FormattingToolbar from "./FormattingToolbar";
 import VariableAutocomplete from "./VariableAutocomplete";
 import ButtonInsertDialog from "./ButtonInsertDialog";
+import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "./EmailTemplateSettings";
 import { VARIABLE_OPTIONS, PREVIEW_VALUES } from "./editorConstants";
 import { buildPreviewHtml } from "./emailPreviewRenderer";
 
@@ -16,6 +17,8 @@ interface AutomationEmailEditorProps {
   message: string;
   onSubjectChange: (v: string) => void;
   onMessageChange: (v: string) => void;
+  templateSettings?: TemplateSettings;
+  onTemplateSettingsChange?: (settings: TemplateSettings) => void;
 }
 
 export default function AutomationEmailEditor({
@@ -24,6 +27,8 @@ export default function AutomationEmailEditor({
   message,
   onSubjectChange,
   onMessageChange,
+  templateSettings,
+  onTemplateSettingsChange,
 }: AutomationEmailEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorWrapRef = useRef<HTMLDivElement>(null);
@@ -37,6 +42,8 @@ export default function AutomationEmailEditor({
     startPos: number;
     position: { top: number; left: number };
   }>({ active: false, filter: "", startPos: 0, position: { top: 0, left: 0 } });
+
+  const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
 
   const insertAtCursor = useCallback(
     (text: string) => {
@@ -121,7 +128,7 @@ export default function AutomationEmailEditor({
   // Write preview HTML to iframe when preview is active
   useEffect(() => {
     if (preview && iframeRef.current) {
-      const html = buildPreviewHtml(message, subject, PREVIEW_VALUES);
+      const html = buildPreviewHtml(message, subject, PREVIEW_VALUES, currentSettings);
       const doc = iframeRef.current.contentDocument;
       if (doc) {
         doc.open();
@@ -129,7 +136,7 @@ export default function AutomationEmailEditor({
         doc.close();
       }
     }
-  }, [preview, message, subject, previewDevice]);
+  }, [preview, message, subject, previewDevice, currentSettings]);
 
   // Close autocomplete on blur
   useEffect(() => {
@@ -280,6 +287,14 @@ export default function AutomationEmailEditor({
           <p className="font-medium text-foreground/70">Formatting tips:</p>
           <p><code className="bg-muted px-1 rounded">• item</code> for bullet lists · <code className="bg-muted px-1 rounded">1. item</code> for numbered lists · <code className="bg-muted px-1 rounded">---</code> for dividers · <code className="bg-muted px-1 rounded"># Heading</code> for headings</p>
         </div>
+      )}
+
+      {/* Template Settings (email only) */}
+      {isEmail && onTemplateSettingsChange && (
+        <EmailTemplateSettings
+          settings={currentSettings}
+          onChange={onTemplateSettingsChange}
+        />
       )}
 
       {/* Quick-insert variable badges */}
