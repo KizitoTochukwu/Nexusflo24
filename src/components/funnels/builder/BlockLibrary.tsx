@@ -1,7 +1,7 @@
 import {
   LayoutTemplate, Columns2, Columns3, Type, AlignLeft, ImageIcon,
   MousePointerClick, Minus, MoveVertical, FormInput, Quote,
-  DollarSign, HelpCircle, Code, Video,
+  DollarSign, HelpCircle, Code, Video, CalendarDays,
 } from "lucide-react";
 import { BlockType, BLOCK_LABELS } from "./blockTypes";
 
