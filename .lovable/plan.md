@@ -1,103 +1,85 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+## Plan: Dynamic Lead Scoring Engine
 
-### Context
+### Overview
+Build an automatic lead scoring system that updates scores based on engagement activities, auto-promotes lead status at score thresholds, and triggers notifications when leads become hot.
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+### Architecture
 
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
-
-### Changes
-
-#### 1. Frontend: Split Settings Tabs by Role
-
-**DashboardSettings.tsx** — Major restructure:
-
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
-
-Tab layout:
-```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+```text
+lead_activities INSERT
+       │
+       ▼
+ DB Trigger: trg_score_on_activity
+       │
+       ▼
+ DB Function: update_lead_score_on_activity()
+   ├─ Look up score delta from lead_scoring_rules table
+   ├─ UPDATE leads SET score = score + delta
+   ├─ Map score → status (Cold/Warm/MQL/SQL/Hot)
+   ├─ UPDATE leads SET status if changed
+   └─ If score ≥ 80: INSERT into notifications
 ```
 
-#### 2. Move Provider Credentials to Platform ENV Secrets
+### Database Changes (1 migration)
 
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+**1. Create `lead_scoring_rules` table**
+- Columns: `id`, `workspace_id`, `activity_type` (text), `score_delta` (integer), `label` (text)
+- RLS: workspace members can CRUD
+- Seed default rules per workspace via the scoring function (or we use a fallback map in the DB function)
 
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+**Better approach**: Use a hardcoded scoring map inside the DB function (no extra table needed for MVP — simpler, faster). Rules:
 
-#### 3. Update Edge Functions for Platform Credentials
+| Activity Type | Delta |
+|---|---|
+| `form_submit` | +10 |
+| `email_open` | +5 |
+| `link_click` | +10 |
+| `lead_magnet_download` | +20 |
+| `website_visit` | +5 |
+| `pricing_page_visit` | +25 |
+| `webinar_registration` | +30 |
+| `call_booking` | +50 |
+| `email_unsubscribe` | -50 |
+| `stage_change` | 0 |
+| `manual_note` | 0 |
 
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+**2. Create DB function `update_lead_score_on_activity()`**
+- `SECURITY DEFINER`, triggered AFTER INSERT on `lead_activities`
+- Looks up delta from a CASE statement on `NEW.type`
+- Updates `leads.score` (clamped to 0 minimum)
+- Derives status from score thresholds:
+  - 0–20: "New" (Cold)
+  - 21–50: "Warm"
+  - 51–80: "Warm" (MQL — we map to existing statuses)
+  - 81–100: "Hot" (SQL)
+  - 100+: "Hot" (Hot Buyer)
+- If score crosses ≥ 80 and old status wasn't "Hot", inserts a notification row and updates status to "Hot"
 
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+**3. Create trigger `trg_lead_score_on_activity`**
+- AFTER INSERT on `lead_activities` → calls `update_lead_score_on_activity()`
 
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+**4. Create DB function `decay_inactive_leads()`**
+- Finds leads with `last_activity_at < now() - 30 days` and score > 0
+- Decrements score by 20, updates status accordingly
+- This can be called manually or via a cron (future); for now we create the function
 
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+### Frontend Changes
 
-#### 4. Backend Admin Authorization
+**5. Update `LeadDetailsDrawer.tsx`**
+- Add a score stage badge below the score number showing the label (Cold Lead / Warm Lead / MQL / SQL / Hot Buyer) with color coding
+- Score still manually editable (override)
 
-All save-settings and test-send edge functions must verify admin role:
-```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
-```
+**6. Update `useLeads.ts`**
+- No changes needed — the DB trigger handles scoring automatically. The existing query invalidation on activity log already refreshes lead data.
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+### What this enables
+- Every `logActivity.mutate()` call (manual notes, form submissions, etc.) automatically adjusts the lead score via the DB trigger
+- The `capture-lead` edge function already logs `form_submit` activities, so new leads get +10 automatically
+- Status auto-promotes without any frontend logic
+- Hot lead notifications appear in the notification bell automatically
 
-#### 5. Admin Integrations Status Widget
-
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
-
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
-
-#### 6. Webhooks Tab (Customer-Accessible)
-
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+### No edge function changes needed
+The existing `capture-lead` function already inserts into `lead_activities` with type `form_submit` — the new trigger will handle the rest.
 
