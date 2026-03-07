@@ -46,6 +46,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminGuard from "./components/admin/AdminGuard";
 import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
+import DashboardBookings from "./pages/dashboard/DashboardBookings";
+import PublicBooking from "./pages/PublicBooking";
 const queryClient = new QueryClient();
 
 const App = () => (
