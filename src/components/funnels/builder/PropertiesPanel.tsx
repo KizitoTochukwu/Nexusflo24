@@ -317,7 +317,17 @@ function HeadingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
 function TextProps({ p, update }: { p: Record<string, unknown>; update: (k: string, v: unknown) => void }) {
   return (
     <>
-      <Field label="Content"><Textarea value={(p.text as string) || ""} onChange={(e) => update("text", e.target.value)} rows={4} /></Field>
+      <div>
+        <Label className="text-xs">Content</Label>
+        <div className="mt-1">
+          <FunnelTextEditor
+            value={(p.text as string) || ""}
+            onChange={(v) => update("text", v)}
+            placeholder="Enter text content with {{variables}}…"
+            minHeight="200px"
+          />
+        </div>
+      </div>
       <AlignField value={p.align as string} onChange={(v) => update("align", v)} />
       <ColorField label="Color" value={p.color as string} onChange={(v) => update("color", v)} />
       <Field label="Font Size"><Input value={(p.fontSize as string) || ""} onChange={(e) => update("fontSize", e.target.value)} placeholder="e.g. 16px" /></Field>
