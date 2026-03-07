@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export interface Notification {
   id: string;
@@ -30,7 +32,7 @@ export function useNotifications() {
       return (data ?? []) as unknown as Notification[];
     },
     enabled: !!user,
-    refetchInterval: 30000, // poll every 30s
+    refetchInterval: 30000,
   });
 }
 
@@ -89,4 +91,38 @@ export function useMarkAllRead() {
       qc.invalidateQueries({ queryKey: ["notifications-unread"] });
     },
   });
+}
+
+/** Watches the notification poll and fires browser push for new items when the tab is hidden. */
+export function useNotificationWatcher() {
+  const { data: notifications } = useNotifications();
+  const { notify } = usePushNotifications();
+  const lastSeenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!notifications || notifications.length === 0) return;
+
+    const latestTs = notifications[0].created_at;
+
+    // First mount — seed the ref without firing
+    if (lastSeenRef.current === null) {
+      lastSeenRef.current = latestTs;
+      return;
+    }
+
+    // Nothing new
+    if (latestTs <= lastSeenRef.current) return;
+
+    // Fire browser notifications only when tab is hidden
+    if (document.hidden) {
+      const newItems = notifications.filter(
+        (n) => !n.read && n.created_at > lastSeenRef.current!
+      );
+      for (const n of newItems) {
+        notify(n.title, n.body ?? undefined);
+      }
+    }
+
+    lastSeenRef.current = latestTs;
+  }, [notifications, notify]);
 }

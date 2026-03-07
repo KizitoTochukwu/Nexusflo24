@@ -1,5 +1,6 @@
-import { Bell, CheckCheck, User, Mail } from "lucide-react";
+import { Bell, CheckCheck, User, Mail, BellRing, BellOff } from "lucide-react";
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllRead, Notification } from "@/hooks/useNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -45,6 +46,7 @@ export default function NotificationBell() {
   const { data: unread = 0 } = useUnreadCount();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllRead();
+  const { permission, requestPermission, supported } = usePushNotifications();
 
   return (
     <Popover>
@@ -61,16 +63,33 @@ export default function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
-          {unread > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground"
-              onClick={() => markAll.mutate()}
-            >
-              <CheckCheck className="h-3 w-3" /> Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {supported && permission === "default" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground"
+                onClick={() => requestPermission()}
+              >
+                <BellRing className="h-3 w-3" /> Enable push
+              </Button>
+            )}
+            {supported && permission === "denied" && (
+              <span className="flex items-center gap-1 px-2 text-xs text-muted-foreground">
+                <BellOff className="h-3 w-3" /> Push blocked
+              </span>
+            )}
+            {unread > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground"
+                onClick={() => markAll.mutate()}
+              >
+                <CheckCheck className="h-3 w-3" /> Mark all read
+              </Button>
+            )}
+          </div>
         </div>
         <ScrollArea className="max-h-[400px]">
           {notifications.length === 0 ? (
