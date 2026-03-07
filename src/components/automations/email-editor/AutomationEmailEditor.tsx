@@ -197,6 +197,7 @@ export default function AutomationEmailEditor({
             </DropdownMenu>
           )}
         </div>
+        <div className="flex items-center gap-1">
           {preview && isEmail && (
             <div className="flex items-center border border-border rounded-md mr-1">
               <Button
