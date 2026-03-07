@@ -112,9 +112,14 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
                 <Button size="sm" variant="ghost" onClick={() => setEditingScore(false)}>Cancel</Button>
               </div>
             ) : (
-              <button onClick={() => { setScoreVal(lead.score); setEditingScore(true); }} className="text-lg font-bold text-accent hover:underline">
-                {lead.score}
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => { setScoreVal(lead.score); setEditingScore(true); }} className="text-lg font-bold text-accent hover:underline">
+                  {lead.score}
+                </button>
+                <Badge className={`${getScoreStage(lead.score).color} text-xs`}>
+                  {getScoreStage(lead.score).label}
+                </Badge>
+              </div>
             )}
           </div>
 
