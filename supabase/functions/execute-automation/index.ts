@@ -15,6 +15,18 @@ function interpolate(template: string, lead: Record<string, any>): string {
     .replace(/\{\{status\}\}/gi, lead.status || "");
 }
 
+function parseDelay(delay: string): number {
+  const match = delay?.match(/^(\d+)\s*(m|min|h|hr|d|day|w|week)s?$/i);
+  if (!match) return 0;
+  const value = parseInt(match[1], 10);
+  const unit = match[2].toLowerCase();
+  if (unit === "m" || unit === "min") return value;
+  if (unit === "h" || unit === "hr") return value * 60;
+  if (unit === "d" || unit === "day") return value * 1440;
+  if (unit === "w" || unit === "week") return value * 10080;
+  return 0;
+}
+
 async function sendResend(apiKey: string, from: string, to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -62,7 +74,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { automation_id, lead_id, workspace_id } = await req.json();
+    const { automation_id, lead_id, workspace_id, start_from_step } = await req.json();
     if (!automation_id || !lead_id || !workspace_id) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -103,10 +115,13 @@ Deno.serve(async (req) => {
 
     const results: any[] = [];
     let skipRemaining = false;
+    const startIndex = typeof start_from_step === "number" ? start_from_step : 0;
 
-    for (const step of (steps || [])) {
+    for (let i = startIndex; i < (steps || []).length; i++) {
+      const step = steps![i];
+
       if (skipRemaining) {
-        results.push({ step_id: step.id, step_type: step.step_type, status: "skipped", details: "Skipped due to condition" });
+        results.push({ step_id: step.id, step_type: step.step_type, status: "skipped", details: "Skipped due to condition or delay" });
         continue;
       }
 
@@ -148,7 +163,6 @@ Deno.serve(async (req) => {
             } else if (actionType === "add_tag") {
               const tag = config.tag;
               if (tag) {
-                await supabase.rpc("increment_automation_run", { _automation_id: automation_id }); // no-op, just testing
                 await supabase
                   .from("leads")
                   .update({ tags: [...(lead.tags || []).filter((t: string) => t !== tag), tag] })
@@ -209,9 +223,34 @@ Deno.serve(async (req) => {
           }
 
           case "delay": {
-            // Delays require queue infrastructure — log and skip
-            details = { message: "Delay steps are not yet supported in live execution", delay: config.delay };
-            status = "skipped";
+            const delayMinutes = parseDelay(config.delay || "");
+            if (delayMinutes <= 0) {
+              details = { message: "Invalid delay value", delay: config.delay };
+              status = "error";
+              break;
+            }
+
+            const runAt = new Date(Date.now() + delayMinutes * 60_000).toISOString();
+            const nextStepIndex = i + 1;
+
+            if (nextStepIndex < (steps || []).length) {
+              await supabase.from("scheduled_jobs").insert({
+                workspace_id,
+                automation_id,
+                lead_id,
+                step_index: nextStepIndex,
+                run_at: runAt,
+                payload: { automation_id, lead_id, workspace_id },
+                status: "pending",
+              });
+              details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
+              status = "scheduled";
+            } else {
+              details = { message: "Delay is last step, nothing to schedule", delay: config.delay };
+              status = "completed";
+            }
+
+            skipRemaining = true;
             break;
           }
 
@@ -230,7 +269,7 @@ Deno.serve(async (req) => {
         automation_id,
         workspace_id,
         lead_id,
-        event_type: `${step.step_type}:${(step.config as any)?.action_type || "execute"}`,
+        event_type: `${step.step_type}:${config?.action || config?.action_type || "execute"}`,
         status,
         details,
       });
