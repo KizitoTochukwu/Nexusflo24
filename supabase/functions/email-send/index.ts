@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     const userId = user.id;
 
     const body = await req.json();
-    const { workspaceId, to, subject, html } = body;
+    const { workspaceId, to, subject, html, templateSettings } = body;
 
     if (!workspaceId || !to || !subject || !html) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, subject, html" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
