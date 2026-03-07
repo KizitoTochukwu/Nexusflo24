@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
-  LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate,
+  LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate, CalendarDays,
   BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield
 } from "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
