@@ -33,6 +33,90 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   delay: <Clock className="h-4 w-4" />,
 };
 
+const TEMPLATE_VARIABLES = [
+  { label: "first_name", value: "{{first_name}}" },
+  { label: "email", value: "{{email}}" },
+  { label: "phone", value: "{{phone}}" },
+  { label: "source", value: "{{source}}" },
+];
+
+function MessageEditor({
+  isEmail,
+  subject,
+  message,
+  onSubjectChange,
+  onMessageChange,
+}: {
+  isEmail: boolean;
+  subject: string;
+  message: string;
+  onSubjectChange: (v: string) => void;
+  onMessageChange: (v: string) => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertVariable = useCallback((variable: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      onMessageChange(message + variable);
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const newValue = message.slice(0, start) + variable + message.slice(end);
+    onMessageChange(newValue);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + variable.length, start + variable.length);
+    });
+  }, [message, onMessageChange]);
+
+  return (
+    <div className="space-y-3 w-full">
+      {isEmail && (
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Subject Line</label>
+          <Input
+            placeholder="Email subject line"
+            className="w-full bg-background"
+            value={subject}
+            onChange={(e) => onSubjectChange(e.target.value)}
+          />
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground">
+          {isEmail ? "Email Body" : "Message Template"}
+        </label>
+        <Textarea
+          ref={textareaRef}
+          placeholder={isEmail
+            ? "Hi {{first_name}},\n\nThanks for signing up! We're excited to have you on board.\n\nBest regards,\nYour Team"
+            : "Hi {{first_name}}, thanks for signing up!"}
+          className="w-full min-h-[240px] bg-background text-base leading-relaxed border-muted rounded-lg p-4 resize-y"
+          value={message}
+          onChange={(e) => onMessageChange(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <span className="text-xs text-muted-foreground">Insert variable:</span>
+        <div className="flex flex-wrap gap-1.5">
+          {TEMPLATE_VARIABLES.map((v) => (
+            <Badge
+              key={v.label}
+              variant="secondary"
+              className="cursor-pointer hover:bg-accent transition-colors text-xs"
+              onClick={() => insertVariable(v.value)}
+            >
+              {v.value}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
