@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Monitor, Smartphone } from "lucide-react";
+import { Eye, EyeOff, Monitor, Smartphone, LayoutTemplate } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import InsertDropdown from "./InsertDropdown";
 import FormattingToolbar from "./FormattingToolbar";
 import VariableAutocomplete from "./VariableAutocomplete";
@@ -10,6 +11,7 @@ import ButtonInsertDialog from "./ButtonInsertDialog";
 import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "./EmailTemplateSettings";
 import { VARIABLE_OPTIONS, PREVIEW_VALUES } from "./editorConstants";
 import { buildPreviewHtml } from "./emailPreviewRenderer";
+import { EMAIL_PRESETS } from "./emailPresets";
 
 interface AutomationEmailEditorProps {
   isEmail: boolean;
@@ -163,7 +165,38 @@ export default function AutomationEmailEditor({
 
       {/* Toolbar row */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <InsertDropdown onInsert={insertAtCursor} />
+        <div className="flex items-center gap-1.5">
+          <InsertDropdown onInsert={insertAtCursor} />
+          {isEmail && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                  Presets
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                {EMAIL_PRESETS.map((preset) => (
+                  <DropdownMenuItem
+                    key={preset.id}
+                    onClick={() => {
+                      onSubjectChange(preset.subject);
+                      onMessageChange(preset.body);
+                    }}
+                    className="flex flex-col items-start gap-0.5 py-2"
+                  >
+                    <span className="font-medium text-sm">
+                      {preset.emoji} {preset.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {preset.description}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           {preview && isEmail && (
             <div className="flex items-center border border-border rounded-md mr-1">
