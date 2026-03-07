@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
       trackedHtml = trackedHtml.replace(
         /<a\s+([^>]*?)href=["']([^"']+)["']([^>]*?)>/gi,
         (_match: string, before: string, href: string, after: string) => {
-          // Skip mailto: and tel: and tracking URLs
-          if (href.startsWith("mailto:") || href.startsWith("tel:") || href.includes("track-click") || href.includes("track-open")) {
+          // Skip mailto: and tel: and tracking URLs and unsubscribe URLs
+          if (href.startsWith("mailto:") || href.startsWith("tel:") || href.includes("track-click") || href.includes("track-open") || href.includes("unsubscribe")) {
             return `<a ${before}href="${href}"${after}>`;
           }
           const trackUrl = `${baseUrl}/functions/v1/track-click?lid=${leadId}&wid=${workspaceId}&url=${encodeURIComponent(href)}${campaignId ? `&cid=${campaignId}` : ""}`;
@@ -84,10 +84,15 @@ Deno.serve(async (req) => {
       // Append tracking pixel before </body> or at end
       const pixelUrl = `${baseUrl}/functions/v1/track-open?lid=${leadId}&wid=${workspaceId}${campaignId ? `&cid=${campaignId}` : ""}`;
       const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;" />`;
+
+      // Build GDPR unsubscribe footer
+      const unsubUrl = `${baseUrl}/functions/v1/unsubscribe?lid=${leadId}&wid=${workspaceId}`;
+      const unsubFooter = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">You received this email because you subscribed to NexusFlo24. <a href="${unsubUrl}" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a></span></div>`;
+
       if (trackedHtml.includes("</body>")) {
-        trackedHtml = trackedHtml.replace("</body>", `${pixel}</body>`);
+        trackedHtml = trackedHtml.replace("</body>", `${unsubFooter}${pixel}</body>`);
       } else {
-        trackedHtml += pixel;
+        trackedHtml += unsubFooter + pixel;
       }
     }
 
