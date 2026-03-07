@@ -226,6 +226,107 @@ Deno.serve(async (req) => {
       meta: { booking_id: booking.id, lead_id: leadId },
     });
 
+    // Send confirmation emails (best effort)
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const fromEmail = Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com";
+    if (resendApiKey) {
+      const formattedDate = startDt.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      const formattedTime = startDt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      const endTime = endDt.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+      const brandColor = page.color || "#D4AF37";
+      const navyColor = "#0B1F3B";
+
+      const emailLayout = (title: string, bodyContent: string) => `
+        <!DOCTYPE html>
+        <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="margin:0;padding:0;background:#ffffff;font-family:'Inter',Arial,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+            <tr><td align="center" style="padding:40px 20px;">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+                <tr><td style="background:${navyColor};padding:24px 32px;border-radius:12px 12px 0 0;">
+                  <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">📅 ${title}</h1>
+                </td></tr>
+                <tr><td style="background:#f8f9fa;padding:32px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:none;">
+                  ${bodyContent}
+                </td></tr>
+                <tr><td style="padding:24px 32px;text-align:center;">
+                  <p style="margin:0;font-size:12px;color:#9ca3af;">Powered by NexusFlo24</p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body></html>
+      `;
+
+      const detailsBlock = `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+          <tr><td style="padding:12px 16px;background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;">
+            <p style="margin:0 0 8px;font-size:14px;color:#6b7280;">📋 <strong>${page.name}</strong></p>
+            <p style="margin:0 0 4px;font-size:14px;color:${navyColor};">📅 ${formattedDate}</p>
+            <p style="margin:0 0 4px;font-size:14px;color:${navyColor};">🕐 ${formattedTime} – ${endTime} (${page.duration_minutes} min)</p>
+            <p style="margin:0;font-size:14px;color:${navyColor};">🌍 ${page.timezone}</p>
+            ${notes ? `<p style="margin:8px 0 0;font-size:13px;color:#6b7280;">📝 ${notes}</p>` : ""}
+          </td></tr>
+        </table>
+      `;
+
+      // Guest confirmation email
+      const guestHtml = emailLayout("Booking Confirmed!", `
+        <p style="margin:0 0 16px;font-size:16px;color:${navyColor};">Hi ${guest_name},</p>
+        <p style="margin:0 0 16px;font-size:14px;color:#374151;">Your appointment has been confirmed! Here are the details:</p>
+        ${detailsBlock}
+        <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">If you need to make changes, please reply to this email or contact the organizer.</p>
+      `);
+
+      // Owner notification email
+      const { data: ownerProfile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("id", page.user_id)
+        .single();
+
+      const sendEmail = async (to: string, subject: string, html: string) => {
+        try {
+          await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ from: `NexusFlo24 <${fromEmail}>`, to: [to], subject, html }),
+          });
+        } catch (_) { /* best effort */ }
+      };
+
+      // Send guest email
+      await sendEmail(
+        guest_email,
+        `Booking Confirmed: ${page.name} on ${formattedDate}`,
+        guestHtml
+      );
+
+      // Send owner email
+      if (ownerProfile?.email) {
+        const ownerHtml = emailLayout("New Appointment Booked", `
+          <p style="margin:0 0 16px;font-size:16px;color:${navyColor};">Hi ${ownerProfile.full_name || "there"},</p>
+          <p style="margin:0 0 16px;font-size:14px;color:#374151;">A new appointment has been booked on your booking page:</p>
+          ${detailsBlock}
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+            <tr><td style="padding:12px 16px;background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;">
+              <p style="margin:0 0 4px;font-size:14px;color:${navyColor};"><strong>Guest:</strong> ${guest_name}</p>
+              <p style="margin:0 0 4px;font-size:14px;color:${navyColor};"><strong>Email:</strong> ${guest_email}</p>
+              ${guest_phone ? `<p style="margin:0;font-size:14px;color:${navyColor};"><strong>Phone:</strong> ${guest_phone}</p>` : ""}
+            </td></tr>
+          </table>
+          <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">Log in to your dashboard to manage this booking.</p>
+        `);
+
+        await sendEmail(
+          ownerProfile.email,
+          `New Booking: ${guest_name} – ${page.name} on ${formattedDate}`,
+          ownerHtml
+        );
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, booking }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
