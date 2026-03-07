@@ -1,103 +1,80 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+## Plan: Structured Email Template Rendering
 
-### Context
+### Problem
+The automation email editor produces mixed content (plain text with `\n`, `• ` bullets, inline HTML like `<b>`, `<a>`) that gets sent as-is. Email clients render this as a plain text block with no structure.
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
-
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
+### Solution
+Create a shared `formatEmailBody` function that transforms editor content into a branded, mobile-friendly HTML email template, then apply it in both edge functions.
 
 ### Changes
 
-#### 1. Frontend: Split Settings Tabs by Role
+**1. Create `supabase/functions/_shared/email-layout.ts`**
 
-**DashboardSettings.tsx** — Major restructure:
+A shared utility with two functions:
 
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
+- `formatEmailBody(rawContent: string): string` — Converts editor output to structured HTML:
+  - Converts `\n` to `<br>` but groups consecutive lines into `<p>` blocks with proper spacing
+  - Converts `• ` prefixed lines into `<ul><li>` lists
+  - Converts `1. ` prefixed lines into `<ol><li>` lists
+  - Detects `---` dividers and converts to `<hr>`
+  - Preserves existing HTML tags (`<b>`, `<i>`, `<a>`, `<img>`, button markup)
 
-Tab layout:
-```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
-```
+- `wrapEmailTemplate(body: string, options?: { preheader?: string }): string` — Wraps formatted body in a full email layout:
+  - DOCTYPE + head with responsive meta tags
+  - Max-width 600px centered container
+  - NexusFlo24 branded header with logo
+  - White body background, clean typography (font-family stack)
+  - 24px padding on desktop, 16px on mobile
+  - Navy (#0B1F3B) text, proper link styling
+  - Media query for mobile responsiveness
 
-#### 2. Move Provider Credentials to Platform ENV Secrets
+**2. Update `supabase/functions/execute-automation/index.ts`**
 
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
-
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-#### 3. Update Edge Functions for Platform Credentials
-
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
-
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
-
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
-
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
-
-#### 4. Backend Admin Authorization
-
-All save-settings and test-send edge functions must verify admin role:
+In the `send_email` action block (line 149), after interpolation:
 ```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
+import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
+// ...
+let html = interpolate(config.body || config.message || "", lead);
+html = wrapEmailTemplate(formatEmailBody(html));
 ```
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+The unsubscribe footer will be injected inside the template wrapper (before the closing `</td>`).
 
-#### 5. Admin Integrations Status Widget
+**3. Update `supabase/functions/email-send/index.ts`**
 
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
+Before tracking injection (line 64), wrap the incoming `html` body:
+```typescript
+import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
+// ...
+let trackedHtml = wrapEmailTemplate(formatEmailBody(html));
+```
 
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
+This ensures campaign emails also render with proper formatting.
 
-#### 6. Webhooks Tab (Customer-Accessible)
+### Template Structure
+```text
+┌─────────────────────────────────┐
+│  #f4f5f7 background             │
+│  ┌───────────────────────────┐  │
+│  │  NexusFlo24 Logo (center) │  │
+│  ├───────────────────────────┤  │
+│  │  #ffffff body card        │  │
+│  │                           │  │
+│  │  <p> paragraph blocks     │  │
+│  │  <ul> bullet lists        │  │
+│  │  <a> styled links         │  │
+│  │  CTA buttons (centered)   │  │
+│  │                           │  │
+│  ├───────────────────────────┤  │
+│  │  Unsubscribe footer       │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘
+```
 
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+### Scope
+- 1 new shared file (`_shared/email-layout.ts`)
+- 2 edge functions updated (`execute-automation`, `email-send`)
+- No database or frontend changes
 
