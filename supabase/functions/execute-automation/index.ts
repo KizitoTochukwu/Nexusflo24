@@ -139,8 +139,19 @@ Deno.serve(async (req) => {
               const fromEmail = Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com";
               if (!apiKey) throw new Error("Email provider not configured");
               if (!lead.email) throw new Error("Lead has no email");
+              // Skip if lead is unsubscribed
+              if ((lead.tags || []).includes("unsubscribed")) {
+                details = { message: "Lead is unsubscribed", channel: "email" };
+                status = "skipped";
+                break;
+              }
               const subject = interpolate(config.subject || "Hello", lead);
-              const html = interpolate(config.body || config.message || "", lead);
+              let html = interpolate(config.body || config.message || "", lead);
+              // Append GDPR unsubscribe footer
+              const baseUrl = Deno.env.get("SUPABASE_URL")!;
+              const unsubUrl = `${baseUrl}/functions/v1/unsubscribe?lid=${lead_id}&wid=${workspace_id}`;
+              const unsubFooter = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">You received this email because you subscribed to NexusFlo24. <a href="${unsubUrl}" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a></span></div>`;
+              html += unsubFooter;
               const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
               details = { messageId: res.id, channel: "email" };
             } else if (actionType === "send_sms") {
