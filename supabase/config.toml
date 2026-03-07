@@ -43,3 +43,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.reschedule-booking]
     verify_jwt = false
+  [functions.process-scheduled-jobs]
+    verify_jwt = false

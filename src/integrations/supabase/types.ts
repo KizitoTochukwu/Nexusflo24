@@ -1055,6 +1055,70 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_jobs: {
+        Row: {
+          automation_id: string
+          created_at: string
+          error: string | null
+          id: string
+          lead_id: string
+          payload: Json | null
+          run_at: string
+          status: string
+          step_index: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          automation_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          lead_id: string
+          payload?: Json | null
+          run_at: string
+          status?: string
+          step_index: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          automation_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          lead_id?: string
+          payload?: Json | null
+          run_at?: string
+          status?: string
+          step_index?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_jobs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_jobs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_logs: {
         Row: {
           created_at: string
