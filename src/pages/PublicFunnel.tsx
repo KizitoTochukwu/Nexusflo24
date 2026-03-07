@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PublicBlockRenderer from "@/components/funnels/PublicBlockRenderer";
@@ -32,7 +32,6 @@ export default function PublicFunnel() {
     (async () => {
       setLoading(true);
 
-      // Fetch funnel by slug – the public SELECT policy only returns active funnels
       const { data: funnelRow, error } = await supabase
         .from("funnels")
         .select("id, name, status, workspace_id, slug")
@@ -40,8 +39,6 @@ export default function PublicFunnel() {
         .maybeSingle();
 
       if (error || !funnelRow) {
-        // Could be draft/paused – try without RLS by checking if ANY funnel with this slug exists
-        // Since the public policy only returns active, a null result means either not found or not active
         setNotFound(true);
         setLoading(false);
         return;
@@ -55,7 +52,6 @@ export default function PublicFunnel() {
 
       setFunnel(funnelRow as FunnelData);
 
-      // Fetch steps
       const { data: stepsData } = await supabase
         .from("funnel_steps")
         .select("id, step_order, step_type, page_content")
@@ -65,7 +61,6 @@ export default function PublicFunnel() {
       setSteps((stepsData ?? []) as StepData[]);
       setLoading(false);
 
-      // Track visit
       const firstStep = stepsData?.[0];
       if (firstStep) {
         const urlParams = new URLSearchParams(window.location.search);
@@ -82,7 +77,7 @@ export default function PublicFunnel() {
     })();
   }, [slug]);
 
-  // Build leadData from URL query params for variable interpolation (must be before any early returns)
+  // All hooks must be called unconditionally — before any early returns
   const leadData = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const data: Record<string, string> = {};
@@ -102,7 +97,6 @@ export default function PublicFunnel() {
     return data;
   }, []);
 
-  // Determine which step to show
   const currentStep = stepPath
     ? steps.find((s) => s.step_type === stepPath) || steps.find((_, i) => String(i + 1) === stepPath)
     : steps[0];
@@ -110,7 +104,81 @@ export default function PublicFunnel() {
   const currentStepIndex = currentStep ? steps.indexOf(currentStep) : 0;
   const nextStep = steps[currentStepIndex + 1] || null;
 
-  const blocks: Block[] = (!loading && currentStep && Array.isArray(currentStep.page_content?.blocks))
+  const handleFormSubmit = useCallback(async (data: Record<string, string>) => {
+    if (!funnel || !currentStep) return;
+    setFormSubmitting(true);
+    try {
+      await supabase.functions.invoke("capture-lead", {
+        body: {
+          full_name: [data.firstName, data.lastName].filter(Boolean).join(" ") || null,
+          email: data.email,
+          phone: data.phone || null,
+          source: `funnel:${funnel.name}`,
+          tags: ["funnel-lead"],
+          notes: `Funnel: ${funnel.name} | Step: ${currentStep.step_type}`,
+          meta: {
+            funnel_id: funnel.id,
+            step_id: currentStep.id,
+            page: window.location.pathname,
+          },
+        },
+      });
+
+      await supabase.from("funnel_visits").insert({
+        funnel_id: funnel.id,
+        step_id: currentStep.id,
+        workspace_id: funnel.workspace_id,
+        converted: true,
+        device_type: /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop",
+      } as any);
+
+      if (nextStep) {
+        window.location.href = `/f/${slug}/${nextStep.step_type}`;
+      }
+    } catch (err) {
+      console.error("Form submit error:", err);
+    } finally {
+      setFormSubmitting(false);
+    }
+  }, [funnel, currentStep, nextStep, slug]);
+
+  // Now safe to do early returns
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="animate-pulse text-gray-400">Loading…</div>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white text-center">
+        <h1 className="text-2xl font-bold text-gray-900">Page Not Found</h1>
+        <p className="mt-2 text-gray-500">This funnel doesn't exist or has been removed.</p>
+      </div>
+    );
+  }
+
+  if (unpublished) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white text-center">
+        <h1 className="text-2xl font-bold text-gray-900">This funnel is not published</h1>
+        <p className="mt-2 text-gray-500">The owner has not activated this funnel yet.</p>
+      </div>
+    );
+  }
+
+  if (!currentStep) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white text-center">
+        <h1 className="text-2xl font-bold text-gray-900">No content yet</h1>
+        <p className="mt-2 text-gray-500">This funnel step has no content.</p>
+      </div>
+    );
+  }
+
+  const blocks: Block[] = Array.isArray(currentStep.page_content?.blocks)
     ? (currentStep.page_content.blocks as Block[])
     : [];
 
