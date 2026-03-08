@@ -315,11 +315,11 @@ export default function AutomationEmailEditor({
       </div>
 
       {/* Formatting tips (only in edit mode for email) */}
-      {!preview && isEmail &&
-      <div className="text-xs text-muted-foreground bg-muted/40 rounded-md px-3 py-2 space-y-0.5">
-          <p className="font-medium text-foreground/70">Formatting tips:</p>
-          <p><code className="bg-muted px-1 rounded">• item</code> for bullet lists · <code className="bg-muted px-1 rounded">1. item</code> for numbered lists · <code className="bg-muted px-1 rounded">---</code> for dividers · <code className="bg-muted px-1 rounded"># Heading</code> for headings</p>
-        </div>
+      {!preview && isEmail
+
+
+
+
       }
 
       {/* Template Settings (email only) */}
