@@ -104,6 +104,7 @@ export default function CreateCampaignDialog() {
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
     setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
     setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
+    setSelectedLeadIds([]); setUseLeadPicker(false);
   };
 
   const handleGenerateAI = async () => {
