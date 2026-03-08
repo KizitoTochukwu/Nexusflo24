@@ -1,7 +1,7 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useCampaignById, useCampaignMessages, TRIGGER_TYPES } from "@/hooks/useCampaigns";
-import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio } from "lucide-react";
+import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
 
 const channelIcons: Record<string, React.ReactNode> = {
@@ -19,6 +19,14 @@ const statusColors: Record<string, string> = {
   completed: "bg-primary/10 text-primary",
 };
 
+const deliveryStatusConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+  delivered: { color: "text-emerald-600", icon: <CheckCircle2 className="h-3.5 w-3.5" />, label: "Delivered" },
+  sent: { color: "text-blue-600", icon: <Send className="h-3.5 w-3.5" />, label: "Sent" },
+  pending: { color: "text-amber-600", icon: <Clock className="h-3.5 w-3.5" />, label: "Pending" },
+  failed: { color: "text-red-600", icon: <XCircle className="h-3.5 w-3.5" />, label: "Failed" },
+  bounced: { color: "text-red-600", icon: <XCircle className="h-3.5 w-3.5" />, label: "Bounced" },
+};
+
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
@@ -27,6 +35,140 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-lg font-bold text-foreground">{value}</p>
       </div>
+    </div>
+  );
+}
+
+function SequenceTimeline({
+  messages,
+  fallback,
+}: {
+  messages: Array<{ id: string; channel: string; delivery_status: string; opened: boolean; clicked: boolean; replied: boolean; created_at: string; lead_id: string | null }>;
+  fallback: { enabled?: boolean; channel?: string; delay_minutes?: number; condition?: string } | null;
+}) {
+  if (!messages || messages.length === 0) {
+    return (
+      <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground text-sm">
+        No messages sent yet. The sequence timeline will appear once messages are delivered.
+      </div>
+    );
+  }
+
+  // Group messages by channel in send order
+  const channelOrder = ["email", "whatsapp", "sms"];
+  const channelGroups: Record<string, typeof messages> = {};
+  messages.forEach((m) => {
+    if (!channelGroups[m.channel]) channelGroups[m.channel] = [];
+    channelGroups[m.channel].push(m);
+  });
+
+  const orderedChannels = channelOrder.filter((ch) => channelGroups[ch]);
+  // Add any channels not in the standard order
+  Object.keys(channelGroups).forEach((ch) => {
+    if (!orderedChannels.includes(ch)) orderedChannels.push(ch);
+  });
+
+  const channelLabels: Record<string, string> = {
+    email: "Email",
+    whatsapp: "WhatsApp",
+    sms: "SMS",
+  };
+
+  return (
+    <div className="space-y-0">
+      {orderedChannels.map((channel, idx) => {
+        const group = channelGroups[channel];
+        const totalSent = group.length;
+        const delivered = group.filter((m) => m.delivery_status === "delivered").length;
+        const opened = group.filter((m) => m.opened).length;
+        const clicked = group.filter((m) => m.clicked).length;
+        const failed = group.filter((m) => m.delivery_status === "failed" || m.delivery_status === "bounced").length;
+        const pending = group.filter((m) => m.delivery_status === "pending").length;
+        const firstSent = group.reduce((min, m) => (m.created_at < min ? m.created_at : min), group[0].created_at);
+        const lastSent = group.reduce((max, m) => (m.created_at > max ? m.created_at : max), group[0].created_at);
+
+        const overallStatus = failed === totalSent ? "failed" : delivered > 0 ? "delivered" : pending > 0 ? "pending" : "sent";
+        const statusConf = deliveryStatusConfig[overallStatus] || deliveryStatusConfig.pending;
+
+        return (
+          <div key={channel}>
+            {/* Timeline node */}
+            <div className="relative flex gap-3">
+              {/* Vertical line */}
+              <div className="flex flex-col items-center">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${
+                  overallStatus === "delivered" ? "border-emerald-500 bg-emerald-50" :
+                  overallStatus === "failed" ? "border-red-500 bg-red-50" :
+                  "border-amber-500 bg-amber-50"
+                }`}>
+                  {channelIcons[channel] || <Mail className="h-4 w-4" />}
+                </div>
+                {idx < orderedChannels.length - 1 && (
+                  <div className="w-0.5 flex-1 min-h-[24px] bg-border" />
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 pb-4">
+                <div className="rounded-lg border bg-card p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-sm text-foreground">
+                      {channelLabels[channel] || channel}
+                    </span>
+                    <span className={`flex items-center gap-1 text-xs font-medium ${statusConf.color}`}>
+                      {statusConf.icon} {statusConf.label}
+                    </span>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-4 gap-2 text-xs">
+                    <div className="text-center rounded bg-muted/50 py-1.5">
+                      <p className="font-bold text-foreground">{totalSent}</p>
+                      <p className="text-muted-foreground">Sent</p>
+                    </div>
+                    <div className="text-center rounded bg-muted/50 py-1.5">
+                      <p className="font-bold text-emerald-600">{delivered}</p>
+                      <p className="text-muted-foreground">Delivered</p>
+                    </div>
+                    <div className="text-center rounded bg-muted/50 py-1.5">
+                      <p className="font-bold text-blue-600">{opened}</p>
+                      <p className="text-muted-foreground">Opened</p>
+                    </div>
+                    <div className="text-center rounded bg-muted/50 py-1.5">
+                      <p className="font-bold text-accent">{clicked}</p>
+                      <p className="text-muted-foreground">Clicked</p>
+                    </div>
+                  </div>
+
+                  {failed > 0 && (
+                    <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                      <XCircle className="h-3 w-3" /> {failed} failed/bounced
+                    </p>
+                  )}
+
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {format(new Date(firstSent), "MMM d, HH:mm")}
+                    {firstSent !== lastSent && ` — ${format(new Date(lastSent), "MMM d, HH:mm")}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Fallback connector between channels */}
+            {idx < orderedChannels.length - 1 && fallback?.enabled && (
+              <div className="flex gap-3 -mt-2 mb-1">
+                <div className="flex flex-col items-center w-10">
+                  <div className="w-0.5 h-2 bg-border" />
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 rounded-full px-3 py-1">
+                  <ArrowDown className="h-3 w-3" />
+                  Fallback after {fallback.delay_minutes}min ({fallback.condition || "unread"})
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -112,6 +254,14 @@ export default function CampaignDetailsDrawer({
             </div>
           )}
 
+          {/* Sequence Timeline */}
+          <div>
+            <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-accent" /> Sequence Timeline
+            </h3>
+            <SequenceTimeline messages={messages || []} fallback={fallback} />
+          </div>
+
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-3">
             <StatCard icon={<Send className="h-4 w-4" />} label="Sent" value={campaign.sent_count} />
@@ -119,29 +269,6 @@ export default function CampaignDetailsDrawer({
             <StatCard icon={<MousePointerClick className="h-4 w-4" />} label="Click Rate" value={`${(campaign.click_rate * 100).toFixed(1)}%`} />
             <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Conversion" value={`${(campaign.conversion_rate * 100).toFixed(1)}%`} />
           </div>
-
-          {/* Per-channel breakdown */}
-          {channelBreakdown && Object.keys(channelBreakdown).length > 0 && (
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">Per-Channel Breakdown</h3>
-              <div className="space-y-2">
-                {Object.entries(channelBreakdown).map(([ch, stats]) => (
-                  <div key={ch} className="flex items-center justify-between rounded-lg border px-3 py-2">
-                    <span className="flex items-center gap-1.5 text-sm capitalize font-medium">
-                      {channelIcons[ch] || null} {ch}
-                    </span>
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      <span>{stats.sent} sent</span>
-                      <span>{stats.delivered} delivered</span>
-                      <span>{stats.opened} opened</span>
-                      <span>{stats.clicked} clicked</span>
-                      <span>{stats.replied} replied</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Message preview */}
           <div>
