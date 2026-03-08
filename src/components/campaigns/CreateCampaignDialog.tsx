@@ -389,6 +389,8 @@ export default function CreateCampaignDialog() {
               onSubjectChange={setSubject}
               message={body}
               onMessageChange={setBody}
+              templateSettings={templateSettings}
+              onTemplateSettingsChange={type === "email" ? setTemplateSettings : undefined}
             />
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
