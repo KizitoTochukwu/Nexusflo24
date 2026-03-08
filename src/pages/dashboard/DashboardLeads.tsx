@@ -239,8 +239,11 @@ const DashboardLeads = () => {
                 onMoveToFolder={handleMoveToFolder}
                 onDeleteSelected={() => setBulkDeleteConfirmOpen(true)}
                 onClearSelection={clearSelection}
+                onBulkQualify={handleBulkQualify}
                 isDeleting={bulkDelete.isPending}
                 isMoving={assignToFolder.isPending}
+                isQualifying={bulkQualifying}
+                qualifyProgress={qualifyProgress}
               />
             </div>
           )}
