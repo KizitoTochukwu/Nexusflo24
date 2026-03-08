@@ -112,7 +112,12 @@ export default function CreateCampaignDialog() {
         enabled: true, channel: fallbackChannel,
         delay_minutes: parseInt(fallbackDelay), condition: fallbackCondition,
       } as any : {} as any,
-      audience_filter: {} as any,
+      audience_filter: {
+        ...(audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
+        ...(audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
+        ...(audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
+        ...(audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
+      } as any,
     });
     setOpen(false);
     reset();
