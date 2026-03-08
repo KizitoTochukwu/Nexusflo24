@@ -159,6 +159,14 @@ Deno.serve(async (req) => {
           case "action": {
             const actionType = config.action || config.action_type || config.channel;
 
+            // Rate-limit: wait at least 550ms between sends to stay under 2 req/s
+            if (["send_email", "send_sms", "send_whatsapp"].includes(actionType)) {
+              const elapsed = Date.now() - lastSendTime;
+              if (lastSendTime > 0 && elapsed < 550) {
+                await sleep(550 - elapsed);
+              }
+            }
+
             if (actionType === "send_email") {
               const apiKey = Deno.env.get("RESEND_API_KEY");
               const fromEmail = Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com";
