@@ -59,6 +59,7 @@ export default function CreateCampaignDialog() {
   const [aiContext, setAiContext] = useState("");
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiVariants, setAiVariants] = useState<Array<{ subject: string; body: string; cta: string }>>([]);
+  const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(DEFAULT_TEMPLATE_SETTINGS);
 
   // Step 4 - Fallback
   const [fallbackEnabled, setFallbackEnabled] = useState(false);
