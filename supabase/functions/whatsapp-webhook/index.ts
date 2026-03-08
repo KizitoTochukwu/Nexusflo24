@@ -146,12 +146,54 @@ Deno.serve(async (req) => {
 
           // Handle status updates
           const statuses = value?.statuses || [];
-          for (const status of statuses) {
-            if (status.id) {
+          for (const st of statuses) {
+            if (st.id) {
+              // Update whatsapp_messages status
               await adminClient
                 .from("whatsapp_messages")
-                .update({ status: status.status })
-                .eq("wa_message_id", status.id);
+                .update({ status: st.status })
+                .eq("wa_message_id", st.id);
+
+              // If status is "read", update campaign_messages.opened for the linked lead
+              if (st.status === "read") {
+                // Find the whatsapp_message to get lead_id
+                const { data: waMsg } = await adminClient
+                  .from("whatsapp_messages")
+                  .select("lead_id, workspace_id")
+                  .eq("wa_message_id", st.id)
+                  .maybeSingle();
+
+                if (waMsg?.lead_id) {
+                  await adminClient
+                    .from("campaign_messages")
+                    .update({ opened: true })
+                    .eq("lead_id", waMsg.lead_id)
+                    .eq("channel", "whatsapp")
+                    .eq("workspace_id", waMsg.workspace_id)
+                    .eq("opened", false);
+
+                  console.log(`WhatsApp read status: updated campaign_messages.opened for lead ${waMsg.lead_id}`);
+                }
+              }
+
+              // If status is "delivered", also update campaign_messages delivery_status
+              if (st.status === "delivered") {
+                const { data: waMsg } = await adminClient
+                  .from("whatsapp_messages")
+                  .select("lead_id, workspace_id")
+                  .eq("wa_message_id", st.id)
+                  .maybeSingle();
+
+                if (waMsg?.lead_id) {
+                  await adminClient
+                    .from("campaign_messages")
+                    .update({ delivery_status: "delivered" })
+                    .eq("lead_id", waMsg.lead_id)
+                    .eq("channel", "whatsapp")
+                    .eq("workspace_id", waMsg.workspace_id)
+                    .in("delivery_status", ["pending", "sent"]);
+                }
+              }
             }
           }
         }

@@ -134,7 +134,19 @@ Deno.serve(async (req) => {
       message_type: type,
       body: msgBody,
       status: "sent",
+      ...(leadId ? { lead_id: leadId } : {}),
     });
+
+    // If this was sent as part of a campaign, link the wa_message_id to the campaign_message
+    if (campaignId && leadId && waMessageId) {
+      await adminClient
+        .from("campaign_messages")
+        .update({ delivery_status: "delivered" })
+        .eq("campaign_id", campaignId)
+        .eq("lead_id", leadId)
+        .eq("channel", "whatsapp")
+        .eq("delivery_status", "pending");
+    }
 
     return new Response(JSON.stringify({ success: true, waMessageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
