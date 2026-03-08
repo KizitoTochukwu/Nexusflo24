@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
+import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -58,6 +59,7 @@ export default function CreateCampaignDialog() {
   const [aiContext, setAiContext] = useState("");
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiVariants, setAiVariants] = useState<Array<{ subject: string; body: string; cta: string }>>([]);
+  const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(DEFAULT_TEMPLATE_SETTINGS);
 
   // Step 4 - Fallback
   const [fallbackEnabled, setFallbackEnabled] = useState(false);
@@ -101,6 +103,7 @@ export default function CreateCampaignDialog() {
     setCampaignMode("broadcast"); setTriggerType("new_lead"); setTriggerValue("");
     setTriggerActions(["send_message"]); setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
+    setTemplateSettings(DEFAULT_TEMPLATE_SETTINGS);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
     setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
     setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
@@ -144,7 +147,7 @@ export default function CreateCampaignDialog() {
       objective,
       campaign_mode: campaignMode,
       status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: { subject, body } as any,
+      message_content: { subject, body, templateSettings: type === "email" ? templateSettings : undefined } as any,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
@@ -387,6 +390,8 @@ export default function CreateCampaignDialog() {
               onSubjectChange={setSubject}
               message={body}
               onMessageChange={setBody}
+              templateSettings={templateSettings}
+              onTemplateSettingsChange={type === "email" ? setTemplateSettings : undefined}
             />
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
