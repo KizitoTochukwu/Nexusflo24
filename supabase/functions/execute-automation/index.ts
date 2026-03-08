@@ -17,25 +17,36 @@ function interpolate(template: string, lead: Record<string, any>): string {
 }
 
 function parseDelayFromConfig(config: Record<string, any>): number {
-  // Support structured format: { duration: number, unit: "minutes"|"hours"|"days" }
-  if (config.duration && config.unit) {
-    const dur = parseInt(String(config.duration), 10) || 0;
-    const unit = String(config.unit).toLowerCase();
-    if (unit === "minutes") return dur;
-    if (unit === "hours") return dur * 60;
-    if (unit === "days") return dur * 1440;
-    if (unit === "weeks") return dur * 10080;
+  // Support structured format: { duration: number, unit: "minutes"|"hours"|"days"|"weeks" }
+  const duration = config.duration ?? config.delay_duration ?? config.value;
+  const unit = config.unit ?? config.delay_unit;
+
+  if (duration !== undefined && duration !== null && unit) {
+    const dur = parseInt(String(duration), 10);
+    if (isNaN(dur) || dur <= 0) return 0;
+    const u = String(unit).toLowerCase();
+    if (u === "minutes" || u === "minute" || u === "min" || u === "m") return dur;
+    if (u === "hours" || u === "hour" || u === "hr" || u === "h") return dur * 60;
+    if (u === "days" || u === "day" || u === "d") return dur * 1440;
+    if (u === "weeks" || u === "week" || u === "w") return dur * 10080;
+    return dur; // assume minutes if unit is unrecognized
   }
+
   // Fallback: legacy string format e.g. "60m", "2h", "1d"
   const delay = config.delay || "";
   const match = delay?.match(/^(\d+)\s*(m|min|h|hr|d|day|w|week)s?$/i);
   if (!match) return 0;
   const value = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
-  if (unit === "m" || unit === "min") return value;
-  if (unit === "h" || unit === "hr") return value * 60;
-  if (unit === "d" || unit === "day") return value * 1440;
-  if (unit === "w" || unit === "week") return value * 10080;
+  const u2 = match[2].toLowerCase();
+  if (u2 === "m" || u2 === "min") return value;
+  if (u2 === "h" || u2 === "hr") return value * 60;
+  if (u2 === "d" || u2 === "day") return value * 1440;
+  if (u2 === "w" || u2 === "week") return value * 10080;
+
+  // Fallback: raw number (assume minutes)
+  const raw = parseInt(String(config.delay || config.duration), 10);
+  if (!isNaN(raw) && raw > 0) return raw;
+
   return 0;
 }
 
