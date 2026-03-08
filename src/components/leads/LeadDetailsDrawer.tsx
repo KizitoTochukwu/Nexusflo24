@@ -16,6 +16,7 @@ import {
 import type { Lead, LeadActivity } from "@/hooks/useLeads";
 import { useLeadActivities, useUpdateLead, useLogActivity } from "@/hooks/useLeads";
 import { useQualifyLead, type AiQualification } from "@/hooks/useQualifyLead";
+import SalesConversationTimeline from "@/components/leads/SalesConversationTimeline";
 
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
 
