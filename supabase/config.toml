@@ -49,3 +49,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.qualify-lead]
     verify_jwt = false
+  [functions.ai-sales-closer]
+    verify_jwt = false
