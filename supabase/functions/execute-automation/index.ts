@@ -191,6 +191,7 @@ Deno.serve(async (req) => {
                 unsubUrl,
               });
               const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
+              lastSendTime = Date.now();
               details = { messageId: res.id, channel: "email" };
             } else if (actionType === "send_sms") {
               const sid = Deno.env.get("TWILIO_ACCOUNT_SID");
