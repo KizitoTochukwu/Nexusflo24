@@ -23,7 +23,7 @@ export function useDashboardMetrics(workspaceId: string) {
       // Leads
       const { data: leads } = await supabase
         .from("leads")
-        .select("id, status, created_at, score, full_name, email, source")
+        .select("id, status, created_at, score, full_name, email, source, ai_qualification")
         .eq("workspace_id", workspaceId);
       const allLeads = leads ?? [];
       const totalLeads = allLeads.length;
@@ -77,6 +77,16 @@ export function useDashboardMetrics(workspaceId: string) {
           clicked: Math.round(c.sent_count * (c.click_rate / 100)),
         }));
 
+      // AI qualification distribution
+      const aiQualified = allLeads.filter(l => (l as any).ai_qualification?.verdict);
+      const aiDistribution = {
+        hot: aiQualified.filter(l => (l as any).ai_qualification.verdict === "hot").length,
+        warm: aiQualified.filter(l => (l as any).ai_qualification.verdict === "warm").length,
+        cold: aiQualified.filter(l => (l as any).ai_qualification.verdict === "cold").length,
+        not_qualified: aiQualified.filter(l => (l as any).ai_qualification.verdict === "not_qualified").length,
+        total: aiQualified.length,
+      };
+
       return {
         totalLeads,
         newLeadsToday,
@@ -89,6 +99,7 @@ export function useDashboardMetrics(workspaceId: string) {
         hasCampaignData: campaignChartData.length > 0,
         revenue: null as number | null,
         isDemo: false,
+        aiDistribution,
       };
     },
     enabled: !!user && !!workspaceId && demoSettings !== undefined,

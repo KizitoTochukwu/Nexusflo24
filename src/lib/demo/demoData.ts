@@ -113,6 +113,15 @@ export function generateDemoMetrics(workspaceId: string, variant: DemoVariant = 
     created_at: new Date(Date.now() - i * 3600000).toISOString(),
   }));
 
+  const aiDistribution = {
+    hot: seededRange(base + 60, 3, 12),
+    warm: seededRange(base + 61, 8, 25),
+    cold: seededRange(base + 62, 5, 15),
+    not_qualified: seededRange(base + 63, 2, 8),
+    total: 0,
+  };
+  aiDistribution.total = aiDistribution.hot + aiDistribution.warm + aiDistribution.cold + aiDistribution.not_qualified;
+
   return {
     totalLeads,
     newLeadsToday,
@@ -125,5 +134,6 @@ export function generateDemoMetrics(workspaceId: string, variant: DemoVariant = 
     hasCampaignData: true,
     revenue,
     isDemo: true,
+    aiDistribution,
   };
 }
