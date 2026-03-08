@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLeads } from "@/hooks/useLeads";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,8 @@ interface LeadPickerProps {
 }
 
 export default function LeadPicker({ channel, selectedLeadIds, onSelectionChange }: LeadPickerProps) {
-  const { data: leads = [], isLoading } = useLeads();
+  const workspaceId = useWorkspaceId();
+  const { data: leads = [], isLoading } = useLeads(workspaceId);
   const [search, setSearch] = useState("");
 
   // Filter leads that have the required contact info for the channel
