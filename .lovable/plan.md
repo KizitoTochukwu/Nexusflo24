@@ -1,55 +1,103 @@
 
 
-## Plan: AI Lead Qualification Engine
+## Plan: Platform-Managed Integrations Access Control
 
-### What it does
-Adds an AI-powered qualification feature that analyzes a lead's full engagement history (activities, score, source, recency) using Lovable AI and returns a structured qualification verdict with reasoning, recommended next action, and an AI confidence score. This goes beyond the existing rule-based scoring by understanding engagement *patterns* (e.g., "visited pricing page 3 times in 2 days then booked a call" = high purchase intent).
+### Context
 
-### Architecture
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-```text
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│  Lead Details    │────▶│  qualify-lead         │────▶│  Lovable AI     │
-│  Drawer (UI)    │     │  Edge Function        │     │  (Gemini Flash) │
-│  "Qualify" btn  │◀────│  - fetches lead +     │◀────│  Tool calling   │
-│  + AI card      │     │    activities from DB  │     │  structured out  │
-└─────────────────┘     │  - sends to LLM       │     └─────────────────┘
-                        │  - writes result to DB │
-                        └──────────────────────┘
-```
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
 ### Changes
 
-**1. Database migration** — Add `ai_qualification` JSONB column to `leads` table
-- Stores: `{ verdict, confidence, reasoning, recommended_action, qualified_at }`
-- Nullable, no structural change to existing flows
+#### 1. Frontend: Split Settings Tabs by Role
 
-**2. New edge function: `supabase/functions/qualify-lead/index.ts`**
-- Accepts `{ lead_id, workspace_id }`
-- Authenticates user via `supabase.auth.getUser()`
-- Fetches lead record + last 50 activities from DB
-- Sends engagement summary to Lovable AI (`google/gemini-3-flash-preview`) with tool calling for structured output
-- Returns `{ verdict: "hot"|"warm"|"cold"|"not_qualified", confidence: 0-100, reasoning: string, recommended_action: string }`
-- Writes result back to `leads.ai_qualification`
-- Handles 429/402 errors gracefully
+**DashboardSettings.tsx** — Major restructure:
 
-**3. Update `supabase/config.toml`** — Register `qualify-lead` with `verify_jwt = false`
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
 
-**4. Frontend hook: `src/hooks/useQualifyLead.ts`**
-- Mutation that calls `qualify-lead` edge function
-- Invalidates lead queries on success
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+```
 
-**5. Update `LeadDetailsDrawer.tsx`**
-- Add "AI Qualify" button below the score section
-- Show AI qualification card when result exists: verdict badge, confidence bar, reasoning text, recommended action
-- Loading state while qualifying
+#### 2. Move Provider Credentials to Platform ENV Secrets
 
-**6. Update `DashboardLeads.tsx`**
-- Show small AI verdict badge in the leads table next to score (if `ai_qualification` exists)
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
 
-### Technical details
-- Uses Lovable AI tool calling to extract structured JSON (verdict, confidence, reasoning, action)
-- System prompt instructs the LLM to analyze engagement velocity, channel diversity, high-intent signals (pricing visits, call bookings), and recency
-- AI qualification is on-demand (user clicks button), not automatic, to control AI credit usage
-- Result is persisted so it doesn't need re-qualification unless user requests it
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+#### 3. Update Edge Functions for Platform Credentials
+
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+
+#### 4. Backend Admin Authorization
+
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
+```
+
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+
+#### 5. Admin Integrations Status Widget
+
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
+
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
+
+#### 6. Webhooks Tab (Customer-Accessible)
+
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
+
+This tab is workspace-scoped and visible to all authenticated users.
+
+### Files to Create/Edit
+
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+### Execution Order
+
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 
