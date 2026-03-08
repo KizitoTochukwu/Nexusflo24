@@ -1,103 +1,64 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+# Campaign Feature Audit — Findings & Plan
 
-### Context
+## Current State
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+After thorough investigation, the Campaign feature has these gaps:
 
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
+### What Works
+- **CRUD operations**: Create, read, update, delete campaigns — fully wired to the `campaigns` table
+- **AI copy generation**: The `generate-campaign-copy` edge function is deployed and functional
+- **Campaign details drawer**: Shows stats, sequence timeline, delivery log
+- **Analytics tab**: Charts and metrics from campaign data
+- **Triggered campaign config**: UI captures trigger type, value, and actions
 
-### Changes
+### What's Missing (Not Firing)
 
-#### 1. Frontend: Split Settings Tabs by Role
+1. **No campaign execution engine**: There is no edge function (e.g., `execute-campaign` or `send-campaign`) that actually sends messages to leads when a campaign is activated. Setting a campaign to "active" only updates the DB status — nothing dispatches emails, WhatsApp, or SMS.
 
-**DashboardSettings.tsx** — Major restructure:
+2. **No audience resolution**: The `audience_filter` field is saved as `{}` but there's no logic to query matching leads and iterate over them to send messages.
 
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
+3. **No `campaign_messages` insertion**: No code anywhere inserts rows into `campaign_messages`. The delivery log and sequence timeline will always be empty.
 
-Tab layout:
-```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
-```
+4. **No triggered campaign listener**: While `capture-lead` fires automations for `new_lead` triggers, it does NOT check or fire triggered campaigns. The campaign trigger config (tag_added, score_threshold, etc.) is stored but never evaluated.
 
-#### 2. Move Provider Credentials to Platform ENV Secrets
+5. **No scheduled campaign processor**: Campaigns with `scheduled_at` are saved but nothing picks them up at the scheduled time.
 
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+## Plan
 
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+### 1. Create `execute-campaign` edge function
+- Accept `campaign_id` and optional `lead_ids` override
+- Load campaign config (channel, message_content, audience_filter, fallback_settings)
+- Resolve audience: query leads matching filters (or all workspace leads if no filter)
+- For each lead, call the existing `email-send`, `whatsapp-send`, or `sms-send` functions
+- Insert a `campaign_messages` row per lead with delivery status
+- Update campaign `sent_count`, `open_rate` stats
+- Handle fallback logic: schedule fallback sends using `scheduled_jobs` table
 
-#### 3. Update Edge Functions for Platform Credentials
+### 2. Add "Send Now" / "Launch" button to UI
+- In `CampaignDetailsDrawer` and/or the campaign table, add a "Send Campaign" action for broadcast campaigns in `draft` or `active` status
+- Show confirmation dialog before sending
+- Call `execute-campaign` edge function
+- Show progress/toast feedback
 
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+### 3. Wire triggered campaigns into `capture-lead`
+- In `capture-lead` function, after inserting automations, also query `campaigns` with `campaign_mode = 'triggered'` and matching `trigger_config.type`
+- Invoke `execute-campaign` with the single new lead
 
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+### 4. Add scheduled campaign support to `process-scheduled-jobs`
+- Query campaigns with `status = 'scheduled'` and `scheduled_at <= now()`
+- Invoke `execute-campaign` for each
+- Update status to `active` → `completed`
 
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+### 5. Add audience filter UI (basic)
+- In step 1 or a new step of CreateCampaignDialog, allow filtering by lead status, tags, or score range
+- Save to `audience_filter` JSON field
 
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+### Technical Details
 
-#### 4. Backend Admin Authorization
-
-All save-settings and test-send edge functions must verify admin role:
-```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
-```
-
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
-
-#### 5. Admin Integrations Status Widget
-
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
-
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
-
-#### 6. Webhooks Tab (Customer-Accessible)
-
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+- The `execute-campaign` function will use the service role key to read leads and insert campaign_messages
+- It will reuse existing `email-send`/`whatsapp-send`/`sms-send` functions for actual delivery
+- Fallback sends will be scheduled via the existing `scheduled_jobs` + `process-scheduled-jobs` infrastructure
+- Config: `verify_jwt = false` with internal auth validation
 
