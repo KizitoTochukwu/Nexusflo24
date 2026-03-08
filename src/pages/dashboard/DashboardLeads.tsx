@@ -156,6 +156,22 @@ const DashboardLeads = () => {
     });
   };
 
+  const handleBulkQualify = async () => {
+    const ids = [...selectedIds];
+    setBulkQualifying(true);
+    setQualifyProgress({ done: 0, total: ids.length });
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        await qualifyLead.mutateAsync({ leadId: ids[i], workspaceId });
+      } catch {
+        // individual errors already toasted by the hook
+      }
+      setQualifyProgress({ done: i + 1, total: ids.length });
+    }
+    setBulkQualifying(false);
+    setQualifyProgress(null);
+  };
+
   const activeFolder = folders.find((f) => f.id === activeFolderId);
 
   return (
