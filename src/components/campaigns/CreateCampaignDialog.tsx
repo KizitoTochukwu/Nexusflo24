@@ -537,7 +537,7 @@ export default function CreateCampaignDialog() {
                   { key: "whatsapp" as const, icon: <MessageSquare className="h-3 w-3" />, label: "WhatsApp Cloud API", channels: ["whatsapp", "multi-channel"] },
                   { key: "twilio" as const, icon: <Phone className="h-3 w-3" />, label: "SMS (Twilio)", channels: ["sms", "multi-channel"] },
                 ] as const).map((item) => {
-                  const isRelevant = item.channels.includes(type);
+                  const isRelevant = (item.channels as readonly string[]).includes(type);
                   const statusBadge = integrationLoading
                     ? <span className="text-muted-foreground text-[10px] font-medium bg-muted px-1.5 py-0.5 rounded flex items-center gap-1"><Loader2 className="h-2.5 w-2.5 animate-spin" /> Checking…</span>
                     : integrationError
