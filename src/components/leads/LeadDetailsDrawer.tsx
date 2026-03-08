@@ -16,6 +16,7 @@ import {
 import type { Lead, LeadActivity } from "@/hooks/useLeads";
 import { useLeadActivities, useUpdateLead, useLogActivity } from "@/hooks/useLeads";
 import { useQualifyLead, type AiQualification } from "@/hooks/useQualifyLead";
+import SalesConversationTimeline from "@/components/leads/SalesConversationTimeline";
 
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
 
@@ -208,6 +209,16 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
               <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note…" rows={2} className="flex-1" />
               <Button size="sm" onClick={handleLogNote} disabled={!noteText.trim()} className="bg-accent text-accent-foreground self-end">Add</Button>
             </div>
+          </div>
+
+          <Separator />
+
+          {/* AI Sales Closer Conversations */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> AI Sales Conversations
+            </p>
+            <SalesConversationTimeline leadId={lead.id} workspaceId={workspaceId} />
           </div>
 
           <Separator />

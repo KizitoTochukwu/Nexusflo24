@@ -25,6 +25,8 @@ import type { DemoVariant } from "@/lib/demo/demoData";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useAdminRole";
+import { Bot } from "lucide-react";
+import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab";
 
 /* ── Profile Tab ─────────────────────────────────────────── */
 
@@ -764,10 +766,11 @@ function DemoModeTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "integrations", "webhooks", "automations", "notifications", "security", "demo"] as const;
+const VALID_TABS = ["profile", "billing", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
+  const workspaceId = useWorkspaceId();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const pathParts = location.pathname.split("/");
   const lastSegment = pathParts[pathParts.length - 1];
@@ -802,6 +805,7 @@ const DashboardSettings = () => {
             <TabsTrigger value="automations" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Automation</TabsTrigger>
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
             <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
+            <TabsTrigger value="ai-sales" className="gap-1.5"><Bot className="h-3.5 w-3.5" />AI Sales</TabsTrigger>
             <TabsTrigger value="demo" className="gap-1.5"><Monitor className="h-3.5 w-3.5" />Demo Mode</TabsTrigger>
           </TabsList>
 
@@ -815,6 +819,7 @@ const DashboardSettings = () => {
             <TabsContent value="automations"><AutomationPrefsTab /></TabsContent>
             <TabsContent value="notifications"><NotificationsTab /></TabsContent>
             <TabsContent value="security"><SecurityTab /></TabsContent>
+            <TabsContent value="ai-sales"><SalesCloserSettingsTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="demo"><DemoModeTab /></TabsContent>
           </div>
         </Tabs>

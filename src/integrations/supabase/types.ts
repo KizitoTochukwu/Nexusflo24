@@ -1058,6 +1058,132 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_closer_settings: {
+        Row: {
+          booking_page_id: string | null
+          channels: string[]
+          created_at: string
+          escalation_enabled: boolean
+          follow_up_delay_hours: number
+          follow_up_enabled: boolean
+          id: string
+          is_enabled: boolean
+          max_follow_ups: number
+          mode: string
+          system_prompt: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          booking_page_id?: string | null
+          channels?: string[]
+          created_at?: string
+          escalation_enabled?: boolean
+          follow_up_delay_hours?: number
+          follow_up_enabled?: boolean
+          id?: string
+          is_enabled?: boolean
+          max_follow_ups?: number
+          mode?: string
+          system_prompt?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          booking_page_id?: string | null
+          channels?: string[]
+          created_at?: string
+          escalation_enabled?: boolean
+          follow_up_delay_hours?: number
+          follow_up_enabled?: boolean
+          id?: string
+          is_enabled?: boolean
+          max_follow_ups?: number
+          mode?: string
+          system_prompt?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_closer_settings_booking_page_id_fkey"
+            columns: ["booking_page_id"]
+            isOneToOne: false
+            referencedRelation: "booking_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_closer_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_conversations: {
+        Row: {
+          ai_generated: boolean
+          ai_model: string | null
+          channel: string
+          created_at: string
+          direction: string
+          id: string
+          intent: string | null
+          intent_confidence: number | null
+          lead_id: string
+          message_body: string
+          meta: Json | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          ai_model?: string | null
+          channel?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          intent?: string | null
+          intent_confidence?: number | null
+          lead_id: string
+          message_body: string
+          meta?: Json | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          ai_generated?: boolean
+          ai_model?: string | null
+          channel?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          intent?: string | null
+          intent_confidence?: number | null
+          lead_id?: string
+          message_body?: string
+          meta?: Json | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_conversations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_jobs: {
         Row: {
           automation_id: string
