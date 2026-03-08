@@ -139,6 +139,8 @@ Deno.serve(async (req) => {
     const results: any[] = [];
     let skipRemaining = false;
     const startIndex = typeof start_from_step === "number" ? start_from_step : 0;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let lastSendTime = 0;
 
     for (let i = startIndex; i < (steps || []).length; i++) {
       const step = steps![i];
