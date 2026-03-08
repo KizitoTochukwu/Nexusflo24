@@ -420,6 +420,8 @@ export default function CreateCampaignDialog() {
           </div>
         )}
 
+        {/* STEP 4.5 (shown within step 5): Audience Filter */}
+
         {/* STEP 5: Review & Launch */}
         {step === 5 && (
           <div className="space-y-4">
