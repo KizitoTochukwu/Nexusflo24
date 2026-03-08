@@ -50,7 +50,7 @@ export default function SalesCloserSettingsTab({ workspaceId }: Props) {
     upsert.mutate({
       workspace_id: workspaceId,
       ...form,
-      booking_page_id: form.booking_page_id || null,
+      booking_page_id: form.booking_page_id === "__none__" ? null : form.booking_page_id || null,
     });
   };
 
