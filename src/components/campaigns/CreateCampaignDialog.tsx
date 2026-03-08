@@ -74,6 +74,25 @@ export default function CreateCampaignDialog() {
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
 
+  // Integration status
+  const [integrationStatus, setIntegrationStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
+  const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [integrationError, setIntegrationError] = useState(false);
+
+  useEffect(() => {
+    if (step === 5 && integrationStatus === null && !integrationLoading) {
+      setIntegrationLoading(true);
+      supabase.functions.invoke("integration-status").then(({ data, error }) => {
+        if (error || data?.error) {
+          setIntegrationError(true);
+        } else {
+          setIntegrationStatus(data as { resend: boolean; twilio: boolean; whatsapp: boolean });
+        }
+        setIntegrationLoading(false);
+      });
+    }
+  }, [step]);
+
   const reset = () => {
     setStep(1); setName(""); setType("email"); setObjective("broadcast");
     setCampaignMode("broadcast"); setTriggerType("new_lead"); setTriggerValue("");
