@@ -770,6 +770,7 @@ const VALID_TABS = ["profile", "billing", "integrations", "webhooks", "automatio
 
 const DashboardSettings = () => {
   const location = useLocation();
+  const workspaceId = useWorkspaceId();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const pathParts = location.pathname.split("/");
   const lastSegment = pathParts[pathParts.length - 1];
