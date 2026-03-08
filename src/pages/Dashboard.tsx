@@ -258,6 +258,11 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+
+        {/* AI Qualification Distribution */}
+        {metrics?.aiDistribution && metrics.aiDistribution.total > 0 && (
+          <AiQualificationWidget distribution={metrics.aiDistribution} workspaceId={workspaceId} />
+        )}
       </div>
 
       {/* Recent leads */}
