@@ -17,25 +17,36 @@ function interpolate(template: string, lead: Record<string, any>): string {
 }
 
 function parseDelayFromConfig(config: Record<string, any>): number {
-  // Support structured format: { duration: number, unit: "minutes"|"hours"|"days" }
-  if (config.duration && config.unit) {
-    const dur = parseInt(String(config.duration), 10) || 0;
-    const unit = String(config.unit).toLowerCase();
-    if (unit === "minutes") return dur;
-    if (unit === "hours") return dur * 60;
-    if (unit === "days") return dur * 1440;
-    if (unit === "weeks") return dur * 10080;
+  // Support structured format: { duration: number, unit: "minutes"|"hours"|"days"|"weeks" }
+  const duration = config.duration ?? config.delay_duration ?? config.value;
+  const unit = config.unit ?? config.delay_unit;
+
+  if (duration !== undefined && duration !== null && unit) {
+    const dur = parseInt(String(duration), 10);
+    if (isNaN(dur) || dur <= 0) return 0;
+    const u = String(unit).toLowerCase();
+    if (u === "minutes" || u === "minute" || u === "min" || u === "m") return dur;
+    if (u === "hours" || u === "hour" || u === "hr" || u === "h") return dur * 60;
+    if (u === "days" || u === "day" || u === "d") return dur * 1440;
+    if (u === "weeks" || u === "week" || u === "w") return dur * 10080;
+    return dur; // assume minutes if unit is unrecognized
   }
+
   // Fallback: legacy string format e.g. "60m", "2h", "1d"
   const delay = config.delay || "";
   const match = delay?.match(/^(\d+)\s*(m|min|h|hr|d|day|w|week)s?$/i);
   if (!match) return 0;
   const value = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
-  if (unit === "m" || unit === "min") return value;
-  if (unit === "h" || unit === "hr") return value * 60;
-  if (unit === "d" || unit === "day") return value * 1440;
-  if (unit === "w" || unit === "week") return value * 10080;
+  const u2 = match[2].toLowerCase();
+  if (u2 === "m" || u2 === "min") return value;
+  if (u2 === "h" || u2 === "hr") return value * 60;
+  if (u2 === "d" || u2 === "day") return value * 1440;
+  if (u2 === "w" || u2 === "week") return value * 10080;
+
+  // Fallback: raw number (assume minutes)
+  const raw = parseInt(String(config.delay || config.duration), 10);
+  if (!isNaN(raw) && raw > 0) return raw;
+
   return 0;
 }
 
@@ -128,6 +139,8 @@ Deno.serve(async (req) => {
     const results: any[] = [];
     let skipRemaining = false;
     const startIndex = typeof start_from_step === "number" ? start_from_step : 0;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let lastSendTime = 0;
 
     for (let i = startIndex; i < (steps || []).length; i++) {
       const step = steps![i];
@@ -145,6 +158,14 @@ Deno.serve(async (req) => {
         switch (step.step_type) {
           case "action": {
             const actionType = config.action || config.action_type || config.channel;
+
+            // Rate-limit: wait at least 550ms between sends to stay under 2 req/s
+            if (["send_email", "send_sms", "send_whatsapp"].includes(actionType)) {
+              const elapsed = Date.now() - lastSendTime;
+              if (lastSendTime > 0 && elapsed < 550) {
+                await sleep(550 - elapsed);
+              }
+            }
 
             if (actionType === "send_email") {
               const apiKey = Deno.env.get("RESEND_API_KEY");
@@ -170,6 +191,7 @@ Deno.serve(async (req) => {
                 unsubUrl,
               });
               const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
+              lastSendTime = Date.now();
               details = { messageId: res.id, channel: "email" };
             } else if (actionType === "send_sms") {
               const sid = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -179,6 +201,7 @@ Deno.serve(async (req) => {
               if (!lead.phone) throw new Error("Lead has no phone");
               const body = interpolate(config.message || "", lead);
               const res = await sendTwilio(sid, token, from, lead.phone, body);
+              lastSendTime = Date.now();
               details = { sid: res.sid, channel: "sms" };
             } else if (actionType === "send_whatsapp") {
               const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
@@ -187,6 +210,7 @@ Deno.serve(async (req) => {
               if (!lead.phone) throw new Error("Lead has no phone");
               const body = interpolate(config.message || "", lead);
               const res = await sendWhatsApp(token, phoneId, lead.phone, body);
+              lastSendTime = Date.now();
               details = { waMessageId: res.messages?.[0]?.id, channel: "whatsapp" };
             } else if (actionType === "add_tag") {
               const tag = config.tag;
@@ -251,9 +275,11 @@ Deno.serve(async (req) => {
           }
 
           case "delay": {
+            console.log("Delay step config:", JSON.stringify(config));
             const delayMinutes = parseDelayFromConfig(config);
+            console.log("Parsed delay minutes:", delayMinutes);
             if (delayMinutes <= 0) {
-              details = { message: "Invalid delay value", config: { duration: config.duration, unit: config.unit, delay: config.delay } };
+              details = { message: "Invalid delay value", config: { duration: config.duration, unit: config.unit, delay: config.delay }, rawConfig: config };
               status = "error";
               break;
             }
