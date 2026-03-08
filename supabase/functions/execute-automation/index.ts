@@ -201,6 +201,7 @@ Deno.serve(async (req) => {
               if (!lead.phone) throw new Error("Lead has no phone");
               const body = interpolate(config.message || "", lead);
               const res = await sendTwilio(sid, token, from, lead.phone, body);
+              lastSendTime = Date.now();
               details = { sid: res.sid, channel: "sms" };
             } else if (actionType === "send_whatsapp") {
               const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
