@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
               Authorization: `Bearer ${serviceRoleKey}`,
             },
             body: JSON.stringify({
-              workspaceId, phone: lead.phone, message: messageBody,
+              workspaceId, to: lead.phone, body: messageBody,
             }),
           });
           const data = await res.json();
