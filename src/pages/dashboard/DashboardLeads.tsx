@@ -51,11 +51,12 @@ const DashboardLeads = () => {
   const workspaceId = useWorkspaceId();
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get("status") || "All";
+  const initialAiVerdict = searchParams.get("ai_verdict") || "All";
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const [source, setSource] = useState("All");
-  const [aiVerdict, setAiVerdict] = useState("All");
+  const [aiVerdict, setAiVerdict] = useState(initialAiVerdict);
   const [sort, setSort] = useState<LeadFilters["sort"]>("newest");
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
