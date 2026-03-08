@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Bold, Italic, Underline, List, ListOrdered,
   Link2, Image, Minus, Smile, Square
 } from "lucide-react";
+import ImageInsertDialog from "./ImageInsertDialog";
 
 interface FormattingToolbarProps {
   onWrap: (before: string, after: string) => void;
@@ -12,6 +14,8 @@ interface FormattingToolbarProps {
 }
 
 export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: FormattingToolbarProps) {
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+
   const tools = [
     { icon: Bold, label: "Bold", action: () => onWrap("<b>", "</b>") },
     { icon: Italic, label: "Italic", action: () => onWrap("<i>", "</i>") },
@@ -20,7 +24,7 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
     { icon: ListOrdered, label: "Numbered List", action: () => onInsert("\n1. ") },
     { icon: Link2, label: "Insert Link", action: () => onWrap('<a href="URL">', "</a>") },
     { icon: Square, label: "Insert Button", action: onInsertButton },
-    { icon: Image, label: "Insert Image", action: () => onInsert('\n<img src="IMAGE_URL" alt="description" width="600" />\n') },
+    { icon: Image, label: "Insert Image", action: () => setImageDialogOpen(true) },
     { icon: Minus, label: "Divider", action: () => onInsert("\n---\n") },
     { icon: Smile, label: "Emoji", action: () => onInsert("😊") },
   ];
@@ -45,6 +49,12 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
           </Tooltip>
         ))}
       </div>
+
+      <ImageInsertDialog
+        open={imageDialogOpen}
+        onOpenChange={setImageDialogOpen}
+        onInsert={onInsert}
+      />
     </TooltipProvider>
   );
 }
