@@ -30,6 +30,8 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 const STATUSES = ["All", "New", "Warm", "Hot", "Won", "Lost"];
 const SOURCES = ["All", "Landing Page", "WhatsApp", "Facebook Ad", "Referral", "Organic", "Other"];
+const AI_VERDICTS = ["All", "hot", "warm", "cold", "not_qualified"];
+const AI_VERDICT_LABELS: Record<string, string> = { All: "All AI", hot: "🔥 Hot", warm: "🌤 Warm", cold: "❄️ Cold", not_qualified: "⛔ Not Qualified" };
 const SORTS: { label: string; value: LeadFilters["sort"] }[] = [
   { label: "Newest", value: "newest" },
   { label: "Oldest", value: "oldest" },
@@ -52,6 +54,7 @@ const DashboardLeads = () => {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const [source, setSource] = useState("All");
+  const [aiVerdict, setAiVerdict] = useState("All");
   const [sort, setSort] = useState<LeadFilters["sort"]>("newest");
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -67,12 +70,18 @@ const DashboardLeads = () => {
   const { data: folders = [] } = useLeadFolders(workspaceId);
   const { data: folderLeadIds } = useFolderLeadIds(activeFolderId, workspaceId);
 
-  // Filter leads by folder
+  // Filter leads by folder and AI verdict
   const leads = useMemo(() => {
-    if (!activeFolderId || !folderLeadIds) return allLeads;
-    const idSet = new Set(folderLeadIds);
-    return allLeads.filter((l) => idSet.has(l.id));
-  }, [allLeads, activeFolderId, folderLeadIds]);
+    let filtered = allLeads;
+    if (activeFolderId && folderLeadIds) {
+      const idSet = new Set(folderLeadIds);
+      filtered = filtered.filter((l) => idSet.has(l.id));
+    }
+    if (aiVerdict !== "All") {
+      filtered = filtered.filter((l) => (l as any).ai_qualification?.verdict === aiVerdict);
+    }
+    return filtered;
+  }, [allLeads, activeFolderId, folderLeadIds, aiVerdict]);
 
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
@@ -229,6 +238,10 @@ const DashboardLeads = () => {
             <Select value={source} onValueChange={setSource}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Source" /></SelectTrigger>
               <SelectContent>{SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={aiVerdict} onValueChange={setAiVerdict}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="AI Verdict" /></SelectTrigger>
+              <SelectContent>{AI_VERDICTS.map((v) => <SelectItem key={v} value={v}>{AI_VERDICT_LABELS[v]}</SelectItem>)}</SelectContent>
             </Select>
             <Select value={sort} onValueChange={(v) => setSort(v as LeadFilters["sort"])}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Sort" /></SelectTrigger>
