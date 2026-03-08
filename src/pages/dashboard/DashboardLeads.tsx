@@ -98,6 +98,9 @@ const DashboardLeads = () => {
   const [csvOpen, setCsvOpen] = useState(false);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkQualifying, setBulkQualifying] = useState(false);
+  const [qualifyProgress, setQualifyProgress] = useState<{ done: number; total: number } | null>(null);
+  const qualifyLead = useQualifyLead();
 
   const handleCreate = (values: Partial<Lead>) => {
     createLead.mutate({ ...values, workspace_id: workspaceId } as any, { onSuccess: () => setAddOpen(false) });
