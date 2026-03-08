@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
               if (!lead.phone) throw new Error("Lead has no phone");
               const body = interpolate(config.message || "", lead);
               const res = await sendWhatsApp(token, phoneId, lead.phone, body);
+              lastSendTime = Date.now();
               details = { waMessageId: res.messages?.[0]?.id, channel: "whatsapp" };
             } else if (actionType === "add_tag") {
               const tag = config.tag;
