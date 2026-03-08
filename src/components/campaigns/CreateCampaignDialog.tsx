@@ -472,38 +472,60 @@ export default function CreateCampaignDialog() {
               </div>
             )}
 
-            {/* Audience Filter Section */}
+            {/* Audience Selection */}
             {campaignMode === "broadcast" && (
-              <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
-                <p className="text-xs font-semibold text-foreground">Audience Filter (optional)</p>
-                <div>
-                  <Label className="text-xs">Lead Status</Label>
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {["New", "Warm", "Hot", "Qualified", "Converted"].map((s) => (
-                      <button key={s} onClick={() => setAudienceStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
-                        className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
-                          audienceStatuses.includes(s) ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
-                        }`}>{s}</button>
-                    ))}
-                  </div>
+              <div className="space-y-3">
+                {/* Toggle between filter and picker */}
+                <div className="flex gap-2">
+                  <button onClick={() => setUseLeadPicker(false)}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                      !useLeadPicker ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
+                    }`}>Filter by Criteria</button>
+                  <button onClick={() => setUseLeadPicker(true)}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                      useLeadPicker ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
+                    }`}>Pick Specific Leads</button>
                 </div>
-                <div>
-                  <Label className="text-xs">Tags (comma-separated)</Label>
-                  <Input value={audienceTags} onChange={(e) => setAudienceTags(e.target.value)}
-                    placeholder="e.g. newsletter, vip" className="h-8 text-xs" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-xs">Min Score</Label>
-                    <Input type="number" value={audienceMinScore} onChange={(e) => setAudienceMinScore(e.target.value)}
-                      placeholder="0" className="h-8 text-xs" />
+
+                {useLeadPicker ? (
+                  <LeadPicker
+                    channel={type}
+                    selectedLeadIds={selectedLeadIds}
+                    onSelectionChange={setSelectedLeadIds}
+                  />
+                ) : (
+                  <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                    <p className="text-xs font-semibold text-foreground">Audience Filter (optional)</p>
+                    <div>
+                      <Label className="text-xs">Lead Status</Label>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {["New", "Warm", "Hot", "Qualified", "Converted"].map((s) => (
+                          <button key={s} onClick={() => setAudienceStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                            className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                              audienceStatuses.includes(s) ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
+                            }`}>{s}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Tags (comma-separated)</Label>
+                      <Input value={audienceTags} onChange={(e) => setAudienceTags(e.target.value)}
+                        placeholder="e.g. newsletter, vip" className="h-8 text-xs" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs">Min Score</Label>
+                        <Input type="number" value={audienceMinScore} onChange={(e) => setAudienceMinScore(e.target.value)}
+                          placeholder="0" className="h-8 text-xs" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Max Score</Label>
+                        <Input type="number" value={audienceMaxScore} onChange={(e) => setAudienceMaxScore(e.target.value)}
+                          placeholder="100" className="h-8 text-xs" />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs">Max Score</Label>
-                    <Input type="number" value={audienceMaxScore} onChange={(e) => setAudienceMaxScore(e.target.value)}
-                      placeholder="100" className="h-8 text-xs" />
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
