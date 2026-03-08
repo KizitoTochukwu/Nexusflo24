@@ -164,7 +164,7 @@ export default function SalesCloserSettingsTab({ workspaceId }: Props) {
                 <SelectValue placeholder="Select a booking page" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {bookingPages.map((bp: any) => (
                   <SelectItem key={bp.id} value={bp.id}>
                     {bp.name}
