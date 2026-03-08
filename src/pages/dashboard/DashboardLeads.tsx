@@ -282,9 +282,16 @@ const DashboardLeads = () => {
                       <TableCell className="text-muted-foreground" onClick={() => setDetailLead(lead)}>{lead.email || "—"}</TableCell>
                       <TableCell className="text-muted-foreground" onClick={() => setDetailLead(lead)}>{lead.source}</TableCell>
                       <TableCell onClick={() => setDetailLead(lead)}>
-                        <span className={`font-semibold ${lead.score >= 80 ? "text-accent" : lead.score >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>
-                          {lead.score}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-semibold ${lead.score >= 80 ? "text-accent" : lead.score >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>
+                            {lead.score}
+                          </span>
+                          {(lead as any).ai_qualification?.verdict && (
+                            <span title={`AI: ${(lead as any).ai_qualification.verdict}`} className="inline-flex">
+                              <Sparkles className="h-3 w-3 text-accent" />
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell onClick={() => setDetailLead(lead)}>
                         <Badge variant="secondary" className={statusColor[lead.status] || ""}>{lead.status}</Badge>
