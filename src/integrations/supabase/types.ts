@@ -897,6 +897,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          ai_qualification: Json | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -913,6 +914,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ai_qualification?: Json | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -929,6 +931,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ai_qualification?: Json | null
           created_at?: string
           email?: string | null
           full_name?: string | null
