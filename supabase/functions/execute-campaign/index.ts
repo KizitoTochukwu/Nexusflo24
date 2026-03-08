@@ -99,7 +99,14 @@ Deno.serve(async (req) => {
     let failedCount = 0;
     const results: Array<{ lead_id: string; status: string; error?: string }> = [];
 
-    for (const lead of filteredLeads) {
+    // Rate-limit helper: wait between sends to avoid provider throttling (Resend = 2 req/s)
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    for (let i = 0; i < filteredLeads.length; i++) {
+      const lead = filteredLeads[i];
+
+      // Throttle: wait 550ms between requests to stay under 2 req/s
+      if (i > 0) await sleep(550);
       const leadName = (lead.full_name || "").split(" ")[0] || "there";
       const messageSubject = (content.subject || "").replace(/\{\{first_name\}\}/g, leadName).replace(/\{\{full_name\}\}/g, lead.full_name || "");
       const messageBody = (content.body || "").replace(/\{\{first_name\}\}/g, leadName).replace(/\{\{full_name\}\}/g, lead.full_name || "");
