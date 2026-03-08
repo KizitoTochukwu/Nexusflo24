@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Users, Mail, MousePointerClick, DollarSign,
-  TrendingUp, CreditCard, Loader2, ChevronRight, Zap, Rocket, FileDown, Send, Info
+  TrendingUp, CreditCard, Loader2, ChevronRight, Zap, Rocket, FileDown, Send, Info,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
