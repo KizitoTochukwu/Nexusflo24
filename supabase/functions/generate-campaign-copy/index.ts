@@ -19,8 +19,17 @@ Rules:
 - Tone: ${tone || "professional"}
 - Objective: ${objective || "promotion"}
 - Channel: ${channel || "email"}
-- For email: generate subject line, body with HTML-safe text, and a clear CTA
-- For WhatsApp: keep it concise, conversational, use emojis sparingly
+- For email: generate subject line and an HTML-formatted body using these supported tags:
+  • <b>bold</b>, <i>italic</i>, <u>underline</u> for emphasis
+  • Use bullet points with "• " prefix on new lines
+  • Use numbered lists with "1. " prefix on new lines
+  • Use "---" on its own line for horizontal dividers
+  • Use <a href="URL">link text</a> for links
+  • Include a clear CTA, ideally as: [button text](URL) format
+  • Use \\n for line breaks between paragraphs
+  • Include {{first_name}} variable for personalization
+  • Do NOT use <p>, <div>, <h1>, or other block-level HTML tags — only inline formatting
+- For WhatsApp: keep it concise, conversational, use emojis sparingly, use {{first_name}} for personalization
 - For SMS: max 160 characters, punchy and action-oriented
 - Generate 2 variants so the user can choose
 
