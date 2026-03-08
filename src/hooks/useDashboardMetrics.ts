@@ -23,7 +23,7 @@ export function useDashboardMetrics(workspaceId: string) {
       // Leads
       const { data: leads } = await supabase
         .from("leads")
-        .select("id, status, created_at, score, full_name, email, source")
+        .select("id, status, created_at, score, full_name, email, source, ai_qualification")
         .eq("workspace_id", workspaceId);
       const allLeads = leads ?? [];
       const totalLeads = allLeads.length;
