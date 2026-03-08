@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     const isServiceRole = token === serviceRoleKey;
 
     const body = await req.json();
-    const { workspaceId, to, type = "text", body: msgBody } = body;
+    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId } = body;
 
     if (!workspaceId || !to || !msgBody) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
         body: msgBody,
         status: "failed",
         error: errMsg,
+        ...(leadId ? { lead_id: leadId } : {}),
       });
 
       const isClientError = [190, 100, 10, 200, 131000, 131026, 131047, 131051].includes(graphCode) || waRes.status === 400 || waRes.status === 401;
@@ -133,7 +134,19 @@ Deno.serve(async (req) => {
       message_type: type,
       body: msgBody,
       status: "sent",
+      ...(leadId ? { lead_id: leadId } : {}),
     });
+
+    // If this was sent as part of a campaign, link the wa_message_id to the campaign_message
+    if (campaignId && leadId && waMessageId) {
+      await adminClient
+        .from("campaign_messages")
+        .update({ delivery_status: "delivered" })
+        .eq("campaign_id", campaignId)
+        .eq("lead_id", leadId)
+        .eq("channel", "whatsapp")
+        .eq("delivery_status", "pending");
+    }
 
     return new Response(JSON.stringify({ success: true, waMessageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
