@@ -382,13 +382,13 @@ function AiQualificationWidget({ distribution, workspaceId }: { distribution: { 
         </div>
         <div className="flex flex-col gap-2 flex-1">
           {data.map((d) => (
-            <div key={d.key} className="flex items-center justify-between text-sm">
+            <Link key={d.key} to={`/dashboard/${workspaceId}/leads?ai_verdict=${d.key}`} className="flex items-center justify-between text-sm rounded-md px-2 py-1 -mx-2 hover:bg-muted/60 transition-colors cursor-pointer">
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: AI_COLORS[d.key] }} />
                 <span>{d.name}</span>
               </div>
               <span className="font-semibold">{d.value} <span className="text-xs text-muted-foreground font-normal">({Math.round((d.value / distribution.total) * 100)}%)</span></span>
-            </div>
+            </Link>
           ))}
           <div className="pt-1 border-t text-xs text-muted-foreground">{distribution.total} lead{distribution.total !== 1 ? "s" : ""} qualified by AI</div>
         </div>
