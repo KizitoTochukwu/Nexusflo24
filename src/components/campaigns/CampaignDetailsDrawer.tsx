@@ -1,7 +1,13 @@
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useCampaignById, useCampaignMessages, TRIGGER_TYPES } from "@/hooks/useCampaigns";
-import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket } from "lucide-react";
 import { format } from "date-fns";
 
 const channelIcons: Record<string, React.ReactNode> = {
