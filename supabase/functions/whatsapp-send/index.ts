@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
         body: msgBody,
         status: "failed",
         error: errMsg,
+        ...(leadId ? { lead_id: leadId } : {}),
       });
 
       const isClientError = [190, 100, 10, 200, 131000, 131026, 131047, 131051].includes(graphCode) || waRes.status === 400 || waRes.status === 401;
