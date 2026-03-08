@@ -239,6 +239,10 @@ const DashboardLeads = () => {
               <SelectTrigger className="w-36"><SelectValue placeholder="Source" /></SelectTrigger>
               <SelectContent>{SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
+            <Select value={aiVerdict} onValueChange={setAiVerdict}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="AI Verdict" /></SelectTrigger>
+              <SelectContent>{AI_VERDICTS.map((v) => <SelectItem key={v} value={v}>{AI_VERDICT_LABELS[v]}</SelectItem>)}</SelectContent>
+            </Select>
             <Select value={sort} onValueChange={(v) => setSort(v as LeadFilters["sort"])}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Sort" /></SelectTrigger>
               <SelectContent>{SORTS.map((s) => <SelectItem key={s.value} value={s.value!}>{s.label}</SelectItem>)}</SelectContent>
