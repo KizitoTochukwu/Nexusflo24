@@ -47,3 +47,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.unsubscribe]
     verify_jwt = false
+  [functions.qualify-lead]
+    verify_jwt = false
