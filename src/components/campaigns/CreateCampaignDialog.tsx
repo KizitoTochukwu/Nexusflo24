@@ -79,7 +79,8 @@ export default function CreateCampaignDialog() {
     setTriggerActions(["send_message"]); setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
-    setFallbackCondition("unread"); setScheduleNow(true); setScheduledAt("");
+    setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
+    setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
   };
 
   const handleGenerateAI = async () => {
