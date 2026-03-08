@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, Upload, Search, Pencil, Trash2, Eye, MoreVertical, Sparkles } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, type Lead, type LeadFilters } from "@/hooks/useLeads";
+import { useQualifyLead } from "@/hooks/useQualifyLead";
 import { useLeadFolders, useFolderLeadIds, useAssignLeadsToFolder, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
 import AddLeadDialog from "@/components/leads/AddLeadDialog";
 import LeadDetailsDrawer from "@/components/leads/LeadDetailsDrawer";
@@ -97,6 +98,9 @@ const DashboardLeads = () => {
   const [csvOpen, setCsvOpen] = useState(false);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkQualifying, setBulkQualifying] = useState(false);
+  const [qualifyProgress, setQualifyProgress] = useState<{ done: number; total: number } | null>(null);
+  const qualifyLead = useQualifyLead();
 
   const handleCreate = (values: Partial<Lead>) => {
     createLead.mutate({ ...values, workspace_id: workspaceId } as any, { onSuccess: () => setAddOpen(false) });
@@ -150,6 +154,22 @@ const DashboardLeads = () => {
     deleteAll.mutate({ workspaceId, folderId: activeFolderId || undefined }, {
       onSuccess: () => { setDeleteAllOpen(false); clearSelection(); },
     });
+  };
+
+  const handleBulkQualify = async () => {
+    const ids = [...selectedIds];
+    setBulkQualifying(true);
+    setQualifyProgress({ done: 0, total: ids.length });
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        await qualifyLead.mutateAsync({ leadId: ids[i], workspaceId });
+      } catch {
+        // individual errors already toasted by the hook
+      }
+      setQualifyProgress({ done: i + 1, total: ids.length });
+    }
+    setBulkQualifying(false);
+    setQualifyProgress(null);
   };
 
   const activeFolder = folders.find((f) => f.id === activeFolderId);
@@ -219,8 +239,11 @@ const DashboardLeads = () => {
                 onMoveToFolder={handleMoveToFolder}
                 onDeleteSelected={() => setBulkDeleteConfirmOpen(true)}
                 onClearSelection={clearSelection}
+                onBulkQualify={handleBulkQualify}
                 isDeleting={bulkDelete.isPending}
                 isMoving={assignToFolder.isPending}
+                isQualifying={bulkQualifying}
+                qualifyProgress={qualifyProgress}
               />
             </div>
           )}

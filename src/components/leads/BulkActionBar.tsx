@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FolderOpen, Trash2, X } from "lucide-react";
+import { FolderOpen, Sparkles, Trash2, X } from "lucide-react";
 import type { LeadFolder } from "@/hooks/useLeadFolders";
 
 type Props = {
@@ -11,16 +11,28 @@ type Props = {
   onMoveToFolder: (folderId: string) => void;
   onDeleteSelected: () => void;
   onClearSelection: () => void;
+  onBulkQualify?: () => void;
   isDeleting?: boolean;
   isMoving?: boolean;
+  isQualifying?: boolean;
+  qualifyProgress?: { done: number; total: number } | null;
 };
 
-const BulkActionBar = ({ selectedCount, folders, onMoveToFolder, onDeleteSelected, onClearSelection, isDeleting, isMoving }: Props) => {
+const BulkActionBar = ({ selectedCount, folders, onMoveToFolder, onDeleteSelected, onClearSelection, onBulkQualify, isDeleting, isMoving, isQualifying, qualifyProgress }: Props) => {
   if (selectedCount === 0) return null;
 
   return (
     <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
       <span className="text-sm font-medium">{selectedCount} selected</span>
+
+      {onBulkQualify && (
+        <Button size="sm" variant="outline" onClick={onBulkQualify} disabled={isQualifying}>
+          <Sparkles className="mr-2 h-3.5 w-3.5" />
+          {isQualifying && qualifyProgress
+            ? `Qualifying ${qualifyProgress.done}/${qualifyProgress.total}…`
+            : "AI Qualify"}
+        </Button>
+      )}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
