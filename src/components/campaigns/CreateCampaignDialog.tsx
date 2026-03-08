@@ -121,9 +121,19 @@ export default function CreateCampaignDialog() {
 
   const applyVariant = (v: { subject: string; body: string; cta: string }) => {
     setSubject(v.subject);
-    setBody(v.body + (v.cta ? `\n\n${v.cta}` : ""));
+    // Preserve formatting: append CTA as a button if it looks like a link, otherwise plain text
+    let finalBody = v.body;
+    if (v.cta) {
+      const linkMatch = v.cta.match(/\[(.+?)\]\((.+?)\)/);
+      if (linkMatch) {
+        finalBody += `\n\n[button:${linkMatch[1]}](${linkMatch[2]})`;
+      } else {
+        finalBody += `\n\n${v.cta}`;
+      }
+    }
+    setBody(finalBody);
     setShowAiPanel(false);
-    toast.success("Copy applied");
+    toast.success("Copy applied to editor — switch to Preview to see formatted output");
   };
 
   const handleCreate = async () => {
