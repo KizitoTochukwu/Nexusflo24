@@ -63,6 +63,12 @@ export default function CreateCampaignDialog() {
   const [fallbackDelay, setFallbackDelay] = useState("30");
   const [fallbackCondition, setFallbackCondition] = useState("unread");
 
+  // Step 4.5 - Audience Filter
+  const [audienceStatuses, setAudienceStatuses] = useState<string[]>([]);
+  const [audienceTags, setAudienceTags] = useState("");
+  const [audienceMinScore, setAudienceMinScore] = useState("");
+  const [audienceMaxScore, setAudienceMaxScore] = useState("");
+
   // Step 5 - Schedule
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -73,7 +79,8 @@ export default function CreateCampaignDialog() {
     setTriggerActions(["send_message"]); setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
-    setFallbackCondition("unread"); setScheduleNow(true); setScheduledAt("");
+    setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
+    setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
   };
 
   const handleGenerateAI = async () => {
@@ -112,7 +119,12 @@ export default function CreateCampaignDialog() {
         enabled: true, channel: fallbackChannel,
         delay_minutes: parseInt(fallbackDelay), condition: fallbackCondition,
       } as any : {} as any,
-      audience_filter: {} as any,
+      audience_filter: {
+        ...(audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
+        ...(audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
+        ...(audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
+        ...(audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
+      } as any,
     });
     setOpen(false);
     reset();
@@ -408,6 +420,8 @@ export default function CreateCampaignDialog() {
           </div>
         )}
 
+        {/* STEP 4.5 (shown within step 5): Audience Filter */}
+
         {/* STEP 5: Review & Launch */}
         {step === 5 && (
           <div className="space-y-4">
@@ -430,6 +444,41 @@ export default function CreateCampaignDialog() {
               <div>
                 <Label>Schedule Date & Time</Label>
                 <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+              </div>
+            )}
+
+            {/* Audience Filter Section */}
+            {campaignMode === "broadcast" && (
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                <p className="text-xs font-semibold text-foreground">Audience Filter (optional)</p>
+                <div>
+                  <Label className="text-xs">Lead Status</Label>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {["New", "Warm", "Hot", "Qualified", "Converted"].map((s) => (
+                      <button key={s} onClick={() => setAudienceStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                          audienceStatuses.includes(s) ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
+                        }`}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Tags (comma-separated)</Label>
+                  <Input value={audienceTags} onChange={(e) => setAudienceTags(e.target.value)}
+                    placeholder="e.g. newsletter, vip" className="h-8 text-xs" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Min Score</Label>
+                    <Input type="number" value={audienceMinScore} onChange={(e) => setAudienceMinScore(e.target.value)}
+                      placeholder="0" className="h-8 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Max Score</Label>
+                    <Input type="number" value={audienceMaxScore} onChange={(e) => setAudienceMaxScore(e.target.value)}
+                      placeholder="100" className="h-8 text-xs" />
+                  </div>
+                </div>
               </div>
             )}
 

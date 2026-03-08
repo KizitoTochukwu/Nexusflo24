@@ -1,7 +1,13 @@
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useCampaignById, useCampaignMessages, TRIGGER_TYPES } from "@/hooks/useCampaigns";
-import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket } from "lucide-react";
 import { format } from "date-fns";
 
 const channelIcons: Record<string, React.ReactNode> = {
@@ -180,6 +186,30 @@ export default function CampaignDetailsDrawer({
 }) {
   const { data: campaign } = useCampaignById(campaignId);
   const { data: messages } = useCampaignMessages(campaignId);
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const qc = useQueryClient();
+
+  const handleSendCampaign = async () => {
+    if (!campaign) return;
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("execute-campaign", {
+        body: { campaign_id: campaign.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Campaign sent to ${data.sent || 0} leads (${data.failed || 0} failed)`);
+      qc.invalidateQueries({ queryKey: ["campaigns"] });
+      qc.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      qc.invalidateQueries({ queryKey: ["campaign-messages", campaignId] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send campaign");
+    } finally {
+      setSending(false);
+      setSendConfirmOpen(false);
+    }
+  };
 
   if (!campaign) return null;
 
@@ -223,6 +253,32 @@ export default function CampaignDetailsDrawer({
               {campaign.campaign_mode || "broadcast"}
             </Badge>
           </div>
+
+          {/* Send Campaign Button */}
+          {campaign.campaign_mode !== "triggered" && ["draft", "active", "scheduled"].includes(campaign.status) && (
+            <>
+              <Button onClick={() => setSendConfirmOpen(true)} disabled={sending} className="w-full gap-2">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                {sending ? "Sending..." : "Send Campaign Now"}
+              </Button>
+              <AlertDialog open={sendConfirmOpen} onOpenChange={setSendConfirmOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Send Campaign?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will send "{campaign.name}" to all matching leads via {campaign.type}. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleSendCampaign} disabled={sending}>
+                      {sending ? "Sending..." : "Send Now"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
 
           {/* Trigger info */}
           {campaign.campaign_mode === "triggered" && triggerConfig?.type && (

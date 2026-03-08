@@ -209,6 +209,9 @@ Deno.serve(async (req) => {
 
     // --- Trigger matching automations for new leads ---
     if (!existing) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
       try {
         const { data: automations } = await supabase
           .from("automations")
@@ -218,14 +221,14 @@ Deno.serve(async (req) => {
           .eq("status", "active");
 
         if (automations && automations.length > 0) {
-          const execUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/execute-automation`;
+          const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
           for (const auto of automations) {
             try {
               await fetch(execUrl, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  Authorization: `Bearer ${svcKey}`,
                 },
                 body: JSON.stringify({ automation_id: auto.id, lead_id: leadId, workspace_id: workspaceId }),
               });
@@ -236,6 +239,37 @@ Deno.serve(async (req) => {
         }
       } catch (autoErr) {
         console.error("Automation trigger error:", autoErr);
+      }
+
+      // --- Trigger matching campaigns for new leads ---
+      try {
+        const { data: triggeredCampaigns } = await supabase
+          .from("campaigns")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .eq("campaign_mode", "triggered")
+          .eq("status", "active")
+          .contains("trigger_config", { type: "new_lead" });
+
+        if (triggeredCampaigns && triggeredCampaigns.length > 0) {
+          const execCampaignUrl = `${supabaseUrl}/functions/v1/execute-campaign`;
+          for (const camp of triggeredCampaigns) {
+            try {
+              await fetch(execCampaignUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${svcKey}`,
+                },
+                body: JSON.stringify({ campaign_id: camp.id, lead_ids: [leadId] }),
+              });
+            } catch (e) {
+              console.error(`Failed to trigger campaign ${camp.id}:`, e);
+            }
+          }
+        }
+      } catch (campErr) {
+        console.error("Campaign trigger error:", campErr);
       }
     }
 
