@@ -63,6 +63,12 @@ export default function CreateCampaignDialog() {
   const [fallbackDelay, setFallbackDelay] = useState("30");
   const [fallbackCondition, setFallbackCondition] = useState("unread");
 
+  // Step 4.5 - Audience Filter
+  const [audienceStatuses, setAudienceStatuses] = useState<string[]>([]);
+  const [audienceTags, setAudienceTags] = useState("");
+  const [audienceMinScore, setAudienceMinScore] = useState("");
+  const [audienceMaxScore, setAudienceMaxScore] = useState("");
+
   // Step 5 - Schedule
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
