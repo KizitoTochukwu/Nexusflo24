@@ -447,6 +447,41 @@ export default function CreateCampaignDialog() {
               </div>
             )}
 
+            {/* Audience Filter Section */}
+            {campaignMode === "broadcast" && (
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
+                <p className="text-xs font-semibold text-foreground">Audience Filter (optional)</p>
+                <div>
+                  <Label className="text-xs">Lead Status</Label>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {["New", "Warm", "Hot", "Qualified", "Converted"].map((s) => (
+                      <button key={s} onClick={() => setAudienceStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                          audienceStatuses.includes(s) ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
+                        }`}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Tags (comma-separated)</Label>
+                  <Input value={audienceTags} onChange={(e) => setAudienceTags(e.target.value)}
+                    placeholder="e.g. newsletter, vip" className="h-8 text-xs" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Min Score</Label>
+                    <Input type="number" value={audienceMinScore} onChange={(e) => setAudienceMinScore(e.target.value)}
+                      placeholder="0" className="h-8 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Max Score</Label>
+                    <Input type="number" value={audienceMaxScore} onChange={(e) => setAudienceMaxScore(e.target.value)}
+                      placeholder="100" className="h-8 text-xs" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1">
               <p className="font-medium text-foreground mb-2">Campaign Summary</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">

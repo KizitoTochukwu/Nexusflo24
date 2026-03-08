@@ -254,6 +254,32 @@ export default function CampaignDetailsDrawer({
             </Badge>
           </div>
 
+          {/* Send Campaign Button */}
+          {campaign.campaign_mode !== "triggered" && ["draft", "active", "scheduled"].includes(campaign.status) && (
+            <>
+              <Button onClick={() => setSendConfirmOpen(true)} disabled={sending} className="w-full gap-2">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                {sending ? "Sending..." : "Send Campaign Now"}
+              </Button>
+              <AlertDialog open={sendConfirmOpen} onOpenChange={setSendConfirmOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Send Campaign?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will send "{campaign.name}" to all matching leads via {campaign.type}. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleSendCampaign} disabled={sending}>
+                      {sending ? "Sending..." : "Send Now"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
+
           {/* Trigger info */}
           {campaign.campaign_mode === "triggered" && triggerConfig?.type && (
             <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">

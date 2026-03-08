@@ -35,6 +35,31 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Also check for scheduled campaigns ---
+    const { data: scheduledCampaigns } = await supabase
+      .from("campaigns")
+      .select("id")
+      .eq("status", "scheduled")
+      .lte("scheduled_at", new Date().toISOString())
+      .limit(20);
+
+    if (scheduledCampaigns && scheduledCampaigns.length > 0) {
+      for (const camp of scheduledCampaigns) {
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/execute-campaign`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify({ campaign_id: camp.id }),
+          });
+        } catch (e) {
+          console.error(`Failed to execute scheduled campaign ${camp.id}:`, e);
+        }
+      }
+    }
+
     const results: any[] = [];
 
     for (const job of jobs) {

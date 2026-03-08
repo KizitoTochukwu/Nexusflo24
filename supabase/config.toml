@@ -51,3 +51,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.ai-sales-closer]
     verify_jwt = false
+  [functions.execute-campaign]
+    verify_jwt = false
