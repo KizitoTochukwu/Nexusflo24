@@ -39,7 +39,7 @@ export default function SalesCloserSettingsTab({ workspaceId }: Props) {
         follow_up_enabled: settings.follow_up_enabled,
         follow_up_delay_hours: settings.follow_up_delay_hours,
         max_follow_ups: settings.max_follow_ups,
-        booking_page_id: settings.booking_page_id || "",
+        booking_page_id: settings.booking_page_id || "__none__",
         system_prompt: settings.system_prompt || "",
         escalation_enabled: settings.escalation_enabled,
       });
