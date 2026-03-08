@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +11,10 @@ import {
   CAMPAIGN_TYPES, CAMPAIGN_OBJECTIVES, CAMPAIGN_MODES, TRIGGER_TYPES, TONE_OPTIONS,
 } from "@/hooks/useCampaigns";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plus, Mail, MessageSquare, Phone, Layers, Sparkles, Zap, Radio,
-  Loader2, Copy, ChevronRight, ChevronLeft, Clock, AlertTriangle,
+  Loader2, Copy, ChevronRight, ChevronLeft, Clock, AlertTriangle, CheckCircle2, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
