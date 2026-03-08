@@ -39,7 +39,7 @@ export default function SalesCloserSettingsTab({ workspaceId }: Props) {
         follow_up_enabled: settings.follow_up_enabled,
         follow_up_delay_hours: settings.follow_up_delay_hours,
         max_follow_ups: settings.max_follow_ups,
-        booking_page_id: settings.booking_page_id || "",
+        booking_page_id: settings.booking_page_id || "__none__",
         system_prompt: settings.system_prompt || "",
         escalation_enabled: settings.escalation_enabled,
       });
@@ -50,7 +50,7 @@ export default function SalesCloserSettingsTab({ workspaceId }: Props) {
     upsert.mutate({
       workspace_id: workspaceId,
       ...form,
-      booking_page_id: form.booking_page_id || null,
+      booking_page_id: form.booking_page_id === "__none__" ? null : form.booking_page_id || null,
     });
   };
 
@@ -164,7 +164,7 @@ export default function SalesCloserSettingsTab({ workspaceId }: Props) {
                 <SelectValue placeholder="Select a booking page" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {bookingPages.map((bp: any) => (
                   <SelectItem key={bp.id} value={bp.id}>
                     {bp.name}
