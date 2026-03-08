@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     const audienceFilter = (campaign.audience_filter || {}) as {
       statuses?: string[];
       tags?: string[];
+      lead_ids?: string[];
       min_score?: number;
       max_score?: number;
     };
