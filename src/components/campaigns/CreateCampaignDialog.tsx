@@ -71,9 +71,11 @@ export default function CreateCampaignDialog() {
   const [audienceMinScore, setAudienceMinScore] = useState("");
   const [audienceMaxScore, setAudienceMaxScore] = useState("");
 
-  // Step 5 - Schedule
+  // Step 5 - Schedule & Lead Selection
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [useLeadPicker, setUseLeadPicker] = useState(false);
 
   // Integration status
   const [integrationStatus, setIntegrationStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
