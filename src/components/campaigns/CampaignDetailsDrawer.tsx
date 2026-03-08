@@ -186,6 +186,30 @@ export default function CampaignDetailsDrawer({
 }) {
   const { data: campaign } = useCampaignById(campaignId);
   const { data: messages } = useCampaignMessages(campaignId);
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const qc = useQueryClient();
+
+  const handleSendCampaign = async () => {
+    if (!campaign) return;
+    setSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("execute-campaign", {
+        body: { campaign_id: campaign.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Campaign sent to ${data.sent || 0} leads (${data.failed || 0} failed)`);
+      qc.invalidateQueries({ queryKey: ["campaigns"] });
+      qc.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      qc.invalidateQueries({ queryKey: ["campaign-messages", campaignId] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send campaign");
+    } finally {
+      setSending(false);
+      setSendConfirmOpen(false);
+    }
+  };
 
   if (!campaign) return null;
 
