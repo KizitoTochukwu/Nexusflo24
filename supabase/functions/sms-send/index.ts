@@ -8,16 +8,60 @@ const corsHeaders = {
 function normalizePhoneNumber(raw: string): string | null {
   const cleaned = raw.replace(/[\s\-()]/g, "");
   if (cleaned.startsWith("+")) return /^\+[1-9]\d{7,14}$/.test(cleaned) ? cleaned : null;
-  if (cleaned.startsWith("00")) { const intl = `+${cleaned.slice(2)}`; return /^\+[1-9]\d{7,14}$/.test(intl) ? intl : null; }
+  if (cleaned.startsWith("00")) {
+    const intl = `+${cleaned.slice(2)}`;
+    return /^\+[1-9]\d{7,14}$/.test(intl) ? intl : null;
+  }
   if (/^0\d{10}$/.test(cleaned)) return `+44${cleaned.slice(1)}`;
   if (/^[1-9]\d{7,14}$/.test(cleaned)) return `+${cleaned}`;
   return null;
 }
 
-async function sendTwilioSms(accountSid: string, authToken: string, from: string, to: string, body: string) {
+type TwilioSender =
+  | { kind: "from"; value: string }
+  | { kind: "messaging_service"; value: string };
+
+function resolveTwilioSender(raw: string): TwilioSender | null {
+  const trimmed = raw.trim();
+
+  // Twilio Messaging Service SID (recommended for production routing)
+  if (/^MG[0-9a-fA-F]{32}$/.test(trimmed)) {
+    return { kind: "messaging_service", value: trimmed };
+  }
+
+  // If user pasted a whatsapp sender by mistake, strip protocol prefix for SMS validation
+  const withoutWhatsAppPrefix = trimmed.replace(/^whatsapp:/i, "");
+
+  // E.164 / local normalization path
+  const normalized = normalizePhoneNumber(withoutWhatsAppPrefix);
+  if (normalized) {
+    return { kind: "from", value: normalized };
+  }
+
+  // Alphanumeric Sender ID (country-dependent support)
+  if (/^[A-Za-z0-9][A-Za-z0-9 ]{0,10}$/.test(trimmed)) {
+    return { kind: "from", value: trimmed };
+  }
+
+  return null;
+}
+
+async function sendTwilioSms(
+  accountSid: string,
+  authToken: string,
+  sender: TwilioSender,
+  to: string,
+  body: string,
+) {
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
   const auth = btoa(`${accountSid}:${authToken}`);
-  const params = new URLSearchParams({ To: to, From: from, Body: body });
+  const params = new URLSearchParams({ To: to, Body: body });
+
+  if (sender.kind === "messaging_service") {
+    params.set("MessagingServiceSid", sender.value);
+  } else {
+    params.set("From", sender.value);
+  }
 
   const res = await fetch(url, {
     method: "POST",
@@ -27,11 +71,17 @@ async function sendTwilioSms(accountSid: string, authToken: string, from: string
 
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || `Twilio error: ${res.status}`);
-  return { providerMessageId: data.sid, status: data.status };
+  return {
+    providerMessageId: data.sid,
+    status: data.status,
+    from: data.from ?? null,
+  };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  let requestBody: { workspaceId?: string; to?: string; message?: string } = {};
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -43,8 +93,8 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const isServiceRole = token === serviceRoleKey;
 
-    const body = await req.json();
-    const { workspaceId, to, message } = body;
+    requestBody = await req.json();
+    const { workspaceId, to, message } = requestBody;
 
     if (!workspaceId || !to || !message) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, message" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -77,29 +127,29 @@ Deno.serve(async (req) => {
     // Platform-managed credentials from ENV
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const fromNumber = Deno.env.get("TWILIO_FROM_NUMBER");
+    const senderRaw = Deno.env.get("TWILIO_FROM_NUMBER");
 
-    if (!accountSid || !authToken || !fromNumber) {
+    if (!accountSid || !authToken || !senderRaw) {
       return new Response(JSON.stringify({ error: "SMS provider not configured. Contact platform admin." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const normalizedFrom = normalizePhoneNumber(fromNumber);
-    if (!normalizedFrom) {
-      return new Response(JSON.stringify({ error: "Platform SMS From Number is invalid." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const sender = resolveTwilioSender(senderRaw);
+    if (!sender) {
+      return new Response(JSON.stringify({ error: "Platform SMS sender is invalid. Set TWILIO_FROM_NUMBER to a valid E.164 number (e.g. +14155552671), Twilio Messaging Service SID (MG...), or supported alphanumeric sender ID." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (normalizedTo === normalizedFrom) {
+    if (sender.kind === "from" && sender.value.startsWith("+") && normalizedTo === sender.value) {
       return new Response(JSON.stringify({ error: "'To' and 'From' number cannot be the same" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const result = await sendTwilioSms(accountSid, authToken, normalizedFrom, normalizedTo, message);
+    const result = await sendTwilioSms(accountSid, authToken, sender, normalizedTo, message);
 
     // Log success
     await adminClient.from("sms_logs").insert({
       workspace_id: workspaceId,
       provider: "twilio",
       to_number: normalizedTo,
-      from_number: normalizedFrom,
+      from_number: sender.kind === "from" ? sender.value : result.from,
       message,
       status: "sent",
       provider_message_id: result.providerMessageId,
@@ -110,20 +160,21 @@ Deno.serve(async (req) => {
     console.error("sms-send error:", err);
 
     try {
-      const body = await req.clone().json().catch(() => ({}));
-      if (body.workspaceId) {
+      if (requestBody.workspaceId) {
         const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         await adminClient.from("sms_logs").insert({
-          workspace_id: body.workspaceId,
+          workspace_id: requestBody.workspaceId,
           provider: "twilio",
-          to_number: body.to || "unknown",
+          to_number: requestBody.to || "unknown",
           from_number: null,
-          message: body.message || "",
+          message: requestBody.message || "",
           status: "failed",
           error: err.message || "Unknown error",
         });
       }
-    } catch (_) { /* ignore logging errors */ }
+    } catch (_) {
+      /* ignore logging errors */
+    }
 
     const errMsgRaw = err?.message || "Failed to send SMS";
     const isTwilioPairError = /current combination of 'To'.*'From'|and\/or 'From' parameters/i.test(errMsgRaw);
