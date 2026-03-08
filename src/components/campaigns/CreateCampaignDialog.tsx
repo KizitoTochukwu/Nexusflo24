@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +11,10 @@ import {
   CAMPAIGN_TYPES, CAMPAIGN_OBJECTIVES, CAMPAIGN_MODES, TRIGGER_TYPES, TONE_OPTIONS,
 } from "@/hooks/useCampaigns";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plus, Mail, MessageSquare, Phone, Layers, Sparkles, Zap, Radio,
-  Loader2, Copy, ChevronRight, ChevronLeft, Clock, AlertTriangle,
+  Loader2, Copy, ChevronRight, ChevronLeft, Clock, AlertTriangle, CheckCircle2, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -72,6 +73,25 @@ export default function CreateCampaignDialog() {
   // Step 5 - Schedule
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
+
+  // Integration status
+  const [integrationStatus, setIntegrationStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
+  const [integrationLoading, setIntegrationLoading] = useState(false);
+  const [integrationError, setIntegrationError] = useState(false);
+
+  useEffect(() => {
+    if (step === 5 && integrationStatus === null && !integrationLoading) {
+      setIntegrationLoading(true);
+      supabase.functions.invoke("integration-status").then(({ data, error }) => {
+        if (error || data?.error) {
+          setIntegrationError(true);
+        } else {
+          setIntegrationStatus(data as { resend: boolean; twilio: boolean; whatsapp: boolean });
+        }
+        setIntegrationLoading(false);
+      });
+    }
+  }, [step]);
 
   const reset = () => {
     setStep(1); setName(""); setType("email"); setObjective("broadcast");
@@ -508,22 +528,30 @@ export default function CreateCampaignDialog() {
               </div>
             </div>
 
-            {/* Integration placeholders */}
+            {/* Integration Status */}
             <div className="rounded-lg border border-dashed border-muted-foreground/30 p-3 space-y-1">
               <p className="text-xs font-medium text-muted-foreground">Integration Status</p>
               <div className="grid gap-1 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> Email (SendGrid/MailerLite)</span>
-                  <span className="text-accent text-[10px] font-medium bg-accent/10 px-1.5 py-0.5 rounded">Placeholder</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> WhatsApp Cloud API</span>
-                  <span className="text-accent text-[10px] font-medium bg-accent/10 px-1.5 py-0.5 rounded">Placeholder</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> SMS Gateway</span>
-                  <span className="text-accent text-[10px] font-medium bg-accent/10 px-1.5 py-0.5 rounded">Placeholder</span>
-                </div>
+                {([
+                  { key: "resend" as const, icon: <Mail className="h-3 w-3" />, label: "Email (Resend)", channels: ["email", "multi-channel"] },
+                  { key: "whatsapp" as const, icon: <MessageSquare className="h-3 w-3" />, label: "WhatsApp Cloud API", channels: ["whatsapp", "multi-channel"] },
+                  { key: "twilio" as const, icon: <Phone className="h-3 w-3" />, label: "SMS (Twilio)", channels: ["sms", "multi-channel"] },
+                ] as const).map((item) => {
+                  const isRelevant = (item.channels as readonly string[]).includes(type);
+                  const statusBadge = integrationLoading
+                    ? <span className="text-muted-foreground text-[10px] font-medium bg-muted px-1.5 py-0.5 rounded flex items-center gap-1"><Loader2 className="h-2.5 w-2.5 animate-spin" /> Checking…</span>
+                    : integrationError
+                      ? <span className="text-muted-foreground text-[10px] font-medium bg-muted px-1.5 py-0.5 rounded">Status unavailable</span>
+                      : integrationStatus?.[item.key]
+                        ? <span className="text-green-700 dark:text-green-400 text-[10px] font-medium bg-green-500/10 px-1.5 py-0.5 rounded flex items-center gap-1"><CheckCircle2 className="h-2.5 w-2.5" /> Connected</span>
+                        : <span className="text-red-700 dark:text-red-400 text-[10px] font-medium bg-red-500/10 px-1.5 py-0.5 rounded flex items-center gap-1"><XCircle className="h-2.5 w-2.5" /> Not Configured</span>;
+                  return (
+                    <div key={item.key} className={`flex items-center justify-between ${!isRelevant ? "opacity-40" : ""}`}>
+                      <span className="flex items-center gap-1">{item.icon} {item.label}</span>
+                      {statusBadge}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
