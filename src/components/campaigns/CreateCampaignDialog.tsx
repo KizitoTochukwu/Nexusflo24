@@ -371,14 +371,13 @@ export default function CreateCampaignDialog() {
               )}
             </div>
 
-            <div>
-              <Label>Subject / Title</Label>
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Don't miss our summer deals!" />
-            </div>
-            <div>
-              <Label>Message Body</Label>
-              <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your campaign message..." rows={5} />
-            </div>
+            <AutomationEmailEditor
+              isEmail={type === "email"}
+              subject={subject}
+              onSubjectChange={setSubject}
+              message={body}
+              onMessageChange={setBody}
+            />
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
               <Button onClick={nextStep} disabled={!body.trim()} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
