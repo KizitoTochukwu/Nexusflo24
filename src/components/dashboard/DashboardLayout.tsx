@@ -32,9 +32,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const sidebarItems = [
     { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
     { icon: Users, label: "Leads", to: `/dashboard/${workspaceId}/leads` },
+    { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
     { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
     { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
-    { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
     { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
     { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
     { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
