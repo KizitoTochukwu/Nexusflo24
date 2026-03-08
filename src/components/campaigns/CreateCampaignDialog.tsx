@@ -3,7 +3,7 @@ import LeadPicker from "@/components/campaigns/LeadPicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -371,14 +371,13 @@ export default function CreateCampaignDialog() {
               )}
             </div>
 
-            <div>
-              <Label>Subject / Title</Label>
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Don't miss our summer deals!" />
-            </div>
-            <div>
-              <Label>Message Body</Label>
-              <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your campaign message..." rows={5} />
-            </div>
+            <AutomationEmailEditor
+              isEmail={type === "email"}
+              subject={subject}
+              onSubjectChange={setSubject}
+              message={body}
+              onMessageChange={setBody}
+            />
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
               <Button onClick={nextStep} disabled={!body.trim()} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
