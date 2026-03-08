@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Plus, Upload, Search, Pencil, Trash2, Eye, MoreVertical, Sparkles } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, type Lead, type LeadFilters } from "@/hooks/useLeads";
+import { useQualifyLead } from "@/hooks/useQualifyLead";
 import { useLeadFolders, useFolderLeadIds, useAssignLeadsToFolder, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
 import AddLeadDialog from "@/components/leads/AddLeadDialog";
 import LeadDetailsDrawer from "@/components/leads/LeadDetailsDrawer";
