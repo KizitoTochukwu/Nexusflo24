@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     const audienceFilter = (campaign.audience_filter || {}) as {
       statuses?: string[];
       tags?: string[];
+      lead_ids?: string[];
       min_score?: number;
       max_score?: number;
     };
@@ -57,8 +58,15 @@ Deno.serve(async (req) => {
       .select("id, email, phone, full_name, status, score, tags")
       .eq("workspace_id", workspaceId);
 
-    if (lead_ids && Array.isArray(lead_ids) && lead_ids.length > 0) {
-      leadsQuery = leadsQuery.in("id", lead_ids);
+    // Check lead_ids from request body OR from saved audience_filter
+    const resolvedLeadIds = (lead_ids && Array.isArray(lead_ids) && lead_ids.length > 0)
+      ? lead_ids
+      : (audienceFilter.lead_ids && audienceFilter.lead_ids.length > 0)
+        ? audienceFilter.lead_ids
+        : null;
+
+    if (resolvedLeadIds) {
+      leadsQuery = leadsQuery.in("id", resolvedLeadIds);
     } else {
       // Apply audience filters
       if (audienceFilter.statuses?.length) {
