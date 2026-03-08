@@ -103,6 +103,7 @@ export default function CreateCampaignDialog() {
     setCampaignMode("broadcast"); setTriggerType("new_lead"); setTriggerValue("");
     setTriggerActions(["send_message"]); setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
+    setTemplateSettings(DEFAULT_TEMPLATE_SETTINGS);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
     setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
     setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
