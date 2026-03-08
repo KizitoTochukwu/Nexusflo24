@@ -213,6 +213,16 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
 
           <Separator />
 
+          {/* AI Sales Closer Conversations */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> AI Sales Conversations
+            </p>
+            <SalesConversationTimeline leadId={lead.id} workspaceId={workspaceId} />
+          </div>
+
+          <Separator />
+
           <div>
             <p className="mb-3 text-xs font-medium text-muted-foreground flex items-center gap-1"><Activity className="h-3 w-3" /> Activity Timeline</p>
             {activities.length === 0 ? (

@@ -25,6 +25,8 @@ import type { DemoVariant } from "@/lib/demo/demoData";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useAdminRole";
+import { Bot } from "lucide-react";
+import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab";
 
 /* ── Profile Tab ─────────────────────────────────────────── */
 
