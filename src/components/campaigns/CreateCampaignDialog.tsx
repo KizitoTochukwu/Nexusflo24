@@ -147,7 +147,7 @@ export default function CreateCampaignDialog() {
       objective,
       campaign_mode: campaignMode,
       status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: { subject, body } as any,
+      message_content: { subject, body, templateSettings: type === "email" ? templateSettings : undefined } as any,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
