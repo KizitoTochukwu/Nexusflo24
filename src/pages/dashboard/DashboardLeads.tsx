@@ -70,12 +70,18 @@ const DashboardLeads = () => {
   const { data: folders = [] } = useLeadFolders(workspaceId);
   const { data: folderLeadIds } = useFolderLeadIds(activeFolderId, workspaceId);
 
-  // Filter leads by folder
+  // Filter leads by folder and AI verdict
   const leads = useMemo(() => {
-    if (!activeFolderId || !folderLeadIds) return allLeads;
-    const idSet = new Set(folderLeadIds);
-    return allLeads.filter((l) => idSet.has(l.id));
-  }, [allLeads, activeFolderId, folderLeadIds]);
+    let filtered = allLeads;
+    if (activeFolderId && folderLeadIds) {
+      const idSet = new Set(folderLeadIds);
+      filtered = filtered.filter((l) => idSet.has(l.id));
+    }
+    if (aiVerdict !== "All") {
+      filtered = filtered.filter((l) => (l as any).ai_qualification?.verdict === aiVerdict);
+    }
+    return filtered;
+  }, [allLeads, activeFolderId, folderLeadIds, aiVerdict]);
 
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
