@@ -54,6 +54,7 @@ const DashboardLeads = () => {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const [source, setSource] = useState("All");
+  const [aiVerdict, setAiVerdict] = useState("All");
   const [sort, setSort] = useState<LeadFilters["sort"]>("newest");
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
