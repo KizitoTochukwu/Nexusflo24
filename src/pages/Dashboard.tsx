@@ -348,4 +348,53 @@ const Dashboard = () => {
   );
 };
 
+const AI_COLORS: Record<string, string> = {
+  hot: "hsl(0 72% 51%)",
+  warm: "hsl(38 92% 50%)",
+  cold: "hsl(210 80% 55%)",
+  not_qualified: "hsl(var(--muted-foreground))",
+};
+const AI_LABELS: Record<string, string> = { hot: "🔥 Hot", warm: "🌤 Warm", cold: "❄️ Cold", not_qualified: "⛔ N/A" };
+
+function AiQualificationWidget({ distribution, workspaceId }: { distribution: { hot: number; warm: number; cold: number; not_qualified: number; total: number }; workspaceId: string }) {
+  const data = (["hot", "warm", "cold", "not_qualified"] as const)
+    .filter((k) => distribution[k] > 0)
+    .map((k) => ({ name: AI_LABELS[k], value: distribution[k], key: k }));
+
+  return (
+    <div className="rounded-xl border bg-card p-6 shadow-card overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold flex items-center gap-2"><Sparkles className="h-4 w-4 text-accent" /> AI Lead Qualification</h3>
+        <Link to={`/dashboard/${workspaceId}/leads`} className="text-xs text-accent hover:underline">View leads →</Link>
+      </div>
+      <div className="flex items-center gap-6">
+        <div className="w-[140px] h-[140px] shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} dataKey="value" cx="50%" cy="50%" innerRadius={35} outerRadius={60} paddingAngle={3} strokeWidth={0}>
+                {data.map((d) => (
+                  <Cell key={d.key} fill={AI_COLORS[d.key]} />
+                ))}
+              </Pie>
+              <RechartTooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex flex-col gap-2 flex-1">
+          {data.map((d) => (
+            <div key={d.key} className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: AI_COLORS[d.key] }} />
+                <span>{d.name}</span>
+              </div>
+              <span className="font-semibold">{d.value} <span className="text-xs text-muted-foreground font-normal">({Math.round((d.value / distribution.total) * 100)}%)</span></span>
+            </div>
+          ))}
+          <div className="pt-1 border-t text-xs text-muted-foreground">{distribution.total} lead{distribution.total !== 1 ? "s" : ""} qualified by AI</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default Dashboard;
