@@ -30,6 +30,8 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 const STATUSES = ["All", "New", "Warm", "Hot", "Won", "Lost"];
 const SOURCES = ["All", "Landing Page", "WhatsApp", "Facebook Ad", "Referral", "Organic", "Other"];
+const AI_VERDICTS = ["All", "hot", "warm", "cold", "not_qualified"];
+const AI_VERDICT_LABELS: Record<string, string> = { All: "All AI", hot: "🔥 Hot", warm: "🌤 Warm", cold: "❄️ Cold", not_qualified: "⛔ Not Qualified" };
 const SORTS: { label: string; value: LeadFilters["sort"] }[] = [
   { label: "Newest", value: "newest" },
   { label: "Oldest", value: "oldest" },
