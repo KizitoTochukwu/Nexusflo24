@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import LeadPicker from "@/components/campaigns/LeadPicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
