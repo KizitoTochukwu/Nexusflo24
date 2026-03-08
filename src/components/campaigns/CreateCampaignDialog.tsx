@@ -144,6 +144,7 @@ export default function CreateCampaignDialog() {
         delay_minutes: parseInt(fallbackDelay), condition: fallbackCondition,
       } as any : {} as any,
       audience_filter: {
+        ...(useLeadPicker && selectedLeadIds.length > 0 ? { lead_ids: selectedLeadIds } : {}),
         ...(audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
         ...(audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
         ...(audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
