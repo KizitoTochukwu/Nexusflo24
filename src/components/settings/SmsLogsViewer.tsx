@@ -106,7 +106,7 @@ export function SmsLogsViewer({ workspaceId }: SmsLogsViewerProps) {
             <p className="text-xs text-muted-foreground">Total</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
-            <p className="text-2xl font-bold text-emerald-600">{stats.delivered}</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.delivered}</p>
             <p className="text-xs text-muted-foreground">Delivered</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
