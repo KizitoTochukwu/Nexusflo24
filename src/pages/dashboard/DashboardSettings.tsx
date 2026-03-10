@@ -27,7 +27,7 @@ import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useAdminRole";
 import { Bot } from "lucide-react";
 import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab";
-import { SmsLogsViewer } from "@/components/settings/SmsLogsViewer";
+
 
 /* ── Profile Tab ─────────────────────────────────────────── */
 
