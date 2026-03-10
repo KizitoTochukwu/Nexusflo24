@@ -366,8 +366,6 @@ function IntegrationsTab() {
         </CardContent>
       </Card>
 
-      {/* SMS Delivery Logs */}
-      <SmsLogsViewer workspaceId={workspaceId} />
     </div>
   );
 }
