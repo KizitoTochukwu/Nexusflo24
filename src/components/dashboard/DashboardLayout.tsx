@@ -6,8 +6,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield
-} from "lucide-react";
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield } from
+"lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
 import PlanBadge from "@/components/billing/PlanBadge";
@@ -16,10 +16,10 @@ import FreePlanBanner from "@/components/billing/FreePlanBanner";
 import { useIsAdmin } from "@/hooks/useAdminRole";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from
+"@/components/ui/dropdown-menu";
 
-const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,16 +30,16 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   useNotificationWatcher();
 
   const sidebarItems = [
-    { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
-    { icon: Users, label: "Leads", to: `/dashboard/${workspaceId}/leads` },
-    { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
-    { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
-    { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
-    { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
-    { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
-    { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
-    ...(isAdmin ? [{ icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` }] : []),
-  ];
+  { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
+  { icon: Users, label: "Leads", to: `/dashboard/${workspaceId}/leads` },
+  { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
+  { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
+  { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
+  { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
+  { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
+  { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
+  ...(isAdmin ? [{ icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` }] : [])];
+
 
   const handleLogout = async () => {
     await signOut();
@@ -57,12 +57,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-primary transition-all duration-300 ${
-          sidebarOpen ? "w-56" : "w-14"
-        }`}
-      >
+        sidebarOpen ? "w-56" : "w-14"}`
+        }>
+        
         <div className="flex h-14 items-center justify-between px-3">
           <Link to="/" className="flex items-center">
-            <SidebarLogo collapsed={!sidebarOpen} />
+            <SidebarLogo collapsed={!sidebarOpen} className="rounded-lg" />
           </Link>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded p-1 text-primary-foreground/60 hover:text-primary-foreground">
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -76,15 +76,15 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 key={item.label}
                 to={item.to}
                 className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-primary-foreground/60 hover:bg-sidebar-accent/50 hover:text-primary-foreground"
-                }`}
-              >
+                isActive ?
+                "bg-sidebar-accent text-sidebar-accent-foreground" :
+                "text-primary-foreground/60 hover:bg-sidebar-accent/50 hover:text-primary-foreground"}`
+                }>
+                
                 <item.icon className="h-4 w-4 shrink-0" />
                 {sidebarOpen && <span>{item.label}</span>}
-              </Link>
-            );
+              </Link>);
+
           })}
         </nav>
 
@@ -92,8 +92,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="border-t border-sidebar-border px-2 py-3">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-primary-foreground"
-          >
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-primary-foreground">
+            
             <LogOut className="h-4 w-4 shrink-0" />
             {sidebarOpen && <span>Log Out</span>}
           </button>
@@ -116,16 +116,16 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel className="text-xs text-muted-foreground">Workspaces</DropdownMenuLabel>
-              {workspaces.map((ws) => (
-                <DropdownMenuItem
-                  key={ws.id}
-                  onClick={() => handleSwitchWorkspace(ws.id)}
-                  className="flex items-center justify-between"
-                >
+              {workspaces.map((ws) =>
+              <DropdownMenuItem
+                key={ws.id}
+                onClick={() => handleSwitchWorkspace(ws.id)}
+                className="flex items-center justify-between">
+                
                   <span className="truncate">{ws.name}</span>
                   {ws.id === workspaceId && <Check className="h-4 w-4 text-accent" />}
                 </DropdownMenuItem>
-              ))}
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -165,8 +165,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           {children}
         </div>
       </main>
-    </div>
-  );
+    </div>);
+
 };
 
 export default DashboardLayout;
