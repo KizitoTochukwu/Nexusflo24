@@ -57,11 +57,6 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const fetchStatus = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("channel-settings-get", {
-        body: null,
-        headers: {},
-      });
-      // Use GET via query param workaround: invoke with method override
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/channel-settings-get?workspaceId=${workspaceId}`,
         {
