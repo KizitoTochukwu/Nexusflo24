@@ -101,7 +101,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
       </aside>
 
       {/* Main */}
-      <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-56" : "ml-14"}`}>
+      <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-14"}`}>
         {/* Top bar */}
         <header className="flex h-14 items-center justify-between border-b bg-background px-6">
           {/* Workspace switcher */}
