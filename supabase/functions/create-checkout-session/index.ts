@@ -51,9 +51,8 @@ serve(async (req) => {
     const { plan, billingCycle, priceId, workspaceId } = await req.json();
     if (!priceId) throw new Error("Missing priceId");
 
-    // Validate priceId against allowed values from env
-    const allowedPrices = getAllowedPriceIds();
-    if (allowedPrices.size > 0 && !allowedPrices.has(priceId)) {
+    // Validate priceId against allowed values
+    if (!ALLOWED_PRICE_IDS.has(priceId)) {
       throw new Error("Invalid priceId");
     }
 
