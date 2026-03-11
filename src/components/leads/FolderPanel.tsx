@@ -112,7 +112,7 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
             <span className="flex-1 text-left truncate">{f.name}</span>
             <div className="flex items-center gap-1">
               {folderRules(f.id).length > 0 && (
-                <Route className="h-3 w-3 text-accent" title="Has routing rules" />
+                <Route className="h-3 w-3 text-accent" />
               )}
               <span className="text-xs text-muted-foreground">{f.lead_count ?? 0}</span>
             </div>
