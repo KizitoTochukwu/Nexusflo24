@@ -67,10 +67,9 @@ const Login = () => {
   return (
     <AuthLayout>
       {/* Mobile logo */}
-      <div className="mb-8 text-center lg:hidden">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-xl font-bold">
-          <span className="text-primary">Nexus</span>
-          <span className="text-gradient-gold">Flo24</span>
+      <div className="mb-6 text-center lg:hidden">
+        <Link to="/">
+          <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-9 sm:h-10 object-contain mx-auto" />
         </Link>
       </div>
 
