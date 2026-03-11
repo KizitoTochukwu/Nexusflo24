@@ -17,27 +17,17 @@ function getCorsHeaders(req: Request) {
   };
 }
 
-// Build allowed price IDs from environment variables
-function getAllowedPriceIds(): Set<string> {
-  const ids = new Set<string>();
-  const envKeys = [
-    "STRIPE_PRICE_STARTER_MONTHLY",
-    "STRIPE_PRICE_PLUS_MONTHLY",
-    "STRIPE_PRICE_PRO_MONTHLY",
-    "STRIPE_PRICE_PRO_YEARLY",
-    "STRIPE_PRICE_ENTERPRISE_MONTHLY",
-    "STRIPE_PRICE_AGENCY_MONTHLY",
-    "STRIPE_PRICE_AGENCY_YEARLY",
-    "STRIPE_PRICE_STARTER_YEARLY",
-    "STRIPE_PRICE_PLUS_YEARLY",
-    "STRIPE_PRICE_ENTERPRISE_YEARLY",
-  ];
-  for (const key of envKeys) {
-    const val = Deno.env.get(key);
-    if (val) ids.add(val);
-  }
-  return ids;
-}
+// Allowed price IDs (public Stripe identifiers, safe to hardcode)
+const ALLOWED_PRICE_IDS = new Set([
+  "price_1T9bcOCvKm9Paj6GxlTolt4h", // Starter Monthly
+  "price_1T9bvNCvKm9Paj6GhL3wIoV5", // Starter Yearly
+  "price_1T9bcnCvKm9Paj6GpHVLemoS", // Plus Monthly
+  "price_1T9bvvCvKm9Paj6G7cu39HN7", // Plus Yearly
+  "price_1T9bdICvKm9Paj6GJAwLkNMW", // Pro Monthly
+  "price_1T9bwOCvKm9Paj6GuvLk2302", // Pro Yearly
+  "price_1T9bdnCvKm9Paj6GslqdiDIe", // Enterprise Monthly
+  "price_1T9bwrCvKm9Paj6GvFJKQrSl", // Enterprise Yearly
+]);
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
