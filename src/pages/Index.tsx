@@ -87,23 +87,19 @@ const Index = () => {
             <p className="max-w-lg text-lg text-primary-foreground/70">
               NexusFlo24 helps you capture leads, nurture them automatically, and close more sales — all in one AI-powered platform.
             </p>
-            {heroCap.success ? (
-              <p className="text-base font-semibold text-gold">✓ You're in — check your inbox!</p>
-            ) : (
-              <form onSubmit={handleHeroSubmit} className="flex flex-wrap gap-3">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={heroEmail}
-                  onChange={(e) => setHeroEmail(e.target.value)}
-                  maxLength={255}
-                  className="max-w-xs bg-navy-light border-navy-lighter text-primary-foreground placeholder:text-primary-foreground/40"
-                />
-                <Button type="submit" size="lg" disabled={heroCap.loading} className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold text-base px-8">
-                  {heroCap.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Start Free Trial <ArrowRight className="ml-2 h-4 w-4" /></>}
-                </Button>
-              </form>
-            )}
+            <form onSubmit={handleHeroSubmit} className="flex flex-wrap gap-3">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={heroEmail}
+                onChange={(e) => setHeroEmail(e.target.value)}
+                maxLength={255}
+                className="max-w-xs bg-navy-light border-navy-lighter text-primary-foreground placeholder:text-primary-foreground/40"
+              />
+              <Button type="submit" size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold text-base px-8">
+                Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </form>
             <Link to="/contact?subject=demo" className="inline-block">
               <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-white hover:bg-primary hover:text-primary-foreground text-base px-8">
                 Book a Demo
