@@ -1,11 +1,20 @@
 import Layout from "@/components/layout/Layout";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Check, Zap, Loader2, Crown } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { PLANS, type PlanKey } from "@/lib/stripe/plans";
+import {
+  PLANS,
+  type PlanKey,
+  type BillingCycle,
+  getDisplayPrice,
+  getYearlyTotal,
+  getYearlySavings,
+} from "@/lib/stripe/plans";
 import { toast } from "sonner";
 
 interface PlanFeatureGroup {
@@ -16,7 +25,6 @@ interface PlanFeatureGroup {
 interface PricingTier {
   name: string;
   key: PlanKey;
-  price: number;
   subtitle: string;
   featureGroups: PlanFeatureGroup[];
   highlight: boolean;
@@ -28,7 +36,6 @@ const tiers: PricingTier[] = [
   {
     name: "Starter",
     key: "starter",
-    price: 15,
     subtitle: "For solopreneurs & side hustlers just getting started",
     trialNote: "14-day free trial — no card required",
     highlight: false,
@@ -42,20 +49,13 @@ const tiers: PricingTier[] = [
           "Basic CRM & pipeline",
         ],
       },
-      {
-        title: "AI-Powered",
-        features: ["10 AI copy generations/day"],
-      },
-      {
-        title: "Channels",
-        features: ["Email only"],
-      },
+      { title: "AI-Powered", features: ["10 AI copy generations/day"] },
+      { title: "Channels", features: ["Email only"] },
     ],
   },
   {
     name: "Plus",
     key: "plus",
-    price: 39,
     subtitle: "For growing businesses scaling their outreach",
     highlight: false,
     featureGroups: [
@@ -71,21 +71,14 @@ const tiers: PricingTier[] = [
       },
       {
         title: "AI-Powered",
-        features: [
-          "50 AI copy generations/day",
-          "Behaviour-triggered automations",
-        ],
+        features: ["50 AI copy generations/day", "Behaviour-triggered automations"],
       },
-      {
-        title: "Channels",
-        features: ["Email + WhatsApp"],
-      },
+      { title: "Channels", features: ["Email + WhatsApp"] },
     ],
   },
   {
     name: "Pro",
     key: "pro",
-    price: 79,
     subtitle: "For serious marketers who want everything",
     highlight: true,
     badge: "Most Popular",
@@ -109,38 +102,24 @@ const tiers: PricingTier[] = [
           "Advanced analytics & reporting",
         ],
       },
-      {
-        title: "Channels",
-        features: ["Email + WhatsApp + SMS"],
-      },
+      { title: "Channels", features: ["Email + WhatsApp + SMS"] },
     ],
   },
   {
     name: "Enterprise",
     key: "enterprise",
-    price: 199,
     subtitle: "For agencies & teams managing multiple clients",
     highlight: false,
     featureGroups: [
       {
         title: "Core Platform",
-        features: [
-          "Everything in Pro",
-          "Unlimited funnels",
-          "Multi-client workspaces",
-        ],
+        features: ["Everything in Pro", "Unlimited funnels", "Multi-client workspaces"],
       },
       {
         title: "AI-Powered",
-        features: [
-          "Unlimited AI across all tools",
-          "Priority AI processing",
-        ],
+        features: ["Unlimited AI across all tools", "Priority AI processing"],
       },
-      {
-        title: "Channels",
-        features: ["All channels + priority delivery"],
-      },
+      { title: "Channels", features: ["All channels + priority delivery"] },
       {
         title: "Advanced",
         features: [
@@ -172,6 +151,7 @@ const comparisonFeatures = [
 ];
 
 const Pricing = () => {
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -184,10 +164,12 @@ const Pricing = () => {
 
     setLoadingPlan(planKey);
     const plan = PLANS[planKey];
+    const priceId =
+      billingCycle === "yearly" ? plan.yearlyPriceId : plan.monthlyPriceId;
 
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { plan: planKey, billingCycle: "monthly", priceId: plan.monthlyPriceId },
+        body: { plan: planKey, billingCycle, priceId },
       });
 
       if (error) throw error;
@@ -217,6 +199,35 @@ const Pricing = () => {
           <p className="mx-auto mt-4 max-w-lg text-primary-foreground/70">
             Start with a 14-day free trial on Starter. Upgrade anytime as your business grows.
           </p>
+
+          {/* Billing Toggle */}
+          <div className="mx-auto mt-8 flex items-center justify-center gap-3">
+            <span
+              className={`text-sm font-medium ${
+                billingCycle === "monthly"
+                  ? "text-primary-foreground"
+                  : "text-primary-foreground/50"
+              }`}
+            >
+              Monthly
+            </span>
+            <Switch
+              checked={billingCycle === "yearly"}
+              onCheckedChange={(checked) =>
+                setBillingCycle(checked ? "yearly" : "monthly")
+              }
+            />
+            <span
+              className={`text-sm font-medium ${
+                billingCycle === "yearly"
+                  ? "text-primary-foreground"
+                  : "text-primary-foreground/50"
+              }`}
+            >
+              Yearly
+            </span>
+            <Badge className="bg-accent text-accent-foreground text-xs">Save 20%</Badge>
+          </div>
         </div>
       </section>
 
@@ -224,75 +235,92 @@ const Pricing = () => {
       <section className="-mt-8 pb-20">
         <div className="container">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {tiers.map((tier) => (
-              <div
-                key={tier.name}
-                className={`relative flex flex-col rounded-2xl border p-6 transition-shadow hover:shadow-lg ${
-                  tier.highlight
-                    ? "border-accent bg-card shadow-gold ring-2 ring-accent/20"
-                    : "bg-card shadow-card"
-                }`}
-              >
-                {tier.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-accent px-4 py-1 text-xs font-bold text-accent-foreground">
-                    <Crown className="h-3 w-3" />
-                    {tier.badge}
-                  </div>
-                )}
+            {tiers.map((tier) => {
+              const plan = PLANS[tier.key];
+              const displayPrice = getDisplayPrice(plan.monthlyPrice, billingCycle);
+              const savings = getYearlySavings(plan.monthlyPrice);
 
-                <div className="mb-4">
-                  <h3 className="text-lg font-bold">{tier.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{tier.subtitle}</p>
-                </div>
-
-                <div className="mb-1">
-                  <span className="text-4xl font-extrabold">${tier.price}</span>
-                  <span className="text-muted-foreground">/mo</span>
-                </div>
-
-                {tier.trialNote && (
-                  <p className="mb-4 text-xs font-medium text-accent">{tier.trialNote}</p>
-                )}
-                {!tier.trialNote && <p className="mb-4 text-xs text-muted-foreground">Billed monthly</p>}
-
-                <div className="mb-6 flex-1 space-y-4">
-                  {tier.featureGroups.map((group) => (
-                    <div key={group.title}>
-                      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {group.title}
-                      </p>
-                      <ul className="space-y-1.5">
-                        {group.features.map((f) => (
-                          <li key={f} className="flex items-start gap-2 text-sm">
-                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-                            <span>{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  className={`w-full ${
+              return (
+                <div
+                  key={tier.name}
+                  className={`relative flex flex-col rounded-2xl border p-6 transition-shadow hover:shadow-lg ${
                     tier.highlight
-                      ? "bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
-                      : ""
+                      ? "border-accent bg-card shadow-gold ring-2 ring-accent/20"
+                      : "bg-card shadow-card"
                   }`}
-                  variant={tier.highlight ? "default" : "outline"}
-                  disabled={loadingPlan === tier.key}
-                  onClick={() => handleSubscribe(tier.key)}
                 >
-                  {loadingPlan === tier.key ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…
-                    </>
-                  ) : (
-                    "Buy Now"
+                  {tier.badge && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-accent px-4 py-1 text-xs font-bold text-accent-foreground">
+                      <Crown className="h-3 w-3" />
+                      {tier.badge}
+                    </div>
                   )}
-                </Button>
-              </div>
-            ))}
+
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold">{tier.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      {tier.subtitle}
+                    </p>
+                  </div>
+
+                  <div className="mb-1">
+                    <span className="text-4xl font-extrabold">${displayPrice}</span>
+                    <span className="text-muted-foreground">/mo</span>
+                  </div>
+
+                  {/* Billing descriptor */}
+                  {tier.trialNote && billingCycle === "monthly" ? (
+                    <p className="mb-4 text-xs font-medium text-accent">{tier.trialNote}</p>
+                  ) : billingCycle === "yearly" ? (
+                    <p className="mb-4 text-xs text-muted-foreground">
+                      Billed ${getYearlyTotal(plan.monthlyPrice)}/yr&nbsp;
+                      <span className="font-semibold text-accent">
+                        — Save ${savings}/yr
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="mb-4 text-xs text-muted-foreground">Billed monthly</p>
+                  )}
+
+                  <div className="mb-6 flex-1 space-y-4">
+                    {tier.featureGroups.map((group) => (
+                      <div key={group.title}>
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {group.title}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {group.features.map((f) => (
+                            <li key={f} className="flex items-start gap-2 text-sm">
+                              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                              <span>{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    className={`w-full ${
+                      tier.highlight
+                        ? "bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
+                        : ""
+                    }`}
+                    variant={tier.highlight ? "default" : "outline"}
+                    disabled={loadingPlan === tier.key}
+                    onClick={() => handleSubscribe(tier.key)}
+                  >
+                    {loadingPlan === tier.key ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…
+                      </>
+                    ) : (
+                      "Buy Now"
+                    )}
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
