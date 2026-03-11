@@ -57,12 +57,12 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-primary transition-all duration-300 ${
-        sidebarOpen ? "w-56" : "w-14"}`
+        sidebarOpen ? "w-64" : "w-14"}`
         }>
         
         <div className="flex h-14 items-center justify-between px-3">
           <Link to="/" className="flex items-center">
-            <SidebarLogo collapsed={!sidebarOpen} className="rounded" />
+            <SidebarLogo collapsed={!sidebarOpen} />
           </Link>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded p-1 text-primary-foreground/60 hover:text-primary-foreground">
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -101,7 +101,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
       </aside>
 
       {/* Main */}
-      <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-56" : "ml-14"}`}>
+      <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-14"}`}>
         {/* Top bar */}
         <header className="flex h-14 items-center justify-between border-b bg-background px-6">
           {/* Workspace switcher */}
