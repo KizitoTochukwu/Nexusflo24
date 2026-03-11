@@ -4,6 +4,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { usePlanGating } from "@/hooks/usePlanGating";
 
+export const PIPELINE_STAGES = [
+  { value: "new_lead", label: "New Lead", color: "bg-blue-100 text-blue-700" },
+  { value: "contacted", label: "Contacted", color: "bg-indigo-100 text-indigo-700" },
+  { value: "engaged", label: "Engaged", color: "bg-purple-100 text-purple-700" },
+  { value: "qualified", label: "Qualified", color: "bg-amber-100 text-amber-700" },
+  { value: "demo_booked", label: "Demo Booked", color: "bg-yellow-100 text-yellow-800" },
+  { value: "proposal_sent", label: "Proposal Sent", color: "bg-orange-100 text-orange-700" },
+  { value: "won", label: "Won", color: "bg-green-100 text-green-700" },
+  { value: "lost", label: "Lost", color: "bg-muted text-muted-foreground" },
+] as const;
+
+export type PipelineStage = typeof PIPELINE_STAGES[number]["value"];
+
 export type Lead = {
   id: string;
   user_id: string;
@@ -19,6 +32,11 @@ export type Lead = {
   last_activity_at: string | null;
   created_at: string;
   updated_at: string;
+  pipeline_stage: PipelineStage;
+  assigned_owner_id: string | null;
+  campaign_name: string | null;
+  funnel_name: string | null;
+  ai_qualification: Record<string, unknown> | null;
 };
 
 export type LeadActivity = {
