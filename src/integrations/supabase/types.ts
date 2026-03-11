@@ -1521,6 +1521,44 @@ export type Database = {
           },
         ]
       }
+      workspace_channel_settings: {
+        Row: {
+          channel: string
+          config_encrypted: string
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel: string
+          config_encrypted: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel?: string
+          config_encrypted?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_channel_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
