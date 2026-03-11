@@ -62,7 +62,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
         
         <div className="flex h-14 items-center justify-between px-3">
           <Link to="/" className="flex items-center">
-            <SidebarLogo collapsed={!sidebarOpen} />
+            <SidebarLogo collapsed={!sidebarOpen} className="rounded" />
           </Link>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="rounded p-1 text-primary-foreground/60 hover:text-primary-foreground">
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
