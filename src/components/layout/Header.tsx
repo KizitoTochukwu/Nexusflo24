@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import logoFull from "@/assets/nexusflo24-logo-full.png";
 
 const navLinks = [
-  { label: "Dashboard", to: "/dashboard" },
-  { label: "Features", to: "/features" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "Academy", to: "/academy" },
-  { label: "Blog", to: "/blog" },
-  { label: "Referral", to: "/referral" },
-];
+{ label: "Dashboard", to: "/dashboard" },
+{ label: "Features", to: "/features" },
+{ label: "Pricing", to: "/pricing" },
+{ label: "Academy", to: "/academy" },
+{ label: "Blog", to: "/blog" },
+{ label: "Referral", to: "/referral" }];
+
 
 
 const Header = () => {
@@ -22,7 +22,7 @@ const Header = () => {
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center">
-          <img alt="NexusFlo24" className="h-8 w-auto object-contain" src={logoFull} />
+          <img alt="NexusFlo24" className="h-8 w-auto object-contain rounded-md" src={logoFull} />
         </Link>
 
         {/* Desktop nav */}
