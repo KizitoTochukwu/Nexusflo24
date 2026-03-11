@@ -57,7 +57,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-primary transition-all duration-300 ${
-        sidebarOpen ? "w-56" : "w-14"}`
+        sidebarOpen ? "w-64" : "w-14"}`
         }>
         
         <div className="flex h-14 items-center justify-between px-3">
