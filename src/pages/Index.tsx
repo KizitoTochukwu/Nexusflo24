@@ -15,7 +15,7 @@ import {
 import heroDashboard from "@/assets/hero-dashboard.png";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useCaptureLead } from "@/hooks/useCaptureLead";
+
 
 const features = [
   { icon: Brain, title: "AI Lead Gen Engine", desc: "Capture and score leads automatically with AI-powered forms and landing pages." },
