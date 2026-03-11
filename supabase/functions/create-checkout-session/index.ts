@@ -21,8 +21,11 @@ function getCorsHeaders(req: Request) {
 function getAllowedPriceIds(): Set<string> {
   const ids = new Set<string>();
   const envKeys = [
+    "STRIPE_PRICE_STARTER_MONTHLY",
+    "STRIPE_PRICE_PLUS_MONTHLY",
     "STRIPE_PRICE_PRO_MONTHLY",
     "STRIPE_PRICE_PRO_YEARLY",
+    "STRIPE_PRICE_ENTERPRISE_MONTHLY",
     "STRIPE_PRICE_AGENCY_MONTHLY",
     "STRIPE_PRICE_AGENCY_YEARLY",
   ];
