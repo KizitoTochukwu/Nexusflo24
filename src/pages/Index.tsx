@@ -100,7 +100,7 @@ const Index = () => {
                 Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </form>
-            <Link to="/contact?subject=demo" className="inline-block">
+            <Link to="/dashboard/bookings" className="inline-block">
               <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-white hover:bg-primary hover:text-primary-foreground text-base px-8">
                 Book a Demo
               </Button>
