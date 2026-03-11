@@ -190,8 +190,8 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-        <p className="text-xs text-blue-800">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+        <p className="text-xs text-foreground/80">
           <strong>Bring Your Own Sender:</strong> Connect your own Email domain, SMS credentials, or WhatsApp Business number.
           If not configured, the platform default credentials are used.
         </p>
