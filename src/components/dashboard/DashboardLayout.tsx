@@ -63,7 +63,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
         <div className="flex h-14 items-center justify-between px-3">
           {sidebarOpen && (
             <Link to="/" className="flex items-center">
-              <SidebarLogo collapsed={!sidebarOpen} className="rounded" />
+              <SidebarLogo collapsed={!sidebarOpen} />
             </Link>
           )}
           <button
