@@ -368,7 +368,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.whatsapp?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => disconnectChannel("whatsapp")}>
+                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("whatsapp")}>
                     <Unplug className="h-4 w-4 mr-1" />Disconnect
                   </Button>
                 )}
