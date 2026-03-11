@@ -444,7 +444,7 @@ const Features = () => (
           <div className="rounded-xl border bg-card p-6 shadow-card-hover">
             <div className="mb-4 flex items-center justify-between">
               <h4 className="text-sm font-semibold text-muted-foreground">Funnel: Product Launch</h4>
-              <Badge className="bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/15 text-xs">Published</Badge>
+              <Badge className="bg-accent/10 text-accent border-accent/30 hover:bg-accent/15 text-xs">Published</Badge>
             </div>
             <div className="space-y-4">
               {[
