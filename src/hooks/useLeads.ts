@@ -76,6 +76,9 @@ export function useLeads(workspaceId: string, filters: LeadFilters = {}) {
       if (filters.source && filters.source !== "All") {
         query = query.eq("source", filters.source);
       }
+      if (filters.pipeline_stage) {
+        query = query.eq("pipeline_stage", filters.pipeline_stage);
+      }
 
       if (filters.sort === "oldest") {
         query = query.order("created_at", { ascending: true });
