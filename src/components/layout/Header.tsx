@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/nexusflo24-logo.png";
+import logoFull from "@/assets/nexusflo24-logo-full.png";
 
 const navLinks = [
   { label: "Dashboard", to: "/dashboard" },
@@ -21,10 +21,8 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-          <img alt="NexusFlo24 Logo" className="h-8 w-8 rounded-lg object-cover" src={logo} />
-          <span className="text-primary">Nexus</span>
-          <span className="text-gradient-gold text-left">Flo24</span>
+        <Link to="/" className="flex items-center">
+          <img alt="NexusFlo24" className="h-8 w-auto object-contain" src={logoFull} />
         </Link>
 
         {/* Desktop nav */}
