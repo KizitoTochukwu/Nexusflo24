@@ -1,5 +1,6 @@
 import Layout from "@/components/layout/Layout";
 import PricingFaq from "@/components/pricing/PricingFaq";
+import PricingCtaBanner from "@/components/pricing/PricingCtaBanner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -359,6 +360,9 @@ const Pricing = () => {
 
       {/* FAQ */}
       <PricingFaq />
+
+      {/* CTA Banner */}
+      <PricingCtaBanner />
     </Layout>
   );
 };
