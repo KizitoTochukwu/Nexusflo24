@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ReactNode } from "react";
 import { Bot, Zap, TrendingUp, BarChart3 } from "lucide-react";
-import nexusLogo from "@/assets/nexusflo24-logo.png";
+import logoFull from "@/assets/nexusflo24-logo-full.png";
 
 const features = [
   { icon: Bot, text: "AI-Powered Lead Scoring & Nurturing" },
@@ -23,11 +23,8 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
         </div>
 
         <div className="relative z-10">
-          <Link to="/" className="inline-flex items-center gap-2.5">
-            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-10 w-10 rounded-lg object-cover" />
-            <span className="text-2xl font-extrabold text-primary-foreground">
-              Nexus<span className="text-gradient-gold">Flo24</span>
-            </span>
+          <Link to="/" className="inline-flex items-center">
+            <img src={logoFull} alt="NexusFlo24" className="h-10 w-auto object-contain" />
           </Link>
         </div>
 
