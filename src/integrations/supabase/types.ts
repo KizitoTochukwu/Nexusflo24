@@ -895,16 +895,119 @@ export type Database = {
           },
         ]
       }
+      lead_routing_rules: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          is_active: boolean
+          match_field: string
+          match_value: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          is_active?: boolean
+          match_field: string
+          match_value: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          is_active?: boolean
+          match_field?: string
+          match_value?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_routing_rules_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "lead_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_routing_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          is_completed: boolean
+          lead_id: string
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          lead_id: string
+          title: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          lead_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           ai_qualification: Json | null
+          assigned_owner_id: string | null
+          campaign_name: string | null
           created_at: string
           email: string | null
           full_name: string | null
+          funnel_name: string | null
           id: string
           last_activity_at: string | null
           notes: string | null
           phone: string | null
+          pipeline_stage: string
           score: number | null
           source: string | null
           status: string | null
@@ -915,13 +1018,17 @@ export type Database = {
         }
         Insert: {
           ai_qualification?: Json | null
+          assigned_owner_id?: string | null
+          campaign_name?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
+          funnel_name?: string | null
           id?: string
           last_activity_at?: string | null
           notes?: string | null
           phone?: string | null
+          pipeline_stage?: string
           score?: number | null
           source?: string | null
           status?: string | null
@@ -932,13 +1039,17 @@ export type Database = {
         }
         Update: {
           ai_qualification?: Json | null
+          assigned_owner_id?: string | null
+          campaign_name?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
+          funnel_name?: string | null
           id?: string
           last_activity_at?: string | null
           notes?: string | null
           phone?: string | null
+          pipeline_stage?: string
           score?: number | null
           source?: string | null
           status?: string | null
