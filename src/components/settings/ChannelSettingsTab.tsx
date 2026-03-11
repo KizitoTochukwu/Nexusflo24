@@ -178,7 +178,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       );
     }
     return (
-      <span className="flex items-center gap-1 text-xs text-emerald-600">
+      <span className="flex items-center gap-1 text-xs text-accent">
         <CheckCircle2 className="h-3.5 w-3.5" /> Custom credentials active
       </span>
     );
