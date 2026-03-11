@@ -3,15 +3,15 @@ import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function FreePlanBanner() {
-  const { isFree, isAdmin, loading } = usePlanGating();
+  const { isStarter, isAdmin, loading } = usePlanGating();
 
-  if (loading || !isFree || isAdmin) return null;
+  if (loading || !isStarter || isAdmin) return null;
 
   return (
     <div className="mb-4 flex items-center gap-3 rounded-lg border border-accent/20 bg-accent/5 px-4 py-3">
       <Sparkles className="h-4 w-4 shrink-0 text-accent" />
       <p className="flex-1 text-sm text-muted-foreground">
-        You're on the <span className="font-semibold text-foreground">Free Plan</span>. Upgrade to unlock unlimited leads, automations, and more.
+        You're on the <span className="font-semibold text-foreground">Starter Plan</span>. Upgrade to unlock unlimited leads, automations, and more.
       </p>
       <Link
         to="/pricing"

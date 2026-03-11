@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Check, X, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { PLAN_LIMITS, type PlanTier } from "@/lib/billing/planLimits";
+import type { PlanTier } from "@/lib/billing/planLimits";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -12,17 +12,17 @@ interface UpgradeModalProps {
 }
 
 const features = [
-  { label: "Leads", free: "100", pro: "Unlimited", agency: "Unlimited" },
-  { label: "Funnels", free: "1", pro: "5", agency: "Unlimited" },
-  { label: "Campaigns", free: "1", pro: "Unlimited", agency: "Unlimited" },
-  { label: "WhatsApp Automation", free: false, pro: true, agency: true },
-  { label: "AI Copy Generation", free: "10/day", pro: "Unlimited", agency: "Unlimited" },
-  { label: "Behaviour Triggers", free: false, pro: true, agency: true },
-  { label: "Advanced Analytics", free: false, pro: false, agency: true },
-  { label: "Multi-Workspace", free: false, pro: false, agency: true },
-  { label: "White-Label Branding", free: false, pro: false, agency: true },
-  { label: "Team Invites", free: false, pro: false, agency: true },
-  { label: "API Access", free: false, pro: false, agency: true },
+  { label: "Contacts", starter: "250", plus: "2,500", pro: "Unlimited", enterprise: "Unlimited" },
+  { label: "Funnels", starter: "1", plus: "3", pro: "10", enterprise: "Unlimited" },
+  { label: "Campaigns", starter: "2", plus: "10", pro: "Unlimited", enterprise: "Unlimited" },
+  { label: "WhatsApp", starter: false, plus: true, pro: true, enterprise: true },
+  { label: "SMS", starter: false, plus: false, pro: true, enterprise: true },
+  { label: "AI Copywriter", starter: "10/day", plus: "50/day", pro: "Unlimited", enterprise: "Unlimited" },
+  { label: "Behaviour Triggers", starter: false, plus: true, pro: true, enterprise: true },
+  { label: "Advanced Analytics", starter: false, plus: false, pro: true, enterprise: true },
+  { label: "Multi-Workspace", starter: false, plus: false, pro: false, enterprise: true },
+  { label: "White-Label", starter: false, plus: false, pro: false, enterprise: true },
+  { label: "API Access", starter: false, plus: false, pro: false, enterprise: true },
 ];
 
 function Cell({ value }: { value: boolean | string }) {
@@ -30,10 +30,17 @@ function Cell({ value }: { value: boolean | string }) {
   return value ? <Check className="h-4 w-4 text-accent mx-auto" /> : <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />;
 }
 
+const planLabels: Record<string, string> = {
+  starter: "Starter",
+  plus: "Plus",
+  pro: "Pro",
+  enterprise: "Enterprise",
+};
+
 export default function UpgradeModal({ open, onOpenChange, feature, requiredPlan }: UpgradeModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Sparkles className="h-5 w-5 text-accent" />
@@ -41,7 +48,7 @@ export default function UpgradeModal({ open, onOpenChange, feature, requiredPlan
           </DialogTitle>
           <DialogDescription>
             {feature
-              ? `"${feature}" requires a ${requiredPlan === "agency" ? "Agency" : "Pro"} plan.`
+              ? `"${feature}" requires a ${planLabels[requiredPlan || "pro"]} plan or higher.`
               : "Compare plans and choose the right one for your business."}
           </DialogDescription>
         </DialogHeader>
@@ -51,10 +58,11 @@ export default function UpgradeModal({ open, onOpenChange, feature, requiredPlan
             <thead>
               <tr className="border-b">
                 <th className="py-2 text-left font-medium text-muted-foreground">Feature</th>
-                <th className="py-2 text-center font-medium text-muted-foreground">Free</th>
+                <th className="py-2 text-center font-medium text-muted-foreground">Starter</th>
+                <th className="py-2 text-center font-medium">Plus</th>
                 <th className="py-2 text-center font-medium text-accent">Pro</th>
                 <th className="py-2 text-center font-medium">
-                  <span className="text-gradient-gold">Agency</span>
+                  <span className="text-gradient-gold">Enterprise</span>
                 </th>
               </tr>
             </thead>
@@ -62,9 +70,10 @@ export default function UpgradeModal({ open, onOpenChange, feature, requiredPlan
               {features.map((f) => (
                 <tr key={f.label} className="border-b last:border-0">
                   <td className="py-2.5 text-xs font-medium">{f.label}</td>
-                  <td className="py-2.5 text-center"><Cell value={f.free} /></td>
+                  <td className="py-2.5 text-center"><Cell value={f.starter} /></td>
+                  <td className="py-2.5 text-center"><Cell value={f.plus} /></td>
                   <td className="py-2.5 text-center"><Cell value={f.pro} /></td>
-                  <td className="py-2.5 text-center"><Cell value={f.agency} /></td>
+                  <td className="py-2.5 text-center"><Cell value={f.enterprise} /></td>
                 </tr>
               ))}
             </tbody>

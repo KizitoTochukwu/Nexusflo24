@@ -328,7 +328,7 @@ const Dashboard = () => {
       </LockedFeature>
 
       {/* Agency-only */}
-      <LockedFeature locked={!isAgency} featureName="Advanced Analytics" requiredPlan="agency">
+      <LockedFeature locked={!isEnterprise} featureName="Advanced Analytics" requiredPlan="enterprise">
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border bg-card p-6 shadow-card">
             <h4 className="text-sm font-medium text-muted-foreground">Client Revenue</h4>
