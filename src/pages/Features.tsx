@@ -359,10 +359,10 @@ const Features = () => (
               {[
                 { icon: Zap, label: "Trigger: New lead from funnel", color: "bg-accent/10 text-accent" },
                 { icon: Clock, label: "Wait 5 minutes", color: "bg-muted text-muted-foreground" },
-                { icon: Mail, label: "Send welcome email", color: "bg-blue-500/10 text-blue-600" },
-                { icon: Filter, label: "If: Opened email?", color: "bg-purple-500/10 text-purple-600" },
-                { icon: MessageSquare, label: "Yes → Send WhatsApp", color: "bg-green-500/10 text-green-600" },
-                { icon: Phone, label: "No → Send SMS reminder", color: "bg-orange-500/10 text-orange-600" },
+                { icon: Mail, label: "Send welcome email", color: "bg-accent/10 text-accent" },
+                { icon: Filter, label: "If: Opened email?", color: "bg-secondary text-secondary-foreground" },
+                { icon: MessageSquare, label: "Yes → Send WhatsApp", color: "bg-accent/10 text-accent" },
+                { icon: Phone, label: "No → Send SMS reminder", color: "bg-muted text-muted-foreground" },
               ].map((step, i) => (
                 <div key={i}>
                   <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
