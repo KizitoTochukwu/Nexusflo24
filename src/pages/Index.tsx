@@ -56,28 +56,15 @@ const integrations = ["Google Sheets", "Zapier", "Make.com", "Meta Ads", "Stripe
 
 const Index = () => {
   const [heroEmail, setHeroEmail] = useState("");
-  const heroCap = useCaptureLead();
+  const navigate = useNavigate();
 
-  const handleHeroSubmit = async (e: React.FormEvent) => {
+  const handleHeroSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!heroEmail || !/\S+@\S+\.\S+/.test(heroEmail)) {
       toast.error("Please enter a valid email address.");
       return;
     }
-    try {
-      await heroCap.capture({
-        email: heroEmail,
-        source: "Landing Page",
-        tags: ["website-signup", "hero-cta"],
-        notes: "Signed up via homepage hero CTA form.",
-        formId: "hero-cta",
-        page: "/",
-      });
-      toast.success("You're in — check your inbox!");
-      setHeroEmail("");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-    }
+    navigate(`/register?email=${encodeURIComponent(heroEmail)}`);
   };
 
   return (
