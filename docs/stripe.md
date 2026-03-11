@@ -7,33 +7,14 @@
 | `STRIPE_SECRET_KEY` | Your Stripe secret key (`sk_test_…` or `sk_live_…`) |
 | `STRIPE_WEBHOOK_SECRET` | Webhook signing secret (`whsec_…`) |
 
-## 2. Replace Price IDs
+## 2. Price IDs (configured)
 
-Open `src/lib/stripe/plans.ts` and replace the placeholder IDs with your actual Stripe price IDs:
-
-```ts
-pro: {
-  monthlyPriceId: "price_YOUR_PRO_MONTHLY",
-  yearlyPriceId: "price_YOUR_PRO_YEARLY",
-  productId: "prod_YOUR_PRO",
-},
-agency: {
-  monthlyPriceId: "price_YOUR_AGENCY_MONTHLY",
-  yearlyPriceId: "price_YOUR_AGENCY_YEARLY",
-  productId: "prod_YOUR_AGENCY",
-},
-```
-
-### Creating Products & Prices in Stripe Dashboard
-
-1. Go to **Stripe Dashboard → Products**
-2. Create **NexusFlo24 Pro** product with two prices:
-   - Monthly: $49/mo recurring
-   - Yearly: $39/mo ($468/yr) recurring
-3. Create **NexusFlo24 Agency** product with two prices:
-   - Monthly: $149/mo recurring
-   - Yearly: $119/mo ($1,428/yr) recurring
-4. Copy each price ID (`price_…`) into `plans.ts`
+| Plan | Price ID |
+|------|----------|
+| Starter ($15/mo) | `price_1T9bcOCvKm9Paj6GxlTolt4h` |
+| Plus ($39/mo) | `price_1T9bcnCvKm9Paj6GpHVLemoS` |
+| Pro ($79/mo) | `price_1T9bdICvKm9Paj6GJAwLkNMW` |
+| Enterprise ($199/mo) | `price_1T9bdnCvKm9Paj6GslqdiDIe` |
 
 ## 3. Webhook Setup
 
@@ -42,21 +23,19 @@ agency: {
 2. Add endpoint: `https://stuaikfyuwcjmchcvfie.supabase.co/functions/v1/stripe-webhook`
 3. Select events:
    - `checkout.session.completed`
+   - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
    - `invoice.payment_succeeded`
    - `invoice.payment_failed`
 4. Copy the signing secret → update `STRIPE_WEBHOOK_SECRET`
 
-### Local Testing (Stripe CLI)
-```bash
-stripe listen --forward-to http://localhost:54321/functions/v1/stripe-webhook
-```
+## 4. Plan Hierarchy
 
-## 4. Customer Portal
-
-1. Go to **Stripe Dashboard → Settings → Billing → Customer Portal**
-2. Enable it and configure allowed actions (cancel, update payment method, etc.)
+- **Starter** ($15/mo) — 14-day free trial, no card required. Account locks after trial unless subscribed.
+- **Plus** ($39/mo) — Growing businesses.
+- **Pro** ($79/mo) — Most popular. Full-featured.
+- **Enterprise** ($199/mo) — Agencies & teams. White-label, API, multi-workspace.
 
 ## 5. Test Cards
 
@@ -68,8 +47,8 @@ stripe listen --forward-to http://localhost:54321/functions/v1/stripe-webhook
 
 ## 6. Flow
 
-1. User clicks "Start Free Trial" on Pro/Agency → redirected to Stripe Checkout
-2. 14-day trial starts (card required)
+1. User clicks "Buy Now" on any plan → redirected to Stripe Checkout
+2. Starter plan includes 14-day free trial (no card required at signup)
 3. On success → redirected to `/dashboard?checkout=success`
 4. Webhook updates `subscriptions` table
 5. "Manage Billing" button opens Stripe Customer Portal
