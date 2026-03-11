@@ -278,34 +278,6 @@ const Index = () => {
       </div>
     </section>
 
-    {/* Pricing teaser */}
-    <section className="py-20 md:py-28">
-      <div className="container text-center">
-        <span className="text-sm font-semibold uppercase tracking-widest text-accent">Pricing</span>
-        <h2 className="mt-2 text-3xl font-bold md:text-4xl">Simple, Transparent Pricing</h2>
-        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-          Start free. Scale as you grow. No hidden fees.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
-          {[
-            { name: "Free Trial", price: "$0", note: "14 days" },
-            { name: "Pro", price: "$49/mo", note: "Full automation" },
-            { name: "Agency", price: "$149/mo", note: "White-label" },
-          ].map((p) => (
-            <div key={p.name} className="w-56 rounded-xl border bg-card p-6 shadow-card transition-all hover:shadow-card-hover">
-              <p className="text-sm font-medium text-muted-foreground">{p.name}</p>
-              <p className="mt-1 text-3xl font-bold">{p.price}</p>
-              <p className="text-xs text-muted-foreground">{p.note}</p>
-            </div>
-          ))}
-        </div>
-        <Link to="/pricing" className="mt-8 inline-block">
-          <Button variant="outline" size="lg">
-            View Full Pricing <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
-    </section>
 
     {/* FAQ */}
     <section className="bg-surface py-20 md:py-28">
