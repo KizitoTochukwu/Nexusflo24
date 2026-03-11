@@ -360,6 +360,9 @@ const Pricing = () => {
 
       {/* FAQ */}
       <PricingFaq />
+
+      {/* CTA Banner */}
+      <PricingCtaBanner />
     </Layout>
   );
 };
