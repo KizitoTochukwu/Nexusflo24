@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import nexusLogo from "@/assets/nexusflo24-logo-full.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
