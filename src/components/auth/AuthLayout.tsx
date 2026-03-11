@@ -23,11 +23,8 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
         </div>
 
         <div className="relative z-10">
-          <Link to="/" className="inline-flex items-center gap-2.5">
-            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-10 w-10 rounded-lg object-cover" />
-            <span className="text-2xl font-extrabold text-primary-foreground">
-              Nexus<span className="text-gradient-gold">Flo24</span>
-            </span>
+          <Link to="/" className="inline-flex items-center">
+            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-12 object-contain" />
           </Link>
         </div>
 
