@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
       .from("leads")
       .select("id, tags")
       .eq("workspace_id", workspaceId)
-      .eq("email", normalizedEmail)
+      .eq("user_id", ownerId)
+      .ilike("email", normalizedEmail)
       .maybeSingle();
 
     let leadId: string;
