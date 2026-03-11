@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Mail, Facebook, Linkedin, Instagram, Loader2 } from "lucide-react";
-import logoFull from "@/assets/nexusflo24-logo-full.png";
+import logo from "@/assets/nexusflo24-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -39,8 +39,9 @@ const Footer = () => {
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="space-y-4">
-            <Link to="/" className="flex items-center">
-              <img src={logoFull} alt="NexusFlo24" className="h-8 w-auto object-contain" />
+            <Link to="/" className="flex items-center gap-2 text-xl font-bold">
+              <img src={logo} alt="NexusFlo24 Logo" className="h-8 w-8 rounded-lg object-cover" />
+              <span>NexusFlo24</span>
             </Link>
             <p className="text-sm text-primary-foreground/70">
               Automate your marketing. Convert smarter. Grow faster — with AI.
