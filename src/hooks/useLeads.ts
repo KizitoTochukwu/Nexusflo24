@@ -53,6 +53,7 @@ export type LeadFilters = {
   search?: string;
   status?: string;
   source?: string;
+  pipeline_stage?: PipelineStage;
   sort?: "newest" | "oldest" | "highest_score";
 };
 
