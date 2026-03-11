@@ -151,7 +151,7 @@ const comparisonFeatures = [
 ];
 
 const Pricing = () => {
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("yearly");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
