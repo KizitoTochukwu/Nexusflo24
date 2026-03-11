@@ -102,14 +102,17 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ workspaceId, channel, config: {}, disconnect: true }),
+          body: JSON.stringify({ workspaceId, channel, disconnect: true }),
         }
       );
-      // Actually we need a delete endpoint. For now, save empty config which will be treated as not configured.
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to disconnect");
+      }
       toast.success(`${channel} disconnected.`);
       await fetchStatus();
-    } catch {
-      toast.error("Failed to disconnect");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to disconnect");
     }
   };
 
