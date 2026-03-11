@@ -496,7 +496,7 @@ const Features = () => (
                 <div key={m.label} className="rounded-lg border bg-muted/30 p-3">
                   <p className="text-xs text-muted-foreground">{m.label}</p>
                   <p className="text-lg font-bold">{m.value}</p>
-                  <p className="text-xs font-medium text-green-600">{m.change}</p>
+                  <p className="text-xs font-medium text-accent">{m.change}</p>
                 </div>
               ))}
             </div>
