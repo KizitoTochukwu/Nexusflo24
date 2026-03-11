@@ -39,7 +39,7 @@ const Dashboard = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const { data: metrics, isLoading } = useDashboardMetrics(workspaceId);
   const { data: demoSettings } = useDemoMode(workspaceId);
-  const { isPro, isAgency, isFree } = usePlanGating();
+  const { isPro, isEnterprise, isStarter } = usePlanGating();
 
   const isDemoMode = demoSettings?.demo_mode_enabled ?? false;
 
