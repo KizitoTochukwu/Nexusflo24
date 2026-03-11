@@ -39,7 +39,7 @@ const Dashboard = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const { data: metrics, isLoading } = useDashboardMetrics(workspaceId);
   const { data: demoSettings } = useDemoMode(workspaceId);
-  const { isPro, isAgency, isFree } = usePlanGating();
+  const { isPro, isEnterprise, isStarter } = usePlanGating();
 
   const isDemoMode = demoSettings?.demo_mode_enabled ?? false;
 
@@ -309,7 +309,7 @@ const Dashboard = () => {
       </div>
 
       {/* Workflow preview */}
-      <LockedFeature locked={isFree} featureName="Automation Workflows">
+      <LockedFeature locked={isStarter} featureName="Automation Workflows">
         <div className="mt-8 rounded-xl border bg-card p-6 shadow-card">
           <h3 className="mb-4 font-semibold">Automation Workflow Preview</h3>
           <div className="flex flex-wrap items-center gap-2">
@@ -328,7 +328,7 @@ const Dashboard = () => {
       </LockedFeature>
 
       {/* Agency-only */}
-      <LockedFeature locked={!isAgency} featureName="Advanced Analytics" requiredPlan="agency">
+      <LockedFeature locked={!isEnterprise} featureName="Advanced Analytics" requiredPlan="enterprise">
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl border bg-card p-6 shadow-card">
             <h4 className="text-sm font-medium text-muted-foreground">Client Revenue</h4>

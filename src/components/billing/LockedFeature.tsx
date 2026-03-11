@@ -18,6 +18,8 @@ export default function LockedFeature({ locked, featureName, requiredPlan = "pro
   // Admins are never locked out
   if (!locked || isAdmin) return <>{children}</>;
 
+  const planLabel = requiredPlan === "enterprise" ? "Enterprise" : requiredPlan === "pro" ? "Pro" : "Plus";
+
   return (
     <>
       <div className="relative cursor-pointer" onClick={() => setShowUpgrade(true)}>
@@ -27,7 +29,7 @@ export default function LockedFeature({ locked, featureName, requiredPlan = "pro
         <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-background/60 backdrop-blur-[1px]">
           <div className="flex flex-col items-center gap-2 rounded-lg border bg-card px-6 py-4 shadow-card">
             <Lock className="h-5 w-5 text-accent" />
-            <p className="text-sm font-semibold">Upgrade to {requiredPlan === "agency" ? "Agency" : "Pro"}</p>
+            <p className="text-sm font-semibold">Upgrade to {planLabel}</p>
             <p className="text-xs text-muted-foreground text-center max-w-[200px]">
               Unlock {featureName} and more premium features.
             </p>

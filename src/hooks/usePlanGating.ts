@@ -28,11 +28,11 @@ export function usePlanGating() {
   // Admin override — bypass all plan checks
   if (isAdmin) {
     return {
-      tier: "agency" as PlanTier,
+      tier: "enterprise" as PlanTier,
       limits: ADMIN_LIMITS,
       isPro: true,
-      isAgency: true,
-      isFree: false,
+      isEnterprise: true,
+      isStarter: false,
       isActive: true,
       isAdmin: true,
       isBillingWarning: false,
@@ -50,12 +50,12 @@ export function usePlanGating() {
   const limits: PlanLimits = getPlanLimits(subscription?.plan);
   const isActive = subscription ? ["active", "trialing"].includes(subscription.status) : false;
 
-  const effectiveTier: PlanTier = isActive ? tier : "free";
-  const effectiveLimits = isActive ? limits : getPlanLimits("free");
+  const effectiveTier: PlanTier = isActive ? tier : "starter";
+  const effectiveLimits = isActive ? limits : getPlanLimits("starter");
 
-  const isPro = effectiveTier === "pro" || effectiveTier === "agency";
-  const isAgency = effectiveTier === "agency";
-  const isFree = effectiveTier === "free";
+  const isPro = effectiveTier === "pro" || effectiveTier === "enterprise";
+  const isEnterprise = effectiveTier === "enterprise";
+  const isStarter = effectiveTier === "starter";
 
   const isBillingWarning = subscription
     ? ["past_due", "incomplete", "canceled", "incomplete_expired"].includes(subscription.status)
@@ -78,8 +78,8 @@ export function usePlanGating() {
     tier: effectiveTier,
     limits: effectiveLimits,
     isPro,
-    isAgency,
-    isFree,
+    isEnterprise,
+    isStarter,
     isActive,
     isAdmin: false,
     isBillingWarning,
