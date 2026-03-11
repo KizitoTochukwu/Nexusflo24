@@ -430,7 +430,7 @@ const Features = () => (
                 <p className="text-xs text-muted-foreground">Templates</p>
               </div>
               <div className="rounded-lg border bg-card px-4 py-3 shadow-card">
-                <p className="text-2xl font-extrabold text-accent">< 60s</p>
+                <p className="text-2xl font-extrabold text-accent">&lt; 60s</p>
                 <p className="text-xs text-muted-foreground">To publish</p>
               </div>
             </div>
