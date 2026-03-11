@@ -19,7 +19,6 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
-    // Validate and sanitize inputs
     const email = sanitizeString(body.email, 255);
     if (!email || !isValidEmail(email)) {
       return new Response(JSON.stringify({ error: "Valid email is required" }), {
@@ -35,7 +34,17 @@ Deno.serve(async (req) => {
     const tags = sanitizeTags(body.tags);
     const meta = typeof body.meta === "object" && body.meta !== null ? body.meta : {};
 
-    // Determine owner: use auth user if present, otherwise pick the first admin/profile
+    // Lead destination config from funnel step
+    const leadDest = typeof body.lead_destination === "object" && body.lead_destination !== null ? body.lead_destination : {};
+    const destTags: string[] = Array.isArray(leadDest.apply_tags) ? leadDest.apply_tags : [];
+    const destSource = sanitizeString(leadDest.source, 100);
+    const destPipelineStage = sanitizeString(leadDest.pipeline_stage, 50) || "new_lead";
+    const destFolderName = sanitizeString(leadDest.folder_name, 100);
+
+    // Campaign/funnel names from meta
+    const campaignName = sanitizeString(body.campaign_name || meta.campaign_name, 200);
+    const funnelName = sanitizeString(body.funnel_name || meta.funnel_name, 200);
+
     let ownerId: string | null = null;
     const authHeader = req.headers.get("Authorization");
     if (authHeader) {
@@ -44,7 +53,6 @@ Deno.serve(async (req) => {
       if (user) ownerId = user.id;
     }
 
-    // For anonymous visitors, assign to the first user in profiles (site owner)
     if (!ownerId) {
       const { data: firstProfile } = await supabase
         .from("profiles")
@@ -61,7 +69,6 @@ Deno.serve(async (req) => {
       ownerId = firstProfile.id;
     }
 
-    // Get the owner's first workspace
     const { data: membership } = await supabase
       .from("workspace_members")
       .select("workspace_id")
@@ -80,7 +87,6 @@ Deno.serve(async (req) => {
     const workspaceId = membership.workspace_id;
     const normalizedEmail = email.toLowerCase();
 
-    // Check for existing lead with same email within workspace
     const { data: existing } = await supabase
       .from("leads")
       .select("id, tags")
@@ -90,7 +96,9 @@ Deno.serve(async (req) => {
 
     let leadId: string;
     const now = new Date().toISOString();
-    const newTags = tags.length > 0 ? tags : ["website-signup"];
+    const allTags = Array.from(new Set([...tags, ...destTags]));
+    const newTags = allTags.length > 0 ? allTags : ["website-signup"];
+    const finalSource = destSource || source || "Landing Page";
 
     if (existing) {
       const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
@@ -103,6 +111,8 @@ Deno.serve(async (req) => {
           ...(full_name ? { full_name } : {}),
           ...(phone ? { phone } : {}),
           ...(notes ? { notes } : {}),
+          ...(campaignName ? { campaign_name: campaignName } : {}),
+          ...(funnelName ? { funnel_name: funnelName } : {}),
         })
         .eq("id", existing.id);
       if (error) throw error;
@@ -116,12 +126,15 @@ Deno.serve(async (req) => {
           full_name: full_name || null,
           email: normalizedEmail,
           phone: phone || null,
-          source: source || "Landing Page",
+          source: finalSource,
           status: "New",
           score: 10,
           tags: newTags,
           notes: notes || null,
           last_activity_at: now,
+          pipeline_stage: destPipelineStage,
+          campaign_name: campaignName || null,
+          funnel_name: funnelName || null,
         })
         .select("id")
         .single();
@@ -138,27 +151,98 @@ Deno.serve(async (req) => {
       meta: meta,
     });
 
+    // --- Auto-route to folders based on routing rules ---
+    try {
+      const { data: rules } = await supabase
+        .from("lead_routing_rules")
+        .select("folder_id, match_field, match_value")
+        .eq("workspace_id", workspaceId)
+        .eq("is_active", true);
+
+      if (rules && rules.length > 0) {
+        const matchedFolderIds = new Set<string>();
+
+        for (const rule of rules) {
+          let matches = false;
+          if (rule.match_field === "source" && finalSource.toLowerCase() === rule.match_value.toLowerCase()) {
+            matches = true;
+          } else if (rule.match_field === "campaign_name" && campaignName?.toLowerCase() === rule.match_value.toLowerCase()) {
+            matches = true;
+          } else if (rule.match_field === "funnel_name" && funnelName?.toLowerCase() === rule.match_value.toLowerCase()) {
+            matches = true;
+          } else if (rule.match_field === "tag" && newTags.some(t => t.toLowerCase() === rule.match_value.toLowerCase())) {
+            matches = true;
+          }
+          if (matches) matchedFolderIds.add(rule.folder_id);
+        }
+
+        for (const folderId of matchedFolderIds) {
+          // Check if not already in folder
+          const { data: existing } = await supabase
+            .from("lead_folder_leads")
+            .select("id")
+            .eq("lead_id", leadId)
+            .eq("folder_id", folderId)
+            .maybeSingle();
+
+          if (!existing) {
+            await supabase.from("lead_folder_leads").insert({
+              workspace_id: workspaceId,
+              folder_id: folderId,
+              lead_id: leadId,
+            });
+          }
+        }
+      }
+
+      // Also route by folder_name from lead destination
+      if (destFolderName) {
+        const { data: folder } = await supabase
+          .from("lead_folders")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .ilike("name", destFolderName)
+          .maybeSingle();
+
+        if (folder) {
+          const { data: existingLink } = await supabase
+            .from("lead_folder_leads")
+            .select("id")
+            .eq("lead_id", leadId)
+            .eq("folder_id", folder.id)
+            .maybeSingle();
+
+          if (!existingLink) {
+            await supabase.from("lead_folder_leads").insert({
+              workspace_id: workspaceId,
+              folder_id: folder.id,
+              lead_id: leadId,
+            });
+          }
+        }
+      }
+    } catch (routeErr) {
+      console.error("Routing error:", routeErr);
+    }
+
     // --- New lead notification (only for brand-new leads) ---
     if (!existing) {
       const leadName = full_name || normalizedEmail;
 
-      // 1. In-app notification
       await supabase.from("notifications").insert({
         workspace_id: workspaceId,
         user_id: ownerId,
         title: `New lead: ${leadName}`,
-        body: `${normalizedEmail}${source ? ` via ${source}` : ""}`,
+        body: `${normalizedEmail}${finalSource ? ` via ${finalSource}` : ""}`,
         type: "new_lead",
-        meta: { lead_id: leadId, email: normalizedEmail, source },
+        meta: { lead_id: leadId, email: normalizedEmail, source: finalSource },
       });
 
-      // 2. Email notification to workspace owner
       try {
         const resendKey = Deno.env.get("RESEND_API_KEY");
         const emailFrom = Deno.env.get("EMAIL_FROM") || "NexusFlo24 <noreply@nexusflo24.com>";
 
         if (resendKey) {
-          // Get owner email
           const { data: ownerProfile } = await supabase
             .from("profiles")
             .select("email, full_name")
@@ -188,7 +272,8 @@ Deno.serve(async (req) => {
                         <tr><td style="padding:4px 8px;font-weight:600;">Name</td><td style="padding:4px 8px;">${full_name || "—"}</td></tr>
                         <tr><td style="padding:4px 8px;font-weight:600;">Email</td><td style="padding:4px 8px;">${normalizedEmail}</td></tr>
                         ${phone ? `<tr><td style="padding:4px 8px;font-weight:600;">Phone</td><td style="padding:4px 8px;">${phone}</td></tr>` : ""}
-                        <tr><td style="padding:4px 8px;font-weight:600;">Source</td><td style="padding:4px 8px;">${source || "Landing Page"}</td></tr>
+                        <tr><td style="padding:4px 8px;font-weight:600;">Source</td><td style="padding:4px 8px;">${finalSource}</td></tr>
+                        <tr><td style="padding:4px 8px;font-weight:600;">Pipeline</td><td style="padding:4px 8px;">${destPipelineStage}</td></tr>
                       </table>
                     </div>
                     <div style="text-align:center;">
@@ -202,12 +287,11 @@ Deno.serve(async (req) => {
           }
         }
       } catch (emailErr) {
-        // Email notification failure should never block lead capture
         console.error("Email notification failed:", emailErr);
       }
     }
 
-    // --- Trigger matching automations for new leads ---
+    // --- Trigger matching automations ---
     if (!existing) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -241,7 +325,6 @@ Deno.serve(async (req) => {
         console.error("Automation trigger error:", autoErr);
       }
 
-      // --- Trigger matching campaigns for new leads ---
       try {
         const { data: triggeredCampaigns } = await supabase
           .from("campaigns")
@@ -252,6 +335,8 @@ Deno.serve(async (req) => {
           .contains("trigger_config", { type: "new_lead" });
 
         if (triggeredCampaigns && triggeredCampaigns.length > 0) {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+          const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
           const execCampaignUrl = `${supabaseUrl}/functions/v1/execute-campaign`;
           for (const camp of triggeredCampaigns) {
             try {
