@@ -1,34 +1,103 @@
 
 
-# Features Page Premium Redesign
+## Plan: Platform-Managed Integrations Access Control
 
-## Single File Change
-Rewrite `src/pages/Features.tsx` completely.
+### Context
 
-## New Page Structure
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-1. **Hero** — `bg-hero` gradient, badge, bold outcome headline ("Turn Visitors Into Revenue — Automatically"), subheadline, dual CTAs (gold + outline), `hero-dashboard.png` with perspective transform and glow shadow
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
-2. **Category Overview** — 4 cards: Core Growth Engine, Multichannel Communication, AI Automation, Performance & Scale. Each with icon, title, 3-4 bullet features
+### Changes
 
-3. **Spotlight Features** (6 sections, alternating white/surface bg) — Each has:
-   - Outcome-driven headline (e.g., "Convert 3x More Leads on Autopilot")
-   - Description + metric callout badge
-   - Faux product UI mockup built with styled Tailwind divs (CRM contact cards, email editor preview, flow builder wireframe, analytics charts, funnel builder)
-   - Features: AI Lead Gen, Smart CRM, Email+WhatsApp, Nurture Flow Builder, Funnel Builder, Analytics
+#### 1. Frontend: Split Settings Tabs by Role
 
-4. **AI Powerhouse** — Dark `bg-hero` section, 4 gold-accented cards: AI Copywriter, AI Campaign Assistant, AI Lead Response, AI GPT Chatbot. Subtle gold border glow
+**DashboardSettings.tsx** — Major restructure:
 
-5. **Integrations** — `bg-surface`, polished icon badges with hover effects, "Works with the tools you already love"
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
 
-6. **Security** — 3-column cards: GDPR, Encryption, Uptime SLA
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+```
 
-7. **CTA** — `bg-hero`, strong outcome headline, dual buttons
+#### 2. Move Provider Credentials to Platform ENV Secrets
 
-## Technical Notes
-- No new dependencies — uses existing Tailwind classes, lucide-react icons, shadcn Button/Badge/Card
-- Faux UI mockups use nested divs with borders, rounded corners, and realistic placeholder data
-- Reuses `hero-dashboard.png` from `src/assets/`
-- Maintains Layout wrapper (Header + Footer)
-- Copy is outcome-driven throughout ("Save 10+ hours/week", "3x conversion rates")
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+#### 3. Update Edge Functions for Platform Credentials
+
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+
+#### 4. Backend Admin Authorization
+
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
+```
+
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+
+#### 5. Admin Integrations Status Widget
+
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
+
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
+
+#### 6. Webhooks Tab (Customer-Accessible)
+
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
+
+This tab is workspace-scoped and visible to all authenticated users.
+
+### Files to Create/Edit
+
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+### Execution Order
+
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 
