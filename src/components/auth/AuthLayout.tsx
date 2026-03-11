@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ReactNode } from "react";
 import { Bot, Zap, TrendingUp, BarChart3 } from "lucide-react";
-import nexusLogo from "@/assets/nexusflo24-logo.png";
+import nexusLogo from "@/assets/nexusflo24-logo-full.png";
 
 const features = [
   { icon: Bot, text: "AI-Powered Lead Scoring & Nurturing" },
