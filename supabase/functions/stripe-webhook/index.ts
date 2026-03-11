@@ -171,7 +171,7 @@ serve(async (req) => {
           : (sub.customer as any)?.id;
 
         const { error: delErr } = await supabase.from("subscriptions").update({
-          plan: "free",
+          plan: "starter",
           status: "canceled",
         }).eq("stripe_customer_id", customerId);
 
