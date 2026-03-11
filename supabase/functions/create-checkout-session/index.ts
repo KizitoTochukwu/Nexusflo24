@@ -28,6 +28,9 @@ function getAllowedPriceIds(): Set<string> {
     "STRIPE_PRICE_ENTERPRISE_MONTHLY",
     "STRIPE_PRICE_AGENCY_MONTHLY",
     "STRIPE_PRICE_AGENCY_YEARLY",
+    "STRIPE_PRICE_STARTER_YEARLY",
+    "STRIPE_PRICE_PLUS_YEARLY",
+    "STRIPE_PRICE_ENTERPRISE_YEARLY",
   ];
   for (const key of envKeys) {
     const val = Deno.env.get(key);
@@ -72,12 +75,10 @@ serve(async (req) => {
     let customerId: string;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      // Ensure email is set on existing customer
       if (!customers.data[0].email) {
         await stripe.customers.update(customerId, { email: user.email });
       }
     } else {
-      // Always create customer with email so webhook fallback can match
       const newCustomer = await stripe.customers.create({
         email: user.email,
         metadata: { supabase_user_id: user.id },
@@ -90,11 +91,17 @@ serve(async (req) => {
       ? `${origin}/dashboard/${workspaceId}/overview?checkout=success`
       : `${origin}/dashboard?checkout=success`;
 
+    // Only apply 14-day trial to Starter plan
+    const subscriptionData: Record<string, unknown> = {};
+    if (plan === "starter") {
+      subscriptionData.trial_period_days = 14;
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
-      subscription_data: { trial_period_days: 14 },
+      subscription_data: subscriptionData,
       allow_promotion_codes: true,
       success_url: successUrl,
       cancel_url: `${origin}/pricing?checkout=cancel`,
@@ -108,7 +115,6 @@ serve(async (req) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[create-checkout-session] Error:", msg);
-    // Return safe messages for known client errors, generic for others
     const safeMessages = ["User not authenticated", "Missing priceId", "Invalid priceId"];
     const clientMsg = safeMessages.includes(msg) ? msg : "Unable to create checkout session.";
     return new Response(JSON.stringify({ error: clientMsg }), {
