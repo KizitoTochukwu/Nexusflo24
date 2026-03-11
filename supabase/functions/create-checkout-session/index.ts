@@ -2,20 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
-const allowedOrigins = [
-  "https://nexusflo24.lovable.app",
-  "https://id-preview--83abe329-97fa-4834-9de4-67adac397517.lovable.app",
-  "https://83abe329-97fa-4834-9de4-67adac397517.lovableproject.com",
-  "http://localhost:5173",
-];
-
-function getCorsHeaders(req: Request) {
-  const origin = req.headers.get("origin") || "";
-  return {
-    "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 // Allowed price IDs (public Stripe identifiers, safe to hardcode)
 const ALLOWED_PRICE_IDS = new Set([
@@ -30,7 +20,6 @@ const ALLOWED_PRICE_IDS = new Set([
 ]);
 
 serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
