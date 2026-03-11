@@ -309,7 +309,7 @@ const Dashboard = () => {
       </div>
 
       {/* Workflow preview */}
-      <LockedFeature locked={isFree} featureName="Automation Workflows">
+      <LockedFeature locked={isStarter} featureName="Automation Workflows">
         <div className="mt-8 rounded-xl border bg-card p-6 shadow-card">
           <h3 className="mb-4 font-semibold">Automation Workflow Preview</h3>
           <div className="flex flex-wrap items-center gap-2">
