@@ -52,10 +52,10 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { workspaceId, channel, config } = body;
+    const { workspaceId, channel, config, disconnect } = body;
 
-    if (!workspaceId || !channel || !config) {
-      return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, channel, config" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!workspaceId || !channel) {
+      return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, channel" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (!VALID_CHANNELS.includes(channel)) {
@@ -68,6 +68,23 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await adminClient.rpc("is_workspace_admin", { _user_id: user.id, _workspace_id: workspaceId });
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Forbidden: workspace admin required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Handle disconnect — delete the row entirely
+    if (disconnect) {
+      const { error: delErr } = await adminClient
+        .from("workspace_channel_settings")
+        .delete()
+        .eq("workspace_id", workspaceId)
+        .eq("channel", channel);
+
+      if (delErr) throw delErr;
+
+      return new Response(JSON.stringify({ success: true, disconnected: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (!config) {
+      return new Response(JSON.stringify({ error: "Missing config" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const encryptionKey = Deno.env.get("CHANNEL_SETTINGS_ENCRYPTION_KEY");
