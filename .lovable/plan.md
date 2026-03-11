@@ -1,103 +1,62 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+# Add Monthly/Yearly Billing Toggle
 
-### Context
+## Overview
+Add a billing cycle toggle to the pricing page with 20% yearly discount, create yearly Stripe prices, and update the checkout flow.
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+## Step 1 — Create Yearly Stripe Prices
+Create 4 new yearly recurring prices in Stripe (20% discount = monthly * 12 * 0.8):
+- **Starter Yearly**: $144/yr ($12/mo effective, was $15/mo)
+- **Plus Yearly**: $374.40/yr ($31.20/mo effective, was $39/mo)
+- **Pro Yearly**: $758.40/yr ($63.20/mo effective, was $79/mo)
+- **Enterprise Yearly**: $1,910.40/yr ($159.20/mo effective, was $199/mo)
 
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
+## Step 2 — Store Yearly Price IDs as Secrets
+Add 4 new secrets:
+- `STRIPE_PRICE_STARTER_YEARLY`
+- `STRIPE_PRICE_PLUS_YEARLY`
+- `STRIPE_PRICE_ENTERPRISE_YEARLY`
+- Update existing `STRIPE_PRICE_PRO_YEARLY` if needed
 
-### Changes
+## Step 3 — Update `src/lib/stripe/plans.ts`
+- Add `yearlyPriceId` to each plan entry
+- Add monthly prices as numbers for display calculations
+- Update `BillingCycle` type to `"monthly" | "yearly"`
 
-#### 1. Frontend: Split Settings Tabs by Role
-
-**DashboardSettings.tsx** — Major restructure:
-
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
-
-Tab layout:
-```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
-```
-
-#### 2. Move Provider Credentials to Platform ENV Secrets
-
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
-
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-#### 3. Update Edge Functions for Platform Credentials
-
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
-
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
-
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
-
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
-
-#### 4. Backend Admin Authorization
-
-All save-settings and test-send edge functions must verify admin role:
 ```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
+export const PLANS = {
+  starter: {
+    name: "Starter",
+    monthlyPrice: 15,
+    monthlyPriceId: "price_...",
+    yearlyPriceId: "price_...",
+  },
+  // ... same pattern for plus, pro, enterprise
+};
 ```
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+## Step 4 — Update `src/pages/Pricing.tsx`
+- Add `billingCycle` state (`"monthly" | "yearly"`)
+- Add a toggle switch in the hero section between "Monthly" and "Yearly" with a "Save 20%" badge
+- Dynamically compute displayed price: yearly shows `Math.round(monthlyPrice * 0.8)` per month
+- Show "Billed yearly" or "Billed monthly" beneath each price
+- Show annual savings text (e.g., "Save $36/yr") on yearly mode
+- Keep 14-day free trial note only on Starter
+- Pass correct `priceId` and `billingCycle` to `handleSubscribe`
 
-#### 5. Admin Integrations Status Widget
+## Step 5 — Update `supabase/functions/create-checkout-session/index.ts`
+- Add the 4 yearly env keys to the `getAllowedPriceIds` allowlist
+- Only apply `trial_period_days: 14` when the plan is `starter` (not all plans)
 
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
+## Step 6 — Update `docs/stripe.md`
+Add yearly Price IDs to the documentation table.
 
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
-
-#### 6. Webhooks Tab (Customer-Accessible)
-
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+## Files Changed
+| File | Change |
+|------|--------|
+| `src/lib/stripe/plans.ts` | Add yearly price IDs, monthly prices, update BillingCycle type |
+| `src/pages/Pricing.tsx` | Add toggle, dynamic pricing, savings display |
+| `supabase/functions/create-checkout-session/index.ts` | Add yearly env keys to allowlist, conditional trial |
+| `docs/stripe.md` | Document yearly Price IDs |
 
