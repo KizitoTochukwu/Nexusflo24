@@ -356,6 +356,9 @@ const Pricing = () => {
           </div>
         </div>
       </section>
+
+      {/* FAQ */}
+      <PricingFaq />
     </Layout>
   );
 };
