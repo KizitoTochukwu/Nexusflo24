@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +50,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [waTestTo, setWaTestTo] = useState("");
   const [waTestMsg, setWaTestMsg] = useState("");
   const [waTestSending, setWaTestSending] = useState(false);
-
+  const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
   useEffect(() => {
     fetchStatus();
   }, [workspaceId]);
@@ -241,7 +242,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.email?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => disconnectChannel("email")}>
+                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("email")}>
                     <Unplug className="h-4 w-4 mr-1" />Disconnect
                   </Button>
                 )}
@@ -304,7 +305,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   {smsSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.sms?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => disconnectChannel("sms")}>
+                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("sms")}>
                     <Unplug className="h-4 w-4 mr-1" />Disconnect
                   </Button>
                 )}
@@ -367,7 +368,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.whatsapp?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => disconnectChannel("whatsapp")}>
+                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("whatsapp")}>
                     <Unplug className="h-4 w-4 mr-1" />Disconnect
                   </Button>
                 )}
@@ -384,6 +385,30 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
           </CollapsibleContent>
         </Card>
       </Collapsible>
+      <AlertDialog open={!!disconnectTarget} onOpenChange={(open) => !open && setDisconnectTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect {disconnectTarget}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove your custom {disconnectTarget} credentials. Messages will fall back to platform defaults if available.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (disconnectTarget) {
+                  disconnectChannel(disconnectTarget);
+                  setDisconnectTarget(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
