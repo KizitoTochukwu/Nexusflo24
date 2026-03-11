@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import type { Lead } from "@/hooks/useLeads";
+import { PIPELINE_STAGES, type Lead } from "@/hooks/useLeads";
 
 const SOURCES = ["Landing Page", "WhatsApp", "Facebook Ad", "Referral", "Organic", "Other"];
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
@@ -21,6 +21,7 @@ const schema = z.object({
   phone: z.string().trim().max(30).optional(),
   source: z.string().default("Organic"),
   status: z.string().default("New"),
+  pipeline_stage: z.string().default("new_lead"),
   score: z.coerce.number().min(0).max(100).default(0),
   tags: z.string().optional(),
   notes: z.string().trim().max(2000).optional(),
@@ -34,9 +35,10 @@ type Props = {
   onSubmit: (values: Partial<Lead>) => void;
   defaultValues?: Partial<Lead>;
   loading?: boolean;
+  workspaceId?: string;
 };
 
-const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading }: Props) => {
+const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, workspaceId }: Props) => {
   const isEdit = !!defaultValues?.id;
 
   const form = useForm<FormValues>({
@@ -47,6 +49,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading }:
       phone: "",
       source: "Organic",
       status: "New",
+      pipeline_stage: "new_lead",
       score: 0,
       tags: "",
       notes: "",
@@ -61,6 +64,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading }:
         phone: defaultValues.phone || "",
         source: defaultValues.source || "Organic",
         status: defaultValues.status || "New",
+        pipeline_stage: defaultValues.pipeline_stage || "new_lead",
         score: defaultValues.score ?? 0,
         tags: defaultValues.tags?.join(", ") || "",
         notes: defaultValues.notes || "",
@@ -81,6 +85,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading }:
       phone: values.phone || null,
       source: values.source,
       status: values.status,
+      pipeline_stage: values.pipeline_stage as any,
       score: values.score,
       tags,
       notes: values.notes || null,
@@ -145,14 +150,26 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading }:
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="score" render={({ field }) => (
+              <FormField control={form.control} name="pipeline_stage" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Score (0–100)</FormLabel>
-                  <FormControl><Input type="number" min={0} max={100} {...field} /></FormControl>
+                  <FormLabel>Pipeline Stage</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {PIPELINE_STAGES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )} />
             </div>
+            <FormField control={form.control} name="score" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Score (0–100)</FormLabel>
+                <FormControl><Input type="number" min={0} max={100} {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
             <FormField control={form.control} name="tags" render={({ field }) => (
               <FormItem>
                 <FormLabel>Tags (comma-separated)</FormLabel>

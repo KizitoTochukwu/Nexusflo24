@@ -1,163 +1,103 @@
 
 
-# Enhanced Multi-Tenant CRM Architecture for NexusFlo24
+## Plan: Platform-Managed Integrations Access Control
 
-## Assessment
+### Context
 
-Much of the requested functionality already exists: lead folders, scoring bands, AI qualification, activity timeline, notes, communication history, tags, UTM tracking, duplicate detection, and folder-based filtering. The key gaps are:
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-1. **Pipeline stages** — current statuses are simple (New/Warm/Hot/Won/Lost); need full sales pipeline
-2. **Lead Destination Settings** — funnels/forms don't route leads to folders or apply tags automatically
-3. **Assigned owner** — leads don't have an owner field
-4. **Lead tasks** — no task entity per lead
-5. **Automatic routing rules** — no auto-folder-assignment based on source/campaign/tags
-6. **Smart lists** — no saved filter presets
-7. **Pipeline Kanban view** — only table view exists
-8. **Enhanced filters** — missing campaign, funnel, owner filters
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
-This is too large for a single implementation. I recommend a phased approach, starting with the highest-impact changes.
+### Changes
 
----
+#### 1. Frontend: Split Settings Tabs by Role
 
-## Phase 1: Pipeline Stages + Enhanced Lead Model (this implementation)
+**DashboardSettings.tsx** — Major restructure:
 
-### Database Changes
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
 
-**Migration 1** — Add `pipeline_stage`, `assigned_owner_id`, `campaign_name`, `funnel_name` columns to `leads` table:
-
-```sql
-ALTER TABLE public.leads
-  ADD COLUMN IF NOT EXISTS pipeline_stage text NOT NULL DEFAULT 'new_lead',
-  ADD COLUMN IF NOT EXISTS assigned_owner_id uuid,
-  ADD COLUMN IF NOT EXISTS campaign_name text,
-  ADD COLUMN IF NOT EXISTS funnel_name text;
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
 ```
 
-Pipeline stages: `new_lead`, `contacted`, `engaged`, `qualified`, `demo_booked`, `proposal_sent`, `won`, `lost`
+#### 2. Move Provider Credentials to Platform ENV Secrets
 
-**Migration 2** — Create `lead_tasks` table:
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
 
-```sql
-CREATE TABLE public.lead_tasks (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  lead_id uuid NOT NULL,
-  workspace_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  title text NOT NULL,
-  description text,
-  due_date timestamptz,
-  is_completed boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
 
-ALTER TABLE public.lead_tasks ENABLE ROW LEVEL SECURITY;
+#### 3. Update Edge Functions for Platform Credentials
 
-CREATE POLICY "Members can view workspace lead_tasks" ON public.lead_tasks
-  FOR SELECT TO authenticated USING (workspace_id IN (SELECT user_workspace_ids(auth.uid())));
-CREATE POLICY "Members can insert workspace lead_tasks" ON public.lead_tasks
-  FOR INSERT TO authenticated WITH CHECK (workspace_id IN (SELECT user_workspace_ids(auth.uid())));
-CREATE POLICY "Members can update workspace lead_tasks" ON public.lead_tasks
-  FOR UPDATE TO authenticated USING (workspace_id IN (SELECT user_workspace_ids(auth.uid())))
-  WITH CHECK (workspace_id IN (SELECT user_workspace_ids(auth.uid())));
-CREATE POLICY "Members can delete workspace lead_tasks" ON public.lead_tasks
-  FOR DELETE TO authenticated USING (workspace_id IN (SELECT user_workspace_ids(auth.uid())));
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+
+#### 4. Backend Admin Authorization
+
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
 ```
 
-**Migration 3** — Create `lead_routing_rules` table for automatic folder routing:
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
 
-```sql
-CREATE TABLE public.lead_routing_rules (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL,
-  folder_id uuid NOT NULL,
-  match_field text NOT NULL, -- 'source', 'campaign_name', 'funnel_name', 'tag'
-  match_value text NOT NULL,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+#### 5. Admin Integrations Status Widget
 
-ALTER TABLE public.lead_routing_rules ENABLE ROW LEVEL SECURITY;
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
 
-CREATE POLICY "Members can manage workspace routing_rules" ON public.lead_routing_rules
-  FOR ALL TO authenticated
-  USING (workspace_id IN (SELECT user_workspace_ids(auth.uid())))
-  WITH CHECK (workspace_id IN (SELECT user_workspace_ids(auth.uid())));
-```
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
 
-### Frontend Changes
+#### 6. Webhooks Tab (Customer-Accessible)
 
-**1. Update Lead Types & Hooks** (`src/hooks/useLeads.ts`)
-- Add `pipeline_stage`, `assigned_owner_id`, `campaign_name`, `funnel_name` to `Lead` type
-- Add pipeline stage filter to `LeadFilters`
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
 
-**2. New Hook** (`src/hooks/useLeadTasks.ts`)
-- CRUD for lead tasks with workspace-aware queries
+This tab is workspace-scoped and visible to all authenticated users.
 
-**3. Pipeline Kanban View** (`src/components/leads/PipelineView.tsx`)
-- Horizontal scrolling columns for each pipeline stage
-- Drag indicator on cards (actual drag-drop deferred to Phase 2)
-- Click to move between stages
-- Navy/gold/white branded cards
+### Files to Create/Edit
 
-**4. Enhanced Leads Page** (`src/pages/dashboard/DashboardLeads.tsx`)
-- Add toggle between Table View and Pipeline View
-- Add pipeline stage filter dropdown
-- Add assigned owner filter (pulls workspace members)
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
 
-**5. Enhanced Lead Details Drawer** (`src/components/leads/LeadDetailsDrawer.tsx`)
-- Add pipeline stage selector with visual stage indicator
-- Add Tasks section with add/complete/delete
-- Add assigned owner selector
-- Show campaign_name and funnel_name if present
+### Execution Order
 
-**6. Enhanced Add/Edit Lead Dialog** (`src/components/leads/AddLeadDialog.tsx`)
-- Add pipeline_stage field
-- Add assigned_owner selector (workspace members dropdown)
-
-**7. Folder Routing Rules UI** (`src/components/leads/FolderPanel.tsx`)
-- Add "Auto-Route" option in folder dropdown menu
-- Simple dialog to create rules: "When [source/campaign/tag] equals [value], add to this folder"
-
-**8. Lead Destination Settings in Funnel Builder** (`src/components/funnels/FunnelStepEditor.tsx`)
-- Add collapsible "Lead Destination Settings" section on optin steps
-- Fields: Save to Folder (dropdown), Apply Tags (input), Set Source, Set Pipeline Stage
-- Store in `page_content.lead_destination` JSON
-
-**9. Update `capture-lead` Edge Function**
-- Read lead_destination config from the funnel step
-- Apply folder assignment, tags, pipeline stage, campaign/funnel name on capture
-
-### UI Design
-
-- Pipeline stages rendered as colored pills matching the navy/gold palette
-- Kanban columns with subtle gradient headers
-- Stage badges: New Lead (blue), Contacted (indigo), Engaged (purple), Qualified (amber), Demo Booked (gold), Proposal Sent (orange), Won (green), Lost (gray)
-
----
-
-## Phase 2 (future)
-- Drag-and-drop Kanban with real-time updates
-- Smart lists (saved filter presets)
-- Advanced routing rules engine with multiple conditions
-- Lead Destination Settings in campaign wizard
-- Automation trigger from routing rules
-
----
-
-## File Summary
-
-| Action | File |
-|--------|------|
-| Migrate | 3 SQL migrations (leads columns, lead_tasks, lead_routing_rules) |
-| Modify | `src/hooks/useLeads.ts` — extended types + filters |
-| Create | `src/hooks/useLeadTasks.ts` |
-| Create | `src/hooks/useLeadRouting.ts` |
-| Create | `src/components/leads/PipelineView.tsx` |
-| Modify | `src/pages/dashboard/DashboardLeads.tsx` — view toggle + filters |
-| Modify | `src/components/leads/LeadDetailsDrawer.tsx` — tasks, pipeline, owner |
-| Modify | `src/components/leads/AddLeadDialog.tsx` — pipeline + owner fields |
-| Modify | `src/components/leads/FolderPanel.tsx` — routing rules UI |
-| Modify | `src/components/funnels/FunnelStepEditor.tsx` — lead destination |
-| Modify | `supabase/functions/capture-lead/index.ts` — apply destination config |
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 

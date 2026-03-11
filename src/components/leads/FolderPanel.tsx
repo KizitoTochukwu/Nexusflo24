@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -11,8 +12,10 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Inbox } from "lucide-react";
+import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Inbox, Route } from "lucide-react";
 import { type LeadFolder, useCreateFolder, useRenameFolder, useDeleteFolder } from "@/hooks/useLeadFolders";
+import { useRoutingRules, useCreateRoutingRule, useDeleteRoutingRule, type LeadRoutingRule } from "@/hooks/useLeadRouting";
+import { Badge } from "@/components/ui/badge";
 
 type Props = {
   folders: LeadFolder[];
@@ -23,11 +26,20 @@ type Props = {
 };
 
 const FOLDER_COLORS = ["#D4AF37", "#3B82F6", "#EF4444", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899"];
+const MATCH_FIELDS = [
+  { value: "source", label: "Source" },
+  { value: "campaign_name", label: "Campaign" },
+  { value: "funnel_name", label: "Funnel" },
+  { value: "tag", label: "Tag" },
+];
 
 const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, totalLeadCount }: Props) => {
   const createFolder = useCreateFolder();
   const renameFolder = useRenameFolder();
   const deleteFolder = useDeleteFolder();
+  const { data: routingRules = [] } = useRoutingRules(workspaceId);
+  const createRule = useCreateRoutingRule();
+  const deleteRule = useDeleteRoutingRule();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -35,6 +47,9 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [routeOpen, setRouteOpen] = useState<string | null>(null);
+  const [ruleField, setRuleField] = useState("source");
+  const [ruleValue, setRuleValue] = useState("");
 
   const handleCreate = () => {
     if (!newName.trim()) return;
@@ -59,6 +74,15 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
       },
     });
   };
+
+  const handleCreateRule = () => {
+    if (!routeOpen || !ruleValue.trim()) return;
+    createRule.mutate({ workspace_id: workspaceId, folder_id: routeOpen, match_field: ruleField, match_value: ruleValue.trim() }, {
+      onSuccess: () => { setRuleValue(""); },
+    });
+  };
+
+  const folderRules = (folderId: string) => routingRules.filter((r) => r.folder_id === folderId);
 
   return (
     <div className="w-full space-y-1">
@@ -86,7 +110,12 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
           >
             <FolderOpen className="h-4 w-4" style={{ color: f.color || undefined }} />
             <span className="flex-1 text-left truncate">{f.name}</span>
-            <span className="text-xs text-muted-foreground">{f.lead_count ?? 0}</span>
+            <div className="flex items-center gap-1">
+              {folderRules(f.id).length > 0 && (
+                <Route className="h-3 w-3 text-accent" />
+              )}
+              <span className="text-xs text-muted-foreground">{f.lead_count ?? 0}</span>
+            </div>
           </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -97,6 +126,9 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => { setRenameId(f.id); setRenameName(f.name); }}>
                 <Pencil className="mr-2 h-3.5 w-3.5" /> Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setRouteOpen(f.id); setRuleField("source"); setRuleValue(""); }}>
+                <Route className="mr-2 h-3.5 w-3.5" /> Auto-Route Rules
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setDeleteId(f.id)} className="text-destructive">
                 <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
@@ -145,6 +177,57 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
             <Button onClick={handleRename} disabled={!renameName.trim() || renameFolder.isPending} className="bg-accent text-accent-foreground hover:bg-accent/90">
               {renameFolder.isPending ? "Saving…" : "Save"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Routing Rules Dialog */}
+      <Dialog open={!!routeOpen} onOpenChange={(v) => { if (!v) setRouteOpen(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Route className="h-4 w-4" /> Auto-Route Rules
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Automatically add new leads to this folder when they match these rules.
+          </p>
+
+          {/* Existing rules */}
+          {routeOpen && folderRules(routeOpen).length > 0 && (
+            <div className="space-y-2">
+              {folderRules(routeOpen).map((rule) => (
+                <div key={rule.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">When </span>
+                    <Badge variant="secondary" className="text-xs">{MATCH_FIELDS.find(f => f.value === rule.match_field)?.label || rule.match_field}</Badge>
+                    <span className="text-muted-foreground"> = </span>
+                    <span className="font-medium">{rule.match_value}</span>
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => deleteRule.mutate({ id: rule.id, workspaceId })}>
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new rule */}
+          <div className="flex gap-2">
+            <Select value={ruleField} onValueChange={setRuleField}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MATCH_FIELDS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Input placeholder="Value to match…" value={ruleValue} onChange={(e) => setRuleValue(e.target.value)} className="flex-1" />
+            <Button onClick={handleCreateRule} disabled={!ruleValue.trim() || createRule.isPending} className="bg-accent text-accent-foreground">
+              Add
+            </Button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRouteOpen(null)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

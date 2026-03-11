@@ -16,8 +16,8 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Upload, Search, Pencil, Trash2, Eye, MoreVertical, Sparkles } from "lucide-react";
-import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, type Lead, type LeadFilters } from "@/hooks/useLeads";
+import { Plus, Upload, Search, Pencil, Trash2, Eye, MoreVertical, Sparkles, LayoutGrid, List } from "lucide-react";
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, PIPELINE_STAGES, type Lead, type LeadFilters, type PipelineStage } from "@/hooks/useLeads";
 import { useQualifyLead } from "@/hooks/useQualifyLead";
 import { useLeadFolders, useFolderLeadIds, useAssignLeadsToFolder, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
 import AddLeadDialog from "@/components/leads/AddLeadDialog";
@@ -26,6 +26,7 @@ import CsvImportDialog from "@/components/leads/CsvImportDialog";
 import FolderPanel from "@/components/leads/FolderPanel";
 import BulkActionBar from "@/components/leads/BulkActionBar";
 import DeleteAllDialog from "@/components/leads/DeleteAllDialog";
+import PipelineView from "@/components/leads/PipelineView";
 import { useSearchParams } from "react-router-dom";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
@@ -57,22 +58,24 @@ const DashboardLeads = () => {
   const [status, setStatus] = useState(initialStatus);
   const [source, setSource] = useState("All");
   const [aiVerdict, setAiVerdict] = useState(initialAiVerdict);
+  const [pipelineStage, setPipelineStage] = useState<string>("All");
   const [sort, setSort] = useState<LeadFilters["sort"]>("newest");
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"table" | "pipeline">("table");
 
   const filters: LeadFilters = useMemo(() => ({
     search: search || undefined,
     status: status !== "All" ? status : undefined,
     source: source !== "All" ? source : undefined,
+    pipeline_stage: pipelineStage !== "All" ? pipelineStage as PipelineStage : undefined,
     sort,
-  }), [search, status, source, sort]);
+  }), [search, status, source, pipelineStage, sort]);
 
   const { data: allLeads = [], isLoading } = useLeads(workspaceId, filters);
   const { data: folders = [] } = useLeadFolders(workspaceId);
   const { data: folderLeadIds } = useFolderLeadIds(activeFolderId, workspaceId);
 
-  // Filter leads by folder and AI verdict
   const leads = useMemo(() => {
     let filtered = allLeads;
     if (activeFolderId && folderLeadIds) {
@@ -120,7 +123,6 @@ const DashboardLeads = () => {
     deleteLead.mutate(deleteId, { onSuccess: () => setDeleteId(null) });
   };
 
-  // Selection helpers
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -165,7 +167,7 @@ const DashboardLeads = () => {
       try {
         await qualifyLead.mutateAsync({ leadId: ids[i], workspaceId });
       } catch {
-        // individual errors already toasted by the hook
+        // individual errors already toasted
       }
       setQualifyProgress({ done: i + 1, total: ids.length });
     }
@@ -175,10 +177,17 @@ const DashboardLeads = () => {
 
   const activeFolder = folders.find((f) => f.id === activeFolderId);
 
+  const getPipelineStageLabel = (stage: string) => {
+    return PIPELINE_STAGES.find((s) => s.value === stage)?.label || stage;
+  };
+
+  const getPipelineStageColor = (stage: string) => {
+    return PIPELINE_STAGES.find((s) => s.value === stage)?.color || "";
+  };
+
   return (
     <DashboardLayout>
       <div className="flex gap-6">
-        {/* Folder Sidebar */}
         <div className="hidden lg:block w-56 shrink-0">
           <FolderPanel
             folders={folders}
@@ -189,7 +198,6 @@ const DashboardLeads = () => {
           />
         </div>
 
-        {/* Main Content */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -201,7 +209,26 @@ const DashboardLeads = () => {
               </p>
             </div>
             <div className="flex gap-2">
-              {/* Mobile folder select */}
+              {/* View mode toggle */}
+              <div className="flex rounded-lg border bg-card">
+                <Button
+                  size="sm"
+                  variant={viewMode === "table" ? "default" : "ghost"}
+                  className="rounded-r-none gap-1.5"
+                  onClick={() => setViewMode("table")}
+                >
+                  <List className="h-4 w-4" /> Table
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === "pipeline" ? "default" : "ghost"}
+                  className="rounded-l-none gap-1.5"
+                  onClick={() => setViewMode("pipeline")}
+                >
+                  <LayoutGrid className="h-4 w-4" /> Pipeline
+                </Button>
+              </div>
+
               <div className="lg:hidden">
                 <Select value={activeFolderId || "__all__"} onValueChange={(v) => { setActiveFolderId(v === "__all__" ? null : v); clearSelection(); }}>
                   <SelectTrigger className="w-36"><SelectValue placeholder="Folder" /></SelectTrigger>
@@ -231,7 +258,6 @@ const DashboardLeads = () => {
             </div>
           </div>
 
-          {/* Bulk Action Bar */}
           {selectedIds.size > 0 && (
             <div className="mt-4">
               <BulkActionBar
@@ -263,6 +289,13 @@ const DashboardLeads = () => {
               <SelectTrigger className="w-36"><SelectValue placeholder="Source" /></SelectTrigger>
               <SelectContent>{SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
+            <Select value={pipelineStage} onValueChange={setPipelineStage}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Pipeline Stage" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Stages</SelectItem>
+                {PIPELINE_STAGES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={aiVerdict} onValueChange={setAiVerdict}>
               <SelectTrigger className="w-40"><SelectValue placeholder="AI Verdict" /></SelectTrigger>
               <SelectContent>{AI_VERDICTS.map((v) => <SelectItem key={v} value={v}>{AI_VERDICT_LABELS[v]}</SelectItem>)}</SelectContent>
@@ -273,88 +306,104 @@ const DashboardLeads = () => {
             </Select>
           </div>
 
-          {/* Table */}
-          <div className="mt-4 rounded-xl border bg-card shadow-card overflow-hidden">
-            {isLoading ? (
-              <div className="flex items-center justify-center p-12 text-muted-foreground">Loading…</div>
-            ) : leads.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-                <p className="font-medium">No leads found</p>
-                <p className="mt-1 text-sm">
-                  {activeFolder ? `No leads in "${activeFolder.name}". Move leads here using bulk actions.` : "Add your first lead or import from CSV."}
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={leads.length > 0 && selectedIds.size === leads.length}
-                        onCheckedChange={toggleAll}
-                        aria-label="Select all"
-                      />
-                    </TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Activity</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead) => (
-                    <TableRow key={lead.id} className="cursor-pointer" data-state={selectedIds.has(lead.id) ? "selected" : undefined}>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+          {/* Pipeline or Table view */}
+          {viewMode === "pipeline" ? (
+            <div className="mt-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center p-12 text-muted-foreground">Loading…</div>
+              ) : (
+                <PipelineView leads={leads} onLeadClick={setDetailLead} workspaceId={workspaceId} />
+              )}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl border bg-card shadow-card overflow-hidden">
+              {isLoading ? (
+                <div className="flex items-center justify-center p-12 text-muted-foreground">Loading…</div>
+              ) : leads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+                  <p className="font-medium">No leads found</p>
+                  <p className="mt-1 text-sm">
+                    {activeFolder ? `No leads in "${activeFolder.name}". Move leads here using bulk actions.` : "Add your first lead or import from CSV."}
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
                         <Checkbox
-                          checked={selectedIds.has(lead.id)}
-                          onCheckedChange={() => toggleSelect(lead.id)}
-                          aria-label={`Select ${lead.full_name || lead.email}`}
+                          checked={leads.length > 0 && selectedIds.size === leads.length}
+                          onCheckedChange={toggleAll}
+                          aria-label="Select all"
                         />
-                      </TableCell>
-                      <TableCell className="font-medium" onClick={() => setDetailLead(lead)}>{lead.full_name || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground" onClick={() => setDetailLead(lead)}>{lead.email || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground" onClick={() => setDetailLead(lead)}>{lead.source}</TableCell>
-                      <TableCell onClick={() => setDetailLead(lead)}>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`font-semibold ${lead.score >= 80 ? "text-accent" : lead.score >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>
-                            {lead.score}
-                          </span>
-                          {(lead as any).ai_qualification?.verdict && (
-                            <span title={`AI: ${(lead as any).ai_qualification.verdict}`} className="inline-flex">
-                              <Sparkles className="h-3 w-3 text-accent" />
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell onClick={() => setDetailLead(lead)}>
-                        <Badge variant="secondary" className={statusColor[lead.status] || ""}>{lead.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs" onClick={() => setDetailLead(lead)}>
-                        {lead.last_activity_at ? format(new Date(lead.last_activity_at), "MMM d, h:mm a") : "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs" onClick={() => setDetailLead(lead)}>{format(new Date(lead.created_at), "MMM d, yyyy")}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <Button size="icon" variant="ghost" onClick={() => setDetailLead(lead)} title="View"><Eye className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => setEditLead(lead)} title="Edit"><Pencil className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" onClick={() => setDeleteId(lead.id)} title="Delete" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                      </TableCell>
+                      </TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pipeline</TableHead>
+                      <TableHead>Last Activity</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {leads.map((lead) => (
+                      <TableRow key={lead.id} className="cursor-pointer" data-state={selectedIds.has(lead.id) ? "selected" : undefined}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(lead.id)}
+                            onCheckedChange={() => toggleSelect(lead.id)}
+                            aria-label={`Select ${lead.full_name || lead.email}`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium" onClick={() => setDetailLead(lead)}>{lead.full_name || "—"}</TableCell>
+                        <TableCell className="text-muted-foreground" onClick={() => setDetailLead(lead)}>{lead.email || "—"}</TableCell>
+                        <TableCell className="text-muted-foreground" onClick={() => setDetailLead(lead)}>{lead.source}</TableCell>
+                        <TableCell onClick={() => setDetailLead(lead)}>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`font-semibold ${lead.score >= 80 ? "text-accent" : lead.score >= 60 ? "text-amber-600" : "text-muted-foreground"}`}>
+                              {lead.score}
+                            </span>
+                            {(lead as any).ai_qualification?.verdict && (
+                              <span title={`AI: ${(lead as any).ai_qualification.verdict}`} className="inline-flex">
+                                <Sparkles className="h-3 w-3 text-accent" />
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={() => setDetailLead(lead)}>
+                          <Badge variant="secondary" className={statusColor[lead.status] || ""}>{lead.status}</Badge>
+                        </TableCell>
+                        <TableCell onClick={() => setDetailLead(lead)}>
+                          <Badge variant="outline" className={`text-[10px] ${getPipelineStageColor(lead.pipeline_stage)}`}>
+                            {getPipelineStageLabel(lead.pipeline_stage)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs" onClick={() => setDetailLead(lead)}>
+                          {lead.last_activity_at ? format(new Date(lead.last_activity_at), "MMM d, h:mm a") : "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs" onClick={() => setDetailLead(lead)}>{format(new Date(lead.created_at), "MMM d, yyyy")}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button size="icon" variant="ghost" onClick={() => setDetailLead(lead)} title="View"><Eye className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => setEditLead(lead)} title="Edit"><Pencil className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" onClick={() => setDeleteId(lead.id)} title="Delete" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <AddLeadDialog open={addOpen} onOpenChange={setAddOpen} onSubmit={handleCreate} loading={createLead.isPending} />
-      <AddLeadDialog open={!!editLead} onOpenChange={(v) => { if (!v) setEditLead(null); }} onSubmit={handleUpdate} defaultValues={editLead || undefined} loading={updateLead.isPending} />
+      <AddLeadDialog open={addOpen} onOpenChange={setAddOpen} onSubmit={handleCreate} loading={createLead.isPending} workspaceId={workspaceId} />
+      <AddLeadDialog open={!!editLead} onOpenChange={(v) => { if (!v) setEditLead(null); }} onSubmit={handleUpdate} defaultValues={editLead || undefined} loading={updateLead.isPending} workspaceId={workspaceId} />
       <LeadDetailsDrawer lead={detailLead} open={!!detailLead} onOpenChange={(v) => { if (!v) setDetailLead(null); }} workspaceId={workspaceId} />
       <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} workspaceId={workspaceId} />
       <DeleteAllDialog
@@ -365,7 +414,6 @@ const DashboardLeads = () => {
         context={activeFolder ? `all leads in "${activeFolder.name}"` : "all leads"}
       />
 
-      {/* Single Delete Confirm */}
       <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -379,7 +427,6 @@ const DashboardLeads = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Bulk Delete Confirm */}
       <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
