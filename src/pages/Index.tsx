@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Brain, Users, Mail, MessageSquare, Workflow, LayoutTemplate,
-  PenTool, BarChart3, ArrowRight, Star, CheckCircle, Zap, Target, TrendingUp, Loader2
+  PenTool, BarChart3, ArrowRight, Star, CheckCircle, Zap, Target, TrendingUp
 } from "lucide-react";
 import {
   Accordion,
