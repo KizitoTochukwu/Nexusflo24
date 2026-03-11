@@ -9,10 +9,15 @@ export interface SubscriptionData {
 
 export function hasProAccess(sub: SubscriptionData | null): boolean {
   if (!sub) return false;
-  return ["trialing", "active"].includes(sub.status) && ["pro", "agency"].includes(sub.plan);
+  return ["trialing", "active"].includes(sub.status) && ["pro", "enterprise"].includes(sub.plan);
 }
 
-export function hasAgencyAccess(sub: SubscriptionData | null): boolean {
+export function hasEnterpriseAccess(sub: SubscriptionData | null): boolean {
   if (!sub) return false;
-  return ["trialing", "active"].includes(sub.status) && sub.plan === "agency";
+  return ["trialing", "active"].includes(sub.status) && sub.plan === "enterprise";
+}
+
+export function hasPaidAccess(sub: SubscriptionData | null): boolean {
+  if (!sub) return false;
+  return ["trialing", "active"].includes(sub.status) && ["starter", "plus", "pro", "enterprise"].includes(sub.plan);
 }

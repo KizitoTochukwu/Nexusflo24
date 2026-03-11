@@ -1,4 +1,4 @@
-export type PlanTier = "free" | "pro" | "agency";
+export type PlanTier = "starter" | "plus" | "pro" | "enterprise";
 
 export interface PlanLimits {
   maxLeads: number;
@@ -18,10 +18,10 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
-  free: {
-    maxLeads: 100,
+  starter: {
+    maxLeads: 250,
     maxFunnels: 1,
-    maxCampaigns: 1,
+    maxCampaigns: 2,
     whatsappAutomation: false,
     smsAutomation: false,
     aiCopyUnlimited: false,
@@ -34,14 +34,14 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     apiAccess: false,
     watermarkedExports: true,
   },
-  pro: {
-    maxLeads: Infinity,
-    maxFunnels: 5,
-    maxCampaigns: Infinity,
+  plus: {
+    maxLeads: 2500,
+    maxFunnels: 3,
+    maxCampaigns: 10,
     whatsappAutomation: true,
-    smsAutomation: true,
-    aiCopyUnlimited: true,
-    aiCopyDailyLimit: Infinity,
+    smsAutomation: false,
+    aiCopyUnlimited: false,
+    aiCopyDailyLimit: 50,
     behaviourTriggeredAutomation: true,
     advancedAnalytics: false,
     multiWorkspace: false,
@@ -50,7 +50,23 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     apiAccess: false,
     watermarkedExports: false,
   },
-  agency: {
+  pro: {
+    maxLeads: Infinity,
+    maxFunnels: 10,
+    maxCampaigns: Infinity,
+    whatsappAutomation: true,
+    smsAutomation: true,
+    aiCopyUnlimited: true,
+    aiCopyDailyLimit: Infinity,
+    behaviourTriggeredAutomation: true,
+    advancedAnalytics: true,
+    multiWorkspace: false,
+    whiteLabelBranding: false,
+    teamInvites: true,
+    apiAccess: false,
+    watermarkedExports: false,
+  },
+  enterprise: {
     maxLeads: Infinity,
     maxFunnels: Infinity,
     maxCampaigns: Infinity,
@@ -69,9 +85,11 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
 };
 
 export function getPlanTier(plan: string | null | undefined): PlanTier {
+  if (plan === "starter") return "starter";
+  if (plan === "plus") return "plus";
   if (plan === "pro") return "pro";
-  if (plan === "agency") return "agency";
-  return "free";
+  if (plan === "enterprise") return "enterprise";
+  return "starter";
 }
 
 export function getPlanLimits(plan: string | null | undefined): PlanLimits {
@@ -79,7 +97,8 @@ export function getPlanLimits(plan: string | null | undefined): PlanLimits {
 }
 
 export const PLAN_DISPLAY: Record<PlanTier, { label: string; color: string; badgeClass: string }> = {
-  free: { label: "Free", color: "text-muted-foreground", badgeClass: "bg-muted text-muted-foreground" },
+  starter: { label: "Starter", color: "text-muted-foreground", badgeClass: "bg-muted text-muted-foreground" },
+  plus: { label: "Plus", color: "text-accent", badgeClass: "bg-accent/15 text-accent border border-accent/25" },
   pro: { label: "Pro", color: "text-accent", badgeClass: "bg-accent/20 text-accent border border-accent/30" },
-  agency: { label: "Agency", color: "text-accent", badgeClass: "bg-gradient-to-r from-accent to-gold-light text-primary font-bold" },
+  enterprise: { label: "Enterprise", color: "text-accent", badgeClass: "bg-gradient-to-r from-accent to-gold-light text-primary font-bold" },
 };
