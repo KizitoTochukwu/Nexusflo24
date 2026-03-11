@@ -385,6 +385,30 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
           </CollapsibleContent>
         </Card>
       </Collapsible>
+      <AlertDialog open={!!disconnectTarget} onOpenChange={(open) => !open && setDisconnectTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disconnect {disconnectTarget}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove your custom {disconnectTarget} credentials. Messages will fall back to platform defaults if available.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (disconnectTarget) {
+                  disconnectChannel(disconnectTarget);
+                  setDisconnectTarget(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Disconnect
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
