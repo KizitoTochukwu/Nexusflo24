@@ -4,13 +4,13 @@ import { Bot, Zap, TrendingUp, BarChart3 } from "lucide-react";
 import nexusLogo from "@/assets/nexusflo24-logo-full.png";
 
 const features = [
-  { icon: Bot, text: "AI-Powered Lead Scoring & Nurturing" },
-  { icon: Zap, text: "Smart Campaign Automation" },
-  { icon: TrendingUp, text: "Conversion-Optimized Funnels" },
-  { icon: BarChart3, text: "Real-Time Analytics Dashboard" },
-];
+{ icon: Bot, text: "AI-Powered Lead Scoring & Nurturing" },
+{ icon: Zap, text: "Smart Campaign Automation" },
+{ icon: TrendingUp, text: "Conversion-Optimized Funnels" },
+{ icon: BarChart3, text: "Real-Time Analytics Dashboard" }];
 
-const AuthLayout = ({ children }: { children: ReactNode }) => {
+
+const AuthLayout = ({ children }: {children: ReactNode;}) => {
   return (
     <div className="flex min-h-screen">
       {/* Left branding panel */}
@@ -24,7 +24,7 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
 
         <div className="relative z-10">
           <Link to="/" className="inline-flex items-center">
-            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-12 object-contain" />
+            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-12 object-contain rounded" />
           </Link>
         </div>
 
@@ -41,17 +41,17 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
           </div>
 
           <div className="grid gap-4">
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 rounded-xl bg-primary-foreground/5 backdrop-blur-sm border border-primary-foreground/10 px-4 py-3"
-              >
+            {features.map((f, i) =>
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-xl bg-primary-foreground/5 backdrop-blur-sm border border-primary-foreground/10 px-4 py-3">
+              
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/20">
                   <f.icon className="h-4.5 w-4.5 text-accent" />
                 </div>
                 <span className="text-sm font-medium text-primary-foreground/90">{f.text}</span>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -66,8 +66,8 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
       <div className="flex w-full lg:w-1/2 items-center justify-center bg-background p-6 sm:p-12">
         <div className="w-full max-w-md">{children}</div>
       </div>
-    </div>
-  );
+    </div>);
+
 };
 
 export default AuthLayout;
