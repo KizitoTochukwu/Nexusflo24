@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,14 +125,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Platform-managed credentials from ENV
-    const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const senderRaw = Deno.env.get("TWILIO_FROM_NUMBER");
+    // Resolve credentials: workspace-specific → platform ENV fallback
+    const creds = await resolveChannelCredentials(workspaceId, "sms", {
+      account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
+      auth_token: Deno.env.get("TWILIO_AUTH_TOKEN"),
+      from_number: Deno.env.get("TWILIO_FROM_NUMBER"),
+    });
 
-    if (!accountSid || !authToken || !senderRaw) {
-      return new Response(JSON.stringify({ error: "SMS provider not configured. Contact platform admin." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (creds.source === "none" || !creds.config.account_sid || !creds.config.auth_token || !creds.config.from_number) {
+      return new Response(JSON.stringify({ error: "SMS provider not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    const accountSid = creds.config.account_sid;
+    const authToken = creds.config.auth_token;
+    const senderRaw = creds.config.from_number;
 
     const sender = resolveTwilioSender(senderRaw);
     if (!sender) {

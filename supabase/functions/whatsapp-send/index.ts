@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,14 +59,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Platform-managed credentials from ENV (trim/sanitize to avoid copy/paste formatting issues)
-    const accessToken = (Deno.env.get("WHATSAPP_ACCESS_TOKEN") ?? "").trim();
-    const rawPhoneNumberId = (Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "").trim();
-    const phoneNumberId = rawPhoneNumberId.replace(/[^\d]/g, "");
+    // Resolve credentials: workspace-specific → platform ENV fallback
+    const creds = await resolveChannelCredentials(workspaceId, "whatsapp", {
+      access_token: Deno.env.get("WHATSAPP_ACCESS_TOKEN"),
+      phone_number_id: Deno.env.get("WHATSAPP_PHONE_NUMBER_ID"),
+    });
 
-    if (!accessToken || !phoneNumberId) {
-      return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (creds.source === "none" || !creds.config.access_token || !creds.config.phone_number_id) {
+      return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    const accessToken = creds.config.access_token.trim();
+    const rawPhoneNumberId = creds.config.phone_number_id.trim();
+    const phoneNumberId = rawPhoneNumberId.replace(/[^\d]/g, "");
 
     if (phoneNumberId.length < 6) {
       return new Response(JSON.stringify({ error: "WhatsApp configuration error: invalid Phone Number ID format." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

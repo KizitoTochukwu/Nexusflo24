@@ -25,8 +25,9 @@ import type { DemoVariant } from "@/lib/demo/demoData";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useAdminRole";
-import { Bot } from "lucide-react";
+import { Bot, Radio } from "lucide-react";
 import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab";
+import ChannelSettingsTab from "@/components/settings/ChannelSettingsTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -768,7 +769,7 @@ function DemoModeTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
+const VALID_TABS = ["profile", "billing", "channels", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
@@ -800,6 +801,7 @@ const DashboardSettings = () => {
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="profile" className="gap-1.5"><User className="h-3.5 w-3.5" />Profile</TabsTrigger>
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
+            <TabsTrigger value="channels" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Channels</TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="integrations" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" />Integrations</TabsTrigger>
             )}
@@ -814,6 +816,7 @@ const DashboardSettings = () => {
           <div className="mt-6 max-w-3xl">
             <TabsContent value="profile"><ProfileTab /></TabsContent>
             <TabsContent value="billing"><BillingTab /></TabsContent>
+            <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="integrations">
               {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
             </TabsContent>

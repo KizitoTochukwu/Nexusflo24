@@ -1,91 +1,103 @@
 
 
-## Plan: Bring-Your-Own Sender — Per-Workspace Channel Settings
+## Plan: Platform-Managed Integrations Access Control
 
-### Overview
-Enable each customer to connect their own Email domain (Resend), SMS credentials (Twilio), and WhatsApp Business number. Platform ENV credentials remain as the fallback when a workspace has no custom config.
+### Context
 
-### 1. Database: New `workspace_channel_settings` Table
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-Single table storing per-workspace, per-channel encrypted credentials:
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
-```text
-workspace_channel_settings
-├── id (uuid, PK)
-├── workspace_id (uuid, NOT NULL)
-├── channel (text: 'email' | 'sms' | 'whatsapp')
-├── is_active (boolean, default true)
-├── config_encrypted (text) — JSON blob encrypted with a platform key
-├── created_at, updated_at
-└── UNIQUE(workspace_id, channel)
+### Changes
+
+#### 1. Frontend: Split Settings Tabs by Role
+
+**DashboardSettings.tsx** — Major restructure:
+
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
+
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
 ```
 
-RLS: workspace admins can CRUD their own rows. The `config_encrypted` field stores a JSON object with channel-specific fields:
+#### 2. Move Provider Credentials to Platform ENV Secrets
 
-- **Email**: `{ provider, api_key, from_email, from_name }`
-- **SMS**: `{ account_sid, auth_token, from_number }`
-- **WhatsApp**: `{ access_token, phone_number_id, verify_token }`
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
 
-Encryption/decryption happens in edge functions using `CHANNEL_SETTINGS_ENCRYPTION_KEY` (new secret).
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
 
-### 2. Frontend: New "Channels" Tab in Settings
+#### 3. Update Edge Functions for Platform Credentials
 
-Available to **all workspace admins** (not just platform admins). Replaces the need for customers to contact the platform admin.
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
 
-Three collapsible cards — Email, SMS, WhatsApp — each with:
-- Credential input fields (password-masked)
-- Save / Test / Disconnect buttons
-- Status indicator (connected / not connected / using platform default)
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
 
-The admin-only "Integrations" tab stays for platform-level status. The new "Channels" tab is workspace-scoped.
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
 
-### 3. Edge Functions: Save & Retrieve Channel Settings
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
 
-**New: `channel-settings-save/index.ts`**
-- Accepts `{ workspaceId, channel, config }`, encrypts config, upserts into `workspace_channel_settings`
-- Validates workspace membership, workspace admin role
+#### 4. Backend Admin Authorization
 
-**New: `channel-settings-get/index.ts`**
-- Returns channel status (configured/not) per workspace — does NOT return decrypted secrets to the client
-- Returns masked values (e.g., `sk_...****`) for UX
-
-### 4. Update Send Functions: Workspace Credentials → Platform Fallback
-
-Each send function (`email-send`, `sms-send`, `whatsapp-send`) gains a credential resolution step:
-
-```text
-1. Query workspace_channel_settings for (workspace_id, channel)
-2. If found & is_active → decrypt & use workspace credentials
-3. If not found → fall back to platform ENV credentials
-4. If neither → return "not configured" error
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
 ```
 
-Same pattern applied in `execute-automation` and `execute-campaign` (these call the send functions via HTTP, so they inherit the behavior automatically).
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
 
-### 5. New Secret
+#### 5. Admin Integrations Status Widget
 
-- `CHANNEL_SETTINGS_ENCRYPTION_KEY` — AES-256 key for encrypting workspace credentials at rest
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
+
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
+
+#### 6. Webhooks Tab (Customer-Accessible)
+
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
+
+This tab is workspace-scoped and visible to all authenticated users.
 
 ### Files to Create/Edit
 
-| Action | File | Purpose |
-|--------|------|---------|
-| **Create** | `src/components/settings/ChannelSettingsTab.tsx` | UI for per-workspace channel config |
-| **Create** | `supabase/functions/channel-settings-save/index.ts` | Encrypt & upsert credentials |
-| **Create** | `supabase/functions/channel-settings-get/index.ts` | Return masked status |
-| **Edit** | `src/pages/dashboard/DashboardSettings.tsx` | Add "Channels" tab |
-| **Edit** | `supabase/functions/email-send/index.ts` | Workspace credential lookup before ENV fallback |
-| **Edit** | `supabase/functions/sms-send/index.ts` | Same pattern |
-| **Edit** | `supabase/functions/whatsapp-send/index.ts` | Same pattern |
-| **Migration** | New table `workspace_channel_settings` with RLS | |
-| **Secret** | `CHANNEL_SETTINGS_ENCRYPTION_KEY` | |
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
 
 ### Execution Order
 
-1. Request `CHANNEL_SETTINGS_ENCRYPTION_KEY` secret
-2. Create `workspace_channel_settings` table with RLS
-3. Create `channel-settings-save` and `channel-settings-get` edge functions
-4. Build `ChannelSettingsTab` component
-5. Add "Channels" tab to `DashboardSettings.tsx`
-6. Update `email-send`, `sms-send`, `whatsapp-send` to resolve workspace credentials first
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 

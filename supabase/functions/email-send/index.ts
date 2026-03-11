@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
+import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,15 +57,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Platform-managed credentials from ENV
-    const apiKey = Deno.env.get("RESEND_API_KEY");
-    const fromEmail = Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com";
+    // Resolve credentials: workspace-specific → platform ENV fallback
+    const creds = await resolveChannelCredentials(workspaceId, "email", {
+      api_key: Deno.env.get("RESEND_API_KEY"),
+      from_email: Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com",
+      from_name: "NexusFlo24",
+    });
 
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Email provider not configured. Contact platform admin." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (creds.source === "none" || !creds.config.api_key) {
+      return new Response(JSON.stringify({ error: "Email provider not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const from = `NexusFlo24 <${fromEmail}>`;
+    const apiKey = creds.config.api_key;
+    const fromEmail = creds.config.from_email || "noreply@nexusflo24.com";
+    const fromName = creds.config.from_name || "NexusFlo24";
+    const from = `${fromName} <${fromEmail}>`;
 
     // Inject tracking pixel and rewrite links for tracking
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
