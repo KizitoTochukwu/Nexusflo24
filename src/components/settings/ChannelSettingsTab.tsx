@@ -242,7 +242,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.email?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => disconnectChannel("email")}>
+                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("email")}>
                     <Unplug className="h-4 w-4 mr-1" />Disconnect
                   </Button>
                 )}
