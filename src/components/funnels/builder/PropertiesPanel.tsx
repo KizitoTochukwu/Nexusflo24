@@ -657,3 +657,69 @@ function ListEditor({ items, renderItem, onAdd, onUpdate, label }: {
     </div>
   );
 }
+
+/* ─── Booking ─── */
+function BookingProps({ p, update }: { p: Record<string, unknown>; update: (k: string, v: unknown) => void }) {
+  const [bookingPages, setBookingPages] = useState<{ id: string; name: string; slug: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useState(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("booking_pages" as any)
+        .select("id, name, slug")
+        .order("created_at", { ascending: false });
+      setBookingPages((data as any[]) || []);
+      setLoading(false);
+    })();
+  });
+
+  return (
+    <>
+      <Field label="Booking Page">
+        {loading ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Loading…</div>
+        ) : bookingPages.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No booking pages found. Create one in Bookings first.</p>
+        ) : (
+          <Select value={(p.booking_page_id as string) || ""} onValueChange={(v) => update("booking_page_id", v)}>
+            <SelectTrigger><SelectValue placeholder="Select a booking page" /></SelectTrigger>
+            <SelectContent>
+              {bookingPages.map((bp) => (
+                <SelectItem key={bp.id} value={bp.id}>{bp.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </Field>
+      <Field label="Button Text">
+        <Input value={(p.buttonText as string) || "Book a Call"} onChange={(e) => update("buttonText", e.target.value)} className="h-8 text-xs" />
+      </Field>
+      <ColorField label="Button Color" value={(p.buttonColor as string) || "#D4AF37"} onChange={(v) => update("buttonColor", v)} />
+      <Field label="Button Alignment">
+        <Select value={(p.align as string) || "center"} onValueChange={(v) => update("align", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">Left</SelectItem>
+            <SelectItem value="center">Center</SelectItem>
+            <SelectItem value="right">Right</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label="Button Size">
+        <Select value={(p.size as string) || "lg"} onValueChange={(v) => update("size", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="sm">Small</SelectItem>
+            <SelectItem value="md">Medium</SelectItem>
+            <SelectItem value="lg">Large</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label="Border Radius">
+        <Input value={(p.borderRadius as string) || "8px"} onChange={(e) => update("borderRadius", e.target.value)} placeholder="e.g. 8px" className="h-8 text-xs" />
+      </Field>
+      <SwitchField label="Open in New Tab" checked={p.openNewTab !== false} onChange={(v) => update("openNewTab", v)} />
+    </>
+  );
+}
