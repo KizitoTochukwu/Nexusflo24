@@ -73,7 +73,13 @@ interface Props {
   onChange: (settings: TemplateSettings) => void;
 }
 
-export default function EmailTemplateSettings({ settings, onChange }: Props) {
+export default function EmailTemplateSettings({ settings: rawSettings, onChange }: Props) {
+  const settings = {
+    header: { ...DEFAULT_TEMPLATE_SETTINGS.header, ...rawSettings?.header },
+    logo: { ...DEFAULT_TEMPLATE_SETTINGS.logo, ...rawSettings?.logo },
+    unsubscribe: { ...DEFAULT_TEMPLATE_SETTINGS.unsubscribe, ...rawSettings?.unsubscribe },
+    footer: { ...DEFAULT_TEMPLATE_SETTINGS.footer, ...rawSettings?.footer },
+  };
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
 
