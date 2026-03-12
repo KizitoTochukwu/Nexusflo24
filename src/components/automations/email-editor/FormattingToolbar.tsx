@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Bold, Italic, Underline, List, ListOrdered,
-  Link2, Image, Minus, Smile, Square
+  Link2, Image, Minus, Smile, Square,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from "lucide-react";
 import ImageInsertDialog from "./ImageInsertDialog";
 
