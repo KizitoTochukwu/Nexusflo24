@@ -95,6 +95,7 @@ export function buildPreviewHtml(
   templateSettings?: Partial<TemplateSettings>
 ): string {
   const ts = {
+    header: { ...DEFAULT_TEMPLATE_SETTINGS.header, ...templateSettings?.header },
     logo: { ...DEFAULT_TEMPLATE_SETTINGS.logo, ...templateSettings?.logo },
     unsubscribe: { ...DEFAULT_TEMPLATE_SETTINGS.unsubscribe, ...templateSettings?.unsubscribe },
     footer: { ...DEFAULT_TEMPLATE_SETTINGS.footer, ...templateSettings?.footer },
@@ -155,7 +156,7 @@ export function buildPreviewHtml(
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
         <tr>
           <td style="padding:0 0 12px;">
-            <div style="background:#0B1F3B;border-radius:12px 12px 0 0;padding:14px 20px;color:#ffffff;font-size:14px;font-weight:600;">
+            <div style="background:${ts.header.color};border-radius:12px 12px 0 0;padding:14px 20px;color:#ffffff;font-size:14px;font-weight:600;">
               Subject: ${interpolatedSubject || "(no subject)"}
             </div>
           </td>
