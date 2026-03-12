@@ -349,27 +349,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
     case "booking": {
       const bpId = p.booking_page_id as string;
       if (!bpId) return null;
-      const bookUrl = `${window.location.origin}/book/${bpId}`;
-      const sizeMap: Record<string, string> = { sm: "10px 20px", md: "14px 32px", lg: "16px 40px" };
-      return (
-        <div style={{ textAlign: (p.align as any) || "center" }}>
-          <a
-            href={bookUrl}
-            target={p.openNewTab !== false ? "_blank" : undefined}
-            rel={p.openNewTab !== false ? "noopener noreferrer" : undefined}
-            className="inline-block font-semibold transition-opacity hover:opacity-90"
-            style={{
-              backgroundColor: (p.buttonColor as string) || "#D4AF37",
-              color: "#ffffff",
-              borderRadius: (p.borderRadius as string) || "8px",
-              padding: sizeMap[(p.size as string) || "lg"] || sizeMap.lg,
-              fontSize: (p.size as string) === "sm" ? "14px" : "16px",
-            }}
-          >
-            {(p.buttonText as string) || "Book a Call"}
-          </a>
-        </div>
-      );
+      return <BookingButton props={p} bookingPageId={bpId} />;
     }
     default:
       return null;
