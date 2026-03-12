@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Bold, Italic, Underline, List, ListOrdered,
-  Link2, Image, Minus, Smile, Square
+  Link2, Image, Minus, Smile, Square,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from "lucide-react";
 import ImageInsertDialog from "./ImageInsertDialog";
 
@@ -27,6 +28,10 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
     { icon: Image, label: "Insert Image", action: () => setImageDialogOpen(true) },
     { icon: Minus, label: "Divider", action: () => onInsert("\n---\n") },
     { icon: Smile, label: "Emoji", action: () => onInsert("😊") },
+    { icon: AlignLeft, label: "Align Left", action: () => onWrap('<div style="text-align:left">', "</div>") },
+    { icon: AlignCenter, label: "Align Center", action: () => onWrap('<div style="text-align:center">', "</div>") },
+    { icon: AlignRight, label: "Align Right", action: () => onWrap('<div style="text-align:right">', "</div>") },
+    { icon: AlignJustify, label: "Justify", action: () => onWrap('<div style="text-align:justify">', "</div>") },
   ];
 
   return (
