@@ -84,20 +84,24 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       };
       if (useHtml) {
         return (
-          <Tag
-            className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
-            style={baseStyle}
-            dangerouslySetInnerHTML={{ __html: resolvedText }}
-          />
+          <div style={headingWrapStyle}>
+            <Tag
+              className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
+              style={baseStyle}
+              dangerouslySetInnerHTML={{ __html: resolvedText }}
+            />
+          </div>
         );
       }
       return (
-        <Tag
-          className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
-          style={baseStyle}
-        >
-          {resolvedText}
-        </Tag>
+        <div style={headingWrapStyle}>
+          <Tag
+            className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
+            style={baseStyle}
+          >
+            {resolvedText}
+          </Tag>
+        </div>
       );
     }
     case "text": {
