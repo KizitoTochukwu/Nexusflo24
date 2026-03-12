@@ -663,7 +663,7 @@ function BookingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
   const [bookingPages, setBookingPages] = useState<{ id: string; name: string; slug: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useState(() => {
+  useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("booking_pages" as any)
@@ -672,6 +672,7 @@ function BookingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
       setBookingPages((data as any[]) || []);
       setLoading(false);
     })();
+  }, []);
   });
 
   return (
