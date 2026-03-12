@@ -121,7 +121,7 @@ export function buildPreviewHtml(
 
   // Build logo block
   const logoBlock = ts.logo.visible && ts.logo.url
-    ? `<tr><td align="${ts.logo.alignment}" style="padding:0 0 24px;"><img src="${ts.logo.url}" width="${logoWidth}"${logoAutoHeight ? '' : ` height="${logoHeight}"`} alt="Logo" style="border-radius:10px;display:block;${logoAutoHeight ? 'height:auto;' : ''}" /></td></tr>`
+    ? `<tr><td align="${ts.logo.alignment}" style="padding:16px 0 24px;"><img src="${ts.logo.url}" width="${logoWidth}"${logoAutoHeight ? '' : ` height="${logoHeight}"`} alt="Logo" style="border-radius:10px;display:block;${logoAutoHeight ? 'height:auto;' : ''}" /></td></tr>`
     : "";
 
   // Build footer
