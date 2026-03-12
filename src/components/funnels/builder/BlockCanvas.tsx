@@ -74,14 +74,27 @@ function renderBlockContent(block: Block) {
         </div>
       );
     }
-    case "text":
+    case "text": {
+      const rawText = (p.text as string) || "Text block";
+      const textHasHtml = /<[a-z][\s\S]*>/i.test(rawText);
+      const textWrapStyle: React.CSSProperties = { maxWidth: (p.maxWidth as string) || undefined, margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined };
+      const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
+      if (textHasHtml) {
+        const htmlContent = rawText.replace(/\n/g, "<br/>");
+        return (
+          <div style={textWrapStyle}>
+            <div className="text-sm leading-relaxed" style={textInnerStyle} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+          </div>
+        );
+      }
       return (
-        <div style={{ maxWidth: (p.maxWidth as string) || undefined, margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined }}>
-          <p className="text-sm leading-relaxed" style={{ color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined, whiteSpace: "pre-wrap" }}>
-            {(p.text as string) || "Text block"}
+        <div style={textWrapStyle}>
+          <p className="text-sm leading-relaxed" style={{ ...textInnerStyle, whiteSpace: "pre-wrap" }}>
+            {rawText}
           </p>
         </div>
       );
+    }
     case "image": {
       const imgEl = (p.src as string) ? (
         <img src={p.src as string} alt={p.alt as string} style={{ width: p.width as string, borderRadius: p.borderRadius as string, objectFit: (p.objectFit as any) || "cover", boxShadow: p.shadow ? "0 4px 12px rgba(0,0,0,0.15)" : undefined }} className="mx-auto" />
