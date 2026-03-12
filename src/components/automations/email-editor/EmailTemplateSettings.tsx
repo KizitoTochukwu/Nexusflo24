@@ -140,6 +140,43 @@ export default function EmailTemplateSettings({ settings, onChange }: Props) {
       </CollapsibleTrigger>
 
       <CollapsibleContent className="space-y-4 pt-2 pb-1">
+        {/* ── Header Bar ── */}
+        <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+          <span className="text-xs font-medium flex items-center gap-1.5">
+            <Type className="h-3.5 w-3.5" /> Header Bar Color
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {HEADER_COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                title={preset.label}
+                onClick={() => update("header", { color: preset.value })}
+                className={`h-7 w-7 rounded-full border-2 transition-all ${
+                  settings.header.color === preset.value
+                    ? "border-primary scale-110 ring-2 ring-primary/30"
+                    : "border-border hover:scale-105"
+                }`}
+                style={{ backgroundColor: preset.value }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="color"
+              value={settings.header.color}
+              onChange={(e) => update("header", { color: e.target.value })}
+              className="h-7 w-7 rounded border border-border cursor-pointer"
+            />
+            <Input
+              value={settings.header.color}
+              onChange={(e) => update("header", { color: e.target.value })}
+              className="flex-1 text-xs h-8 font-mono"
+              placeholder="#0B1F3B"
+            />
+          </div>
+        </div>
+
         {/* ── Header Logo ── */}
         <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
           <div className="flex items-center justify-between">

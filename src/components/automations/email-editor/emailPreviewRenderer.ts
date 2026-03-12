@@ -95,6 +95,7 @@ export function buildPreviewHtml(
   templateSettings?: Partial<TemplateSettings>
 ): string {
   const ts = {
+    header: { ...DEFAULT_TEMPLATE_SETTINGS.header, ...templateSettings?.header },
     logo: { ...DEFAULT_TEMPLATE_SETTINGS.logo, ...templateSettings?.logo },
     unsubscribe: { ...DEFAULT_TEMPLATE_SETTINGS.unsubscribe, ...templateSettings?.unsubscribe },
     footer: { ...DEFAULT_TEMPLATE_SETTINGS.footer, ...templateSettings?.footer },
