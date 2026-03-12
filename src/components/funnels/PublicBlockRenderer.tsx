@@ -132,7 +132,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       }
       return (
         <div style={textWrapStyle}>
-          <p className="text-base md:text-lg leading-relaxed" style={textStyle}>
+          <p className="text-base md:text-lg leading-relaxed" style={{ ...textStyle, whiteSpace: "pre-wrap" }}>
             {resolvedText}
           </p>
         </div>

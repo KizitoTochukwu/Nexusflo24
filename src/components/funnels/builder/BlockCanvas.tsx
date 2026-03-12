@@ -77,7 +77,7 @@ function renderBlockContent(block: Block) {
     case "text":
       return (
         <div style={{ maxWidth: (p.maxWidth as string) || undefined, margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined }}>
-          <p className="text-sm leading-relaxed" style={{ color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined }}>
+          <p className="text-sm leading-relaxed" style={{ color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined, whiteSpace: "pre-wrap" }}>
             {(p.text as string) || "Text block"}
           </p>
         </div>
