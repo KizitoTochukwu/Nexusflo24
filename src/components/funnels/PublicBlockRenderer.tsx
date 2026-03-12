@@ -71,13 +71,16 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       const rawText = (p.text as string) || "Heading";
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
       const useHtml = hasHtml(resolvedText);
+      const headingWrapStyle: React.CSSProperties = {
+        maxWidth: (p.maxWidth as string) || undefined,
+        margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+      };
       const baseStyle: React.CSSProperties = {
         color: p.color as string,
         textAlign: p.align as any,
         fontSize: (p.fontSize as string) || undefined,
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
-        maxWidth: (p.maxWidth as string) || undefined,
       };
       if (useHtml) {
         return (
