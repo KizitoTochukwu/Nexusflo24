@@ -348,20 +348,23 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
     }
     case "booking": {
       const bpId = p.booking_page_id as string;
-      if (!bpId) return (
-        <div className="mx-auto max-w-sm rounded-xl border bg-muted/50 p-6 text-center">
-          <p className="text-sm text-muted-foreground">No booking page selected.</p>
-        </div>
-      );
+      if (!bpId) return null;
       const bookUrl = `${window.location.origin}/book/${bpId}`;
+      const sizeMap: Record<string, string> = { sm: "10px 20px", md: "14px 32px", lg: "16px 40px" };
       return (
-        <div className="text-center">
+        <div style={{ textAlign: (p.align as any) || "center" }}>
           <a
             href={bookUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block rounded-lg px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: (p.buttonColor as string) || "#D4AF37" }}
+            target={p.openNewTab !== false ? "_blank" : undefined}
+            rel={p.openNewTab !== false ? "noopener noreferrer" : undefined}
+            className="inline-block font-semibold transition-opacity hover:opacity-90"
+            style={{
+              backgroundColor: (p.buttonColor as string) || "#D4AF37",
+              color: "#ffffff",
+              borderRadius: (p.borderRadius as string) || "8px",
+              padding: sizeMap[(p.size as string) || "lg"] || sizeMap.lg,
+              fontSize: (p.size as string) === "sm" ? "14px" : "16px",
+            }}
           >
             {(p.buttonText as string) || "Book a Call"}
           </a>
