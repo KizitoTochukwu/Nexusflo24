@@ -203,6 +203,32 @@ function renderBlockContent(block: Block) {
         </div>
       );
     }
+    case "booking": {
+      const bpId = p.booking_page_id as string;
+      if (!bpId) {
+        return (
+          <div className="mx-auto max-w-sm rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 text-center">
+            <p className="text-sm text-muted-foreground">Select a booking page in properties →</p>
+          </div>
+        );
+      }
+      const sizeMap: Record<string, string> = { sm: "12px 24px", md: "14px 32px", lg: "16px 40px" };
+      return (
+        <div style={{ textAlign: (p.align as any) || "center" }}>
+          <span
+            className="inline-block font-semibold"
+            style={{
+              backgroundColor: (p.buttonColor as string) || "#D4AF37",
+              color: "#ffffff",
+              borderRadius: (p.borderRadius as string) || "8px",
+              padding: sizeMap[(p.size as string) || "lg"] || sizeMap.lg,
+            }}
+          >
+            {(p.buttonText as string) || "Book a Call"}
+          </span>
+        </div>
+      );
+    }
     default:
       return <div className="p-2 text-xs text-muted-foreground">Unknown block: {block.type}</div>;
   }
