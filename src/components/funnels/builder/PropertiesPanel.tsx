@@ -673,7 +673,6 @@ function BookingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
       setLoading(false);
     })();
   }, []);
-  });
 
   return (
     <>
