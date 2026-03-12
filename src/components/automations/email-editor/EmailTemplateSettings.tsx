@@ -14,7 +14,10 @@ export interface TemplateSettings {
   logo: {
     url: string;
     alignment: "left" | "center" | "right";
-    size: number;
+    size?: number; // deprecated, kept for backward compat
+    width: number;
+    height: number;
+    autoHeight: boolean;
     visible: boolean;
   };
   unsubscribe: {
