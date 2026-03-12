@@ -35,7 +35,9 @@ export const DEFAULT_TEMPLATE_SETTINGS: TemplateSettings = {
   logo: {
     url: "https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png",
     alignment: "center",
-    size: 56,
+    width: 120,
+    height: 56,
+    autoHeight: true,
     visible: true,
   },
   unsubscribe: {
