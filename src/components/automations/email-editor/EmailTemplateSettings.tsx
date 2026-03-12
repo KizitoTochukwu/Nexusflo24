@@ -11,6 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface TemplateSettings {
+  header: {
+    color: string;
+  };
   logo: {
     url: string;
     alignment: "left" | "center" | "right";
@@ -30,6 +33,17 @@ export interface TemplateSettings {
     alignment: "left" | "center" | "right";
   };
 }
+
+const HEADER_COLOR_PRESETS = [
+  { label: "Navy", value: "#0B1F3B" },
+  { label: "Black", value: "#000000" },
+  { label: "Charcoal", value: "#333333" },
+  { label: "Dark Teal", value: "#0D4F4F" },
+  { label: "Deep Purple", value: "#2D1B69" },
+  { label: "Burgundy", value: "#5B1A2A" },
+  { label: "Forest", value: "#1B4332" },
+  { label: "Slate", value: "#475569" },
+];
 
 export const DEFAULT_TEMPLATE_SETTINGS: TemplateSettings = {
   logo: {
