@@ -46,6 +46,9 @@ const HEADER_COLOR_PRESETS = [
 ];
 
 export const DEFAULT_TEMPLATE_SETTINGS: TemplateSettings = {
+  header: {
+    color: "#0B1F3B",
+  },
   logo: {
     url: "https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png",
     alignment: "center",
