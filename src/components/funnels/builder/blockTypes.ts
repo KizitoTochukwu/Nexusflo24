@@ -87,7 +87,9 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     align: "left",
     color: "#333333",
     fontSize: "",
+    fontWeight: "normal",
     lineHeight: "",
+    maxWidth: "",
   }),
   image: () => ({
     src: "",
