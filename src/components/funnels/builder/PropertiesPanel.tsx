@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Block, BlockType, BLOCK_LABELS, BLOCK_DEFAULTS } from "./blockTypes";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
