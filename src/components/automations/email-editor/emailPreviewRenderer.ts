@@ -100,6 +100,11 @@ export function buildPreviewHtml(
     footer: { ...DEFAULT_TEMPLATE_SETTINGS.footer, ...templateSettings?.footer },
   };
 
+  // Backward compat: migrate old `size` to width/height
+  const logoWidth = ts.logo.width ?? (ts.logo as any).size ?? 120;
+  const logoAutoHeight = ts.logo.autoHeight ?? true;
+  const logoHeight = ts.logo.height ?? (ts.logo as any).size ?? 56;
+
   // Interpolate variables with preview values
   let content = rawBody;
   for (const [key, val] of Object.entries(previewValues)) {
@@ -116,7 +121,7 @@ export function buildPreviewHtml(
 
   // Build logo block
   const logoBlock = ts.logo.visible && ts.logo.url
-    ? `<tr><td align="${ts.logo.alignment}" style="padding:0 0 24px;"><img src="${ts.logo.url}" width="${ts.logo.size}" height="${ts.logo.size}" alt="Logo" style="border-radius:10px;display:block;" /></td></tr>`
+    ? `<tr><td align="${ts.logo.alignment}" style="padding:0 0 24px;"><img src="${ts.logo.url}" width="${logoWidth}"${logoAutoHeight ? '' : ` height="${logoHeight}"`} alt="Logo" style="border-radius:10px;display:block;${logoAutoHeight ? 'height:auto;' : ''}" /></td></tr>`
     : "";
 
   // Build footer

@@ -14,7 +14,10 @@ export interface TemplateSettings {
   logo: {
     url: string;
     alignment: "left" | "center" | "right";
-    size: number;
+    size?: number; // deprecated, kept for backward compat
+    width: number;
+    height: number;
+    autoHeight: boolean;
     visible: boolean;
   };
   unsubscribe: {
@@ -32,7 +35,9 @@ export const DEFAULT_TEMPLATE_SETTINGS: TemplateSettings = {
   logo: {
     url: "https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png",
     alignment: "center",
-    size: 56,
+    width: 120,
+    height: 56,
+    autoHeight: true,
     visible: true,
   },
   unsubscribe: {
@@ -183,17 +188,43 @@ export default function EmailTemplateSettings({ settings, onChange }: Props) {
                 </div>
                 <div className="flex-1">
                   <label className="text-[10px] text-muted-foreground">
-                    Size: {settings.logo.size}px
+                    Width: {settings.logo.width ?? settings.logo.size ?? 120}px
                   </label>
                   <Slider
                     min={32}
-                    max={120}
+                    max={300}
                     step={4}
-                    value={[settings.logo.size]}
-                    onValueChange={([v]) => update("logo", { size: v })}
+                    value={[settings.logo.width ?? settings.logo.size ?? 120]}
+                    onValueChange={([v]) => update("logo", { width: v })}
                     className="mt-1"
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <Switch
+                    checked={settings.logo.autoHeight ?? true}
+                    onCheckedChange={(v) => update("logo", { autoHeight: v })}
+                  />
+                  <label className="text-[10px] text-muted-foreground">Auto height</label>
+                </div>
+
+                {!settings.logo.autoHeight && (
+                  <div className="flex-1">
+                    <label className="text-[10px] text-muted-foreground">
+                      Height: {settings.logo.height ?? settings.logo.size ?? 56}px
+                    </label>
+                    <Slider
+                      min={32}
+                      max={200}
+                      step={4}
+                      value={[settings.logo.height ?? settings.logo.size ?? 56]}
+                      onValueChange={([v]) => update("logo", { height: v })}
+                      className="mt-1"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
