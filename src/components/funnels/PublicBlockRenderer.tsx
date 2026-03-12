@@ -404,6 +404,47 @@ function FormBlock({ props: p, onSubmit, submitting }: { props: Record<string, u
   );
 }
 
+function BookingButton({ props: p, bookingPageId }: { props: Record<string, unknown>; bookingPageId: string }) {
+  const [slug, setSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await (await import("@/integrations/supabase/client")).supabase
+        .from("booking_pages" as any)
+        .select("slug")
+        .eq("id", bookingPageId)
+        .maybeSingle();
+      if (data?.slug) setSlug(data.slug as string);
+    })();
+  }, [bookingPageId]);
+
+  const bookUrl = slug
+    ? `${window.location.origin}/book/${slug}`
+    : `${window.location.origin}/book/${bookingPageId}`;
+
+  const sizeMap: Record<string, string> = { sm: "10px 20px", md: "14px 32px", lg: "16px 40px" };
+
+  return (
+    <div style={{ textAlign: (p.align as any) || "center" }}>
+      <a
+        href={bookUrl}
+        target={p.openNewTab !== false ? "_blank" : undefined}
+        rel={p.openNewTab !== false ? "noopener noreferrer" : undefined}
+        className="inline-block font-semibold transition-opacity hover:opacity-90"
+        style={{
+          backgroundColor: (p.buttonColor as string) || "#D4AF37",
+          color: "#ffffff",
+          borderRadius: (p.borderRadius as string) || "8px",
+          padding: sizeMap[(p.size as string) || "lg"] || sizeMap.lg,
+          fontSize: (p.size as string) === "sm" ? "14px" : "16px",
+        }}
+      >
+        {(p.buttonText as string) || "Book a Call"}
+      </a>
+    </div>
+  );
+}
+
 export default function PublicBlockRenderer({ blocks, onFormSubmit, formSubmitting, leadData = {} }: Props) {
   return (
     <div className="space-y-6">
