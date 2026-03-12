@@ -71,55 +71,71 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       const rawText = (p.text as string) || "Heading";
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
       const useHtml = hasHtml(resolvedText);
+      const headingWrapStyle: React.CSSProperties = {
+        maxWidth: (p.maxWidth as string) || undefined,
+        margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+      };
       const baseStyle: React.CSSProperties = {
         color: p.color as string,
         textAlign: p.align as any,
         fontSize: (p.fontSize as string) || undefined,
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
-        maxWidth: (p.maxWidth as string) || undefined,
       };
       if (useHtml) {
         return (
-          <Tag
-            className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
-            style={baseStyle}
-            dangerouslySetInnerHTML={{ __html: resolvedText }}
-          />
+          <div style={headingWrapStyle}>
+            <Tag
+              className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
+              style={baseStyle}
+              dangerouslySetInnerHTML={{ __html: resolvedText }}
+            />
+          </div>
         );
       }
       return (
-        <Tag
-          className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
-          style={baseStyle}
-        >
-          {resolvedText}
-        </Tag>
+        <div style={headingWrapStyle}>
+          <Tag
+            className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
+            style={baseStyle}
+          >
+            {resolvedText}
+          </Tag>
+        </div>
       );
     }
     case "text": {
       const rawText = (p.text as string) || "";
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
       const useHtml = hasHtml(resolvedText);
+      const textWrapStyle: React.CSSProperties = {
+        maxWidth: (p.maxWidth as string) || undefined,
+        margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+      };
       const textStyle: React.CSSProperties = {
         color: p.color as string,
         textAlign: p.align as any,
         fontSize: (p.fontSize as string) || undefined,
+        fontWeight: (p.fontWeight as string) || undefined,
         lineHeight: (p.lineHeight as string) || undefined,
       };
       if (useHtml) {
         return (
-          <div
-            className="text-base md:text-lg leading-relaxed"
-            style={textStyle}
-            dangerouslySetInnerHTML={{ __html: resolvedText }}
-          />
+          <div style={textWrapStyle}>
+            <div
+              className="text-base md:text-lg leading-relaxed"
+              style={textStyle}
+              dangerouslySetInnerHTML={{ __html: resolvedText }}
+            />
+          </div>
         );
       }
       return (
-        <p className="text-base md:text-lg leading-relaxed" style={textStyle}>
-          {resolvedText}
-        </p>
+        <div style={textWrapStyle}>
+          <p className="text-base md:text-lg leading-relaxed" style={textStyle}>
+            {resolvedText}
+          </p>
+        </div>
       );
     }
     case "image": {

@@ -331,7 +331,20 @@ function TextProps({ p, update }: { p: Record<string, unknown>; update: (k: stri
       <AlignField value={p.align as string} onChange={(v) => update("align", v)} />
       <ColorField label="Color" value={p.color as string} onChange={(v) => update("color", v)} />
       <Field label="Font Size"><Input value={(p.fontSize as string) || ""} onChange={(e) => update("fontSize", e.target.value)} placeholder="e.g. 16px" /></Field>
+      <Field label="Font Weight">
+        <Select value={(p.fontWeight as string) || "normal"} onValueChange={(v) => update("fontWeight", v)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="semibold">Semibold</SelectItem>
+            <SelectItem value="bold">Bold</SelectItem>
+            <SelectItem value="extrabold">Extra Bold</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
       <Field label="Line Height"><Input value={(p.lineHeight as string) || ""} onChange={(e) => update("lineHeight", e.target.value)} placeholder="e.g. 1.6" /></Field>
+      <Field label="Max Width"><Input value={(p.maxWidth as string) || ""} onChange={(e) => update("maxWidth", e.target.value)} placeholder="e.g. 600px" /></Field>
     </>
   );
 }
