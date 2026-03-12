@@ -61,6 +61,7 @@ export default function PropertiesPanel({ block, onChange }: Props) {
       {block.type === "faq" && <FaqProps p={p} update={update} />}
       {block.type === "embed" && <EmbedProps p={p} update={update} />}
       {block.type === "video" && <VideoProps p={p} update={update} />}
+      {block.type === "booking" && <BookingProps p={p} update={update} />}
     </div>
   );
 }
