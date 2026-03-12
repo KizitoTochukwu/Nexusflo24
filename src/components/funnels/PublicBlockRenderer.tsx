@@ -414,7 +414,7 @@ function BookingButton({ props: p, bookingPageId }: { props: Record<string, unkn
         .select("slug")
         .eq("id", bookingPageId)
         .maybeSingle();
-      if (data?.slug) setSlug(data.slug as string);
+      if ((data as any)?.slug) setSlug((data as any).slug as string);
     })();
   }, [bookingPageId]);
 
