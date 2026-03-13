@@ -7,6 +7,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from "lucide-react";
 import ImageInsertDialog from "./ImageInsertDialog";
+import LinkInsertDialog from "./LinkInsertDialog";
 
 interface FormattingToolbarProps {
   onWrap: (before: string, after: string) => void;
