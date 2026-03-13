@@ -25,7 +25,7 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
     { icon: Underline, label: "Underline", action: () => onWrap("<u>", "</u>") },
     { icon: List, label: "Bullet List", action: () => onWrap("<ul>\n<li>", "</li>\n</ul>") },
     { icon: ListOrdered, label: "Numbered List", action: () => onWrap("<ol>\n<li>", "</li>\n</ol>") },
-    { icon: Link2, label: "Insert Link", action: () => onWrap('<a href="URL">', "</a>") },
+    { icon: Link2, label: "Insert Link", action: () => setLinkDialogOpen(true) },
     { icon: Square, label: "Insert Button", action: onInsertButton },
     { icon: Image, label: "Insert Image", action: () => setImageDialogOpen(true) },
     { icon: Minus, label: "Divider", action: () => onInsert("\n---\n") },
