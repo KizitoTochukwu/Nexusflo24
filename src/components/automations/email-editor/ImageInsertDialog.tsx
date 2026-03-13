@@ -130,6 +130,14 @@ export default function ImageInsertDialog({ open, onOpenChange, onInsert }: Imag
         </Tabs>
 
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Link URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
+            <Input
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://example.com/landing-page"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Alt Text</Label>
