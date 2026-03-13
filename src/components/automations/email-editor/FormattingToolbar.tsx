@@ -17,6 +17,7 @@ interface FormattingToolbarProps {
 
 export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: FormattingToolbarProps) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
   const tools = [
     { icon: Bold, label: "Bold", action: () => onWrap("<b>", "</b>") },
