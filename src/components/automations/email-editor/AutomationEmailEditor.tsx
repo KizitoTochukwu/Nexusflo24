@@ -263,7 +263,7 @@ export default function AutomationEmailEditor({
               title="Email Preview"
               className="w-full border-0"
               style={{ minHeight: "480px", height: "auto" }}
-              sandbox="allow-same-origin" />
+              sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation" />
             
               </div>
             </div> :
