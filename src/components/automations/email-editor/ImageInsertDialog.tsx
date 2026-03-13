@@ -18,6 +18,7 @@ export default function ImageInsertDialog({ open, onOpenChange, onInsert }: Imag
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
   const [width, setWidth] = useState("600");
+  const [linkUrl, setLinkUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
 
