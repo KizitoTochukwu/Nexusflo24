@@ -18,6 +18,7 @@ export default function ImageInsertDialog({ open, onOpenChange, onInsert }: Imag
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
   const [width, setWidth] = useState("600");
+  const [linkUrl, setLinkUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
 
@@ -62,12 +63,16 @@ export default function ImageInsertDialog({ open, onOpenChange, onInsert }: Imag
       return;
     }
     const w = parseInt(width) || 600;
-    const html = `\n<img src="${url}" alt="${alt || "image"}" width="${w}" style="max-width:100%;height:auto;display:block;border-radius:8px;" />\n`;
+    const imgTag = `<img src="${url}" alt="${alt || "image"}" width="${w}" style="max-width:100%;height:auto;display:block;border-radius:8px;" />`;
+    const html = linkUrl
+      ? `\n<a href="${linkUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;">${imgTag}</a>\n`
+      : `\n${imgTag}\n`;
     onInsert(html);
     onOpenChange(false);
     setUrl("");
     setAlt("");
     setWidth("600");
+    setLinkUrl("");
     setPreviewUrl("");
   };
 
@@ -125,6 +130,14 @@ export default function ImageInsertDialog({ open, onOpenChange, onInsert }: Imag
         </Tabs>
 
         <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Link URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
+            <Input
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://example.com/landing-page"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Alt Text</Label>
