@@ -7,6 +7,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from "lucide-react";
 import ImageInsertDialog from "./ImageInsertDialog";
+import LinkInsertDialog from "./LinkInsertDialog";
 
 interface FormattingToolbarProps {
   onWrap: (before: string, after: string) => void;
@@ -16,6 +17,7 @@ interface FormattingToolbarProps {
 
 export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: FormattingToolbarProps) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
 
   const tools = [
     { icon: Bold, label: "Bold", action: () => onWrap("<b>", "</b>") },
@@ -23,7 +25,7 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
     { icon: Underline, label: "Underline", action: () => onWrap("<u>", "</u>") },
     { icon: List, label: "Bullet List", action: () => onWrap("<ul>\n<li>", "</li>\n</ul>") },
     { icon: ListOrdered, label: "Numbered List", action: () => onWrap("<ol>\n<li>", "</li>\n</ol>") },
-    { icon: Link2, label: "Insert Link", action: () => onWrap('<a href="URL">', "</a>") },
+    { icon: Link2, label: "Insert Link", action: () => setLinkDialogOpen(true) },
     { icon: Square, label: "Insert Button", action: onInsertButton },
     { icon: Image, label: "Insert Image", action: () => setImageDialogOpen(true) },
     { icon: Minus, label: "Divider", action: () => onInsert("\n---\n") },
@@ -58,6 +60,11 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
       <ImageInsertDialog
         open={imageDialogOpen}
         onOpenChange={setImageDialogOpen}
+        onInsert={onInsert}
+      />
+      <LinkInsertDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
         onInsert={onInsert}
       />
     </TooltipProvider>
