@@ -63,12 +63,16 @@ export default function ImageInsertDialog({ open, onOpenChange, onInsert }: Imag
       return;
     }
     const w = parseInt(width) || 600;
-    const html = `\n<img src="${url}" alt="${alt || "image"}" width="${w}" style="max-width:100%;height:auto;display:block;border-radius:8px;" />\n`;
+    const imgTag = `<img src="${url}" alt="${alt || "image"}" width="${w}" style="max-width:100%;height:auto;display:block;border-radius:8px;" />`;
+    const html = linkUrl
+      ? `\n<a href="${linkUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;">${imgTag}</a>\n`
+      : `\n${imgTag}\n`;
     onInsert(html);
     onOpenChange(false);
     setUrl("");
     setAlt("");
     setWidth("600");
+    setLinkUrl("");
     setPreviewUrl("");
   };
 
