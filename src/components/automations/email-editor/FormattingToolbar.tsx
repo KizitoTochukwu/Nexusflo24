@@ -62,6 +62,11 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
         onOpenChange={setImageDialogOpen}
         onInsert={onInsert}
       />
+      <LinkInsertDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        onInsert={onInsert}
+      />
     </TooltipProvider>
   );
 }
