@@ -137,6 +137,13 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
           onOpenChange={setBgColorOpen}
           onSelect={(hex) => onWrap(`<span style="background-color:${hex}">`, "</span>")}
         />
+        <ColorPickerPopover
+          icon={<PanelTop className="h-3.5 w-3.5" />}
+          label="Block Background"
+          open={blockBgOpen}
+          onOpenChange={setBlockBgOpen}
+          onSelect={(hex) => onWrap(`<div style="background-color:${hex};padding:16px;border-radius:8px">`, "</div>")}
+        />
       </div>
 
       <ImageInsertDialog
