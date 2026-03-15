@@ -1,103 +1,40 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+# Funnel-Specific Automation Triggering
 
-### Context
+## Problem
+All active `new_lead` automations fire for every captured lead, regardless of which funnel captured it. There's no way to link an automation to a specific funnel.
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
-
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
+## Approach
+Use the existing `trigger_config` JSONB column on the `automations` table to store an optional `funnel_id`. No database migration needed.
 
 ### Changes
 
-#### 1. Frontend: Split Settings Tabs by Role
+**1. `capture-lead` Edge Function** — Pass `funnel_id` from meta to the automation trigger, and filter automations by matching `trigger_config.funnel_id`:
+- Extract `funnel_id` from `meta.funnel_id`
+- Query automations where `trigger_config->funnel_id` equals the funnel ID **OR** `trigger_config->funnel_id` is null/empty (global automations still fire for all leads)
+- Pass `funnel_id` along in the execute-automation payload
 
-**DashboardSettings.tsx** — Major restructure:
+**2. `PublicFunnel.tsx`** — Already sends `meta.funnel_id` — also pass `funnel_name` so the lead record gets the funnel name stored:
+- Add `funnel_name: funnel.name` to the capture-lead body
 
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
+**3. `CreateAutomationDialog.tsx`** — Add an optional funnel selector when trigger is `new_lead`:
+- Fetch funnels list for the workspace
+- Show a "Trigger from funnel" dropdown (with "All funnels" as default)
+- Store selected funnel_id in `trigger_config.funnel_id`
 
-Tab layout:
-```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
-```
+**4. `AutomationDetailsDrawer.tsx`** — Same funnel selector in the edit view:
+- Initialize from `automation.trigger_config.funnel_id`
+- Save back to `trigger_config` on update
 
-#### 2. Move Provider Credentials to Platform ENV Secrets
+**5. `useAutomations.ts`** — Ensure `trigger_config` is passed through in create/update mutations (already supported via the existing code, just needs the UI to populate it).
 
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
-
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-#### 3. Update Edge Functions for Platform Credentials
-
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
-
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
-
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
-
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
-
-#### 4. Backend Admin Authorization
-
-All save-settings and test-send edge functions must verify admin role:
-```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
+### Matching Logic (Edge Function)
+```text
+For each automation where trigger_type = 'new_lead' AND status = 'active':
+  - If trigger_config.funnel_id is set → only fire if it matches the lead's funnel_id
+  - If trigger_config.funnel_id is null/empty → fire for ALL leads (backward compatible)
 ```
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
-
-#### 5. Admin Integrations Status Widget
-
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
-
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
-
-#### 6. Webhooks Tab (Customer-Accessible)
-
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+This keeps existing automations working as-is (global), while new ones can be scoped to specific funnels.
 
