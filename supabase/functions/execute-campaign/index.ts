@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     const workspaceId = campaign.workspace_id;
     const channel = campaign.type;
-    const content = (campaign.message_content || {}) as { subject?: string; body?: string };
+    const content = (campaign.message_content || {}) as { subject?: string; body?: string; templateSettings?: Record<string, any> };
     const audienceFilter = (campaign.audience_filter || {}) as {
       statuses?: string[];
       tags?: string[];
@@ -103,6 +103,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Skip unsubscribed leads
+    filteredLeads = filteredLeads.filter((lead: any) => {
+      const leadTags: string[] = lead.tags || [];
+      return !leadTags.includes("unsubscribed");
+    });
+
+    if (filteredLeads.length === 0) {
+      await supabase.from("campaigns").update({
+        status: "completed", sent_count: 0, updated_at: new Date().toISOString(),
+      }).eq("id", campaign_id);
+
+      return new Response(JSON.stringify({ ok: true, sent: 0, message: "All matching leads are unsubscribed" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let sentCount = 0;
     let failedCount = 0;
     const results: Array<{ lead_id: string; status: string; error?: string }> = [];
@@ -136,6 +152,7 @@ Deno.serve(async (req) => {
               workspaceId, to: lead.email,
               subject: messageSubject, html: messageBody,
               leadId: lead.id, campaignId: campaign_id,
+              templateSettings: content.templateSettings || undefined,
             }),
           });
           const data = await res.json();
