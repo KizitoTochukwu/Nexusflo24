@@ -114,7 +114,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Trigger</label>
-              <Select value={triggerType} onValueChange={(v) => { setTriggerType(v); if (v !== "new_lead") setSelectedFunnelId("all"); }}>
+              <Select value={triggerType} onValueChange={setTriggerType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TRIGGER_OPTIONS.map((t) => (
