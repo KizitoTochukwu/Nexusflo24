@@ -152,6 +152,7 @@ Deno.serve(async (req) => {
               workspaceId, to: lead.email,
               subject: messageSubject, html: messageBody,
               leadId: lead.id, campaignId: campaign_id,
+              templateSettings: content.templateSettings || undefined,
             }),
           });
           const data = await res.json();
