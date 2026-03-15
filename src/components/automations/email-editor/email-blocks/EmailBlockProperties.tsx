@@ -1,0 +1,327 @@
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  EmailBlock, TextBlockProps, ImageBlockProps, ButtonBlockProps,
+  DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
+  BLOCK_META,
+} from "./emailBlockTypes";
+
+interface EmailBlockPropertiesProps {
+  block: EmailBlock | null;
+  onChange: (id: string, props: EmailBlock["props"]) => void;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function AlignmentSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="left">Left</SelectItem>
+        <SelectItem value="center">Center</SelectItem>
+        <SelectItem value="right">Right</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextBlockProps) => void }) {
+  const p = block.props as TextBlockProps;
+  return (
+    <>
+      <Field label="Content">
+        <Textarea
+          className="min-h-[120px] text-sm font-mono"
+          value={p.content}
+          onChange={(e) => onChange({ ...p, content: e.target.value })}
+          placeholder="Use {{first_name}} for variables..."
+        />
+      </Field>
+      <Field label="Font Size">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.fontSize]} min={10} max={36} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.fontSize}px</span>
+        </div>
+      </Field>
+      <Field label="Line Height">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.lineHeight * 10]} min={10} max={25} step={1} onValueChange={([v]) => onChange({ ...p, lineHeight: v / 10 })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.lineHeight}</span>
+        </div>
+      </Field>
+      <Field label="Text Color">
+        <div className="flex items-center gap-2">
+          <input type="color" value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
+          <Input value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-8 text-xs flex-1" />
+        </div>
+      </Field>
+      <Field label="Alignment">
+        <Select value={p.alignment} onValueChange={(v) => onChange({ ...p, alignment: v as TextBlockProps["alignment"] })}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">Left</SelectItem>
+            <SelectItem value="center">Center</SelectItem>
+            <SelectItem value="right">Right</SelectItem>
+            <SelectItem value="justify">Justify</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label="Font Weight">
+        <Select value={p.fontWeight} onValueChange={(v) => onChange({ ...p, fontWeight: v as "normal" | "bold" })}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="bold">Bold</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+    </>
+  );
+}
+
+function ImageProps({ block, onChange }: { block: EmailBlock; onChange: (p: ImageBlockProps) => void }) {
+  const p = block.props as ImageBlockProps;
+  return (
+    <>
+      <Field label="Image URL">
+        <Input className="h-8 text-xs" value={p.src} onChange={(e) => onChange({ ...p, src: e.target.value })} placeholder="https://..." />
+      </Field>
+      <Field label="Alt Text">
+        <Input className="h-8 text-xs" value={p.alt} onChange={(e) => onChange({ ...p, alt: e.target.value })} />
+      </Field>
+      <Field label="Width (%)">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.width]} min={10} max={100} step={5} onValueChange={([v]) => onChange({ ...p, width: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.width}%</span>
+        </div>
+      </Field>
+      <Field label="Border Radius">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.borderRadius]} min={0} max={24} step={2} onValueChange={([v]) => onChange({ ...p, borderRadius: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.borderRadius}px</span>
+        </div>
+      </Field>
+      <Field label="Link URL (optional)">
+        <Input className="h-8 text-xs" value={p.linkUrl} onChange={(e) => onChange({ ...p, linkUrl: e.target.value })} placeholder="https://..." />
+      </Field>
+      <Field label="Alignment">
+        <AlignmentSelect value={p.alignment} onChange={(v) => onChange({ ...p, alignment: v as ImageBlockProps["alignment"] })} />
+      </Field>
+    </>
+  );
+}
+
+function ButtonProps({ block, onChange }: { block: EmailBlock; onChange: (p: ButtonBlockProps) => void }) {
+  const p = block.props as ButtonBlockProps;
+  return (
+    <>
+      <Field label="Button Label">
+        <Input className="h-8 text-xs" value={p.label} onChange={(e) => onChange({ ...p, label: e.target.value })} />
+      </Field>
+      <Field label="Button URL">
+        <Input className="h-8 text-xs" value={p.url} onChange={(e) => onChange({ ...p, url: e.target.value })} placeholder="https://..." />
+      </Field>
+      <Field label="Background Color">
+        <div className="flex items-center gap-2">
+          <input type="color" value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
+          <Input value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-8 text-xs flex-1" />
+        </div>
+      </Field>
+      <Field label="Text Color">
+        <div className="flex items-center gap-2">
+          <input type="color" value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
+          <Input value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-8 text-xs flex-1" />
+        </div>
+      </Field>
+      <Field label="Border Radius">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.borderRadius]} min={0} max={24} step={2} onValueChange={([v]) => onChange({ ...p, borderRadius: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.borderRadius}px</span>
+        </div>
+      </Field>
+      <Field label="Font Size">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.fontSize]} min={12} max={24} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.fontSize}px</span>
+        </div>
+      </Field>
+      <Field label="Alignment">
+        <AlignmentSelect value={p.alignment} onChange={(v) => onChange({ ...p, alignment: v as ButtonBlockProps["alignment"] })} />
+      </Field>
+      <Field label="Full Width">
+        <Switch checked={p.fullWidth} onCheckedChange={(v) => onChange({ ...p, fullWidth: v })} />
+      </Field>
+    </>
+  );
+}
+
+function DividerProps({ block, onChange }: { block: EmailBlock; onChange: (p: DividerBlockProps) => void }) {
+  const p = block.props as DividerBlockProps;
+  return (
+    <>
+      <Field label="Color">
+        <div className="flex items-center gap-2">
+          <input type="color" value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
+          <Input value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-8 text-xs flex-1" />
+        </div>
+      </Field>
+      <Field label="Thickness">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.thickness]} min={1} max={6} step={1} onValueChange={([v]) => onChange({ ...p, thickness: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.thickness}px</span>
+        </div>
+      </Field>
+      <Field label="Style">
+        <Select value={p.style} onValueChange={(v) => onChange({ ...p, style: v as DividerBlockProps["style"] })}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="solid">Solid</SelectItem>
+            <SelectItem value="dashed">Dashed</SelectItem>
+            <SelectItem value="dotted">Dotted</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label="Margin">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.margin]} min={4} max={48} step={4} onValueChange={([v]) => onChange({ ...p, margin: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.margin}px</span>
+        </div>
+      </Field>
+    </>
+  );
+}
+
+function SpacerProps({ block, onChange }: { block: EmailBlock; onChange: (p: SpacerBlockProps) => void }) {
+  const p = block.props as SpacerBlockProps;
+  return (
+    <Field label="Height">
+      <div className="flex items-center gap-2">
+        <Slider value={[p.height]} min={8} max={120} step={4} onValueChange={([v]) => onChange({ ...p, height: v })} className="flex-1" />
+        <span className="text-xs text-muted-foreground w-8 text-right">{p.height}px</span>
+      </div>
+    </Field>
+  );
+}
+
+function SocialProps({ block, onChange }: { block: EmailBlock; onChange: (p: SocialBlockProps) => void }) {
+  const p = block.props as SocialBlockProps;
+  const platforms = ["facebook", "twitter", "linkedin", "instagram"] as const;
+  return (
+    <>
+      {platforms.map((platform) => (
+        <Field key={platform} label={`${platform.charAt(0).toUpperCase() + platform.slice(1)} URL`}>
+          <Input
+            className="h-8 text-xs"
+            value={p.links[platform]}
+            onChange={(e) => onChange({ ...p, links: { ...p.links, [platform]: e.target.value } })}
+            placeholder={`https://${platform}.com/...`}
+          />
+        </Field>
+      ))}
+      <Field label="Icon Size">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.iconSize]} min={20} max={48} step={4} onValueChange={([v]) => onChange({ ...p, iconSize: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.iconSize}px</span>
+        </div>
+      </Field>
+      <Field label="Alignment">
+        <AlignmentSelect value={p.alignment} onChange={(v) => onChange({ ...p, alignment: v as SocialBlockProps["alignment"] })} />
+      </Field>
+    </>
+  );
+}
+
+function ColumnsProps({ block, onChange }: { block: EmailBlock; onChange: (p: ColumnsBlockProps) => void }) {
+  const p = block.props as ColumnsBlockProps;
+  return (
+    <>
+      <Field label="Columns">
+        <Select
+          value={String(p.columnCount)}
+          onValueChange={(v) => {
+            const count = Number(v) as 2 | 3;
+            const cols = [...p.columns];
+            while (cols.length < count) cols.push(`Column ${cols.length + 1} text`);
+            onChange({ ...p, columnCount: count, columns: cols.slice(0, count) });
+          }}
+        >
+          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 Columns</SelectItem>
+            <SelectItem value="3">3 Columns</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label="Gap">
+        <div className="flex items-center gap-2">
+          <Slider value={[p.gap]} min={0} max={32} step={4} onValueChange={([v]) => onChange({ ...p, gap: v })} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-8 text-right">{p.gap}px</span>
+        </div>
+      </Field>
+      {p.columns.map((col, i) => (
+        <Field key={i} label={`Column ${i + 1}`}>
+          <Textarea
+            className="min-h-[60px] text-xs"
+            value={col}
+            onChange={(e) => {
+              const cols = [...p.columns];
+              cols[i] = e.target.value;
+              onChange({ ...p, columns: cols });
+            }}
+          />
+        </Field>
+      ))}
+    </>
+  );
+}
+
+export default function EmailBlockProperties({ block, onChange }: EmailBlockPropertiesProps) {
+  if (!block) {
+    return (
+      <div className="w-[220px] shrink-0 border-l border-border bg-muted/30 p-4 flex items-center justify-center">
+        <p className="text-xs text-muted-foreground text-center">
+          Select a block to edit its properties
+        </p>
+      </div>
+    );
+  }
+
+  const meta = BLOCK_META[block.type];
+  const Icon = meta.icon;
+
+  const handleChange = (props: EmailBlock["props"]) => {
+    onChange(block.id, props);
+  };
+
+  return (
+    <div className="w-[220px] shrink-0 border-l border-border bg-muted/30 overflow-y-auto">
+      <div className="p-3 border-b border-border">
+        <div className="flex items-center gap-1.5">
+          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-semibold">{meta.label} Properties</span>
+        </div>
+      </div>
+      <div className="p-3 space-y-3">
+        {block.type === "text" && <TextProps block={block} onChange={handleChange as (p: TextBlockProps) => void} />}
+        {block.type === "image" && <ImageProps block={block} onChange={handleChange as (p: ImageBlockProps) => void} />}
+        {block.type === "button" && <ButtonProps block={block} onChange={handleChange as (p: ButtonBlockProps) => void} />}
+        {block.type === "divider" && <DividerProps block={block} onChange={handleChange as (p: DividerBlockProps) => void} />}
+        {block.type === "spacer" && <SpacerProps block={block} onChange={handleChange as (p: SpacerBlockProps) => void} />}
+        {block.type === "social" && <SocialProps block={block} onChange={handleChange as (p: SocialBlockProps) => void} />}
+        {block.type === "columns" && <ColumnsProps block={block} onChange={handleChange as (p: ColumnsBlockProps) => void} />}
+      </div>
+    </div>
+  );
+}
