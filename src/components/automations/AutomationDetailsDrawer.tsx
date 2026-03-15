@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { useFunnels } from "@/hooks/useFunnels";
 import { format } from "date-fns";
 
 interface Props {
@@ -30,12 +31,14 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const workspaceId = useWorkspaceId();
   const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs } = useAutomationLogs(automation?.id ?? null);
+  const { data: funnels } = useFunnels(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("new_lead");
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
   const [steps, setSteps] = useState<StepData[]>([]);
 
   useEffect(() => {
@@ -43,6 +46,8 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       setName(automation.name);
       setDescription(automation.description || "");
       setTriggerType(automation.trigger_type);
+      const fId = (automation.trigger_config as Record<string, unknown>)?.funnel_id as string | undefined;
+      setSelectedFunnelId(fId || "all");
     }
   }, [automation]);
 
@@ -55,12 +60,17 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   if (!automation) return null;
 
   const handleSave = () => {
+    const triggerConfig: Record<string, unknown> = {};
+    if (triggerType === "new_lead" && selectedFunnelId !== "all") {
+      triggerConfig.funnel_id = selectedFunnelId;
+    }
     updateAutomation.mutate({
       id: automation.id,
       workspace_id: workspaceId,
       name,
       description,
       trigger_type: triggerType,
+      trigger_config: triggerConfig,
       steps,
     });
   };
@@ -104,7 +114,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Trigger</label>
-              <Select value={triggerType} onValueChange={setTriggerType}>
+              <Select value={triggerType} onValueChange={(v) => { setTriggerType(v); if (v !== "new_lead") setSelectedFunnelId("all"); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TRIGGER_OPTIONS.map((t) => (
@@ -113,6 +123,24 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 </SelectContent>
               </Select>
             </div>
+
+            {triggerType === "new_lead" && (
+              <div>
+                <label className="text-sm font-medium text-foreground">Trigger from funnel</label>
+                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All funnels (global)</SelectItem>
+                    {(funnels ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads captured from this funnel"}
+                </p>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
               <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />

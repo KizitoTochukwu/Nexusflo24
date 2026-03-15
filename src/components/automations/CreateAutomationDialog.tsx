@@ -7,34 +7,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus } from "lucide-react";
 import { useCreateAutomation, TRIGGER_OPTIONS } from "@/hooks/useAutomations";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { useFunnels } from "@/hooks/useFunnels";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 
 export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
   const workspaceId = useWorkspaceId();
   const createAutomation = useCreateAutomation();
+  const { data: funnels } = useFunnels(workspaceId);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("new_lead");
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
   const [steps, setSteps] = useState<StepData[]>([]);
 
   const reset = () => {
     setName("");
     setDescription("");
     setTriggerType("new_lead");
+    setSelectedFunnelId("all");
     setSteps([]);
   };
 
   const handleCreate = () => {
     if (!name.trim()) return;
+    const triggerConfig: Record<string, unknown> = {};
+    if (triggerType === "new_lead" && selectedFunnelId !== "all") {
+      triggerConfig.funnel_id = selectedFunnelId;
+    }
     createAutomation.mutate(
       {
         workspace_id: workspaceId,
         name: name.trim(),
         description: description.trim(),
         trigger_type: triggerType,
-        trigger_config: {},
+        trigger_config: triggerConfig,
         steps,
       },
       {
@@ -71,7 +79,7 @@ export default function CreateAutomationDialog() {
 
           <div>
             <label className="text-sm font-medium text-foreground">Trigger</label>
-            <Select value={triggerType} onValueChange={setTriggerType}>
+            <Select value={triggerType} onValueChange={(v) => { setTriggerType(v); if (v !== "new_lead") setSelectedFunnelId("all"); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TRIGGER_OPTIONS.map((t) => (
@@ -80,6 +88,24 @@ export default function CreateAutomationDialog() {
               </SelectContent>
             </Select>
           </div>
+
+          {triggerType === "new_lead" && (
+            <div>
+              <label className="text-sm font-medium text-foreground">Trigger from funnel</label>
+              <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All funnels (global)</SelectItem>
+                  {(funnels ?? []).map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads captured from this funnel"}
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Workflow Steps</label>

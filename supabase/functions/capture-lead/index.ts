@@ -298,9 +298,11 @@ Deno.serve(async (req) => {
       const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
       try {
+        const capturedFunnelId = meta?.funnel_id || null;
+
         const { data: automations } = await supabase
           .from("automations")
-          .select("id")
+          .select("id, trigger_config")
           .eq("workspace_id", workspaceId)
           .eq("trigger_type", "new_lead")
           .eq("status", "active");
@@ -308,6 +310,13 @@ Deno.serve(async (req) => {
         if (automations && automations.length > 0) {
           const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
           for (const auto of automations) {
+            // Funnel-specific filtering: skip if automation targets a different funnel
+            const cfg = auto.trigger_config as Record<string, unknown> | null;
+            const autoFunnelId = cfg?.funnel_id as string | null | undefined;
+            if (autoFunnelId && autoFunnelId !== capturedFunnelId) {
+              continue; // This automation is scoped to a different funnel
+            }
+
             try {
               await fetch(execUrl, {
                 method: "POST",
