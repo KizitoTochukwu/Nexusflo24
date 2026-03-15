@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
     const workspaceId = campaign.workspace_id;
     const channel = campaign.type;
-    const content = (campaign.message_content || {}) as { subject?: string; body?: string };
+    const content = (campaign.message_content || {}) as { subject?: string; body?: string; templateSettings?: Record<string, any> };
     const audienceFilter = (campaign.audience_filter || {}) as {
       statuses?: string[];
       tags?: string[];
