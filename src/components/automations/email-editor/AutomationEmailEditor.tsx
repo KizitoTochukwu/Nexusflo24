@@ -40,8 +40,8 @@ export default function AutomationEmailEditor({
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [buttonDialogOpen, setButtonDialogOpen] = useState(false);
   const [autocomplete, setAutocomplete] = useState<{
-    active: boolean; filter: string; startPos: number;
-    position: { top: number; left: number };
+    active: boolean;filter: string;startPos: number;
+    position: {top: number;left: number;};
   }>({ active: false, filter: "", startPos: 0, position: { top: 0, left: 0 } });
 
   const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
@@ -57,12 +57,12 @@ export default function AutomationEmailEditor({
   const insertAtCursor = useCallback(
     (text: string) => {
       const el = textareaRef.current;
-      if (!el) { onMessageChange(message + text); return; }
+      if (!el) {onMessageChange(message + text);return;}
       const start = el.selectionStart;
       const end = el.selectionEnd;
       const newValue = message.slice(0, start) + text + message.slice(end);
       onMessageChange(newValue);
-      requestAnimationFrame(() => { el.focus(); const pos = start + text.length; el.setSelectionRange(pos, pos); });
+      requestAnimationFrame(() => {el.focus();const pos = start + text.length;el.setSelectionRange(pos, pos);});
     },
     [message, onMessageChange]
   );
@@ -76,7 +76,7 @@ export default function AutomationEmailEditor({
       const selected = message.slice(start, end) || "text";
       const newValue = message.slice(0, start) + before + selected + after + message.slice(end);
       onMessageChange(newValue);
-      requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + before.length, start + before.length + selected.length); });
+      requestAnimationFrame(() => {el.focus();el.setSelectionRange(start + before.length, start + before.length + selected.length);});
     },
     [message, onMessageChange]
   );
@@ -89,7 +89,7 @@ export default function AutomationEmailEditor({
       const after = message.slice(el.selectionStart);
       onMessageChange(before + value + after);
       setAutocomplete((s) => ({ ...s, active: false }));
-      requestAnimationFrame(() => { el.focus(); const pos = autocomplete.startPos + value.length; el.setSelectionRange(pos, pos); });
+      requestAnimationFrame(() => {el.focus();const pos = autocomplete.startPos + value.length;el.setSelectionRange(pos, pos);});
     },
     [message, onMessageChange, autocomplete.startPos]
   );
@@ -119,7 +119,7 @@ export default function AutomationEmailEditor({
       const htmlBody = getEmailHtml();
       const html = buildPreviewHtml(htmlBody, subject, PREVIEW_VALUES, currentSettings);
       const doc = iframeRef.current.contentDocument;
-      if (doc) { doc.open(); doc.write(html); doc.close(); }
+      if (doc) {doc.open();doc.write(html);doc.close();}
     }
   }, [preview, message, subject, previewDevice, currentSettings, isEmail, getEmailHtml]);
 
@@ -134,24 +134,24 @@ export default function AutomationEmailEditor({
   return (
     <div className="space-y-3 w-full">
       {/* Subject */}
-      {isEmail && (
-        <div className="space-y-1">
+      {isEmail &&
+      <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Subject Line</label>
           <Input
-            placeholder="Email subject line"
-            className="w-full bg-background"
-            value={subject}
-            onChange={(e) => onSubjectChange(e.target.value)}
-          />
+          placeholder="Email subject line"
+          className="w-full bg-background"
+          value={subject}
+          onChange={(e) => onSubjectChange(e.target.value)} />
+        
         </div>
-      )}
+      }
 
       {/* Toolbar row (preview/device toggle) */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1.5">
           {!isEmail && <InsertDropdown onInsert={insertAtCursor} />}
-          {isEmail && !preview && (
-            <DropdownMenu>
+          {isEmail && !preview &&
+          <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                   <LayoutTemplate className="h-3.5 w-3.5" />
@@ -159,23 +159,23 @@ export default function AutomationEmailEditor({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">
-                {EMAIL_PRESETS.map((preset) => (
-                  <DropdownMenuItem
-                    key={preset.id}
-                    onClick={() => { onSubjectChange(preset.subject); onMessageChange(preset.body); }}
-                    className="flex flex-col items-start gap-0.5 py-2"
-                  >
+                {EMAIL_PRESETS.map((preset) =>
+              <DropdownMenuItem
+                key={preset.id}
+                onClick={() => {onSubjectChange(preset.subject);onMessageChange(preset.body);}}
+                className="flex flex-col items-start gap-0.5 py-2">
+                
                     <span className="font-medium text-sm">{preset.emoji} {preset.label}</span>
                     <span className="text-xs text-muted-foreground">{preset.description}</span>
                   </DropdownMenuItem>
-                ))}
+              )}
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          }
         </div>
         <div className="flex items-center gap-1">
-          {preview && isEmail && (
-            <div className="flex items-center border border-border rounded-md mr-1">
+          {preview && isEmail &&
+          <div className="flex items-center border border-border rounded-md mr-1">
               <Button type="button" variant={previewDevice === "desktop" ? "secondary" : "ghost"} size="sm" className="h-7 w-7 p-0 rounded-r-none" onClick={() => setPreviewDevice("desktop")}>
                 <Monitor className="h-3.5 w-3.5" />
               </Button>
@@ -183,14 +183,14 @@ export default function AutomationEmailEditor({
                 <Smartphone className="h-3.5 w-3.5" />
               </Button>
             </div>
-          )}
+          }
           <Button
             type="button"
             variant={preview ? "default" : "ghost"}
             size="sm"
             className="gap-1.5 h-8 text-xs"
-            onClick={() => setPreview(!preview)}
-          >
+            onClick={() => setPreview(!preview)}>
+            
             {preview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             {preview ? "Edit" : "Preview"}
           </Button>
@@ -198,103 +198,103 @@ export default function AutomationEmailEditor({
       </div>
 
       {/* Editor area */}
-      {preview ? (
-        isEmail ? (
-          <div className="flex justify-center bg-muted/30 p-4 border border-border rounded-lg">
+      {preview ?
+      isEmail ?
+      <div className="flex justify-center bg-muted/30 p-4 border border-border rounded-lg">
             <div
-              className="transition-all duration-300 overflow-hidden rounded-lg border border-border shadow-sm"
-              style={{ width: previewDevice === "mobile" ? "375px" : "100%", maxWidth: "100%" }}
-            >
+          className="transition-all duration-300 overflow-hidden rounded-lg border border-border shadow-sm"
+          style={{ width: previewDevice === "mobile" ? "375px" : "100%", maxWidth: "100%" }}>
+          
               <iframe
-                ref={iframeRef}
-                title="Email Preview"
-                className="w-full border-0"
-                style={{ minHeight: "480px", height: "auto" }}
-                sandbox="allow-same-origin"
-              />
+            ref={iframeRef}
+            title="Email Preview"
+            className="w-full border-0"
+            style={{ minHeight: "480px", height: "auto" }}
+            sandbox="allow-same-origin" />
+          
             </div>
-          </div>
-        ) : (
-          <div className="p-4 min-h-[300px] bg-muted/30 border border-border rounded-lg">
+          </div> :
+
+      <div className="p-4 min-h-[300px] bg-muted/30 border border-border rounded-lg">
             <div className="bg-background rounded-lg border border-border p-4 max-w-md mx-auto">
               <p className="text-xs text-muted-foreground mb-2 font-medium">
                 {message.length > 0 ? `${message.length} characters` : "Empty message"}
               </p>
               <div
-                className="text-sm leading-relaxed"
-                dangerouslySetInnerHTML={{
-                  __html: (() => {
-                    let result = message;
-                    for (const [key, val] of Object.entries(PREVIEW_VALUES)) {
-                      result = result.split(key).join(`<span class="font-semibold">${val}</span>`);
-                    }
-                    result = result.replace(/\{\{(\w+)\}\}/g, '<span class="text-muted-foreground">[$1]</span>');
-                    result = result.replace(/\n/g, "<br/>");
-                    return result;
-                  })()
-                }}
-              />
+            className="text-sm leading-relaxed"
+            dangerouslySetInnerHTML={{
+              __html: (() => {
+                let result = message;
+                for (const [key, val] of Object.entries(PREVIEW_VALUES)) {
+                  result = result.split(key).join(`<span class="font-semibold">${val}</span>`);
+                }
+                result = result.replace(/\{\{(\w+)\}\}/g, '<span class="text-muted-foreground">[$1]</span>');
+                result = result.replace(/\n/g, "<br/>");
+                return result;
+              })()
+            }} />
+          
             </div>
-          </div>
-        )
-      ) : isEmail ? (
-        /* Block editor for email */
-        <EmailBlockEditor message={message} onMessageChange={onMessageChange} />
-      ) : (
-        /* Textarea for SMS/WhatsApp */
-        <div className="relative border border-border rounded-lg bg-background overflow-hidden">
+          </div> :
+
+      isEmail ? (
+      /* Block editor for email */
+      <EmailBlockEditor message={message} onMessageChange={onMessageChange} />) : (
+
+      /* Textarea for SMS/WhatsApp */
+      <div className="relative border border-border rounded-lg bg-background overflow-hidden">
           <div className="px-2 pt-2">
             <FormattingToolbar
-              onWrap={wrapSelection}
-              onInsert={insertAtCursor}
-              onInsertButton={() => setButtonDialogOpen(true)}
-            />
+            onWrap={wrapSelection}
+            onInsert={insertAtCursor}
+            onInsertButton={() => setButtonDialogOpen(true)} />
+          
           </div>
           <div className="relative">
             <textarea
-              ref={textareaRef}
-              placeholder="Hi {{first_name}}, thanks for signing up!"
-              className="w-full min-h-[300px] bg-transparent text-base leading-relaxed p-4 resize-y outline-none placeholder:text-muted-foreground font-mono text-sm"
-              value={message}
-              onChange={handleInput}
-            />
-            {autocomplete.active && (
-              <VariableAutocomplete
-                filter={autocomplete.filter}
-                position={autocomplete.position}
-                onSelect={handleAutocompleteSelect}
-              />
-            )}
+            ref={textareaRef}
+            placeholder="Hi {{first_name}}, thanks for signing up!"
+            className="w-full min-h-[300px] bg-transparent text-base leading-relaxed p-4 resize-y outline-none placeholder:text-muted-foreground font-mono text-sm"
+            value={message}
+            onChange={handleInput} />
+          
+            {autocomplete.active &&
+          <VariableAutocomplete
+            filter={autocomplete.filter}
+            position={autocomplete.position}
+            onSelect={handleAutocompleteSelect} />
+
+          }
           </div>
-        </div>
-      )}
+        </div>)
+      }
 
       {/* Template Settings (email only) */}
-      {isEmail && onTemplateSettingsChange && (
-        <EmailTemplateSettings settings={currentSettings} onChange={onTemplateSettingsChange} />
-      )}
+      {isEmail && onTemplateSettingsChange &&
+      <EmailTemplateSettings settings={currentSettings} onChange={onTemplateSettingsChange} />
+      }
 
       {/* Quick-insert variable badges (SMS only) */}
-      {!preview && !isEmail && (
-        <div className="flex flex-wrap gap-1.5">
-          {VARIABLE_OPTIONS.map((v) => (
-            <Badge
-              key={v.value}
-              variant="secondary"
-              className="cursor-pointer hover:bg-primary/10 text-xs"
-              onClick={() => insertAtCursor(v.value)}
-            >
-              {v.label}
-            </Badge>
-          ))}
-        </div>
-      )}
+      {!preview && !isEmail
+
+
+
+
+
+
+
+
+
+
+
+
+      }
 
       <ButtonInsertDialog
         open={buttonDialogOpen}
         onOpenChange={setButtonDialogOpen}
-        onInsert={insertAtCursor}
-      />
-    </div>
-  );
+        onInsert={insertAtCursor} />
+      
+    </div>);
+
 }
