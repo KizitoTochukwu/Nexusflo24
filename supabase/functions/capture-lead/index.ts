@@ -310,11 +310,26 @@ Deno.serve(async (req) => {
         if (automations && automations.length > 0) {
           const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
           for (const auto of automations) {
-            // Funnel-specific filtering: skip if automation targets a different funnel
             const cfg = auto.trigger_config as Record<string, unknown> | null;
-            const autoFunnelId = cfg?.funnel_id as string | null | undefined;
-            if (autoFunnelId && autoFunnelId !== capturedFunnelId) {
-              continue; // This automation is scoped to a different funnel
+
+            // Funnel ID filter
+            const autoFunnelId = cfg?.funnel_id as string | undefined;
+            if (autoFunnelId && autoFunnelId !== capturedFunnelId) continue;
+
+            // Source filter
+            const autoSource = cfg?.source as string | undefined;
+            if (autoSource && autoSource.toLowerCase() !== finalSource.toLowerCase()) continue;
+
+            // Funnel name filter (contains match)
+            const autoFunnelName = cfg?.funnel_name as string | undefined;
+            if (autoFunnelName && !(funnelName || "").toLowerCase().includes(autoFunnelName.toLowerCase())) continue;
+
+            // Tags filter (lead must have ALL specified tags)
+            const autoTags = cfg?.tags as string[] | undefined;
+            if (autoTags && autoTags.length > 0) {
+              const leadTagsLower = newTags.map(t => t.toLowerCase());
+              const allMatch = autoTags.every(t => leadTagsLower.includes(t.toLowerCase()));
+              if (!allMatch) continue;
             }
 
             try {
