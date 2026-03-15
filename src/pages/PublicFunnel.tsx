@@ -114,6 +114,7 @@ export default function PublicFunnel() {
           email: data.email,
           phone: data.phone || null,
           source: `funnel:${funnel.name}`,
+          funnel_name: funnel.name,
           tags: ["funnel-lead"],
           notes: `Funnel: ${funnel.name} | Step: ${currentStep.step_type}`,
           meta: {

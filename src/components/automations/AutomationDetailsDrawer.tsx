@@ -114,7 +114,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">Trigger</label>
-              <Select value={triggerType} onValueChange={setTriggerType}>
+              <Select value={triggerType} onValueChange={(v) => { setTriggerType(v); if (v !== "new_lead") setSelectedFunnelId("all"); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TRIGGER_OPTIONS.map((t) => (
@@ -123,6 +123,24 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 </SelectContent>
               </Select>
             </div>
+
+            {triggerType === "new_lead" && (
+              <div>
+                <label className="text-sm font-medium text-foreground">Trigger from funnel</label>
+                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All funnels (global)</SelectItem>
+                    {(funnels ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads captured from this funnel"}
+                </p>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
               <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
