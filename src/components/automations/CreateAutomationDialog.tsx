@@ -9,6 +9,7 @@ import { useCreateAutomation, TRIGGER_OPTIONS } from "@/hooks/useAutomations";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
+import TriggerConfigFilters, { type TriggerConfig } from "./TriggerConfigFilters";
 
 export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
@@ -19,30 +20,35 @@ export default function CreateAutomationDialog() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("new_lead");
-  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
+  const [triggerConfig, setTriggerConfig] = useState<TriggerConfig>({});
   const [steps, setSteps] = useState<StepData[]>([]);
 
   const reset = () => {
     setName("");
     setDescription("");
     setTriggerType("new_lead");
-    setSelectedFunnelId("all");
+    setTriggerConfig({});
     setSteps([]);
+  };
+
+  const buildTriggerConfig = (): Record<string, unknown> => {
+    const cfg: Record<string, unknown> = {};
+    if (triggerConfig.funnel_id) cfg.funnel_id = triggerConfig.funnel_id;
+    if (triggerConfig.source) cfg.source = triggerConfig.source;
+    if (triggerConfig.funnel_name) cfg.funnel_name = triggerConfig.funnel_name;
+    if (triggerConfig.tags && triggerConfig.tags.length > 0) cfg.tags = triggerConfig.tags;
+    return cfg;
   };
 
   const handleCreate = () => {
     if (!name.trim()) return;
-    const triggerConfig: Record<string, unknown> = {};
-    if (selectedFunnelId !== "all") {
-      triggerConfig.funnel_id = selectedFunnelId;
-    }
     createAutomation.mutate(
       {
         workspace_id: workspaceId,
         name: name.trim(),
         description: description.trim(),
         trigger_type: triggerType,
-        trigger_config: triggerConfig,
+        trigger_config: buildTriggerConfig(),
         steps,
       },
       {
@@ -89,21 +95,11 @@ export default function CreateAutomationDialog() {
             </Select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
-            <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-              <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All funnels (global)</SelectItem>
-                {(funnels ?? []).map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
-            </p>
-          </div>
+          <TriggerConfigFilters
+            config={triggerConfig}
+            onChange={setTriggerConfig}
+            funnels={funnels ?? []}
+          />
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Workflow Steps</label>
