@@ -6,7 +6,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   Link2, Image, Minus, Smile, Square,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  Type, Paintbrush
+  Type, Paintbrush, PanelTop
 } from "lucide-react";
 import ImageInsertDialog from "./ImageInsertDialog";
 
@@ -82,6 +82,7 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [textColorOpen, setTextColorOpen] = useState(false);
   const [bgColorOpen, setBgColorOpen] = useState(false);
+  const [blockBgOpen, setBlockBgOpen] = useState(false);
 
   const tools = [
     { icon: Bold, label: "Bold", action: () => onWrap("<b>", "</b>") },
@@ -135,6 +136,13 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
           open={bgColorOpen}
           onOpenChange={setBgColorOpen}
           onSelect={(hex) => onWrap(`<span style="background-color:${hex}">`, "</span>")}
+        />
+        <ColorPickerPopover
+          icon={<PanelTop className="h-3.5 w-3.5" />}
+          label="Block Background"
+          open={blockBgOpen}
+          onOpenChange={setBlockBgOpen}
+          onSelect={(hex) => onWrap(`<div style="background-color:${hex};padding:16px;border-radius:8px">`, "</div>")}
         />
       </div>
 
