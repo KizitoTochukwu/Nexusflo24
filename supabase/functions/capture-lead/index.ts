@@ -292,8 +292,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- Trigger matching automations ---
-    if (!existing) {
+    // --- Trigger matching automations (for both new and returning leads) ---
+    {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -310,11 +310,10 @@ Deno.serve(async (req) => {
         if (automations && automations.length > 0) {
           const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
           for (const auto of automations) {
-            // Funnel-specific filtering: skip if automation targets a different funnel
             const cfg = auto.trigger_config as Record<string, unknown> | null;
             const autoFunnelId = cfg?.funnel_id as string | null | undefined;
             if (autoFunnelId && autoFunnelId !== capturedFunnelId) {
-              continue; // This automation is scoped to a different funnel
+              continue;
             }
 
             try {
@@ -345,8 +344,6 @@ Deno.serve(async (req) => {
           .contains("trigger_config", { type: "new_lead" });
 
         if (triggeredCampaigns && triggeredCampaigns.length > 0) {
-          const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-          const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
           const execCampaignUrl = `${supabaseUrl}/functions/v1/execute-campaign`;
           for (const camp of triggeredCampaigns) {
             try {
