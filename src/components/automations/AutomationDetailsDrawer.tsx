@@ -31,12 +31,14 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const workspaceId = useWorkspaceId();
   const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs } = useAutomationLogs(automation?.id ?? null);
+  const { data: funnels } = useFunnels(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("new_lead");
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
   const [steps, setSteps] = useState<StepData[]>([]);
 
   useEffect(() => {
@@ -44,6 +46,8 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       setName(automation.name);
       setDescription(automation.description || "");
       setTriggerType(automation.trigger_type);
+      const fId = (automation.trigger_config as Record<string, unknown>)?.funnel_id as string | undefined;
+      setSelectedFunnelId(fId || "all");
     }
   }, [automation]);
 
