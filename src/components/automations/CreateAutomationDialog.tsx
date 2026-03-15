@@ -33,7 +33,7 @@ export default function CreateAutomationDialog() {
   const handleCreate = () => {
     if (!name.trim()) return;
     const triggerConfig: Record<string, unknown> = {};
-    if (triggerType === "new_lead" && selectedFunnelId !== "all") {
+    if (selectedFunnelId !== "all") {
       triggerConfig.funnel_id = selectedFunnelId;
     }
     createAutomation.mutate(
@@ -79,7 +79,7 @@ export default function CreateAutomationDialog() {
 
           <div>
             <label className="text-sm font-medium text-foreground">Trigger</label>
-            <Select value={triggerType} onValueChange={(v) => { setTriggerType(v); if (v !== "new_lead") setSelectedFunnelId("all"); }}>
+            <Select value={triggerType} onValueChange={setTriggerType}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TRIGGER_OPTIONS.map((t) => (
@@ -89,23 +89,21 @@ export default function CreateAutomationDialog() {
             </Select>
           </div>
 
-          {triggerType === "new_lead" && (
-            <div>
-              <label className="text-sm font-medium text-foreground">Trigger from funnel</label>
-              <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-                <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All funnels (global)</SelectItem>
-                  {(funnels ?? []).map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads captured from this funnel"}
-              </p>
-            </div>
-          )}
+          <div>
+            <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
+            <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+              <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All funnels (global)</SelectItem>
+                {(funnels ?? []).map((f) => (
+                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
+            </p>
+          </div>
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Workflow Steps</label>
