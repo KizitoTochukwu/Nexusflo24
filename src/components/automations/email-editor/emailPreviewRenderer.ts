@@ -4,6 +4,8 @@
  */
 
 import type { TemplateSettings } from "./EmailTemplateSettings";
+import type { EmailBlock } from "./email-blocks/emailBlockTypes";
+import { blocksToHtml, parseBlocksFromMessage } from "./email-blocks/emailBlockSerializer";
 import { DEFAULT_TEMPLATE_SETTINGS } from "./EmailTemplateSettings";
 
 export function formatEmailBody(raw: string): string {
