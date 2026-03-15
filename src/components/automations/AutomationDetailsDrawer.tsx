@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { useFunnels } from "@/hooks/useFunnels";
 import { format } from "date-fns";
 
 interface Props {
