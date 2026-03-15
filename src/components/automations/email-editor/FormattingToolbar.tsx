@@ -82,6 +82,7 @@ export default function FormattingToolbar({ onWrap, onInsert, onInsertButton }: 
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [textColorOpen, setTextColorOpen] = useState(false);
   const [bgColorOpen, setBgColorOpen] = useState(false);
+  const [blockBgOpen, setBlockBgOpen] = useState(false);
 
   const tools = [
     { icon: Bold, label: "Bold", action: () => onWrap("<b>", "</b>") },
