@@ -6,7 +6,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   Link2, Image, Minus, Smile, Square,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  Type, Paintbrush
+  Type, Paintbrush, PanelTop
 } from "lucide-react";
 import ImageInsertDialog from "./ImageInsertDialog";
 
