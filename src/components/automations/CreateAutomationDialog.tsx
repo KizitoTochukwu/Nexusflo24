@@ -33,7 +33,7 @@ export default function CreateAutomationDialog() {
   const handleCreate = () => {
     if (!name.trim()) return;
     const triggerConfig: Record<string, unknown> = {};
-    if (triggerType === "new_lead" && selectedFunnelId !== "all") {
+    if (selectedFunnelId !== "all") {
       triggerConfig.funnel_id = selectedFunnelId;
     }
     createAutomation.mutate(
