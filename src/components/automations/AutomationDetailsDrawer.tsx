@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft } from "lucide-react";
 import {
   type Automation,
   TRIGGER_OPTIONS,
@@ -57,7 +56,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
     }
   }, [savedSteps]);
 
-  if (!automation) return null;
+  if (!automation || !open) return null;
 
   const handleSave = () => {
     const triggerConfig: Record<string, unknown> = {};
@@ -87,47 +86,64 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const statusColor = automation.status === "active" ? "bg-emerald-100 text-emerald-700" : automation.status === "paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground";
 
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <div className="flex items-center gap-3">
-            <Zap className="h-5 w-5 text-accent" />
-            <SheetTitle className="flex-1">{automation.name}</SheetTitle>
-            <Badge className={statusColor}>{automation.status}</Badge>
-          </div>
-        </SheetHeader>
+    <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+      {/* Top bar */}
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <Zap className="h-5 w-5 text-accent shrink-0" />
+        <h1 className="text-lg font-semibold truncate flex-1">{automation.name}</h1>
+        <Badge className={statusColor}>{automation.status}</Badge>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={toggleStatus} className="gap-1.5">
+            {automation.status === "active" ? <><Pause className="h-3.5 w-3.5" /> Pause</> : <><Play className="h-3.5 w-3.5" /> Activate</>}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleSimulate} disabled={simulate.isPending} className="gap-1.5">
+            <Zap className="h-3.5 w-3.5" /> {simulate.isPending ? "Running…" : "Simulate"}
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={updateAutomation.isPending}>
+            {updateAutomation.isPending ? "Saving…" : "Save Changes"}
+          </Button>
+        </div>
+      </div>
 
-        <Tabs defaultValue="builder" className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
+      {/* Content */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <Tabs defaultValue="builder">
+          <TabsList className="grid w-full max-w-xs grid-cols-2">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="builder" className="space-y-4 mt-4">
-            <div>
-              <label className="text-sm font-medium text-foreground">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <TabsContent value="builder" className="space-y-5 mt-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-foreground">Name</label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Trigger</label>
+                <Select value={triggerType} onValueChange={setTriggerType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TRIGGER_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div>
               <label className="text-sm font-medium text-foreground">Description</label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Trigger</label>
-              <Select value={triggerType} onValueChange={setTriggerType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TRIGGER_OPTIONS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div>
               <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
               <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-                <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+                <SelectTrigger className="max-w-sm"><SelectValue placeholder="All funnels" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All funnels (global)</SelectItem>
                   {(funnels ?? []).map((f) => (
@@ -139,25 +155,14 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
               </p>
             </div>
+
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
               <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
             </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} disabled={updateAutomation.isPending}>
-                {updateAutomation.isPending ? "Saving…" : "Save Changes"}
-              </Button>
-              <Button variant="outline" onClick={toggleStatus} className="gap-1.5">
-                {automation.status === "active" ? <><Pause className="h-4 w-4" /> Pause</> : <><Play className="h-4 w-4" /> Activate</>}
-              </Button>
-              <Button variant="secondary" onClick={handleSimulate} disabled={simulate.isPending} className="gap-1.5">
-                <Zap className="h-4 w-4" /> {simulate.isPending ? "Running…" : "Simulate"}
-              </Button>
-            </div>
           </TabsContent>
 
-          <TabsContent value="logs" className="mt-4">
+          <TabsContent value="logs" className="mt-5">
             {!logs?.length ? (
               <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
                 No execution logs yet. Simulate or activate this automation to see logs.
@@ -188,7 +193,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                        <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
                           {JSON.stringify(log.details)}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
@@ -205,7 +210,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             )}
           </TabsContent>
         </Tabs>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </div>
   );
 }
