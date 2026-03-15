@@ -60,12 +60,17 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   if (!automation) return null;
 
   const handleSave = () => {
+    const triggerConfig: Record<string, unknown> = {};
+    if (triggerType === "new_lead" && selectedFunnelId !== "all") {
+      triggerConfig.funnel_id = selectedFunnelId;
+    }
     updateAutomation.mutate({
       id: automation.id,
       workspace_id: workspaceId,
       name,
       description,
       trigger_type: triggerType,
+      trigger_config: triggerConfig,
       steps,
     });
   };
