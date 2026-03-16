@@ -52,6 +52,30 @@ Deno.serve(async (req) => {
             .eq("lead_id", lid)
             .eq("workspace_id", wid);
         }
+
+        // Fire triggered campaigns with email_opened trigger
+        try {
+          const { data: triggeredCampaigns } = await supabase
+            .from("campaigns")
+            .select("id")
+            .eq("workspace_id", wid)
+            .eq("campaign_mode", "triggered")
+            .eq("status", "active")
+            .contains("trigger_config", { type: "email_opened" });
+
+          for (const camp of triggeredCampaigns || []) {
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/execute-campaign`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ campaign_id: camp.id, lead_ids: [lid] }),
+            });
+          }
+        } catch (triggerErr) {
+          console.error("track-open trigger check error:", triggerErr);
+        }
       }
     }
   } catch (err) {
