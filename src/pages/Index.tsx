@@ -29,9 +29,9 @@ const features = [
 ];
 
 const steps = [
-  { icon: Target, title: "Capture", desc: "AI-powered forms, landing pages, and chatbots capture leads 24/7.", num: "01" },
-  { icon: Workflow, title: "Nurture", desc: "Automated email, WhatsApp, and SMS flows keep leads engaged.", num: "02" },
-  { icon: TrendingUp, title: "Convert", desc: "AI scores leads and notifies your team when they're ready to buy.", num: "03" },
+  { icon: Target, title: "Capture", desc: "AI-powered forms, landing pages, and chatbots capture leads 24/7.", num: "01", slug: "capture" },
+  { icon: Workflow, title: "Nurture", desc: "Automated email, WhatsApp, and SMS flows keep leads engaged.", num: "02", slug: "nurture" },
+  { icon: TrendingUp, title: "Convert", desc: "AI scores leads and notifies your team when they're ready to buy.", num: "03", slug: "convert" },
 ];
 
 const testimonials = [
@@ -183,6 +183,9 @@ const Index = () => {
               </div>
               <h3 className="mb-2 text-xl font-bold">{s.title}</h3>
               <p className="text-sm text-muted-foreground">{s.desc}</p>
+              <Link to={`/how-it-works/${s.slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors">
+                Learn more <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           ))}
         </div>

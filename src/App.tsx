@@ -49,6 +49,9 @@ import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
 import PublicBooking from "./pages/PublicBooking";
 import RescheduleBooking from "./pages/RescheduleBooking";
+import HowCapture from "./pages/HowCapture";
+import HowNurture from "./pages/HowNurture";
+import HowConvert from "./pages/HowConvert";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -82,6 +85,9 @@ const App = () => (
               <Route path="/disclaimer" element={<Disclaimer />} />
               <Route path="/anti-spam-policy" element={<AntiSpamPolicy />} />
               <Route path="/gdpr-rights" element={<GdprRights />} />
+              <Route path="/how-it-works/capture" element={<HowCapture />} />
+              <Route path="/how-it-works/nurture" element={<HowNurture />} />
+              <Route path="/how-it-works/convert" element={<HowConvert />} />
 
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
