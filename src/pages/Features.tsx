@@ -479,7 +479,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: ANALYTICS ═══════════════════════ */}
-    <section className="py-24">
+    <section id="analytics" className="py-24 scroll-mt-20">
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           {/* Faux Analytics UI */}
