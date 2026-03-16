@@ -281,7 +281,9 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: EMAIL + WHATSAPP ═══════════════════════ */}
-    <section className="bg-surface py-24">
+    <section id="email-whatsapp" className="bg-surface py-24 scroll-mt-20">
+    {/* Also serves as anchor for bulk-sms */}
+    <div id="bulk-sms" className="scroll-mt-20" />
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
