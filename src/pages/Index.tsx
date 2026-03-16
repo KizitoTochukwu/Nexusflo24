@@ -71,49 +71,58 @@ const Index = () => {
   return (
   <Layout>
     {/* Hero */}
-    <section className="bg-hero relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(213_50%_25%_/_0.5),transparent_70%)]" />
-      <div className="container relative z-10 py-20 md:py-32">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div className="space-y-6 animate-fade-up">
-            <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-navy-light/50 px-4 py-1.5 text-sm text-gold">
-              <Zap className="h-3.5 w-3.5" />
-              AI-Powered Marketing Automation
-            </div>
-            <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary-foreground md:text-5xl lg:text-6xl">
-              Automate Your Marketing.{" "}
-              <span className="text-gradient-gold">Convert Smarter.</span>{" "}
-              Grow Faster — with AI.
-            </h1>
-            <p className="max-w-lg text-lg text-primary-foreground/70">
-              NexusFlo24 helps you capture leads, nurture them automatically, and close more sales — all in one AI-powered platform.
-            </p>
-            <form onSubmit={handleHeroSubmit} className="flex flex-wrap gap-3">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                value={heroEmail}
-                onChange={(e) => setHeroEmail(e.target.value)}
-                maxLength={255}
-                className="max-w-xs bg-navy-light border-navy-lighter text-primary-foreground placeholder:text-primary-foreground/40"
-              />
-              <Button type="submit" size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold text-base px-8">
-                Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </form>
-            <Link to="/contact?subject=demo" className="inline-block">
-              <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-white hover:bg-primary hover:text-primary-foreground text-base px-8">
-                Book a Demo
-              </Button>
-            </Link>
+    <section className="relative overflow-hidden min-h-[600px] md:min-h-[700px]">
+      {/* Background image */}
+      <div className="absolute inset-0">
+        <img
+          src={heroTeam}
+          alt=""
+          className="h-full w-full object-cover"
+          loading="eager"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/50 to-navy/80" />
+      </div>
+
+      {/* Content */}
+      <div className="container relative z-10 flex flex-col items-center justify-center py-24 md:py-36 text-center">
+        <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary-foreground md:text-5xl lg:text-6xl max-w-4xl animate-fade-up">
+          Automate Your{" "}
+          <span className="text-accent">Sales & Marketing</span>
+          <br />
+          With <span className="text-accent">AI-Powered</span> Precision
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg text-primary-foreground/70 animate-fade-up">
+          Drive Leads, Engage Customers, and Grow Revenue — All From One Intelligent Platform.
+        </p>
+
+        <div className="mt-10 flex flex-wrap justify-center gap-4 animate-fade-up">
+          <Link to="/register">
+            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold text-base px-10 py-6 text-lg rounded-lg">
+              Get Started Free
+            </Button>
+          </Link>
+          <Link to="/contact?subject=demo">
+            <Button size="lg" variant="outline" className="border-primary-foreground/40 bg-background/90 text-foreground hover:bg-background text-base px-10 py-6 text-lg rounded-lg">
+              Get a Demo
+            </Button>
+          </Link>
+        </div>
+
+        {/* Trust badges */}
+        <div className="mt-16 inline-flex flex-wrap items-center justify-center gap-1 rounded-full bg-background/90 px-6 py-3 shadow-lg animate-fade-up">
+          <div className="flex items-center gap-2 px-4 py-1">
+            <CheckCircle className="h-5 w-5 text-accent" />
+            <span className="text-sm font-semibold text-foreground">Increased Sales</span>
           </div>
-          <div className="animate-fade-up animation-delay-200">
-            <img
-              src={heroDashboard}
-              alt="NexusFlo24 AI marketing automation dashboard showing CRM, workflows, and analytics"
-              className="rounded-xl shadow-2xl border border-navy-light/30"
-              loading="eager"
-            />
+          <div className="h-6 w-px bg-border" />
+          <div className="flex items-center gap-2 px-4 py-1">
+            <Workflow className="h-5 w-5 text-accent" />
+            <span className="text-sm font-semibold text-foreground">Automated Marketing</span>
+          </div>
+          <div className="h-6 w-px bg-border" />
+          <div className="flex items-center gap-2 px-4 py-1">
+            <Brain className="h-5 w-5 text-accent" />
+            <span className="text-sm font-semibold text-foreground">AI-Powered CRM</span>
           </div>
         </div>
       </div>
