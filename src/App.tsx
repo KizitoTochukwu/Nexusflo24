@@ -85,6 +85,9 @@ const App = () => (
               <Route path="/disclaimer" element={<Disclaimer />} />
               <Route path="/anti-spam-policy" element={<AntiSpamPolicy />} />
               <Route path="/gdpr-rights" element={<GdprRights />} />
+              <Route path="/how-it-works/capture" element={<HowCapture />} />
+              <Route path="/how-it-works/nurture" element={<HowNurture />} />
+              <Route path="/how-it-works/convert" element={<HowConvert />} />
 
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
