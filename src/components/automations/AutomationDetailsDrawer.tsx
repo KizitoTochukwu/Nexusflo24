@@ -86,7 +86,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const statusColor = automation.status === "active" ? "bg-emerald-100 text-emerald-700" : automation.status === "paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground";
 
   return (
-    <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+    <div className="fixed inset-0 z-[60] bg-background overflow-y-auto">
       {/* Top bar */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-4 sm:px-6 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
