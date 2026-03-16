@@ -72,55 +72,62 @@ const Index = () => {
   <Layout>
     {/* Hero */}
     <section className="relative overflow-hidden min-h-[600px] md:min-h-[700px]">
-      {/* Background image */}
+      {/* Background image with Ken Burns */}
       <div className="absolute inset-0">
         <img
           src={heroTeam}
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover animate-ken-burns"
           loading="eager"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/50 to-navy/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/75 via-navy/55 to-navy/85" />
+        {/* Floating particles overlay */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-1/4 left-1/4 h-2 w-2 rounded-full bg-accent animate-pulse" />
+          <div className="absolute top-1/3 right-1/3 h-1.5 w-1.5 rounded-full bg-gold-light animate-pulse [animation-delay:0.5s]" />
+          <div className="absolute bottom-1/3 left-1/3 h-1 w-1 rounded-full bg-accent animate-pulse [animation-delay:1s]" />
+          <div className="absolute top-1/2 right-1/4 h-2.5 w-2.5 rounded-full bg-gold-light animate-pulse [animation-delay:1.5s]" />
+        </div>
       </div>
 
       {/* Content */}
       <div className="container relative z-10 flex flex-col items-center justify-center py-24 md:py-36 text-center">
         <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary-foreground md:text-5xl lg:text-6xl max-w-4xl animate-fade-up">
           Automate Your{" "}
-          <span className="text-accent">Sales & Marketing</span>
+          <span className="text-accent bg-gradient-to-r from-gold to-gold-light bg-clip-text text-transparent">Sales & Marketing</span>
           <br />
-          With <span className="text-accent">AI-Powered</span> Precision
+          With <span className="text-accent bg-gradient-to-r from-gold to-gold-light bg-clip-text text-transparent">AI-Powered</span> Precision
         </h1>
-        <p className="mt-6 max-w-2xl text-lg text-primary-foreground/70 animate-fade-up">
+        <p className="mt-6 max-w-2xl text-lg text-primary-foreground/70 animate-fade-up-slow [animation-delay:0.3s]">
           Drive Leads, Engage Customers, and Grow Revenue — All From One Intelligent Platform.
         </p>
 
-        <div className="mt-10 flex flex-wrap justify-center gap-4 animate-fade-up">
+        <div className="mt-10 flex flex-wrap justify-center gap-4 animate-fade-up [animation-delay:0.5s]">
           <Link to="/register">
-            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold text-base px-10 py-6 text-lg rounded-lg">
+            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold text-base px-10 py-6 text-lg rounded-lg animate-pulse-glow transition-transform duration-300 hover:scale-105">
               Get Started Free
             </Button>
           </Link>
           <Link to="/contact?subject=demo">
-            <Button size="lg" variant="outline" className="border-primary-foreground/40 bg-background/90 text-foreground hover:bg-background text-base px-10 py-6 text-lg rounded-lg">
+            <Button size="lg" variant="outline" className="border-primary-foreground/40 bg-background/90 text-foreground hover:bg-background text-base px-10 py-6 text-lg rounded-lg transition-transform duration-300 hover:scale-105">
               Get a Demo
             </Button>
           </Link>
         </div>
 
         {/* Trust badges */}
-        <div className="mt-16 inline-flex flex-wrap items-center justify-center gap-1 rounded-full bg-background/90 px-6 py-3 shadow-lg animate-fade-up">
-          <div className="flex items-center gap-2 px-4 py-1">
+        <div className="mt-16 inline-flex flex-wrap items-center justify-center gap-1 rounded-full bg-background/90 backdrop-blur-sm px-6 py-3 shadow-lg animate-slide-up-badge [animation-delay:0.8s]">
+          <div className="flex items-center gap-2 px-4 py-1 transition-transform duration-200 hover:scale-110 cursor-default">
             <CheckCircle className="h-5 w-5 text-accent" />
             <span className="text-sm font-semibold text-foreground">Increased Sales</span>
           </div>
           <div className="h-6 w-px bg-border" />
-          <div className="flex items-center gap-2 px-4 py-1">
+          <div className="flex items-center gap-2 px-4 py-1 transition-transform duration-200 hover:scale-110 cursor-default">
             <Workflow className="h-5 w-5 text-accent" />
             <span className="text-sm font-semibold text-foreground">Automated Marketing</span>
           </div>
           <div className="h-6 w-px bg-border" />
-          <div className="flex items-center gap-2 px-4 py-1">
+          <div className="flex items-center gap-2 px-4 py-1 transition-transform duration-200 hover:scale-110 cursor-default">
             <Brain className="h-5 w-5 text-accent" />
             <span className="text-sm font-semibold text-foreground">AI-Powered CRM</span>
           </div>
