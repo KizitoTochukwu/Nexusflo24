@@ -133,15 +133,52 @@ Deno.serve(async (req) => {
           // Handle inbound messages
           const messages = value?.messages || [];
           for (const msg of messages) {
+            const phone = msg.from ? `+${msg.from}` : "unknown";
             await adminClient.from("whatsapp_messages").insert({
               workspace_id: workspaceId,
               wa_message_id: msg.id,
               direction: "inbound",
-              phone_number: msg.from ? `+${msg.from}` : "unknown",
+              phone_number: phone,
               message_type: msg.type || "text",
               body: msg.text?.body || msg.type || "",
               status: "received",
             });
+
+            // Fire triggered campaigns with whatsapp_reply trigger
+            try {
+              // Find the lead by phone number
+              const { data: lead } = await adminClient
+                .from("leads")
+                .select("id")
+                .eq("workspace_id", workspaceId)
+                .eq("phone", phone)
+                .maybeSingle();
+
+              if (lead) {
+                const { data: triggeredCampaigns } = await adminClient
+                  .from("campaigns")
+                  .select("id")
+                  .eq("workspace_id", workspaceId)
+                  .eq("campaign_mode", "triggered")
+                  .eq("status", "active")
+                  .contains("trigger_config", { type: "whatsapp_reply" });
+
+                const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+                const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+                for (const camp of triggeredCampaigns || []) {
+                  await fetch(`${supabaseUrl}/functions/v1/execute-campaign`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${serviceRoleKey}`,
+                    },
+                    body: JSON.stringify({ campaign_id: camp.id, lead_ids: [lead.id] }),
+                  });
+                }
+              }
+            } catch (triggerErr) {
+              console.error("whatsapp_reply trigger check error:", triggerErr);
+            }
           }
 
           // Handle status updates

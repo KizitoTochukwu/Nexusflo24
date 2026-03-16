@@ -140,7 +140,7 @@ export default function CreateCampaignDialog() {
   };
 
   const handleCreate = async () => {
-    await createCampaign.mutateAsync({
+    const campaign = await createCampaign.mutateAsync({
       workspace_id: workspaceId,
       name,
       type,
@@ -164,6 +164,27 @@ export default function CreateCampaignDialog() {
         ...(audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
       } as any,
     });
+
+    // Auto-fire broadcast "Send Now" campaigns immediately
+    if (campaignMode === "broadcast" && scheduleNow && campaign?.id) {
+      try {
+        const { data, error } = await supabase.functions.invoke("execute-campaign", {
+          body: { campaign_id: campaign.id },
+        });
+        if (error) {
+          console.error("Auto-execute error:", error);
+          toast.error("Campaign created but failed to send. You can retry from the campaign details.");
+        } else {
+          const sent = data?.sent ?? 0;
+          const failed = data?.failed ?? 0;
+          toast.success(`Campaign sent! ${sent} delivered${failed > 0 ? `, ${failed} failed` : ""}`);
+        }
+      } catch (err) {
+        console.error("Auto-execute error:", err);
+        toast.error("Campaign created but failed to send. You can retry from the campaign details.");
+      }
+    }
+
     setOpen(false);
     reset();
   };

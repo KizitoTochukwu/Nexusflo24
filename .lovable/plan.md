@@ -1,62 +1,103 @@
 
 
-# Campaign Firing Audit & Fix Plan
+## Plan: Platform-Managed Integrations Access Control
 
-## Current State Analysis
+### Context
 
-After tracing the full campaign pipeline, here's what's working and what's broken:
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-### Working
-- **Manual send**: The "Send Campaign Now" button in the campaign details drawer correctly invokes `execute-campaign` — this works.
-- **Scheduled campaigns**: `process-scheduled-jobs` picks up campaigns with status `scheduled` where `scheduled_at` has passed, and fires `execute-campaign` — this works.
-- **Triggered campaigns (new_lead only)**: `capture-lead` queries for active triggered campaigns with `trigger_config.type = "new_lead"` and fires them — this works.
-- **Edge function config**: `execute-campaign` has `verify_jwt = false` in `config.toml` — correct.
-- **Fallback scheduling**: Failed sends schedule fallback jobs via `scheduled_jobs` — this works.
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
-### Broken / Not Wired
+### Changes
 
-1. **Broadcast "Send Now" does NOT auto-fire**: When a user creates a broadcast campaign and clicks "Launch Campaign" with "Send Now" selected, the campaign is saved with status `active` but `execute-campaign` is **never called**. The user must then open the drawer and manually click "Send Campaign Now" — this is confusing and defeats the purpose of "Launch Campaign."
+#### 1. Frontend: Split Settings Tabs by Role
 
-2. **Most triggered campaign types are dead**: Only `new_lead` triggers are wired (in `capture-lead`). The remaining 7 trigger types (`tag_added`, `tag_removed`, `score_threshold`, `email_opened`, `link_clicked`, `whatsapp_reply`, `purchase_event`) are offered in the UI but have **no backend wiring** — campaigns created with these triggers will never fire.
+**DashboardSettings.tsx** — Major restructure:
 
-## Fix Plan
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
 
-### Fix 1: Auto-execute broadcast "Send Now" campaigns on creation
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
+```
 
-In `CreateCampaignDialog.tsx`, after `createCampaign.mutateAsync(...)` succeeds, if the campaign is broadcast mode with "Send Now", immediately call `supabase.functions.invoke("execute-campaign", { body: { campaign_id } })` and show a toast with results.
+#### 2. Move Provider Credentials to Platform ENV Secrets
 
-**File**: `src/components/campaigns/CreateCampaignDialog.tsx` — update `handleCreate`
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
 
-### Fix 2: Wire trigger events for tag/score/email/click/whatsapp triggers
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
 
-Add trigger-checking logic to the relevant backend functions so triggered campaigns actually fire:
+#### 3. Update Edge Functions for Platform Credentials
 
-- **`tag_added` / `tag_removed`**: In the leads update flow. Since leads are updated via the Supabase client directly (not an edge function), the most practical approach is to add a database trigger on the `leads` table that detects tag changes and inserts a `scheduled_job` to fire matching campaigns. Alternatively, add a lightweight edge function `check-campaign-triggers` that the frontend calls after tag updates.
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
 
-- **`score_threshold`**: The `update_lead_score_on_activity` DB function already updates scores. Add logic there (or a separate trigger) to check for campaigns with `score_threshold` triggers.
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
 
-- **`email_opened` / `link_clicked`**: Already tracked by `track-open` and `track-click` edge functions. Add campaign trigger checks there.
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
 
-- **`whatsapp_reply`**: Already handled in `whatsapp-webhook`. Add campaign trigger check there.
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
 
-- **`purchase_event`**: Placeholder — leave as-is with a UI indicator that it's coming soon.
+#### 4. Backend Admin Authorization
 
-Given the complexity, I recommend a two-phase approach:
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
+```
 
-**Phase 1 (this change):**
-- Fix the broadcast "Send Now" auto-fire (high impact, simple fix)
-- Wire `email_opened` and `link_clicked` triggers in their existing edge functions
-- Wire `whatsapp_reply` trigger in `whatsapp-webhook`
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
 
-**Phase 2 (follow-up):**
-- Wire tag and score triggers via a reusable `check-campaign-triggers` edge function called from relevant update paths
+#### 5. Admin Integrations Status Widget
 
-## Files Modified
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
 
-| Action | File | Change |
-|--------|------|--------|
-| Modify | `src/components/campaigns/CreateCampaignDialog.tsx` | Auto-invoke `execute-campaign` after broadcast "Send Now" creation |
-| Modify | `supabase/functions/track-open/index.ts` | Check for `email_opened` triggered campaigns |
-| Modify | `supabase/functions/track-click/index.ts` | Check for `link_clicked` triggered campaigns |
-| Modify | `supabase/functions/whatsapp-webhook/index.ts` | Check for `whatsapp_reply` triggered campaigns |
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
+
+#### 6. Webhooks Tab (Customer-Accessible)
+
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
+
+This tab is workspace-scoped and visible to all authenticated users.
+
+### Files to Create/Edit
+
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+### Execution Order
+
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 
