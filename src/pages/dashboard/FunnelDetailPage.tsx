@@ -318,7 +318,26 @@ export default function FunnelDetailPage() {
                   <span className="text-sm text-muted-foreground">/f/</span>
                   <Input value={editSlug} onChange={(e) => setEditSlug(e.target.value)} className="max-w-xs" />
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Public URL for your funnel. Must be unique.</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}/f/${funnel.slug || editSlug}`}
+                    className="max-w-md text-sm bg-muted cursor-pointer"
+                    onClick={(e) => {
+                      (e.target as HTMLInputElement).select();
+                      navigator.clipboard.writeText(`${window.location.origin}/f/${funnel.slug || editSlug}`);
+                      toast.success("URL copied to clipboard");
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/f/${funnel.slug || editSlug}`, "_blank")}
+                  >
+                    <ExternalLink className="mr-1.5 h-4 w-4" /> Open
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Click the URL to copy. Must be unique.</p>
               </div>
               <Button onClick={saveSettings} disabled={updateFunnel.isPending}>
                 {updateFunnel.isPending ? "Saving…" : "Save Settings"}
