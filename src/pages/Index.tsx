@@ -13,6 +13,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import heroDashboard from "@/assets/hero-dashboard.png";
+import heroTeam from "@/assets/hero-team.jpg";
 import { useState } from "react";
 import { toast } from "sonner";
 
