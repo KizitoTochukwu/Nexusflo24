@@ -76,6 +76,31 @@ Deno.serve(async (req) => {
         } catch (triggerErr) {
           console.error("track-click trigger check error:", triggerErr);
         }
+
+        // Fire score_threshold triggered campaigns
+        try {
+          const { data: updatedLead } = await supabase
+            .from("leads")
+            .select("score")
+            .eq("id", lid)
+            .single();
+
+          if (updatedLead?.score) {
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/check-campaign-triggers`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({
+                workspace_id: wid, lead_id: lid,
+                trigger_type: "score_threshold", trigger_value: String(updatedLead.score),
+              }),
+            });
+          }
+        } catch (scoreErr) {
+          console.error("track-click score trigger error:", scoreErr);
+        }
       }
     }
   } catch (err) {

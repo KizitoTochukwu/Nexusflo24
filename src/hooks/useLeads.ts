@@ -202,6 +202,25 @@ export function useUpdateLead() {
         } as any);
       }
 
+      // Fire tag campaign triggers if tags changed
+      if (workspace_id && updates.tags && prev?.tags) {
+        const oldTags = prev.tags || [];
+        const newTags = updates.tags || [];
+        const added = newTags.filter((t) => !oldTags.includes(t));
+        const removed = oldTags.filter((t) => !newTags.includes(t));
+
+        for (const tag of added) {
+          supabase.functions.invoke("check-campaign-triggers", {
+            body: { workspace_id, lead_id: id, trigger_type: "tag_added", trigger_value: tag },
+          }).catch((e) => console.error("tag_added trigger error:", e));
+        }
+        for (const tag of removed) {
+          supabase.functions.invoke("check-campaign-triggers", {
+            body: { workspace_id, lead_id: id, trigger_type: "tag_removed", trigger_value: tag },
+          }).catch((e) => console.error("tag_removed trigger error:", e));
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
