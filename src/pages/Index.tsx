@@ -29,9 +29,9 @@ const features = [
 ];
 
 const steps = [
-  { icon: Target, title: "Capture", desc: "AI-powered forms, landing pages, and chatbots capture leads 24/7.", num: "01" },
-  { icon: Workflow, title: "Nurture", desc: "Automated email, WhatsApp, and SMS flows keep leads engaged.", num: "02" },
-  { icon: TrendingUp, title: "Convert", desc: "AI scores leads and notifies your team when they're ready to buy.", num: "03" },
+  { icon: Target, title: "Capture", desc: "AI-powered forms, landing pages, and chatbots capture leads 24/7.", num: "01", slug: "capture" },
+  { icon: Workflow, title: "Nurture", desc: "Automated email, WhatsApp, and SMS flows keep leads engaged.", num: "02", slug: "nurture" },
+  { icon: TrendingUp, title: "Convert", desc: "AI scores leads and notifies your team when they're ready to buy.", num: "03", slug: "convert" },
 ];
 
 const testimonials = [
