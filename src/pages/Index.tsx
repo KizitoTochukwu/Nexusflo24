@@ -158,6 +158,9 @@ const Index = () => {
               </div>
               <h3 className="mb-2 text-lg font-semibold">{f.title}</h3>
               <p className="text-sm text-muted-foreground">{f.desc}</p>
+              <Link to={`/features#${f.slug}`} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors">
+                Learn more <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           ))}
         </div>

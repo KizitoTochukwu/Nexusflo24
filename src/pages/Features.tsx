@@ -545,7 +545,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ AI POWERHOUSE ═══════════════════════ */}
-    <section className="bg-hero py-24">
+    <section id="ai-copywriter" className="bg-hero py-24 scroll-mt-20">
       <div className="container">
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <Badge className="mb-4 border-gold/30 bg-navy-light/60 text-gold hover:bg-navy-light/80">
