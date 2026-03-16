@@ -154,7 +154,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: AI LEAD GEN ═══════════════════════ */}
-    <section className="bg-surface py-24">
+    <section id="ai-lead-gen" className="bg-surface py-24 scroll-mt-20">
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
