@@ -154,7 +154,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: AI LEAD GEN ═══════════════════════ */}
-    <section className="bg-surface py-24">
+    <section id="ai-lead-gen" className="bg-surface py-24 scroll-mt-20">
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
@@ -216,7 +216,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: SMART CRM ═══════════════════════ */}
-    <section className="py-24">
+    <section id="smart-crm" className="py-24 scroll-mt-20">
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           {/* Faux CRM UI */}
@@ -281,7 +281,9 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: EMAIL + WHATSAPP ═══════════════════════ */}
-    <section className="bg-surface py-24">
+    <section id="email-whatsapp" className="bg-surface py-24 scroll-mt-20">
+    {/* Also serves as anchor for bulk-sms */}
+    <div id="bulk-sms" className="scroll-mt-20" />
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
@@ -346,7 +348,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: NURTURE FLOW BUILDER ═══════════════════════ */}
-    <section className="py-24">
+    <section id="nurture-flow" className="py-24 scroll-mt-20">
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           {/* Faux Flow Builder UI */}
@@ -409,7 +411,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: FUNNEL BUILDER ═══════════════════════ */}
-    <section className="bg-surface py-24">
+    <section id="funnel-builder" className="bg-surface py-24 scroll-mt-20">
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
@@ -477,7 +479,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ SPOTLIGHT: ANALYTICS ═══════════════════════ */}
-    <section className="py-24">
+    <section id="analytics" className="py-24 scroll-mt-20">
       <div className="container">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           {/* Faux Analytics UI */}
@@ -543,7 +545,7 @@ const Features = () => (
     </section>
 
     {/* ═══════════════════════ AI POWERHOUSE ═══════════════════════ */}
-    <section className="bg-hero py-24">
+    <section id="ai-copywriter" className="bg-hero py-24 scroll-mt-20">
       <div className="container">
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <Badge className="mb-4 border-gold/30 bg-navy-light/60 text-gold hover:bg-navy-light/80">

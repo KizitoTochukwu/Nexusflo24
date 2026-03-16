@@ -18,14 +18,14 @@ import { toast } from "sonner";
 
 
 const features = [
-  { icon: Brain, title: "AI Lead Gen Engine", desc: "Capture and score leads automatically with AI-powered forms and landing pages." },
-  { icon: Users, title: "Smart CRM", desc: "Manage contacts, track interactions, and close deals with intelligent insights." },
-  { icon: Mail, title: "AI Email & WhatsApp", desc: "Send personalized campaigns across email and WhatsApp with AI-written copy." },
-  { icon: MessageSquare, title: "Bulk SMS", desc: "Reach thousands instantly with targeted SMS campaigns and auto-replies." },
-  { icon: Workflow, title: "Nurture Flow Builder", desc: "Drag-and-drop automation workflows that convert leads on autopilot." },
-  { icon: LayoutTemplate, title: "Funnel & Page Builder", desc: "Build high-converting funnels and landing pages in minutes — no code needed." },
-  { icon: PenTool, title: "AI Copywriter", desc: "Generate compelling subject lines, ad copy, and follow-ups with AI." },
-  { icon: BarChart3, title: "Analytics Dashboard", desc: "See what's converting with real-time analytics and AI-powered insights." },
+  { icon: Brain, title: "AI Lead Gen Engine", desc: "Capture and score leads automatically with AI-powered forms and landing pages.", slug: "ai-lead-gen" },
+  { icon: Users, title: "Smart CRM", desc: "Manage contacts, track interactions, and close deals with intelligent insights.", slug: "smart-crm" },
+  { icon: Mail, title: "AI Email & WhatsApp", desc: "Send personalized campaigns across email and WhatsApp with AI-written copy.", slug: "email-whatsapp" },
+  { icon: MessageSquare, title: "Bulk SMS", desc: "Reach thousands instantly with targeted SMS campaigns and auto-replies.", slug: "bulk-sms" },
+  { icon: Workflow, title: "Nurture Flow Builder", desc: "Drag-and-drop automation workflows that convert leads on autopilot.", slug: "nurture-flow" },
+  { icon: LayoutTemplate, title: "Funnel & Page Builder", desc: "Build high-converting funnels and landing pages in minutes — no code needed.", slug: "funnel-builder" },
+  { icon: PenTool, title: "AI Copywriter", desc: "Generate compelling subject lines, ad copy, and follow-ups with AI.", slug: "ai-copywriter" },
+  { icon: BarChart3, title: "Analytics Dashboard", desc: "See what's converting with real-time analytics and AI-powered insights.", slug: "analytics" },
 ];
 
 const steps = [
@@ -158,6 +158,9 @@ const Index = () => {
               </div>
               <h3 className="mb-2 text-lg font-semibold">{f.title}</h3>
               <p className="text-sm text-muted-foreground">{f.desc}</p>
+              <Link to={`/features#${f.slug}`} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors">
+                Learn more <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           ))}
         </div>
