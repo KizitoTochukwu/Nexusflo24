@@ -57,3 +57,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.channel-settings-get]
     verify_jwt = false
+  [functions.check-campaign-triggers]
+    verify_jwt = false
