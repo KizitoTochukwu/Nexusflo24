@@ -49,6 +49,9 @@ import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
 import PublicBooking from "./pages/PublicBooking";
 import RescheduleBooking from "./pages/RescheduleBooking";
+import HowCapture from "./pages/HowCapture";
+import HowNurture from "./pages/HowNurture";
+import HowConvert from "./pages/HowConvert";
 const queryClient = new QueryClient();
 
 const App = () => (
