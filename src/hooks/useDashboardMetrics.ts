@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { subDays, startOfDay, format } from "date-fns";
@@ -8,6 +9,28 @@ import { generateDemoMetrics } from "@/lib/demo/demoData";
 export function useDashboardMetrics(workspaceId: string) {
   const { user } = useAuth();
   const { data: demoSettings } = useDemoMode(workspaceId);
+  const queryClient = useQueryClient();
+
+  // Real-time subscription: auto-refresh metrics on campaign_messages or leads changes
+  useEffect(() => {
+    if (!workspaceId || demoSettings?.demo_mode_enabled) return;
+
+    const channel = supabase
+      .channel(`dashboard-rt-${workspaceId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "campaign_messages", filter: `workspace_id=eq.${workspaceId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", workspaceId] }); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "leads", filter: `workspace_id=eq.${workspaceId}` },
+        () => { queryClient.invalidateQueries({ queryKey: ["dashboard-metrics", workspaceId] }); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [workspaceId, demoSettings?.demo_mode_enabled, queryClient]);
 
   return useQuery({
     queryKey: ["dashboard-metrics", workspaceId, demoSettings?.demo_mode_enabled, demoSettings?.demo_seed_variant],
