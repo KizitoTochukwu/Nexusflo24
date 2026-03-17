@@ -384,10 +384,11 @@ async function sendMessage(channel: string, lead: any, message: string, workspac
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          workspace_id: workspaceId,
+          workspaceId,
           to: lead.email,
           subject: `Following up with you, ${lead.full_name || ""}`.trim(),
-          body: message,
+          html: message,
+          leadId: lead.id,
         }),
       });
     } else if (channel === "whatsapp" && lead.phone) {
@@ -398,9 +399,10 @@ async function sendMessage(channel: string, lead: any, message: string, workspac
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          workspace_id: workspaceId,
+          workspaceId,
           to: lead.phone,
-          message,
+          body: message,
+          leadId: lead.id,
         }),
       });
     }
