@@ -47,6 +47,7 @@ import AdminGuard from "./components/admin/AdminGuard";
 import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
+import DashboardMessages from "./pages/dashboard/DashboardMessages";
 import PublicBooking from "./pages/PublicBooking";
 import RescheduleBooking from "./pages/RescheduleBooking";
 import HowCapture from "./pages/HowCapture";
@@ -101,6 +102,7 @@ const App = () => (
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="bookings" element={<DashboardBookings />} />
+                <Route path="messages" element={<DashboardMessages />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
