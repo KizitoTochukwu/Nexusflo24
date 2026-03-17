@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Save, Loader2, Bot, Zap, Clock, Shield } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Save, Loader2, Bot, Zap, Clock, Shield, MessageCircle, Mail, Smartphone } from "lucide-react";
 import { useSalesCloserSettings, useUpsertSalesCloserSettings, type SalesCloserSettings } from "@/hooks/useSalesCloser";
 import { useBookingPages } from "@/hooks/useBookings";
 
@@ -112,7 +113,40 @@ export default function SalesCloserSettingsTab({ workspaceId }: Props) {
 
           <Separator />
 
-          {/* Follow-up settings */}
+          {/* Active Channels */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-1.5">
+              <MessageCircle className="h-4 w-4" /> Active Channels
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Choose which channels the AI chatbot will auto-reply on when leads message you.
+            </p>
+            <div className="flex flex-col gap-2">
+              {[
+                { value: "email", label: "Email", icon: Mail },
+                { value: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+                { value: "sms", label: "SMS", icon: Smartphone },
+              ].map(({ value, label, icon: Icon }) => (
+                <label key={value} className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={form.channels.includes(value)}
+                    onCheckedChange={(checked) => {
+                      setForm((f) => ({
+                        ...f,
+                        channels: checked
+                          ? [...f.channels, value]
+                          : f.channels.filter((c) => c !== value),
+                      }));
+                    }}
+                  />
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1.5">

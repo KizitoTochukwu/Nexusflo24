@@ -134,27 +134,72 @@ Deno.serve(async (req) => {
           const messages = value?.messages || [];
           for (const msg of messages) {
             const phone = msg.from ? `+${msg.from}` : "unknown";
+            const msgBody = msg.text?.body || msg.type || "";
+
             await adminClient.from("whatsapp_messages").insert({
               workspace_id: workspaceId,
               wa_message_id: msg.id,
               direction: "inbound",
               phone_number: phone,
               message_type: msg.type || "text",
-              body: msg.text?.body || msg.type || "",
+              body: msgBody,
               status: "received",
             });
 
-            // Fire triggered campaigns with whatsapp_reply trigger
-            try {
-              // Find the lead by phone number
-              const { data: lead } = await adminClient
-                .from("leads")
-                .select("id")
-                .eq("workspace_id", workspaceId)
-                .eq("phone", phone)
-                .maybeSingle();
+            // Find the lead by phone number
+            const { data: lead } = await adminClient
+              .from("leads")
+              .select("id")
+              .eq("workspace_id", workspaceId)
+              .eq("phone", phone)
+              .maybeSingle();
 
-              if (lead) {
+            // --- AI WhatsApp Chatbot: auto-reply via AI Sales Closer ---
+            if (lead && msg.type === "text" && msgBody) {
+              try {
+                // Check if AI Sales Closer is enabled for WhatsApp
+                const { data: closerSettings } = await adminClient
+                  .from("sales_closer_settings")
+                  .select("is_enabled, channels")
+                  .eq("workspace_id", workspaceId)
+                  .maybeSingle();
+
+                if (closerSettings?.is_enabled && (closerSettings.channels || []).includes("whatsapp")) {
+                  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+                  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+                  console.log(`AI WhatsApp Chatbot: Processing inbound from ${phone} for lead ${lead.id}`);
+
+                  const aiRes = await fetch(`${supabaseUrl}/functions/v1/ai-sales-closer`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${serviceRoleKey}`,
+                    },
+                    body: JSON.stringify({
+                      action: "process_inbound",
+                      workspace_id: workspaceId,
+                      lead_id: lead.id,
+                      message: msgBody,
+                      channel: "whatsapp",
+                    }),
+                  });
+
+                  const aiData = await aiRes.json();
+                  console.log(`AI WhatsApp Chatbot: Response for lead ${lead.id}:`, JSON.stringify({
+                    intent: aiData.intent,
+                    confidence: aiData.confidence,
+                    status: aiData.status,
+                  }));
+                }
+              } catch (aiErr) {
+                console.error("AI WhatsApp Chatbot error:", aiErr);
+              }
+            }
+
+            // Fire triggered campaigns with whatsapp_reply trigger
+            if (lead) {
+              try {
                 const { data: triggeredCampaigns } = await adminClient
                   .from("campaigns")
                   .select("id")
@@ -175,9 +220,9 @@ Deno.serve(async (req) => {
                     body: JSON.stringify({ campaign_id: camp.id, lead_ids: [lead.id] }),
                   });
                 }
+              } catch (triggerErr) {
+                console.error("whatsapp_reply trigger check error:", triggerErr);
               }
-            } catch (triggerErr) {
-              console.error("whatsapp_reply trigger check error:", triggerErr);
             }
           }
 
