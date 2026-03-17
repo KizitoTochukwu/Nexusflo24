@@ -1,89 +1,149 @@
-import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Zap } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { MessageCircle, X, Send, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
-type Message = { role: "bot" | "user"; text: string };
+type Message = { role: "assistant" | "user"; content: string };
 
-const faqResponses: Record<string, string> = {
-  pricing: "We offer 3 plans: Free Trial ($0 for 14 days), Pro ($49/mo), and Agency ($149/mo). Visit /pricing for details!",
-  features: "NexusFlo24 includes AI Lead Gen, Smart CRM, Email & WhatsApp automation, SMS, Funnel Builder, AI Copywriter, and Analytics. Check /features for the full list!",
-  trial: "Yes! Start a 14-day free trial with no credit card required. Visit /register to get started.",
-  demo: "You can explore our demo dashboard at /dashboard, or contact us at /contact to book a live demo!",
-  whatsapp: "NexusFlo24 supports WhatsApp automation including broadcasts, follow-ups, and chatbot replies.",
-  integrations: "We integrate with Google Sheets, Zapier, Make.com, Meta Ads, Stripe, PayPal, and more!",
-};
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexus-ai-chat`;
 
-const findResponse = (input: string): string => {
-  const lower = input.toLowerCase();
-  for (const [key, response] of Object.entries(faqResponses)) {
-    if (lower.includes(key)) return response;
+async function streamChat({
+  messages,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  messages: Message[];
+  onDelta: (text: string) => void;
+  onDone: () => void;
+  onError: (err: string) => void;
+}) {
+  const resp = await fetch(CHAT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+    body: JSON.stringify({ messages }),
+  });
+
+  if (!resp.ok) {
+    const data = await resp.json().catch(() => ({}));
+    onError(data.error || "Something went wrong. Please try again.");
+    return;
   }
-  if (lower.includes("price") || lower.includes("cost")) return faqResponses.pricing;
-  if (lower.includes("free")) return faqResponses.trial;
-  return "Great question! I'd love to help. Could you share your name and email so our team can follow up with a detailed answer?";
-};
+
+  if (!resp.body) {
+    onError("No response received.");
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let textBuffer = "";
+  let streamDone = false;
+
+  while (!streamDone) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    textBuffer += decoder.decode(value, { stream: true });
+
+    let newlineIndex: number;
+    while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+      let line = textBuffer.slice(0, newlineIndex);
+      textBuffer = textBuffer.slice(newlineIndex + 1);
+
+      if (line.endsWith("\r")) line = line.slice(0, -1);
+      if (line.startsWith(":") || line.trim() === "") continue;
+      if (!line.startsWith("data: ")) continue;
+
+      const jsonStr = line.slice(6).trim();
+      if (jsonStr === "[DONE]") {
+        streamDone = true;
+        break;
+      }
+
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+        if (content) onDelta(content);
+      } catch {
+        textBuffer = line + "\n" + textBuffer;
+        break;
+      }
+    }
+  }
+
+  // Flush remaining
+  if (textBuffer.trim()) {
+    for (let raw of textBuffer.split("\n")) {
+      if (!raw) continue;
+      if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+      if (raw.startsWith(":") || raw.trim() === "") continue;
+      if (!raw.startsWith("data: ")) continue;
+      const jsonStr = raw.slice(6).trim();
+      if (jsonStr === "[DONE]") continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+        if (content) onDelta(content);
+      } catch { /* ignore */ }
+    }
+  }
+
+  onDone();
+}
 
 const ChatbotWidget = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "bot", text: "👋 Hi! I'm Nexus AI. How can I help you today? Ask me about features, pricing, or getting started!" },
+    { role: "assistant", content: "👋 Hi! I'm **Nexus AI**. How can I help you today? Ask me about features, pricing, or getting started!" },
   ]);
   const [input, setInput] = useState("");
-  const [capturing, setCapturing] = useState(false);
-  const [captureStep, setCaptureStep] = useState(0);
-  const [leadData, setLeadData] = useState({ name: "", email: "", goal: "" });
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const addMessage = (role: "bot" | "user", text: string) => {
-    setMessages((prev) => [...prev, { role, text }]);
-  };
-
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const userMsg = input.trim();
-    addMessage("user", userMsg);
+  const send = useCallback(async () => {
+    if (!input.trim() || isLoading) return;
+    const userMsg: Message = { role: "user", content: input.trim() };
+    const allMessages = [...messages, userMsg];
+    setMessages(allMessages);
     setInput("");
+    setIsLoading(true);
 
-    if (capturing) {
-      if (captureStep === 0) {
-        setLeadData((prev) => ({ ...prev, name: userMsg }));
-        setCaptureStep(1);
-        setTimeout(() => addMessage("bot", "Thanks! What's your email address?"), 500);
-      } else if (captureStep === 1) {
-        if (!/\S+@\S+\.\S+/.test(userMsg)) {
-          setTimeout(() => addMessage("bot", "That doesn't look like a valid email. Please try again."), 500);
-          return;
+    let assistantSoFar = "";
+
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && prev.length > allMessages.length) {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
         }
-        setLeadData((prev) => ({ ...prev, email: userMsg }));
-        setCaptureStep(2);
-        setTimeout(() => addMessage("bot", "And what's your main marketing goal? (e.g., more leads, better engagement, automation)"), 500);
-      } else {
-        setLeadData((prev) => ({ ...prev, goal: userMsg }));
-        setCapturing(false);
-        setCaptureStep(0);
-        toast.success("Lead captured! Our team will reach out soon.");
-        setTimeout(() => addMessage("bot", `Awesome! We've noted your info. Our team will reach out to help you with "${userMsg}". Anything else I can help with?`), 500);
-      }
-      return;
-    }
+        return [...prev.slice(0, allMessages.length), { role: "assistant", content: assistantSoFar }];
+      });
+    };
 
-    const response = findResponse(userMsg);
-    setTimeout(() => addMessage("bot", response), 600);
-
-    if (response.includes("name and email")) {
-      setTimeout(() => {
-        setCapturing(true);
-        setCaptureStep(0);
-        addMessage("bot", "What's your name?");
-      }, 1200);
+    try {
+      await streamChat({
+        messages: allMessages,
+        onDelta: (chunk) => upsertAssistant(chunk),
+        onDone: () => setIsLoading(false),
+        onError: (err) => {
+          setMessages((prev) => [...prev, { role: "assistant", content: `Sorry, I ran into an issue: ${err}` }]);
+          setIsLoading(false);
+        },
+      });
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
+      setIsLoading(false);
     }
-  };
+  }, [input, isLoading, messages]);
 
   return (
     <>
@@ -100,13 +160,13 @@ const ChatbotWidget = () => {
 
       {/* Chat window */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 flex h-[480px] w-[360px] flex-col overflow-hidden rounded-2xl border bg-card shadow-card-hover animate-fade-up">
+        <div className="fixed bottom-6 right-6 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border bg-card shadow-card-hover animate-fade-up">
           {/* Header */}
           <div className="flex items-center justify-between bg-primary px-4 py-3">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-accent" />
               <span className="text-sm font-semibold text-primary-foreground">Nexus AI</span>
-              <span className="h-2 w-2 rounded-full bg-accent" />
+              <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
             </div>
             <button onClick={() => setOpen(false)} className="text-primary-foreground/60 hover:text-primary-foreground">
               <X className="h-4 w-4" />
@@ -122,30 +182,45 @@ const ChatbotWidget = () => {
                     ? "bg-accent text-accent-foreground"
                     : "bg-muted text-foreground"
                 }`}>
-                  {msg.text}
+                  {msg.role === "assistant" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:mt-1 [&>ol]:mt-1">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
+            {isLoading && messages[messages.length - 1]?.role === "user" && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-xl px-3 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              </div>
+            )}
             <div ref={messagesEnd} />
           </div>
 
           {/* Input */}
           <div className="border-t p-3">
             <form
-              onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+              onSubmit={(e) => { e.preventDefault(); send(); }}
               className="flex gap-2"
             >
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type a message…"
+                placeholder="Ask me anything…"
                 className="text-sm"
                 maxLength={500}
+                disabled={isLoading}
               />
-              <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-gold-dark shrink-0">
+              <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-gold-dark shrink-0" disabled={isLoading}>
                 <Send className="h-4 w-4" />
               </Button>
             </form>
+            <p className="text-[10px] text-muted-foreground mt-1.5 text-center">Powered by Nexus AI</p>
           </div>
         </div>
       )}
