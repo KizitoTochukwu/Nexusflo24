@@ -25,7 +25,34 @@ async function decrypt(cipherB64: string, keyHex: string): Promise<string> {
   return new TextDecoder().decode(plainBuf);
 }
 
-export interface ChannelCredentials {
+export async function findWorkspaceByWhatsAppPhoneNumberId(phoneNumberId: string): Promise<string | null> {
+  const encryptionKey = Deno.env.get("CHANNEL_SETTINGS_ENCRYPTION_KEY");
+  if (!encryptionKey) return null;
+
+  const normalizedPhoneNumberId = phoneNumberId.replace(/[^\d]/g, "");
+  if (!normalizedPhoneNumberId) return null;
+
+  const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: rows } = await adminClient
+    .from("workspace_channel_settings")
+    .select("workspace_id, config_encrypted")
+    .eq("channel", "whatsapp")
+    .eq("is_active", true);
+
+  for (const row of rows || []) {
+    try {
+      const config = JSON.parse(await decrypt(row.config_encrypted, encryptionKey));
+      const configuredPhoneNumberId = String(config?.phone_number_id || "").replace(/[^\d]/g, "");
+      if (configuredPhoneNumberId && configuredPhoneNumberId === normalizedPhoneNumberId) {
+        return row.workspace_id;
+      }
+    } catch (err) {
+      console.warn("Failed to inspect workspace WhatsApp credentials for phone number lookup:", err);
+    }
+  }
+
+  return null;
+}
   source: "workspace" | "platform" | "none";
   config: Record<string, string>;
 }
