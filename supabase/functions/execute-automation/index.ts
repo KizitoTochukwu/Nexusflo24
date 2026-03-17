@@ -76,17 +76,6 @@ async function sendTwilio(sid: string, token: string, from: string, to: string, 
   return data;
 }
 
-async function sendWhatsApp(token: string, phoneNumberId: string, to: string, body: string) {
-  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || `WhatsApp error: ${res.status}`);
-  return data;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
