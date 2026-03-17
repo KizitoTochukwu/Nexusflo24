@@ -59,3 +59,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.check-campaign-triggers]
     verify_jwt = false
+  [functions.nexus-ai-chat]
+    verify_jwt = false
