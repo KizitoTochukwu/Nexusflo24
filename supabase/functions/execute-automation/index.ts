@@ -193,14 +193,20 @@ Deno.serve(async (req) => {
               lastSendTime = Date.now();
               details = { sid: res.sid, channel: "sms" };
             } else if (actionType === "send_whatsapp") {
-              const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-              const phoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-              if (!token || !phoneId) throw new Error("WhatsApp provider not configured");
               if (!lead.phone) throw new Error("Lead has no phone");
               const body = interpolate(config.message || "", lead);
-              const res = await sendWhatsApp(token, phoneId, lead.phone, body);
+              const waRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id }),
+              });
+              const waData = await waRes.json();
+              if (!waRes.ok || !waData.success) throw new Error(waData?.error || "WhatsApp send failed");
               lastSendTime = Date.now();
-              details = { waMessageId: res.messages?.[0]?.id, channel: "whatsapp" };
+              details = { waMessageId: waData.waMessageId, channel: "whatsapp", credentialSource: waData.credentialSource };
             } else if (actionType === "add_tag") {
               const tag = config.tag;
               if (tag) {
