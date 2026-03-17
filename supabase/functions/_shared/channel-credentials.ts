@@ -53,6 +53,8 @@ export async function findWorkspaceByWhatsAppPhoneNumberId(phoneNumberId: string
 
   return null;
 }
+
+export interface ChannelCredentials {
   source: "workspace" | "platform" | "none";
   config: Record<string, string>;
 }
