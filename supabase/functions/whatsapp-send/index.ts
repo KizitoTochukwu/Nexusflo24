@@ -15,6 +15,68 @@ function normalizePhone(raw: string): string | null {
   return null;
 }
 
+type WhatsAppAttemptResult = {
+  ok: boolean;
+  data: any;
+  phoneNumberId: string;
+  source: "workspace" | "platform";
+};
+
+function buildWhatsAppError(waRes: Response, waData: any) {
+  const graphMessage = waData?.error?.message || `WhatsApp API error: ${waRes.status}`;
+  const graphCode = Number(waData?.error?.code ?? 0);
+  const graphSubcode = Number(waData?.error?.error_subcode ?? 0);
+  const graphType = String(waData?.error?.type ?? "GraphMethodException");
+
+  const isCredentialMismatch =
+    /Unsupported post request|does not exist|missing permissions/i.test(graphMessage) ||
+    (graphCode === 100 && /object with id|cannot find|not found/i.test(graphMessage));
+
+  const isTokenOrPermissionError = graphCode === 190 || graphCode === 10 || graphCode === 200;
+
+  const errMsg = isCredentialMismatch
+    ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Contact platform admin."
+    : isTokenOrPermissionError
+      ? "WhatsApp token is invalid, expired, or missing required permissions (whatsapp_business_messaging). Contact platform admin."
+      : `[${graphType} ${graphCode}${graphSubcode ? `/${graphSubcode}` : ""}] ${graphMessage}`;
+
+  return { errMsg, graphCode, graphSubcode, isCredentialMismatch, isTokenOrPermissionError };
+}
+
+async function sendWhatsAppMessage(
+  accessToken: string,
+  rawPhoneNumberId: string,
+  to: string,
+  msgBody: string,
+  source: "workspace" | "platform",
+): Promise<WhatsAppAttemptResult> {
+  const phoneNumberId = rawPhoneNumberId.replace(/[^\d]/g, "");
+
+  if (phoneNumberId.length < 6) {
+    throw new Error("WhatsApp configuration error: invalid Phone Number ID format.");
+  }
+
+  const waTo = to.startsWith("+") ? to.slice(1) : to;
+  const waPayload: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    to: waTo,
+    type: "text",
+    text: { body: msgBody },
+  };
+
+  const waRes = await fetch(`https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(waPayload),
+  });
+
+  const waData = await waRes.json();
+  return { ok: waRes.ok, data: waData, phoneNumberId, source };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -42,7 +104,6 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
 
-    // If called with service role key (internal/campaign calls), skip user auth
     if (!isServiceRole) {
       const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
         global: { headers: { Authorization: authHeader } },
@@ -59,61 +120,47 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Resolve credentials: workspace-specific → platform ENV fallback
+    const platformAccessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")?.trim();
+    const platformPhoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim();
+
     const creds = await resolveChannelCredentials(workspaceId, "whatsapp", {
-      access_token: Deno.env.get("WHATSAPP_ACCESS_TOKEN"),
-      phone_number_id: Deno.env.get("WHATSAPP_PHONE_NUMBER_ID"),
+      access_token: platformAccessToken,
+      phone_number_id: platformPhoneNumberId,
     });
 
     if (creds.source === "none" || !creds.config.access_token || !creds.config.phone_number_id) {
       return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const accessToken = creds.config.access_token.trim();
-    const rawPhoneNumberId = creds.config.phone_number_id.trim();
-    const phoneNumberId = rawPhoneNumberId.replace(/[^\d]/g, "");
+    let attempt = await sendWhatsAppMessage(
+      creds.config.access_token.trim(),
+      creds.config.phone_number_id.trim(),
+      normalizedTo,
+      msgBody,
+      creds.source === "workspace" ? "workspace" : "platform",
+    );
 
-    if (phoneNumberId.length < 6) {
-      return new Response(JSON.stringify({ error: "WhatsApp configuration error: invalid Phone Number ID format." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!attempt.ok && attempt.source === "workspace" && platformAccessToken && platformPhoneNumberId) {
+      const workspaceError = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
+      if (workspaceError.isCredentialMismatch || workspaceError.isTokenOrPermissionError) {
+        console.warn("Workspace WhatsApp credentials failed, retrying with platform credentials", {
+          workspaceId,
+          graphCode: workspaceError.graphCode,
+          graphSubcode: workspaceError.graphSubcode,
+        });
+
+        attempt = await sendWhatsAppMessage(
+          platformAccessToken,
+          platformPhoneNumberId,
+          normalizedTo,
+          msgBody,
+          "platform",
+        );
+      }
     }
 
-    const waTo = normalizedTo.startsWith("+") ? normalizedTo.slice(1) : normalizedTo;
-
-    const waPayload: Record<string, unknown> = {
-      messaging_product: "whatsapp",
-      to: waTo,
-      type: "text",
-      text: { body: msgBody },
-    };
-
-    const waRes = await fetch(`https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(waPayload),
-    });
-
-    const waData = await waRes.json();
-
-    if (!waRes.ok) {
-      const graphMessage = waData?.error?.message || `WhatsApp API error: ${waRes.status}`;
-      const graphCode = Number(waData?.error?.code ?? 0);
-      const graphSubcode = Number(waData?.error?.error_subcode ?? 0);
-      const graphType = String(waData?.error?.type ?? "GraphMethodException");
-
-      const isCredentialMismatch =
-        /Unsupported post request|does not exist|missing permissions/i.test(graphMessage) ||
-        (graphCode === 100 && /object with id|cannot find|not found/i.test(graphMessage));
-
-      const isTokenOrPermissionError = graphCode === 190 || graphCode === 10 || graphCode === 200;
-
-      const errMsg = isCredentialMismatch
-        ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Contact platform admin."
-        : isTokenOrPermissionError
-          ? "WhatsApp token is invalid, expired, or missing required permissions (whatsapp_business_messaging). Contact platform admin."
-          : `[${graphType} ${graphCode}${graphSubcode ? `/${graphSubcode}` : ""}] ${graphMessage}`;
+    if (!attempt.ok) {
+      const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
 
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
@@ -126,11 +173,11 @@ Deno.serve(async (req) => {
         ...(leadId ? { lead_id: leadId } : {}),
       });
 
-      const isClientError = [190, 100, 10, 200, 131000, 131026, 131047, 131051].includes(graphCode) || waRes.status === 400 || waRes.status === 401;
+      const isClientError = [190, 100, 10, 200, 131000, 131026, 131047, 131051].includes(graphCode) || graphCode === 0;
       return new Response(JSON.stringify({ success: false, error: errMsg, graphCode, graphSubcode }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const waMessageId = waData?.messages?.[0]?.id || null;
+    const waMessageId = attempt.data?.messages?.[0]?.id || null;
 
     await adminClient.from("whatsapp_messages").insert({
       workspace_id: workspaceId,
@@ -143,7 +190,6 @@ Deno.serve(async (req) => {
       ...(leadId ? { lead_id: leadId } : {}),
     });
 
-    // If this was sent as part of a campaign, link the wa_message_id to the campaign_message
     if (campaignId && leadId && waMessageId) {
       await adminClient
         .from("campaign_messages")
@@ -154,7 +200,7 @@ Deno.serve(async (req) => {
         .eq("delivery_status", "pending");
     }
 
-    return new Response(JSON.stringify({ success: true, waMessageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("whatsapp-send error:", err);
     return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send WhatsApp message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
