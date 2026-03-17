@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Save, Loader2, Bot, Zap, Clock, Shield } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Save, Loader2, Bot, Zap, Clock, Shield, MessageCircle, Mail, Smartphone } from "lucide-react";
 import { useSalesCloserSettings, useUpsertSalesCloserSettings, type SalesCloserSettings } from "@/hooks/useSalesCloser";
 import { useBookingPages } from "@/hooks/useBookings";
 
