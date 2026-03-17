@@ -76,17 +76,6 @@ async function sendTwilio(sid: string, token: string, from: string, to: string, 
   return data;
 }
 
-async function sendWhatsApp(token: string, phoneNumberId: string, to: string, body: string) {
-  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || `WhatsApp error: ${res.status}`);
-  return data;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -204,14 +193,20 @@ Deno.serve(async (req) => {
               lastSendTime = Date.now();
               details = { sid: res.sid, channel: "sms" };
             } else if (actionType === "send_whatsapp") {
-              const token = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-              const phoneId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-              if (!token || !phoneId) throw new Error("WhatsApp provider not configured");
               if (!lead.phone) throw new Error("Lead has no phone");
               const body = interpolate(config.message || "", lead);
-              const res = await sendWhatsApp(token, phoneId, lead.phone, body);
+              const waRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id }),
+              });
+              const waData = await waRes.json();
+              if (!waRes.ok || !waData.success) throw new Error(waData?.error || "WhatsApp send failed");
               lastSendTime = Date.now();
-              details = { waMessageId: res.messages?.[0]?.id, channel: "whatsapp" };
+              details = { waMessageId: waData.waMessageId, channel: "whatsapp", credentialSource: waData.credentialSource };
             } else if (actionType === "add_tag") {
               const tag = config.tag;
               if (tag) {

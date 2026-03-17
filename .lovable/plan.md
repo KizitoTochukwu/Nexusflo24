@@ -1,35 +1,103 @@
 
 
-## Diagnosis
+## Plan: Platform-Managed Integrations Access Control
 
-The automation logs confirm all WhatsApp sends returned `status: success` with valid `waMessageId` values. However, the `execute-automation` function sends WhatsApp messages **directly via the Meta Graph API** (lines 79-89, 206-214) using hardcoded platform ENV credentials (`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`), completely bypassing the `whatsapp-send` edge function.
+### Context
 
-This causes two problems:
+NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
 
-1. **Wrong credentials**: The function uses platform-level ENV variables instead of the workspace's own WhatsApp credentials (stored encrypted in `workspace_channel_settings`). If the workspace has configured custom WhatsApp credentials pointing to a different Business Account, messages are sent from the wrong number — Meta accepts them but the recipient never sees them because the sending number isn't the one they interacted with.
+The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
 
-2. **No message logging**: Messages sent this way are not recorded in the `whatsapp_messages` table, so they don't appear in the Messages inbox.
+### Changes
 
-By contrast, `execute-campaign` correctly delegates to `whatsapp-send` via an internal fetch call, which handles credential resolution, phone normalization, and message logging.
+#### 1. Frontend: Split Settings Tabs by Role
 
-## Plan
+**DashboardSettings.tsx** — Major restructure:
 
-**Modify `supabase/functions/execute-automation/index.ts`**:
+- Import `useIsAdmin()` hook
+- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
+- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
+- If customer navigates to `?tab=integrations`, show "Access Denied" card
+- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
 
-- Replace the direct Meta API call in the `send_whatsapp` action block (lines 206-214) with an internal fetch to the `whatsapp-send` edge function, matching the pattern already used by `execute-campaign`.
-- Use the service role key for authorization so it bypasses user auth checks.
-- Pass `workspaceId`, `to`, `body`, and `leadId` to ensure proper credential resolution and message logging.
-- Remove the now-unused `sendWhatsApp` helper function (lines 79-89).
-
-```text
-Before (direct Meta call):
-  token from ENV → sendWhatsApp(token, phoneId, lead.phone, body)
-
-After (delegating to whatsapp-send):
-  fetch(SUPABASE_URL/functions/v1/whatsapp-send, {
-    workspaceId, to: lead.phone, body, leadId: lead_id
-  })
+Tab layout:
+```
+Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
+Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
 ```
 
-This single change ensures automations use the same credential resolution, phone normalization, and message logging as campaigns and the inbox.
+#### 2. Move Provider Credentials to Platform ENV Secrets
+
+Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+
+**New secrets to add** (via `add_secret` tool):
+- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+#### 3. Update Edge Functions for Platform Credentials
+
+**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+
+**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+
+**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+
+**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+
+#### 4. Backend Admin Authorization
+
+All save-settings and test-send edge functions must verify admin role:
+```typescript
+// Check admin role via user_roles table
+const { data: adminRole } = await adminClient
+  .from("user_roles")
+  .select("role")
+  .eq("user_id", userId)
+  .eq("role", "admin")
+  .maybeSingle();
+if (!adminRole) {
+  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
+}
+```
+
+Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
+
+#### 5. Admin Integrations Status Widget
+
+Add a read-only status card at the top of the admin Integrations tab:
+- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
+- Twilio: configured / not configured
+- WhatsApp: configured / not configured
+
+Create a small edge function `integration-status` that returns boolean flags (no secret values).
+
+#### 6. Webhooks Tab (Customer-Accessible)
+
+Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
+- Lead Ingest Endpoint URL (copy button)
+- Bearer token instructions
+- X-Workspace-Id header guidance
+
+This tab is workspace-scoped and visible to all authenticated users.
+
+### Files to Create/Edit
+
+- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
+- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
+- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
+- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
+- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
+- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
+- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+
+### Execution Order
+
+1. Request all new ENV secrets (batch)
+2. Create `integration-status` edge function
+3. Update send functions to use ENV credentials
+4. Update save-settings functions with admin checks
+5. Restructure `DashboardSettings.tsx` with role-gated tabs
 
