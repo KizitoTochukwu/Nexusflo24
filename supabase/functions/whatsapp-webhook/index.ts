@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { findWorkspaceByWhatsAppPhoneNumberId } from "../_shared/channel-credentials.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -166,8 +167,16 @@ Deno.serve(async (req) => {
             .limit(1)
             .maybeSingle();
 
-          const workspaceId = settings?.workspace_id;
-          if (!workspaceId) continue;
+          let workspaceId = settings?.workspace_id || null;
+          if (!workspaceId) {
+            workspaceId = await findWorkspaceByWhatsAppPhoneNumberId(phoneNumberId);
+            if (workspaceId) {
+              console.log(`Resolved inbound WhatsApp workspace via workspace_channel_settings for phone_number_id ${phoneNumberId}`);
+            } else {
+              console.warn(`No workspace found for inbound WhatsApp phone_number_id ${phoneNumberId}`);
+              continue;
+            }
+          }
 
           // Handle inbound messages
           const messages = value?.messages || [];
