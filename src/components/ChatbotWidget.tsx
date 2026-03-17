@@ -166,7 +166,7 @@ const ChatbotWidget = () => {
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-accent" />
               <span className="text-sm font-semibold text-primary-foreground">Nexus AI</span>
-              <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
             </div>
             <button onClick={() => setOpen(false)} className="text-primary-foreground/60 hover:text-primary-foreground">
               <X className="h-4 w-4" />
