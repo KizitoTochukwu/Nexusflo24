@@ -172,31 +172,69 @@ Deno.serve(async (req) => {
           // Handle inbound messages
           const messages = value?.messages || [];
           for (const msg of messages) {
-            const phone = msg.from ? `+${msg.from}` : "unknown";
+            const rawPhone = msg.from ? `+${msg.from}` : "unknown";
+            const normalizedPhone = normalizePhone(rawPhone) || rawPhone;
             const msgBody = msg.text?.body || msg.type || "";
+            const candidates = phoneCandidates(rawPhone);
+
+            let lead = null;
+            const { data: matchedLead } = await adminClient
+              .from("leads")
+              .select("id, user_id, phone")
+              .eq("workspace_id", workspaceId)
+              .in("phone", candidates)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            lead = matchedLead;
+
+            if (!lead && normalizedPhone !== "unknown") {
+              const { data: workspace } = await adminClient
+                .from("workspaces")
+                .select("owner_user_id")
+                .eq("id", workspaceId)
+                .maybeSingle();
+
+              if (workspace?.owner_user_id) {
+                const contactName = value?.contacts?.find((c: any) => c?.wa_id === msg.from)?.profile?.name || null;
+                const { data: createdLead, error: createLeadErr } = await adminClient
+                  .from("leads")
+                  .insert({
+                    workspace_id: workspaceId,
+                    user_id: workspace.owner_user_id,
+                    full_name: contactName,
+                    phone: normalizedPhone,
+                    source: "whatsapp_inbound",
+                    status: "New",
+                    pipeline_stage: "new",
+                  })
+                  .select("id, user_id, phone")
+                  .single();
+
+                if (createLeadErr) {
+                  console.error("Failed to auto-create lead from inbound WhatsApp:", createLeadErr);
+                } else {
+                  lead = createdLead;
+                  console.log(`Created lead ${lead.id} for inbound WhatsApp ${normalizedPhone}`);
+                }
+              }
+            }
 
             await adminClient.from("whatsapp_messages").insert({
               workspace_id: workspaceId,
               wa_message_id: msg.id,
               direction: "inbound",
-              phone_number: phone,
+              phone_number: normalizedPhone,
               message_type: msg.type || "text",
               body: msgBody,
               status: "received",
+              ...(lead?.id ? { lead_id: lead.id } : {}),
             });
 
-            // Find the lead by phone number
-            const { data: lead } = await adminClient
-              .from("leads")
-              .select("id")
-              .eq("workspace_id", workspaceId)
-              .eq("phone", phone)
-              .maybeSingle();
-
             // --- AI WhatsApp Chatbot: auto-reply via AI Sales Closer ---
-            if (lead && msg.type === "text" && msgBody) {
+            if (lead?.id && msg.type === "text" && msgBody) {
               try {
-                // Check if AI Sales Closer is enabled for WhatsApp
                 const { data: closerSettings } = await adminClient
                   .from("sales_closer_settings")
                   .select("is_enabled, channels")
@@ -207,7 +245,7 @@ Deno.serve(async (req) => {
                   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
                   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-                  console.log(`AI WhatsApp Chatbot: Processing inbound from ${phone} for lead ${lead.id}`);
+                  console.log(`AI WhatsApp Chatbot: Processing inbound from ${normalizedPhone} for lead ${lead.id}`);
 
                   const aiRes = await fetch(`${supabaseUrl}/functions/v1/ai-sales-closer`, {
                     method: "POST",
@@ -226,9 +264,11 @@ Deno.serve(async (req) => {
 
                   const aiData = await aiRes.json();
                   console.log(`AI WhatsApp Chatbot: Response for lead ${lead.id}:`, JSON.stringify({
+                    ok: aiRes.ok,
                     intent: aiData.intent,
                     confidence: aiData.confidence,
                     status: aiData.status,
+                    error: aiData.error,
                   }));
                 }
               } catch (aiErr) {
