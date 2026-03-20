@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
       message,
       status: "sent",
       provider_message_id: result.providerMessageId,
+      direction: "outbound",
     });
 
     return new Response(JSON.stringify({ success: true, providerMessageId: result.providerMessageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
