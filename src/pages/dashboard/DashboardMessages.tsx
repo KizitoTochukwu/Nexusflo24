@@ -287,19 +287,6 @@ export default function DashboardMessages() {
                   )}
                 </div>
 
-                {/* 24-hour window warning for WhatsApp */}
-                {selectedThread.channel === "whatsapp" && waWindowExpired && !templateMode && (
-                  <div className="mx-3 mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                    <div className="text-xs text-foreground">
-                      <p className="font-medium">24-hour conversation window expired</p>
-                      <p className="text-muted-foreground mt-0.5">
-                        Free-form messages can only be sent within 24 hours of the contact's last reply. 
-                        Use a <button onClick={() => setTemplateMode(true)} className="underline font-medium text-accent hover:text-accent/80">template message</button> to re-initiate the conversation.
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Template selector */}
                 {templateMode && selectedThread.channel === "whatsapp" && (
