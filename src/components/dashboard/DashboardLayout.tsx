@@ -30,6 +30,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const workspaceId = useWorkspaceId();
   const { data: isAdmin } = useIsAdmin();
   useNotificationWatcher();
+  useLowCreditAlert();
 
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
