@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     const isServiceRole = token === serviceRoleKey;
 
     const body = await req.json();
-    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId, template } = body;
+    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId, template, skipCredits } = body;
 
     if (!workspaceId || !to || (!msgBody && !template)) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body (or template)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
