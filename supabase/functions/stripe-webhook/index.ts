@@ -81,6 +81,23 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // Handle credit pack purchases (one-time payments)
+        if (session.metadata?.type === "credit_purchase") {
+          const channel = session.metadata.channel as CreditChannel;
+          const credits = parseInt(session.metadata.credits || "0", 10);
+          const wsId = session.metadata.workspaceId;
+
+          if (channel && credits > 0 && wsId) {
+            await addCredits(wsId, channel, credits, "purchase", session.id);
+            log("Credit purchase fulfilled", { channel, credits, workspaceId: wsId });
+          } else {
+            log("WARNING: Invalid credit purchase metadata", session.metadata);
+          }
+          break;
+        }
+
+        // Handle subscription checkout
         const userId = session.metadata?.userId;
         const plan = session.metadata?.plan || "pro";
         const billingCycle = session.metadata?.billingCycle || "monthly";
@@ -130,6 +147,12 @@ serve(async (req) => {
           log("ERROR upserting subscription", upsertErr);
         } else {
           log("Subscription created/updated", { userId, plan, status, workspaceId });
+        }
+
+        // Allocate plan-included credits
+        if (workspaceId) {
+          await allocatePlanCredits(workspaceId, plan, session.id);
+          log("Plan credits allocated", { workspaceId, plan });
         }
         break;
       }
