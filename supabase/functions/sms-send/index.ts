@@ -128,10 +128,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits (admin users are exempt)
-    const creditResult = await deductCredit(workspaceId, "sms", undefined, callerUserId);
-    if (!creditResult.allowed) {
-      return new Response(JSON.stringify({ error: creditResult.error || "Insufficient SMS credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Check and deduct credits (skip for service-role internal calls with skipCredits flag; admin users are exempt)
+    const skipCredits = (requestBody as any).skipCredits;
+    if (!(isServiceRole && skipCredits)) {
+      const creditResult = await deductCredit(workspaceId, "sms", undefined, callerUserId);
+      if (!creditResult.allowed) {
+        return new Response(JSON.stringify({ error: creditResult.error || "Insufficient SMS credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     // Resolve credentials: workspace-specific → platform ENV fallback

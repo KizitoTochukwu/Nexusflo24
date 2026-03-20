@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     const isServiceRole = token === serviceRoleKey;
 
     const body = await req.json();
-    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId, template } = body;
+    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId, template, skipCredits } = body;
 
     if (!workspaceId || !to || (!msgBody && !template)) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body (or template)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -166,10 +166,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits
-    const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
-    if (!creditResult.allowed) {
-      return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Check and deduct credits (skip for service-role internal calls with skipCredits flag)
+    if (!(isServiceRole && skipCredits)) {
+      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
+      if (!creditResult.allowed) {
+        return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const platformAccessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")?.trim();

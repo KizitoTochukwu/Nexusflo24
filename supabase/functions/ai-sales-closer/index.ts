@@ -376,35 +376,52 @@ Rules:
 
 async function sendMessage(channel: string, lead: any, message: string, workspaceId: string) {
   try {
+    let url = "";
+    let payload: Record<string, unknown> = {};
+
     if (channel === "email" && lead.email) {
-      await fetch(`${SUPABASE_URL}/functions/v1/email-send`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          workspaceId,
-          to: lead.email,
-          subject: `Following up with you, ${lead.full_name || ""}`.trim(),
-          html: message,
-          leadId: lead.id,
-        }),
-      });
+      url = `${SUPABASE_URL}/functions/v1/email-send`;
+      payload = {
+        workspaceId,
+        to: lead.email,
+        subject: `Following up with you, ${lead.full_name || ""}`.trim(),
+        html: message,
+        leadId: lead.id,
+        skipCredits: true,
+      };
     } else if (channel === "whatsapp" && lead.phone) {
-      await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-send`, {
+      url = `${SUPABASE_URL}/functions/v1/whatsapp-send`;
+      payload = {
+        workspaceId,
+        to: lead.phone,
+        body: message,
+        leadId: lead.id,
+        skipCredits: true,
+      };
+    } else if (channel === "sms" && lead.phone) {
+      url = `${SUPABASE_URL}/functions/v1/sms-send`;
+      payload = {
+        workspaceId,
+        to: lead.phone,
+        message,
+        skipCredits: true,
+      };
+    }
+
+    if (url) {
+      const resp = await fetch(url, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          workspaceId,
-          to: lead.phone,
-          body: message,
-          leadId: lead.id,
-        }),
+        body: JSON.stringify(payload),
       });
+
+      if (!resp.ok) {
+        const errData = await resp.text();
+        console.error(`[ai-sales-closer] ${channel} send failed (${resp.status}):`, errData);
+      }
     }
   } catch (e) {
     console.error(`Failed to send ${channel} message:`, e);
