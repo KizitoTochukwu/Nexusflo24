@@ -817,6 +817,7 @@ const DashboardSettings = () => {
           <div className="mt-6 max-w-3xl">
             <TabsContent value="profile"><ProfileTab /></TabsContent>
             <TabsContent value="billing"><BillingTab /></TabsContent>
+            <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="integrations">
               {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
