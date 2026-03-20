@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
-import { deductCredit } from "../_shared/credit-guard.ts";
+import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -166,8 +166,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits (skip for service-role internal calls with skipCredits flag)
-    if (!(isServiceRole && skipCredits)) {
+    // Check and deduct credits — only skip if service-role + skipCredits + workspace owner is admin
+    let shouldDeductCredits = true;
+    if (isServiceRole && skipCredits) {
+      const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
+      if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
+        shouldDeductCredits = false;
+      }
+    }
+    if (shouldDeductCredits) {
       const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });

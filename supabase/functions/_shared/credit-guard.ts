@@ -20,7 +20,7 @@ const USED_COL: Record<CreditChannel, string> = {
   whatsapp: "whatsapp_used",
 };
 
-async function isAdminUser(userId: string): Promise<boolean> {
+export async function isAdminUser(userId: string): Promise<boolean> {
   const adminClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,

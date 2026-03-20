@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
-import { deductCredit } from "../_shared/credit-guard.ts";
+import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 
 const corsHeaders = {
@@ -60,9 +60,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits (skip for service-role internal calls with skipCredits flag; admin users are exempt)
+    // Check and deduct credits — only skip if service-role + skipCredits + workspace owner is admin
     const skipCredits = body.skipCredits;
-    if (!(isServiceRole && skipCredits)) {
+    let shouldDeductCredits = true;
+    if (isServiceRole && skipCredits) {
+      const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
+      if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
+        shouldDeductCredits = false;
+      }
+    }
+    if (shouldDeductCredits) {
       const creditResult = await deductCredit(workspaceId, "email", undefined, callerUserId);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient email credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
