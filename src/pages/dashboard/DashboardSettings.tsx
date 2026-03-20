@@ -18,7 +18,7 @@ import {
   User, Shield, Bell, CreditCard, Loader2, Save, Upload, Key,
   Mail, MessageCircle, Smartphone, Webhook, Settings2, Clock,
   Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor,
-  CheckCircle2, XCircle, ShieldAlert
+  CheckCircle2, XCircle, ShieldAlert, Palette
 } from "lucide-react";
 import { useDemoMode, useUpdateDemoMode } from "@/hooks/useDemoMode";
 import type { DemoVariant } from "@/lib/demo/demoData";
