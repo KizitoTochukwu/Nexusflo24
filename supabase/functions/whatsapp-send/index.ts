@@ -199,12 +199,13 @@ Deno.serve(async (req) => {
     if (!attempt.ok) {
       const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
 
+      const logBody = msgBody || `[Template: ${template?.name}]`;
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
         direction: "outbound",
         phone_number: normalizedTo,
-        message_type: type,
-        body: msgBody,
+        message_type: template ? "template" : type,
+        body: logBody,
         status: "failed",
         error: errMsg,
         ...(leadId ? { lead_id: leadId } : {}),
