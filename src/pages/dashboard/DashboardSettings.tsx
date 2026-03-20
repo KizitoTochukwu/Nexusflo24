@@ -781,6 +781,11 @@ const DashboardSettings = () => {
 
   // If customer navigates to integrations, redirect to webhooks
   const getInitialTab = () => {
+    // Support ?tab=usage query param (used by credit purchase redirects)
+    const tabParam = new URLSearchParams(location.search).get("tab");
+    if (tabParam && (VALID_TABS as readonly string[]).includes(tabParam)) {
+      return tabParam;
+    }
     if ((VALID_TABS as readonly string[]).includes(lastSegment)) {
       if (lastSegment === "integrations" && !isAdmin) return "webhooks";
       return lastSegment;
