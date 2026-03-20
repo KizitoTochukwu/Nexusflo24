@@ -217,13 +217,14 @@ Deno.serve(async (req) => {
 
     const waMessageId = attempt.data?.messages?.[0]?.id || null;
 
+    const sentLogBody = msgBody || `[Template: ${template?.name}]`;
     await adminClient.from("whatsapp_messages").insert({
       workspace_id: workspaceId,
       wa_message_id: waMessageId,
       direction: "outbound",
       phone_number: normalizedTo,
-      message_type: type,
-      body: msgBody,
+      message_type: template ? "template" : type,
+      body: sentLogBody,
       status: "sent",
       ...(leadId ? { lead_id: leadId } : {}),
     });
