@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Zap, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, Zap, Loader2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -8,13 +8,17 @@ type Message = { role: "assistant" | "user"; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexus-ai-chat`;
 
+const LEAD_TAG_RE = /\[LEAD_CAPTURED:name=([^;]+);email=([^\]]+)\]/;
+
 async function streamChat({
   messages,
+  capturedLead,
   onDelta,
   onDone,
   onError,
 }: {
   messages: Message[];
+  capturedLead?: { name: string; email: string; intent?: string } | null;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;
@@ -25,7 +29,7 @@ async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, capturedLead }),
   });
 
   if (!resp.ok) {
@@ -34,10 +38,7 @@ async function streamChat({
     return;
   }
 
-  if (!resp.body) {
-    onError("No response received.");
-    return;
-  }
+  if (!resp.body) { onError("No response received."); return; }
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
@@ -53,17 +54,11 @@ async function streamChat({
     while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
       let line = textBuffer.slice(0, newlineIndex);
       textBuffer = textBuffer.slice(newlineIndex + 1);
-
       if (line.endsWith("\r")) line = line.slice(0, -1);
       if (line.startsWith(":") || line.trim() === "") continue;
       if (!line.startsWith("data: ")) continue;
-
       const jsonStr = line.slice(6).trim();
-      if (jsonStr === "[DONE]") {
-        streamDone = true;
-        break;
-      }
-
+      if (jsonStr === "[DONE]") { streamDone = true; break; }
       try {
         const parsed = JSON.parse(jsonStr);
         const content = parsed.choices?.[0]?.delta?.content as string | undefined;
@@ -75,7 +70,6 @@ async function streamChat({
     }
   }
 
-  // Flush remaining
   if (textBuffer.trim()) {
     for (let raw of textBuffer.split("\n")) {
       if (!raw) continue;
@@ -91,8 +85,11 @@ async function streamChat({
       } catch { /* ignore */ }
     }
   }
-
   onDone();
+}
+
+function stripLeadTag(text: string) {
+  return text.replace(LEAD_TAG_RE, "").trim();
 }
 
 const ChatbotWidget = () => {
@@ -102,6 +99,7 @@ const ChatbotWidget = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [leadCaptured, setLeadCaptured] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -117,15 +115,25 @@ const ChatbotWidget = () => {
     setIsLoading(true);
 
     let assistantSoFar = "";
+    let pendingLead: { name: string; email: string } | null = null;
 
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
+
+      // Check for lead capture tag
+      const match = assistantSoFar.match(LEAD_TAG_RE);
+      if (match && !leadCaptured) {
+        pendingLead = { name: match[1], email: match[2] };
+      }
+
+      const displayText = stripLeadTag(assistantSoFar);
+
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last?.role === "assistant" && prev.length > allMessages.length) {
-          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: displayText } : m));
         }
-        return [...prev.slice(0, allMessages.length), { role: "assistant", content: assistantSoFar }];
+        return [...prev.slice(0, allMessages.length), { role: "assistant", content: displayText }];
       });
     };
 
@@ -133,7 +141,24 @@ const ChatbotWidget = () => {
       await streamChat({
         messages: allMessages,
         onDelta: (chunk) => upsertAssistant(chunk),
-        onDone: () => setIsLoading(false),
+        onDone: () => {
+          setIsLoading(false);
+          // Send captured lead to backend
+          if (pendingLead && !leadCaptured) {
+            setLeadCaptured(true);
+            fetch(CHAT_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({
+                messages: [{ role: "user", content: "ping" }],
+                capturedLead: { ...pendingLead, intent: "Chatbot conversation" },
+              }),
+            }).catch(() => {});
+          }
+        },
         onError: (err) => {
           setMessages((prev) => [...prev, { role: "assistant", content: `Sorry, I ran into an issue: ${err}` }]);
           setIsLoading(false);
@@ -143,37 +168,40 @@ const ChatbotWidget = () => {
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
       setIsLoading(false);
     }
-  }, [input, isLoading, messages]);
+  }, [input, isLoading, messages, leadCaptured]);
 
   return (
     <>
-      {/* Toggle button */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-gold transition-transform hover:scale-105"
+          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-gold transition-transform hover:scale-105 active:scale-95"
           aria-label="Open Nexus AI chat"
         >
           <MessageCircle className="h-6 w-6 text-accent-foreground" />
         </button>
       )}
 
-      {/* Chat window */}
       {open && (
         <div className="fixed bottom-6 right-6 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border bg-card shadow-card-hover animate-fade-up">
-          {/* Header */}
           <div className="flex items-center justify-between bg-primary px-4 py-3">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-accent" />
               <span className="text-sm font-semibold text-primary-foreground">Nexus AI</span>
               <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
             </div>
-            <button onClick={() => setOpen(false)} className="text-primary-foreground/60 hover:text-primary-foreground">
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {leadCaptured && (
+                <span className="flex items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] text-accent font-medium">
+                  <UserPlus className="h-2.5 w-2.5" /> Lead saved
+                </span>
+              )}
+              <button onClick={() => setOpen(false)} className="text-primary-foreground/60 hover:text-primary-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -186,9 +214,7 @@ const ChatbotWidget = () => {
                     <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0 [&>ul]:mt-1 [&>ol]:mt-1">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
-                  ) : (
-                    msg.content
-                  )}
+                  ) : msg.content}
                 </div>
               </div>
             ))}
@@ -202,12 +228,8 @@ const ChatbotWidget = () => {
             <div ref={messagesEnd} />
           </div>
 
-          {/* Input */}
           <div className="border-t p-3">
-            <form
-              onSubmit={(e) => { e.preventDefault(); send(); }}
-              className="flex gap-2"
-            >
+            <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex gap-2">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

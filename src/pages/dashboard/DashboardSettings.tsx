@@ -18,7 +18,7 @@ import {
   User, Shield, Bell, CreditCard, Loader2, Save, Upload, Key,
   Mail, MessageCircle, Smartphone, Webhook, Settings2, Clock,
   Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor,
-  CheckCircle2, XCircle, ShieldAlert
+  CheckCircle2, XCircle, ShieldAlert, Palette
 } from "lucide-react";
 import { useDemoMode, useUpdateDemoMode } from "@/hooks/useDemoMode";
 import type { DemoVariant } from "@/lib/demo/demoData";
@@ -29,6 +29,7 @@ import { Bot, Radio } from "lucide-react";
 import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab";
 import ChannelSettingsTab from "@/components/settings/ChannelSettingsTab";
 import UsageCreditsTab from "@/components/settings/UsageCreditsTab";
+import BrandingTab from "@/components/settings/BrandingTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -770,7 +771,7 @@ function DemoModeTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "usage", "channels", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
+const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
@@ -809,6 +810,7 @@ const DashboardSettings = () => {
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
             <TabsTrigger value="usage" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Usage</TabsTrigger>
             <TabsTrigger value="channels" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Channels</TabsTrigger>
+            <TabsTrigger value="branding" className="gap-1.5"><Palette className="h-3.5 w-3.5" />Branding</TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="integrations" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" />Integrations</TabsTrigger>
             )}
@@ -825,6 +827,7 @@ const DashboardSettings = () => {
             <TabsContent value="billing"><BillingTab /></TabsContent>
             <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
+            <TabsContent value="branding"><BrandingTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="integrations">
               {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
             </TabsContent>

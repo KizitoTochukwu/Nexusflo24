@@ -27,6 +27,7 @@ import FolderPanel from "@/components/leads/FolderPanel";
 import BulkActionBar from "@/components/leads/BulkActionBar";
 import DeleteAllDialog from "@/components/leads/DeleteAllDialog";
 import PipelineView from "@/components/leads/PipelineView";
+import SmartListPanel from "@/components/leads/SmartListPanel";
 import { useSearchParams } from "react-router-dom";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
@@ -188,13 +189,24 @@ const DashboardLeads = () => {
   return (
     <DashboardLayout>
       <div className="flex gap-6">
-        <div className="hidden lg:block w-56 shrink-0">
+        <div className="hidden lg:block w-56 shrink-0 space-y-4">
           <FolderPanel
             folders={folders}
             activeFolderId={activeFolderId}
             onSelectFolder={(id) => { setActiveFolderId(id); clearSelection(); }}
             workspaceId={workspaceId}
             totalLeadCount={allLeads.length}
+          />
+          <SmartListPanel
+            workspaceId={workspaceId}
+            currentFilters={{ status, source, pipeline_stage: pipelineStage, ai_verdict: aiVerdict, sort: sort || "newest" }}
+            onApply={(filters) => {
+              setStatus(filters.status || "All");
+              setSource(filters.source || "All");
+              setPipelineStage(filters.pipeline_stage || "All");
+              setAiVerdict(filters.ai_verdict || "All");
+              setSort((filters.sort as any) || "newest");
+            }}
           />
         </div>
 
