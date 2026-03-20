@@ -39,6 +39,9 @@ export default function DashboardMessages() {
   const [search, setSearch] = useState("");
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [templateMode, setTemplateMode] = useState(false);
+  const [templateName, setTemplateName] = useState("hello_world");
+  const [templateLang, setTemplateLang] = useState("en_US");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Data sources
