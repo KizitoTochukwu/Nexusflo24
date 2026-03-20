@@ -14,9 +14,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AiReplyButton from "@/components/messages/AiReplyButton";
-import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate, AlertTriangle } from "lucide-react";
+import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInHours } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 type Channel = "all" | "whatsapp" | "email" | "sms";
@@ -114,14 +114,7 @@ export default function DashboardMessages() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [currentMessages]);
 
-  // Detect if the WhatsApp 24-hour conversation window is expired
-  const lastInboundWa = selectedThread?.channel === "whatsapp"
-    ? waMessages.filter((m: any) => m.direction === "inbound").sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-    : null;
-
-  const waWindowExpired = selectedThread?.channel === "whatsapp" && (
-    !lastInboundWa || differenceInHours(new Date(), new Date(lastInboundWa.created_at)) >= 24
-  );
+  // Template mode is kept for manual use but 24h auto-fallback is handled server-side
 
   const handleSend = async () => {
     if ((!reply.trim() && !templateMode) || !selectedThread || !workspaceId) return;
@@ -294,19 +287,6 @@ export default function DashboardMessages() {
                   )}
                 </div>
 
-                {/* 24-hour window warning for WhatsApp */}
-                {selectedThread.channel === "whatsapp" && waWindowExpired && !templateMode && (
-                  <div className="mx-3 mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                    <div className="text-xs text-foreground">
-                      <p className="font-medium">24-hour conversation window expired</p>
-                      <p className="text-muted-foreground mt-0.5">
-                        Free-form messages can only be sent within 24 hours of the contact's last reply. 
-                        Use a <button onClick={() => setTemplateMode(true)} className="underline font-medium text-accent hover:text-accent/80">template message</button> to re-initiate the conversation.
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Template selector */}
                 {templateMode && selectedThread.channel === "whatsapp" && (
