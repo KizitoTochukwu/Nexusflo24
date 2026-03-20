@@ -830,6 +830,7 @@ const DashboardSettings = () => {
             <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="branding"><BrandingTab workspaceId={workspaceId} /></TabsContent>
+            <TabsContent value="team"><TeamTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="integrations">
               {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
             </TabsContent>
