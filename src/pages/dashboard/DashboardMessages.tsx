@@ -294,23 +294,91 @@ export default function DashboardMessages() {
                   )}
                 </div>
 
+                {/* 24-hour window warning for WhatsApp */}
+                {selectedThread.channel === "whatsapp" && waWindowExpired && !templateMode && (
+                  <div className="mx-3 mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <div className="text-xs text-foreground">
+                      <p className="font-medium">24-hour conversation window expired</p>
+                      <p className="text-muted-foreground mt-0.5">
+                        Free-form messages can only be sent within 24 hours of the contact's last reply. 
+                        Use a <button onClick={() => setTemplateMode(true)} className="underline font-medium text-accent hover:text-accent/80">template message</button> to re-initiate the conversation.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Template selector */}
+                {templateMode && selectedThread.channel === "whatsapp" && (
+                  <div className="mx-3 mt-3 p-3 rounded-lg bg-muted/50 border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                        <LayoutTemplate className="h-3.5 w-3.5" />
+                        Send Template Message
+                      </p>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setTemplateMode(false)}>Cancel</Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={templateName}
+                        onChange={e => setTemplateName(e.target.value)}
+                        placeholder="Template name (e.g. hello_world)"
+                        className="flex-1 h-8 text-xs"
+                      />
+                      <Input
+                        value={templateLang}
+                        onChange={e => setTemplateLang(e.target.value)}
+                        placeholder="Language code"
+                        className="w-24 h-8 text-xs"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Enter the exact template name from your Meta Business Manager. The template must be approved before use.
+                    </p>
+                  </div>
+                )}
+
                 <div className="p-3 border-t flex gap-2">
-                  <Input
-                    value={reply}
-                    onChange={e => setReply(e.target.value)}
-                    placeholder={`Reply via ${selectedThread.channel}...`}
-                    className="flex-1"
-                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-                    disabled={sending}
-                  />
-                  <Button
-                    onClick={handleSend}
-                    disabled={sending || !reply.trim()}
-                    size="icon"
-                    className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
-                  >
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
+                  {selectedThread.channel === "whatsapp" && !templateMode && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      title="Send template message"
+                      onClick={() => setTemplateMode(true)}
+                    >
+                      <LayoutTemplate className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {templateMode ? (
+                    <Button
+                      onClick={handleSend}
+                      disabled={sending || !templateName.trim()}
+                      className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                    >
+                      {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                      Send Template
+                    </Button>
+                  ) : (
+                    <>
+                      <Input
+                        value={reply}
+                        onChange={e => setReply(e.target.value)}
+                        placeholder={`Reply via ${selectedThread.channel}...`}
+                        className="flex-1"
+                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+                        disabled={sending}
+                      />
+                      <Button
+                        onClick={handleSend}
+                        disabled={sending || !reply.trim()}
+                        size="icon"
+                        className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
+                      >
+                        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </>
             )}
