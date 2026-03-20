@@ -243,8 +243,8 @@ function TwilioSubaccountPanel({ workspaceId }: { workspaceId: string }) {
       </p>
 
       {provisionedNumber ? (
-        <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+        <div className="flex items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2">
+          <CheckCircle2 className="h-4 w-4 text-accent" />
           <span className="text-sm">Provisioned: <strong className="font-mono">{provisionedNumber}</strong></span>
         </div>
       ) : subaccountSid ? (
