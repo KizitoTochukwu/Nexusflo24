@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
 
+    let callerUserId: string | undefined;
     if (!isServiceRole) {
       const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
         global: { headers: { Authorization: authHeader } },
@@ -115,6 +116,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const user = { id: claimsData.claims.sub as string };
+      callerUserId = user.id;
 
       const { data: isMember } = await adminClient.rpc("is_workspace_member", { _user_id: user.id, _workspace_id: workspaceId });
       if (!isMember) {
@@ -122,8 +124,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits
-    const creditResult = await deductCredit(workspaceId, "whatsapp");
+    // Check and deduct credits (admin users are exempt)
+    const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
     if (!creditResult.allowed) {
       return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
