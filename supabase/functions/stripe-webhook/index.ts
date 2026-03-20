@@ -216,7 +216,7 @@ serve(async (req) => {
 
         const { data: existingSub } = await supabase
           .from("subscriptions")
-          .select("id")
+          .select("id, plan, workspace_id")
           .eq("stripe_customer_id", customerId)
           .maybeSingle();
 
@@ -226,6 +226,12 @@ serve(async (req) => {
           }).eq("stripe_customer_id", customerId);
           if (error) log("ERROR on payment_succeeded update", error);
           else log("Payment succeeded, status set to active", { customerId });
+
+          // Allocate monthly credits on renewal
+          if (existingSub.workspace_id && existingSub.plan) {
+            await allocatePlanCredits(existingSub.workspace_id, existingSub.plan, `renewal_${event.id}`);
+            log("Renewal credits allocated", { workspaceId: existingSub.workspace_id, plan: existingSub.plan });
+          }
         } else {
           log("No subscription row found for customer, skipping", { customerId });
         }

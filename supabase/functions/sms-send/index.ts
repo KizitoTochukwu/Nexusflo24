@@ -126,6 +126,12 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check and deduct credits
+    const creditResult = await deductCredit(workspaceId, "sms");
+    if (!creditResult.allowed) {
+      return new Response(JSON.stringify({ error: creditResult.error || "Insufficient SMS credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Resolve credentials: workspace-specific → platform ENV fallback
     const creds = await resolveChannelCredentials(workspaceId, "sms", {
       account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),

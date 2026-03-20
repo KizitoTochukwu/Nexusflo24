@@ -58,6 +58,12 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Check and deduct credits
+    const creditResult = await deductCredit(workspaceId, "email");
+    if (!creditResult.allowed) {
+      return new Response(JSON.stringify({ error: creditResult.error || "Insufficient email credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Resolve credentials: workspace-specific → platform ENV fallback
     const creds = await resolveChannelCredentials(workspaceId, "email", {
       api_key: Deno.env.get("RESEND_API_KEY"),
