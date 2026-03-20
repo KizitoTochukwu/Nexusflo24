@@ -128,9 +128,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits (skip for service-role internal calls with skipCredits flag; admin users are exempt)
+    // Check and deduct credits — only skip if service-role + skipCredits + workspace owner is admin
     const skipCredits = (requestBody as any).skipCredits;
-    if (!(isServiceRole && skipCredits)) {
+    let shouldDeductCredits = true;
+    if (isServiceRole && skipCredits) {
+      const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
+      if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
+        shouldDeductCredits = false;
+      }
+    }
+    if (shouldDeductCredits) {
       const creditResult = await deductCredit(workspaceId, "sms", undefined, callerUserId);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient SMS credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
