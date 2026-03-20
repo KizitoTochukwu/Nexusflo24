@@ -1441,6 +1441,50 @@ export type Database = {
           },
         ]
       }
+      smart_lists: {
+        Row: {
+          created_at: string
+          filters: Json
+          icon: string | null
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          icon?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          icon?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_lists_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_logs: {
         Row: {
           created_at: string
@@ -1595,6 +1639,45 @@ export type Database = {
           },
         ]
       }
+      templates: {
+        Row: {
+          category: string
+          config: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_premium: boolean
+          name: string
+          popularity: number
+          tags: string[] | null
+          thumbnail_url: string | null
+        }
+        Insert: {
+          category: string
+          config?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          name: string
+          popularity?: number
+          tags?: string[] | null
+          thumbnail_url?: string | null
+        }
+        Update: {
+          category?: string
+          config?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          name?: string
+          popularity?: number
+          tags?: string[] | null
+          thumbnail_url?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1709,6 +1792,50 @@ export type Database = {
             foreignKeyName: "whatsapp_settings_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_branding: {
+        Row: {
+          brand_color: string | null
+          brand_name: string | null
+          created_at: string
+          custom_domain: string | null
+          icon_url: string | null
+          id: string
+          logo_url: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          brand_color?: string | null
+          brand_name?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          icon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          brand_color?: string | null
+          brand_name?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          icon_url?: string | null
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_branding_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
