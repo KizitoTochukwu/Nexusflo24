@@ -46,7 +46,44 @@ export async function deductCredit(
   }
 
   if (!credits) {
-    return { allowed: false, remaining: 0, error: "No credits allocated. Subscribe to a plan or purchase credits." };
+    // Auto-allocate starter credits for workspaces that have none yet
+    const starterCredits = PLAN_CREDITS.starter;
+    const { error: seedErr } = await adminClient
+      .from("message_credits")
+      .insert({
+        workspace_id: workspaceId,
+        email_balance: starterCredits.email,
+        sms_balance: starterCredits.sms,
+        whatsapp_balance: starterCredits.whatsapp,
+      });
+
+    if (seedErr) {
+      console.error("[credit-guard] auto-seed error:", seedErr);
+      return { allowed: false, remaining: 0, error: "Failed to initialise credits. Please try again." };
+    }
+
+    // Log the auto-allocation
+    const channels: CreditChannel[] = ["email", "sms", "whatsapp"];
+    for (const ch of channels) {
+      if (starterCredits[ch] > 0) {
+        await adminClient.from("credit_transactions").insert({
+          workspace_id: workspaceId,
+          channel: ch,
+          amount: starterCredits[ch],
+          reason: "plan_allocation",
+          reference_id: "starter_auto_seed",
+        });
+      }
+    }
+
+    // Re-check: the channel we need might still be 0 (e.g. SMS on starter)
+    const newBalance = starterCredits[channel] ?? 0;
+    if (newBalance <= 0) {
+      return { allowed: false, remaining: 0, error: `Insufficient ${channel} credits. Upgrade your plan or buy more in Settings → Usage.` };
+    }
+
+    // Continue with the freshly-seeded balance
+    return deductCredit(workspaceId, channel, referenceId);
   }
 
   const currentBalance = (credits as Record<string, number>)[balCol] ?? 0;
