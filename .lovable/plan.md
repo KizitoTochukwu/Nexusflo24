@@ -1,32 +1,30 @@
 
 
-## Fix: Confirmation Emails Not Being Sent
+## Fix: Domain List Showing All Domains Instead of Workspace-Specific Ones
 
-### Root Cause
+### Problem
+The `ResendDomainPanel` calls `resend-domain-verify` with `action: "list"`, which calls the Resend API's `GET /domains` endpoint. This returns **all domains** registered under the Resend API key — not just the ones belonging to the current workspace. When workspaces share the platform Resend key, every user sees every domain (including other users' domains like `kizioo.com`).
 
-The email domain (`support.nexusflo24.com`) is verified and the `auth-email-hook` Edge Function code exists, but the email infrastructure was never fully set up:
+### Solution
+Track domain ownership per workspace in the database and filter the domain list accordingly.
 
-1. **No email queue infrastructure** — the `email_send_log` table doesn't exist, and there's no `process-email-queue` cron job. This means `setup_email_infra` was never called.
-2. **auth-email-hook has zero logs** — the function is either not deployed or not activated as the auth email hook. Without activation, the auth system uses default (built-in) email delivery, which may not be configured or working.
-3. **Old direct-send pattern** — the current `auth-email-hook` uses `sendLovableEmail` directly instead of the queue-based approach. This should be upgraded for retry safety.
+### Changes
 
-### Fix Steps
+**1. Database migration — create `workspace_domains` table**
+- Columns: `id`, `workspace_id`, `resend_domain_id` (text), `domain_name`, `status`, `created_at`
+- RLS: workspace members can SELECT; workspace admins can INSERT/DELETE
+- When a domain is added via the "add" action, store the mapping
 
-**1. Set up email infrastructure**
-- Call `setup_email_infra` to create the email queue tables (`email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens`), pgmq queues, RPC wrappers, and the `process-email-queue` cron job.
+**2. `supabase/functions/resend-domain-verify/index.ts`**
+- **`add` action**: After successfully adding a domain via Resend API, insert a row into `workspace_domains` with the `resend_domain_id` and `workspace_id`
+- **`list` action**: Instead of returning all Resend domains, query `workspace_domains` for the current workspace, then fetch status from Resend only for those domain IDs
+- **`verify` / `status` actions**: Verify the requested `domainId` belongs to the workspace before proceeding (prevents cross-workspace access)
 
-**2. Re-scaffold auth email templates**
-- Call `scaffold_auth_email_templates` to upgrade the `auth-email-hook` to the queue-based pattern and properly activate it with the auth system.
-- Re-apply the existing NexusFlo24 brand styling (Navy #0B1F3B, Gold #C9A227, Inter font, profile logo) to the templates.
+**3. `src/components/settings/ChannelSettingsTab.tsx`**
+- No UI changes needed — the filtered list from the backend will automatically show only the workspace's domains
 
-**3. Deploy the updated Edge Functions**
-- Deploy `auth-email-hook` (and `process-email-queue` if created by infra setup) so the auth system can route signup confirmation emails through the hook.
-
-### What This Fixes
-- Signup confirmation emails will be enqueued and delivered via the verified `support.nexusflo24.com` domain
-- Retry safety via the pgmq queue (rate-limit handling, dead-letter queue)
-- All 6 auth email types (signup, recovery, magic link, invite, email change, reauthentication) will work
-
-### No Database Migration Needed
-The `setup_email_infra` tool handles all table creation internally.
+### Security
+- Each workspace only sees and manages its own domains
+- Domain ownership is enforced server-side via the `workspace_domains` table
+- Cross-workspace domain access is blocked by checking ownership before any Resend API call
 
