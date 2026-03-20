@@ -166,10 +166,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits
-    const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
-    if (!creditResult.allowed) {
-      return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Check and deduct credits (skip for service-role internal calls with skipCredits flag)
+    if (!(isServiceRole && skipCredits)) {
+      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
+      if (!creditResult.allowed) {
+        return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const platformAccessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")?.trim();
