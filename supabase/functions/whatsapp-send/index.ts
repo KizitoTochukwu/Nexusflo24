@@ -189,8 +189,9 @@ Deno.serve(async (req) => {
           platformAccessToken,
           platformPhoneNumberId,
           normalizedTo,
-          msgBody,
+          msgBody || `[Template: ${template?.name}]`,
           "platform",
+          template,
         );
       }
     }
