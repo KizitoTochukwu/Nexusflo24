@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import AiReplyButton from "@/components/messages/AiReplyButton";
 import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInHours } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 type Channel = "all" | "whatsapp" | "email" | "sms";
