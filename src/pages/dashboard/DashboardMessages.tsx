@@ -114,14 +114,7 @@ export default function DashboardMessages() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [currentMessages]);
 
-  // Detect if the WhatsApp 24-hour conversation window is expired
-  const lastInboundWa = selectedThread?.channel === "whatsapp"
-    ? waMessages.filter((m: any) => m.direction === "inbound").sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-    : null;
-
-  const waWindowExpired = selectedThread?.channel === "whatsapp" && (
-    !lastInboundWa || differenceInHours(new Date(), new Date(lastInboundWa.created_at)) >= 24
-  );
+  // Template mode is kept for manual use but 24h auto-fallback is handled server-side
 
   const handleSend = async () => {
     if ((!reply.trim() && !templateMode) || !selectedThread || !workspaceId) return;
