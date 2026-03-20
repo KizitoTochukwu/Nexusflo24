@@ -15,6 +15,7 @@ import { Mail, Lock, User } from "lucide-react";
 const Register = () => {
   const [searchParams] = useSearchParams();
   const prefillEmail = searchParams.get("email") || "";
+  const refCode = searchParams.get("ref") || "";
   const [form, setForm] = useState({ name: "", email: prefillEmail, password: "" });
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,6 +51,19 @@ const Register = () => {
       return;
     }
     localStorage.setItem("nexusflo_new_signup", "true");
+    // Track referral if ref code present
+    if (refCode) {
+      try {
+        await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-referral`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ referralCode: refCode, referredUserId: null }),
+          }
+        );
+      } catch {}
+    }
     toast.success("Check your email for a confirmation link!");
     navigate("/login");
   };

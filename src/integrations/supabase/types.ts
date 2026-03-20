@@ -512,6 +512,66 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          body: string | null
+          created_at: string
+          direction: string
+          error: string | null
+          from_email: string | null
+          id: string
+          lead_id: string | null
+          provider_message_id: string | null
+          status: string
+          subject: string | null
+          to_email: string
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          direction?: string
+          error?: string | null
+          from_email?: string | null
+          id?: string
+          lead_id?: string | null
+          provider_message_id?: string | null
+          status?: string
+          subject?: string | null
+          to_email: string
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          direction?: string
+          error?: string | null
+          from_email?: string | null
+          id?: string
+          lead_id?: string | null
+          provider_message_id?: string | null
+          status?: string
+          subject?: string | null
+          to_email?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_settings: {
         Row: {
           api_key_encrypted: string
@@ -1251,6 +1311,50 @@ export type Database = {
         }
         Relationships: []
       }
+      referrals: {
+        Row: {
+          converted_at: string | null
+          created_at: string
+          id: string
+          referral_code: string
+          referred_user_id: string | null
+          referrer_user_id: string
+          reward_credits: number
+          status: string
+          workspace_id: string | null
+        }
+        Insert: {
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_user_id?: string | null
+          referrer_user_id: string
+          reward_credits?: number
+          status?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_user_id?: string | null
+          referrer_user_id?: string
+          reward_credits?: number
+          status?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_closer_settings: {
         Row: {
           booking_page_id: string | null
@@ -1488,6 +1592,7 @@ export type Database = {
       sms_logs: {
         Row: {
           created_at: string
+          direction: string
           error: string | null
           from_number: string | null
           id: string
@@ -1500,6 +1605,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          direction?: string
           error?: string | null
           from_number?: string | null
           id?: string
@@ -1512,6 +1618,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          direction?: string
           error?: string | null
           from_number?: string | null
           id?: string
@@ -1797,6 +1904,47 @@ export type Database = {
           },
         ]
       }
+      workspace_activity: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          meta: Json | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          meta?: Json | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          meta?: Json | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_activity_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_branding: {
         Row: {
           brand_color: string | null
@@ -1872,6 +2020,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "workspace_channel_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_invites: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: string
+          status: string
+          token: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: string
+          status?: string
+          token?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: string
+          status?: string
+          token?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invites_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

@@ -125,6 +125,20 @@ Deno.serve(async (req) => {
     const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
     const result = await sendResend(apiKey, from, to, subject, trackedHtml, replyTo);
 
+    // Log outbound email
+    try {
+      await adminClient.from("email_logs").insert({
+        workspace_id: workspaceId,
+        to_email: to,
+        from_email: fromEmail,
+        subject,
+        direction: "outbound",
+        status: "sent",
+        provider_message_id: result.messageId,
+        lead_id: leadId || null,
+      });
+    } catch (_) { /* ignore logging errors */ }
+
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("email-send error:", err);

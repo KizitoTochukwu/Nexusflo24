@@ -1,16 +1,18 @@
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/contexts/AuthContext";
-import { Copy, Share2, Mail, MessageCircle, Users, MousePointerClick, Gift, Trophy } from "lucide-react";
+import { useReferrals } from "@/hooks/useReferrals";
+import { Copy, Share2, Mail, MessageCircle, Users, MousePointerClick, Gift, Trophy, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const Referral = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { data: stats, isLoading } = useReferrals();
   const referralCode = user?.id?.slice(0, 8) || "DEMO1234";
   const referralLink = `https://nexusflo24.lovable.app/register?ref=${referralCode}`;
   const [copied, setCopied] = useState(false);
@@ -30,10 +32,10 @@ const Referral = () => {
     window.open(`mailto:?subject=${encodeURIComponent("Try NexusFlo24!")}&body=${encodeURIComponent(`Hey! Check out NexusFlo24 for AI-powered marketing automation: ${referralLink}`)}`, "_blank");
   };
 
-  const stats = [
-    { icon: MousePointerClick, label: "Link Clicks", value: "0" },
-    { icon: Users, label: "Signups", value: "0" },
-    { icon: Gift, label: "Rewards Earned", value: "$0" },
+  const statCards = [
+    { icon: MousePointerClick, label: "Link Clicks", value: String(stats?.totalClicks ?? 0) },
+    { icon: Users, label: "Signups", value: String(stats?.totalSignups ?? 0) },
+    { icon: Gift, label: "Credits Earned", value: String(stats?.totalRewardCredits ?? 0) },
   ];
 
   const steps = [
@@ -123,17 +125,21 @@ const Referral = () => {
         <section className="py-16 md:py-24 bg-surface">
           <div className="container max-w-4xl">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">Your Referral Stats</h2>
-            <div className="grid grid-cols-3 gap-6">
-              {stats.map((s, i) => (
-                <Card key={i} className="text-center shadow-card">
-                  <CardContent className="pt-6 flex flex-col items-center gap-2">
-                    <s.icon className="h-8 w-8 text-accent" />
-                    <p className="text-2xl font-bold">{s.value}</p>
-                    <p className="text-sm text-muted-foreground">{s.label}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <div className="grid grid-cols-3 gap-6">
+                {statCards.map((s, i) => (
+                  <Card key={i} className="text-center shadow-card">
+                    <CardContent className="pt-6 flex flex-col items-center gap-2">
+                      <s.icon className="h-8 w-8 text-accent" />
+                      <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+                      <p className="text-sm text-muted-foreground">{s.label}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}

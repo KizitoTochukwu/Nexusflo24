@@ -1,0 +1,182 @@
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useWorkspaceMembers, useWorkspaceInvites, useSendInvite, useRevokeInvite, useUpdateMemberRole, useRemoveMember } from "@/hooks/useWorkspaceInvites";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Users, Mail, Loader2, Trash2, Shield, Crown, Eye, UserCheck } from "lucide-react";
+
+const ROLE_COLORS: Record<string, string> = {
+  owner: "bg-amber-100 text-amber-800",
+  admin: "bg-blue-100 text-blue-800",
+  member: "bg-green-100 text-green-800",
+  viewer: "bg-gray-100 text-gray-600",
+};
+
+const ROLE_ICONS: Record<string, any> = {
+  owner: Crown,
+  admin: Shield,
+  member: UserCheck,
+  viewer: Eye,
+};
+
+export default function TeamTab({ workspaceId }: { workspaceId: string }) {
+  const { user } = useAuth();
+  const { canManage } = useWorkspaceRole();
+  const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(workspaceId);
+  const { data: invites = [], isLoading: invitesLoading } = useWorkspaceInvites(workspaceId);
+  const sendInvite = useSendInvite();
+  const revokeInvite = useRevokeInvite();
+  const updateRole = useUpdateMemberRole();
+  const removeMember = useRemoveMember();
+
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("member");
+
+  const handleInvite = async () => {
+    if (!email.trim()) { toast.error("Enter an email address."); return; }
+    try {
+      await sendInvite.mutateAsync({ workspaceId, email: email.trim(), role });
+      toast.success(`Invitation sent to ${email}`);
+      setEmail("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send invite");
+    }
+  };
+
+  const pendingInvites = (invites as any[]).filter((i: any) => i.status === "pending");
+
+  return (
+    <div className="space-y-6">
+      {/* Members */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2"><Users className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Team Members</CardTitle></div>
+          <CardDescription>People with access to this workspace.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {membersLoading ? (
+            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (
+            (members as any[]).map((m: any) => {
+              const RoleIcon = ROLE_ICONS[m.role] || UserCheck;
+              return (
+                <div key={m.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex items-center gap-3">
+                    {m.profile?.avatar_url ? (
+                      <img src={m.profile.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                        {(m.profile?.full_name?.[0] || m.profile?.email?.[0] || "?").toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium">{m.profile?.full_name || m.profile?.email || "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">{m.profile?.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {canManage && m.role !== "owner" && m.user_id !== user?.id ? (
+                      <Select
+                        value={m.role}
+                        onValueChange={(v) => updateRole.mutate({ memberId: m.id, role: v, workspaceId }, { onSuccess: () => toast.success("Role updated") })}
+                      >
+                        <SelectTrigger className="w-[110px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge className={`${ROLE_COLORS[m.role] || ""} text-xs gap-1`}>
+                        <RoleIcon className="h-3 w-3" />{m.role}
+                      </Badge>
+                    )}
+                    {canManage && m.role !== "owner" && m.user_id !== user?.id && (
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => removeMember.mutate({ memberId: m.id, workspaceId }, { onSuccess: () => toast.success("Member removed") })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Invite */}
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><Mail className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Invite Team Member</CardTitle></div>
+            <CardDescription>Send an invitation to join this workspace.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="colleague@company.com"
+                className="flex-1"
+                maxLength={255}
+              />
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleInvite} disabled={sendInvite.isPending} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                {sendInvite.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Invite"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pending Invites */}
+      {pendingInvites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Pending Invitations</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pendingInvites.map((inv: any) => (
+              <div key={inv.id} className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <p className="text-sm font-medium">{inv.email}</p>
+                  <p className="text-xs text-muted-foreground">Role: {inv.role} · Expires: {new Date(inv.expires_at).toLocaleDateString()}</p>
+                </div>
+                {canManage && (
+                  <Button
+                    variant="ghost" size="sm" className="text-destructive"
+                    onClick={() => revokeInvite.mutate({ id: inv.id, workspaceId }, { onSuccess: () => toast.success("Invite revoked") })}
+                  >
+                    Revoke
+                  </Button>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

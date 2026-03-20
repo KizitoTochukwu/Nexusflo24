@@ -154,6 +154,33 @@ serve(async (req) => {
           await allocatePlanCredits(workspaceId, plan, session.id);
           log("Plan credits allocated", { workspaceId, plan });
         }
+
+        // Check for referral conversion
+        try {
+          const { data: referral } = await supabase
+            .from("referrals")
+            .select("id, referrer_user_id, workspace_id")
+            .eq("referred_user_id", userId)
+            .eq("status", "signed_up")
+            .maybeSingle();
+
+          if (referral) {
+            const rewardCredits = 500;
+            await supabase.from("referrals").update({
+              status: "converted",
+              reward_credits: rewardCredits,
+              converted_at: new Date().toISOString(),
+            }).eq("id", referral.id);
+
+            // Credit referrer's workspace
+            if (referral.workspace_id) {
+              await addCredits(referral.workspace_id, "email", rewardCredits, "referral_reward", referral.id);
+            }
+            log("Referral converted", { referralId: referral.id, rewardCredits });
+          }
+        } catch (refErr) {
+          log("Referral conversion check failed (non-fatal)", refErr);
+        }
         break;
       }
 
