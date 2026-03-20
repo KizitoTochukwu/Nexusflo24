@@ -30,6 +30,7 @@ import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab
 import ChannelSettingsTab from "@/components/settings/ChannelSettingsTab";
 import UsageCreditsTab from "@/components/settings/UsageCreditsTab";
 import BrandingTab from "@/components/settings/BrandingTab";
+import TeamTab from "@/components/settings/TeamTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
