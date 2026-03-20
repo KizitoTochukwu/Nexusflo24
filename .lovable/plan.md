@@ -1,103 +1,115 @@
 
 
-## Plan: Platform-Managed Integrations Access Control
+# Phase 1: Usage-Based Message Credit System
 
-### Context
+## Overview
+Add a message credit system so every outbound message (email, SMS, WhatsApp) deducts from a workspace balance. Credits are purchased through Stripe and managed entirely within NexusFlo24 — no third-party accounts needed.
 
-NexusFlo24 already has a working admin role system: `user_roles` table, `app_role` enum (`admin`), `admin_allowlist` seeded with `kizzyadichie@gmail.com`, `sync_admin_role()` function, `useIsAdmin()` hook, and `AdminGuard` component. Per security rules, roles must stay in the separate `user_roles` table — not on `profiles`.
+## Database Changes
 
-The user's `super_admin` maps to the existing `admin` role. No schema changes needed for role management.
+### New table: `message_credits`
+Tracks per-workspace credit balance and lifetime usage.
 
-### Changes
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| workspace_id | uuid | unique, FK to workspaces |
+| email_balance | integer | default 0 |
+| sms_balance | integer | default 0 |
+| whatsapp_balance | integer | default 0 |
+| email_used | integer | default 0, lifetime counter |
+| sms_used | integer | default 0 |
+| whatsapp_used | integer | default 0 |
+| updated_at | timestamptz | auto-updated |
 
-#### 1. Frontend: Split Settings Tabs by Role
+RLS: workspace members can SELECT; service_role can INSERT/UPDATE.
 
-**DashboardSettings.tsx** — Major restructure:
+### New table: `credit_transactions`
+Audit log of every credit change (purchase, deduction, admin grant).
 
-- Import `useIsAdmin()` hook
-- **For admins**: show all tabs including "Integrations" (Email/WA/SMS + Webhooks)
-- **For customers**: hide "Integrations" tab entirely, show a new "Webhooks" tab instead
-- If customer navigates to `?tab=integrations`, show "Access Denied" card
-- Extract Webhook Settings Card into its own `WebhooksTab` component (reused by both views)
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| workspace_id | uuid | |
+| channel | text | email/sms/whatsapp |
+| amount | integer | positive = top-up, negative = deduction |
+| reason | text | "purchase", "message_sent", "admin_grant", "plan_allocation" |
+| reference_id | text | nullable, e.g. Stripe session ID or message ID |
+| created_at | timestamptz | |
 
-Tab layout:
+RLS: workspace members can SELECT; service_role can INSERT.
+
+## Plan-Included Credits
+
+Each billing cycle, workspaces receive bundled credits based on their plan tier. These are allocated on subscription creation/renewal via the existing webhook.
+
+| Plan | Email/mo | SMS/mo | WhatsApp/mo |
+|------|----------|--------|-------------|
+| Starter | 500 | 0 | 0 |
+| Plus | 2,500 | 100 | 100 |
+| Pro | 10,000 | 500 | 500 |
+| Enterprise | 50,000 | 2,000 | 2,000 |
+
+## Stripe Credit Packs (Top-Up)
+
+Create 3 Stripe products for purchasing additional credits beyond plan allocation:
+
+- **Email Credits Pack** — e.g. 1,000 emails for $5
+- **SMS Credits Pack** — e.g. 100 SMS for $5
+- **WhatsApp Credits Pack** — e.g. 100 messages for $5
+
+These are one-time payments (not subscriptions). A new edge function `create-credit-purchase` handles checkout, and the existing `stripe-webhook` is extended to handle `checkout.session.completed` with a `type: "credit_purchase"` metadata flag.
+
+## Edge Function Changes
+
+### Shared utility: `_shared/credit-guard.ts`
+A reusable function called by `email-send`, `sms-send`, and `whatsapp-send`:
+
+```text
+deductCredit(workspaceId, channel) → { allowed: boolean, remaining: number }
 ```
-Customer: Profile | Billing | Webhooks | Automation | Notifications | Security
-Admin:    Profile | Billing | Integrations | Webhooks | Automation | Notifications | Security
-```
 
-#### 2. Move Provider Credentials to Platform ENV Secrets
+- Checks `message_credits` balance for the channel
+- If balance > 0: atomically decrements balance, increments used counter, logs to `credit_transactions`, returns allowed=true
+- If balance <= 0: returns allowed=false (send functions return a clear error)
 
-Currently Email/SMS/WhatsApp credentials are stored per-workspace in DB tables (`email_settings`, `sms_settings`, `whatsapp_settings`). The new model reads credentials from platform ENV variables.
+### Modify `email-send`, `sms-send`, `whatsapp-send`
+Before sending, call `deductCredit()`. If not allowed, return `{ error: "Insufficient credits" }` with status 402.
 
-**New secrets to add** (via `add_secret` tool):
-- `RESEND_API_KEY`, `EMAIL_FROM` (e.g. `support@nexusflo24.com`)
-- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`
-- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+### Modify `stripe-webhook`
+- On `checkout.session.completed` with metadata `type: "credit_purchase"`: add credits to `message_credits` and log to `credit_transactions`.
+- On `checkout.session.completed` with subscription metadata: allocate plan-included credits (upsert `message_credits` row).
+- On `invoice.payment_succeeded` (renewal): top up monthly allocation.
 
-#### 3. Update Edge Functions for Platform Credentials
+### New: `create-credit-purchase/index.ts`
+One-time payment checkout for credit packs. Accepts `{ channel, packSize, workspaceId }`, creates a Stripe checkout session with `mode: "payment"`.
 
-**`email-send/index.ts`**: Read `RESEND_API_KEY` and `EMAIL_FROM` from ENV instead of decrypting from `email_settings` table. Remove workspace-specific credential lookup.
+## Frontend Changes
 
-**`sms-send/index.ts`**: Read `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` from ENV. Remove workspace credential lookup.
+### Credit Balance Display
+- Add a `useMessageCredits` hook that fetches from `message_credits` table
+- Show balances in the dashboard sidebar (email: X, SMS: X, WhatsApp: X)
+- Show in Settings page under a new "Usage & Credits" tab
 
-**`whatsapp-send/index.ts`**: Read `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` from ENV. Remove workspace credential decryption.
+### Buy Credits UI
+- Add "Buy Credits" button in the Usage tab
+- Simple modal with pack selection per channel → calls `create-credit-purchase`
 
-**`email-save-settings/index.ts`**, **`sms-save-settings/index.ts`**, **`whatsapp-save-settings/index.ts`**: Add admin role check at the top. These endpoints now only update platform-level config (accessible only to super_admin). Alternatively, since credentials move to ENV, these save-settings functions become admin-only status/config endpoints or can be deprecated.
+### Insufficient Credits Feedback
+- When send functions return 402, show a toast: "Insufficient [channel] credits. Buy more in Settings → Usage."
 
-#### 4. Backend Admin Authorization
+### Plan Limits Update
+- Update `planLimits.ts` to include credit allocations per tier (for display on Pricing page)
+- Update Pricing page to show included credits per plan
 
-All save-settings and test-send edge functions must verify admin role:
-```typescript
-// Check admin role via user_roles table
-const { data: adminRole } = await adminClient
-  .from("user_roles")
-  .select("role")
-  .eq("user_id", userId)
-  .eq("role", "admin")
-  .maybeSingle();
-if (!adminRole) {
-  return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 });
-}
-```
+## Implementation Order
 
-Send functions (`email-send`, `sms-send`, `whatsapp-send`) remain accessible to workspace members since automations/campaigns invoke them on behalf of users.
-
-#### 5. Admin Integrations Status Widget
-
-Add a read-only status card at the top of the admin Integrations tab:
-- Resend: configured / not configured (checks if `RESEND_API_KEY` is set)
-- Twilio: configured / not configured
-- WhatsApp: configured / not configured
-
-Create a small edge function `integration-status` that returns boolean flags (no secret values).
-
-#### 6. Webhooks Tab (Customer-Accessible)
-
-Extract the existing Webhook Settings card from `IntegrationsTab` into a standalone `WebhooksTab` component showing:
-- Lead Ingest Endpoint URL (copy button)
-- Bearer token instructions
-- X-Workspace-Id header guidance
-
-This tab is workspace-scoped and visible to all authenticated users.
-
-### Files to Create/Edit
-
-- **Edit**: `src/pages/dashboard/DashboardSettings.tsx` — split tabs, role-gate Integrations, add WebhooksTab
-- **Edit**: `supabase/functions/email-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/sms-send/index.ts` — use ENV credentials  
-- **Edit**: `supabase/functions/whatsapp-send/index.ts` — use ENV credentials
-- **Edit**: `supabase/functions/email-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/sms-save-settings/index.ts` — add admin check
-- **Edit**: `supabase/functions/whatsapp-save-settings/index.ts` — add admin check
-- **New**: `supabase/functions/integration-status/index.ts` — returns config status booleans
-- **New secrets**: `RESEND_API_KEY`, `EMAIL_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
-
-### Execution Order
-
-1. Request all new ENV secrets (batch)
-2. Create `integration-status` edge function
-3. Update send functions to use ENV credentials
-4. Update save-settings functions with admin checks
-5. Restructure `DashboardSettings.tsx` with role-gated tabs
+1. Database migration (2 tables)
+2. `_shared/credit-guard.ts` utility
+3. Modify `stripe-webhook` for credit allocation on subscription events
+4. Modify `email-send`, `sms-send`, `whatsapp-send` to enforce credits
+5. `create-credit-purchase` edge function
+6. Frontend: `useMessageCredits` hook + sidebar display
+7. Frontend: Usage tab + Buy Credits modal
+8. Update Pricing page with credit info
 
