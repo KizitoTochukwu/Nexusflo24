@@ -136,10 +136,15 @@ const tiers: PricingTier[] = [
   },
 ];
 
+const fmtCredits = (n: number) => (n === 0 ? "—" : n.toLocaleString());
+
 const comparisonFeatures = [
   { name: "Contacts", starter: "250", plus: "2,500", pro: "Unlimited", enterprise: "Unlimited" },
   { name: "Funnels", starter: "1", plus: "3", pro: "10", enterprise: "Unlimited" },
   { name: "Campaigns", starter: "2", plus: "10", pro: "Unlimited", enterprise: "Unlimited" },
+  { name: "Email Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.email), plus: fmtCredits(PLAN_CREDITS.plus.email), pro: fmtCredits(PLAN_CREDITS.pro.email), enterprise: fmtCredits(PLAN_CREDITS.enterprise.email) },
+  { name: "SMS Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.sms), plus: fmtCredits(PLAN_CREDITS.plus.sms), pro: fmtCredits(PLAN_CREDITS.pro.sms), enterprise: fmtCredits(PLAN_CREDITS.enterprise.sms) },
+  { name: "WhatsApp Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.whatsapp), plus: fmtCredits(PLAN_CREDITS.plus.whatsapp), pro: fmtCredits(PLAN_CREDITS.pro.whatsapp), enterprise: fmtCredits(PLAN_CREDITS.enterprise.whatsapp) },
   { name: "Email", starter: "✓", plus: "✓", pro: "✓", enterprise: "✓" },
   { name: "WhatsApp", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
   { name: "SMS", starter: "—", plus: "—", pro: "✓", enterprise: "✓" },
