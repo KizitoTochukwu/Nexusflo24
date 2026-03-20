@@ -78,6 +78,7 @@ const tiers: PricingTier[] = [
         features: ["50 AI copy generations/day", "Behaviour-triggered automations"],
       },
       { title: "Channels", features: ["Email + WhatsApp"] },
+      { title: "Monthly Credits", features: ["2,500 email", "100 SMS", "100 WhatsApp"] },
     ],
   },
   {
