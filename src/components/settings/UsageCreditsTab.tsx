@@ -116,6 +116,8 @@ export default function UsageCreditsTab() {
           )}
         </CardContent>
       </Card>
+
+      <CreditTransactionHistory />
     </div>
   );
 }
