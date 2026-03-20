@@ -126,6 +126,7 @@ const tiers: PricingTier[] = [
         features: ["Unlimited AI across all tools", "Priority AI processing"],
       },
       { title: "Channels", features: ["All channels + priority delivery"] },
+      { title: "Monthly Credits", features: ["50,000 email", "2,000 SMS", "2,000 WhatsApp"] },
       {
         title: "Advanced",
         features: [
