@@ -15,6 +15,7 @@ export interface PlanLimits {
   teamInvites: boolean;
   apiAccess: boolean;
   watermarkedExports: boolean;
+  monthlyCredits: { email: number; sms: number; whatsapp: number };
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
