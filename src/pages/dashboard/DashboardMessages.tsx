@@ -114,17 +114,35 @@ export default function DashboardMessages() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [currentMessages]);
 
+  // Detect if the WhatsApp 24-hour conversation window is expired
+  const lastInboundWa = selectedThread?.channel === "whatsapp"
+    ? waMessages.filter((m: any) => m.direction === "inbound").sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+    : null;
+
+  const waWindowExpired = selectedThread?.channel === "whatsapp" && (
+    !lastInboundWa || differenceInHours(new Date(), new Date(lastInboundWa.created_at)) >= 24
+  );
+
   const handleSend = async () => {
-    if (!reply.trim() || !selectedThread || !workspaceId) return;
+    if ((!reply.trim() && !templateMode) || !selectedThread || !workspaceId) return;
     setSending(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers = { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` };
 
       if (selectedThread.channel === "whatsapp") {
+        const payload: Record<string, unknown> = { workspaceId, to: selectedThread.identifier };
+
+        if (templateMode) {
+          payload.template = { name: templateName, language: templateLang };
+          payload.body = ""; // body is optional for templates
+        } else {
+          payload.body = reply.trim();
+        }
+
         const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-send`, {
           method: "POST", headers,
-          body: JSON.stringify({ workspaceId, to: selectedThread.identifier, body: reply.trim() }),
+          body: JSON.stringify(payload),
         });
         if (!resp.ok) throw new Error((await resp.json()).error || "Failed");
       } else if (selectedThread.channel === "sms") {
@@ -139,6 +157,7 @@ export default function DashboardMessages() {
         if (error) throw error;
       }
       setReply("");
+      setTemplateMode(false);
       toast.success("Message sent");
     } catch (err: any) {
       toast.error(err.message || "Failed to send");
