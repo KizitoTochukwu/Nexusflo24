@@ -771,7 +771,7 @@ function DemoModeTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
+const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
