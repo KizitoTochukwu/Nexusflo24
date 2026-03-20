@@ -11,6 +11,7 @@ import { usePlanGating } from "@/hooks/usePlanGating";
 import { CREDIT_PACKS, type CreditChannel } from "@/lib/stripe/creditPacks";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import CreditTransactionHistory from "./CreditTransactionHistory";
 
 const CHANNEL_META: Record<CreditChannel, { icon: typeof Mail; label: string; color: string }> = {
   email: { icon: Mail, label: "Email", color: "text-blue-500" },
@@ -115,6 +116,8 @@ export default function UsageCreditsTab() {
           )}
         </CardContent>
       </Card>
+
+      <CreditTransactionHistory />
     </div>
   );
 }

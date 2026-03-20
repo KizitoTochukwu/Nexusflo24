@@ -17,6 +17,7 @@ import {
   getYearlyTotal,
   getYearlySavings,
 } from "@/lib/stripe/plans";
+import { PLAN_CREDITS, CREDIT_PACKS } from "@/lib/stripe/creditPacks";
 import { toast } from "sonner";
 
 interface PlanFeatureGroup {
@@ -53,6 +54,7 @@ const tiers: PricingTier[] = [
       },
       { title: "AI-Powered", features: ["10 AI copy generations/day"] },
       { title: "Channels", features: ["Email only"] },
+      { title: "Monthly Credits", features: ["500 email credits"] },
     ],
   },
   {
@@ -76,6 +78,7 @@ const tiers: PricingTier[] = [
         features: ["50 AI copy generations/day", "Behaviour-triggered automations"],
       },
       { title: "Channels", features: ["Email + WhatsApp"] },
+      { title: "Monthly Credits", features: ["2,500 email", "100 SMS", "100 WhatsApp"] },
     ],
   },
   {
@@ -105,6 +108,7 @@ const tiers: PricingTier[] = [
         ],
       },
       { title: "Channels", features: ["Email + WhatsApp + SMS"] },
+      { title: "Monthly Credits", features: ["10,000 email", "500 SMS", "500 WhatsApp"] },
     ],
   },
   {
@@ -122,6 +126,7 @@ const tiers: PricingTier[] = [
         features: ["Unlimited AI across all tools", "Priority AI processing"],
       },
       { title: "Channels", features: ["All channels + priority delivery"] },
+      { title: "Monthly Credits", features: ["50,000 email", "2,000 SMS", "2,000 WhatsApp"] },
       {
         title: "Advanced",
         features: [
@@ -135,10 +140,15 @@ const tiers: PricingTier[] = [
   },
 ];
 
+const fmtCredits = (n: number) => (n === 0 ? "—" : n.toLocaleString());
+
 const comparisonFeatures = [
   { name: "Contacts", starter: "250", plus: "2,500", pro: "Unlimited", enterprise: "Unlimited" },
   { name: "Funnels", starter: "1", plus: "3", pro: "10", enterprise: "Unlimited" },
   { name: "Campaigns", starter: "2", plus: "10", pro: "Unlimited", enterprise: "Unlimited" },
+  { name: "Email Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.email), plus: fmtCredits(PLAN_CREDITS.plus.email), pro: fmtCredits(PLAN_CREDITS.pro.email), enterprise: fmtCredits(PLAN_CREDITS.enterprise.email) },
+  { name: "SMS Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.sms), plus: fmtCredits(PLAN_CREDITS.plus.sms), pro: fmtCredits(PLAN_CREDITS.pro.sms), enterprise: fmtCredits(PLAN_CREDITS.enterprise.sms) },
+  { name: "WhatsApp Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.whatsapp), plus: fmtCredits(PLAN_CREDITS.plus.whatsapp), pro: fmtCredits(PLAN_CREDITS.pro.whatsapp), enterprise: fmtCredits(PLAN_CREDITS.enterprise.whatsapp) },
   { name: "Email", starter: "✓", plus: "✓", pro: "✓", enterprise: "✓" },
   { name: "WhatsApp", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
   { name: "SMS", starter: "—", plus: "—", pro: "✓", enterprise: "✓" },
@@ -354,6 +364,32 @@ const Pricing = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Credit Top-Up Packs */}
+      <section className="py-16">
+        <div className="container">
+          <h2 className="mb-2 text-center text-2xl font-bold">Need More Credits?</h2>
+          <p className="mx-auto mb-8 max-w-md text-center text-muted-foreground">
+            Purchase additional credit packs anytime — no subscription change required.
+          </p>
+          <div className="mx-auto grid max-w-2xl gap-4 sm:grid-cols-3">
+            {(["email", "sms", "whatsapp"] as const).map((ch) => {
+              const pack = CREDIT_PACKS[ch];
+              return (
+                <div
+                  key={ch}
+                  className="flex flex-col items-center gap-2 rounded-xl border bg-card p-6 text-center shadow-card"
+                >
+                  <Badge variant="outline" className="text-xs uppercase">{ch}</Badge>
+                  <p className="text-2xl font-bold">{pack.credits.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">{pack.unit}</p>
+                  <p className="text-lg font-semibold text-accent">${pack.price}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

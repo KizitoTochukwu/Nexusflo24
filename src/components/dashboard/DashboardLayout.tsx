@@ -1,6 +1,8 @@
 import { useState } from "react";
 import SidebarLogo from "@/components/brand/SidebarLogo";
+import SidebarCreditWidget from "@/components/dashboard/SidebarCreditWidget";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLowCreditAlert } from "@/hooks/useLowCreditAlert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
@@ -28,6 +30,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const workspaceId = useWorkspaceId();
   const { data: isAdmin } = useIsAdmin();
   useNotificationWatcher();
+  useLowCreditAlert();
 
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
@@ -95,6 +98,9 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
           })}
         </nav>
+
+        {/* Credit balances */}
+        <SidebarCreditWidget collapsed={!sidebarOpen} />
 
         {/* Sidebar logout */}
         <div className="border-t border-sidebar-border px-2 py-3">
