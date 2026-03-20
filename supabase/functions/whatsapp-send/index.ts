@@ -44,12 +44,19 @@ function buildWhatsAppError(waRes: Response, waData: any) {
   return { errMsg, graphCode, graphSubcode, isCredentialMismatch, isTokenOrPermissionError };
 }
 
+interface TemplatePayload {
+  name: string;
+  language: string;
+  components?: Array<Record<string, unknown>>;
+}
+
 async function sendWhatsAppMessage(
   accessToken: string,
   rawPhoneNumberId: string,
   to: string,
   msgBody: string,
   source: "workspace" | "platform",
+  template?: TemplatePayload,
 ): Promise<WhatsAppAttemptResult> {
   const phoneNumberId = rawPhoneNumberId.replace(/[^\d]/g, "");
 
@@ -58,12 +65,29 @@ async function sendWhatsAppMessage(
   }
 
   const waTo = to.startsWith("+") ? to.slice(1) : to;
-  const waPayload: Record<string, unknown> = {
-    messaging_product: "whatsapp",
-    to: waTo,
-    type: "text",
-    text: { body: msgBody },
-  };
+
+  let waPayload: Record<string, unknown>;
+  if (template) {
+    // Template message — works outside 24-hour window
+    waPayload = {
+      messaging_product: "whatsapp",
+      to: waTo,
+      type: "template",
+      template: {
+        name: template.name,
+        language: { code: template.language || "en" },
+        ...(template.components ? { components: template.components } : {}),
+      },
+    };
+  } else {
+    // Free-form text — only works within 24-hour conversation window
+    waPayload = {
+      messaging_product: "whatsapp",
+      to: waTo,
+      type: "text",
+      text: { body: msgBody },
+    };
+  }
 
   const waRes = await fetch(`https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}/messages`, {
     method: "POST",
