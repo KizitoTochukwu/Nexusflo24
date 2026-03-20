@@ -26,7 +26,7 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Reset your NexusFlo24 password</Preview>
+    <Preview>Reset your password for NexusFlo24</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
@@ -34,7 +34,8 @@ export const RecoveryEmail = ({
         </Section>
         <Heading style={h1}>Reset your password</Heading>
         <Text style={text}>
-          We received a request to reset your NexusFlo24 password. Click below to choose a new one:
+          We received a request to reset your password for NexusFlo24. Click
+          the button below to choose a new password.
         </Text>
         <Section style={buttonSection}>
           <Button style={button} href={confirmationUrl}>
@@ -42,7 +43,8 @@ export const RecoveryEmail = ({
           </Button>
         </Section>
         <Text style={footer}>
-          If you didn't request this, you can safely ignore this email — your password won't change.
+          If you didn't request a password reset, you can safely ignore this
+          email. Your password will not be changed.
         </Text>
         <Text style={footerBrand}>© NexusFlo24 · AI-Powered Marketing Automation</Text>
       </Container>

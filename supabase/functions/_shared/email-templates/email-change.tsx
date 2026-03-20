@@ -37,21 +37,28 @@ export const EmailChangeEmail = ({
         <Section style={logoSection}>
           <Img src="https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png" width="56" height="56" alt="NexusFlo24" style={logo} />
         </Section>
-        <Heading style={h1}>Confirm your new email</Heading>
+        <Heading style={h1}>Confirm your email change</Heading>
         <Text style={text}>
-          You requested to change your NexusFlo24 email from{' '}
-          <Link href={`mailto:${email}`} style={link}>{email}</Link>{' '}
+          You requested to change your email address for NexusFlo24 from{' '}
+          <Link href={`mailto:${email}`} style={link}>
+            {email}
+          </Link>{' '}
           to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
+          <Link href={`mailto:${newEmail}`} style={link}>
+            {newEmail}
+          </Link>
+          .
         </Text>
-        <Text style={text}>Click below to confirm this change:</Text>
+        <Text style={text}>
+          Click the button below to confirm this change:
+        </Text>
         <Section style={buttonSection}>
           <Button style={button} href={confirmationUrl}>
             Confirm Email Change
           </Button>
         </Section>
         <Text style={footer}>
-          If you didn't request this, please secure your account immediately.
+          If you didn't request this change, please secure your account immediately.
         </Text>
         <Text style={footerBrand}>© NexusFlo24 · AI-Powered Marketing Automation</Text>
       </Container>

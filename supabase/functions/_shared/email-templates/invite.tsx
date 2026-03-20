@@ -35,13 +35,13 @@ export const InviteEmail = ({
         <Section style={logoSection}>
           <Img src="https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png" width="56" height="56" alt="NexusFlo24" style={logo} />
         </Section>
-        <Heading style={h1}>You're invited! 🎉</Heading>
+        <Heading style={h1}>You've been invited</Heading>
         <Text style={text}>
           You've been invited to join{' '}
           <Link href={siteUrl} style={link}>
             <strong>NexusFlo24</strong>
           </Link>
-          — the all-in-one AI marketing platform. Accept below to create your account and start automating:
+          . Click the button below to accept the invitation and create your account.
         </Text>
         <Section style={buttonSection}>
           <Button style={button} href={confirmationUrl}>
@@ -49,7 +49,7 @@ export const InviteEmail = ({
           </Button>
         </Section>
         <Text style={footer}>
-          If you weren't expecting this, you can safely ignore this email.
+          If you weren't expecting this invitation, you can safely ignore this email.
         </Text>
         <Text style={footerBrand}>© NexusFlo24 · AI-Powered Marketing Automation</Text>
       </Container>

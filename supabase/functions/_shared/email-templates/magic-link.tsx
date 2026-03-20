@@ -26,7 +26,7 @@ export const MagicLinkEmail = ({
 }: MagicLinkEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your NexusFlo24 login link</Preview>
+    <Preview>Your login link for NexusFlo24</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={logoSection}>
@@ -34,11 +34,11 @@ export const MagicLinkEmail = ({
         </Section>
         <Heading style={h1}>Your login link</Heading>
         <Text style={text}>
-          Click below to log in to NexusFlo24. This link expires shortly — use it while it's hot! 🔥
+          Click the button below to log in to NexusFlo24. This link will expire shortly.
         </Text>
         <Section style={buttonSection}>
           <Button style={button} href={confirmationUrl}>
-            Log In to NexusFlo24
+            Log In
           </Button>
         </Section>
         <Text style={footer}>
