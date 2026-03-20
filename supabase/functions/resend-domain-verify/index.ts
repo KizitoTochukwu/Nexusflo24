@@ -29,39 +29,46 @@ async function decrypt(cipherB64: string, keyHex: string): Promise<string> {
   return new TextDecoder().decode(plainBuf);
 }
 
+async function resolveResendKey(adminClient: any, workspaceId: string, encryptionKey: string): Promise<string | null> {
+  const { data: channelRow } = await adminClient
+    .from("workspace_channel_settings")
+    .select("config_encrypted")
+    .eq("workspace_id", workspaceId)
+    .eq("channel", "email")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (channelRow?.config_encrypted) {
+    const config = JSON.parse(await decrypt(channelRow.config_encrypted, encryptionKey));
+    if (config.api_key) return config.api_key;
+  }
+  return Deno.env.get("RESEND_API_KEY") || null;
+}
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!authHeader?.startsWith("Bearer ")) return jsonResponse({ error: "Unauthorized" }, 401);
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user }, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (userErr || !user) return jsonResponse({ error: "Unauthorized" }, 401);
 
     const body = await req.json();
     const { workspaceId, action, domain } = body;
-
-    if (!workspaceId) {
-      return new Response(JSON.stringify({ error: "Missing workspaceId" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!workspaceId) return jsonResponse({ error: "Missing workspaceId" }, 400);
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -69,55 +76,17 @@ Deno.serve(async (req) => {
       _user_id: user.id,
       _workspace_id: workspaceId,
     });
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!isAdmin) return jsonResponse({ error: "Forbidden" }, 403);
 
-    // Get the workspace's Resend API key from channel settings
     const encryptionKey = Deno.env.get("CHANNEL_SETTINGS_ENCRYPTION_KEY");
-    if (!encryptionKey) {
-      return new Response(JSON.stringify({ error: "Encryption key not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!encryptionKey) return jsonResponse({ error: "Encryption key not configured" }, 500);
 
-    const { data: channelRow } = await adminClient
-      .from("workspace_channel_settings")
-      .select("config_encrypted")
-      .eq("workspace_id", workspaceId)
-      .eq("channel", "email")
-      .eq("is_active", true)
-      .maybeSingle();
+    const resendApiKey = await resolveResendKey(adminClient, workspaceId, encryptionKey);
+    if (!resendApiKey) return jsonResponse({ error: "No Resend API key found. Save your email credentials first." }, 400);
 
-    let resendApiKey: string | null = null;
+    const resendHeaders = { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" };
 
-    if (channelRow?.config_encrypted) {
-      const config = JSON.parse(await decrypt(channelRow.config_encrypted, encryptionKey));
-      resendApiKey = config.api_key || null;
-    }
-
-    // Fallback to platform key
-    if (!resendApiKey) {
-      resendApiKey = Deno.env.get("RESEND_API_KEY") || null;
-    }
-
-    if (!resendApiKey) {
-      return new Response(JSON.stringify({ error: "No Resend API key found. Save your email credentials first." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const resendHeaders = {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    };
-
-    // Action: add domain
+    // ── ADD DOMAIN ──
     if (action === "add" && domain) {
       const addRes = await fetch("https://api.resend.com/domains", {
         method: "POST",
@@ -127,20 +96,41 @@ Deno.serve(async (req) => {
 
       if (!addRes.ok) {
         const errBody = await addRes.text();
-        return new Response(JSON.stringify({ error: "Failed to add domain", details: errBody }), {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        // Provide a user-friendly message for plan limits
+        if (errBody.includes("Upgrade to add more")) {
+          return jsonResponse({
+            error: "Your Resend plan has reached its domain limit. Please upgrade your Resend plan or remove an existing domain before adding a new one.",
+            details: errBody,
+          }, 400);
+        }
+        return jsonResponse({ error: "Failed to add domain", details: errBody }, 502);
       }
 
       const domainData = await addRes.json();
-      return new Response(JSON.stringify({ success: true, domain: domainData }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+      // Track ownership in workspace_domains
+      await adminClient.from("workspace_domains").upsert({
+        workspace_id: workspaceId,
+        resend_domain_id: String(domainData.id),
+        domain_name: domain,
+        status: domainData.status || "pending",
+      }, { onConflict: "workspace_id,resend_domain_id" });
+
+      return jsonResponse({ success: true, domain: domainData });
     }
 
-    // Action: verify (trigger re-check)
+    // ── VERIFY DOMAIN ──
     if (action === "verify" && body.domainId) {
+      // Enforce workspace ownership
+      const { data: owned } = await adminClient
+        .from("workspace_domains")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("resend_domain_id", String(body.domainId))
+        .maybeSingle();
+
+      if (!owned) return jsonResponse({ error: "Domain not found in this workspace" }, 403);
+
       const verifyRes = await fetch(`https://api.resend.com/domains/${body.domainId}/verify`, {
         method: "POST",
         headers: resendHeaders,
@@ -148,66 +138,88 @@ Deno.serve(async (req) => {
 
       if (!verifyRes.ok) {
         const errBody = await verifyRes.text();
-        return new Response(JSON.stringify({ error: "Verification failed", details: errBody }), {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Verification failed", details: errBody }, 502);
       }
 
-      return new Response(JSON.stringify({ success: true, message: "Verification initiated" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ success: true, message: "Verification initiated" });
     }
 
-    // Action: status (get domain info)
+    // ── DOMAIN STATUS ──
     if (action === "status" && body.domainId) {
+      // Enforce workspace ownership
+      const { data: owned } = await adminClient
+        .from("workspace_domains")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("resend_domain_id", String(body.domainId))
+        .maybeSingle();
+
+      if (!owned) return jsonResponse({ error: "Domain not found in this workspace" }, 403);
+
       const statusRes = await fetch(`https://api.resend.com/domains/${body.domainId}`, {
         headers: resendHeaders,
       });
 
       if (!statusRes.ok) {
         const errBody = await statusRes.text();
-        return new Response(JSON.stringify({ error: "Failed to get domain status", details: errBody }), {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Failed to get domain status", details: errBody }, 502);
       }
 
       const statusData = await statusRes.json();
-      return new Response(JSON.stringify({ success: true, domain: statusData }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+      // Sync status back
+      await adminClient
+        .from("workspace_domains")
+        .update({ status: statusData.status || "unknown" })
+        .eq("workspace_id", workspaceId)
+        .eq("resend_domain_id", String(body.domainId));
+
+      return jsonResponse({ success: true, domain: statusData });
     }
 
-    // Action: list (list all domains)
+    // ── LIST DOMAINS (workspace-scoped) ──
     if (action === "list") {
-      const listRes = await fetch("https://api.resend.com/domains", {
-        headers: resendHeaders,
-      });
+      // Only return domains owned by this workspace
+      const { data: ownedDomains } = await adminClient
+        .from("workspace_domains")
+        .select("resend_domain_id, domain_name, status, created_at")
+        .eq("workspace_id", workspaceId);
 
-      if (!listRes.ok) {
-        const errBody = await listRes.text();
-        return new Response(JSON.stringify({ error: "Failed to list domains", details: errBody }), {
-          status: 502,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (!ownedDomains || ownedDomains.length === 0) {
+        return jsonResponse({ success: true, domains: [] });
       }
 
-      const listData = await listRes.json();
-      return new Response(JSON.stringify({ success: true, domains: listData.data || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Fetch live status from Resend for each owned domain
+      const enriched = await Promise.all(
+        ownedDomains.map(async (d) => {
+          try {
+            const res = await fetch(`https://api.resend.com/domains/${d.resend_domain_id}`, {
+              headers: resendHeaders,
+            });
+            if (res.ok) {
+              const live = await res.json();
+              // Sync status
+              if (live.status !== d.status) {
+                await adminClient
+                  .from("workspace_domains")
+                  .update({ status: live.status })
+                  .eq("workspace_id", workspaceId)
+                  .eq("resend_domain_id", d.resend_domain_id);
+              }
+              return live;
+            }
+          } catch { /* fall through */ }
+          // Return stored data if Resend call fails
+          return { id: d.resend_domain_id, name: d.domain_name, status: d.status, created_at: d.created_at };
+        })
+      );
+
+      return jsonResponse({ success: true, domains: enriched });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action. Use: add, verify, status, list" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Invalid action. Use: add, verify, status, list" }, 400);
   } catch (err: any) {
     console.error("resend-domain-verify error:", err);
-    return new Response(JSON.stringify({ error: err?.message || "Failed" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: err?.message || "Failed" }, 500);
   }
 });
