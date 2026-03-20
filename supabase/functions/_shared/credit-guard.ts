@@ -20,15 +20,46 @@ const USED_COL: Record<CreditChannel, string> = {
   whatsapp: "whatsapp_used",
 };
 
+async function isAdminUser(userId: string): Promise<boolean> {
+  const adminClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { data } = await adminClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  return !!data;
+}
+
 export async function deductCredit(
   workspaceId: string,
   channel: CreditChannel,
   referenceId?: string,
+  userId?: string,
 ): Promise<DeductResult> {
   const adminClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  // Admin bypass — unlimited free messaging
+  if (userId) {
+    const admin = await isAdminUser(userId);
+    if (admin) {
+      // Log for audit trail but don't deduct
+      await adminClient.from("credit_transactions").insert({
+        workspace_id: workspaceId,
+        channel,
+        amount: 0,
+        reason: "admin_exempt",
+        reference_id: referenceId || null,
+      });
+      return { allowed: true, remaining: 999999 };
+    }
+  }
 
   const balCol = BALANCE_COL[channel];
   const usedCol = USED_COL[channel];
