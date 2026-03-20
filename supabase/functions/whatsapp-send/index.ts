@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
+import { deductCredit } from "../_shared/credit-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -119,6 +120,12 @@ Deno.serve(async (req) => {
       if (!isMember) {
         return new Response(JSON.stringify({ error: "Access denied" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+    }
+
+    // Check and deduct credits
+    const creditResult = await deductCredit(workspaceId, "whatsapp");
+    if (!creditResult.allowed) {
+      return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const platformAccessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")?.trim();

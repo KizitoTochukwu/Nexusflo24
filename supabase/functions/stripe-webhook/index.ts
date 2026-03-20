@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { allocatePlanCredits, addCredits } from "../_shared/credit-guard.ts";
+import type { CreditChannel } from "../_shared/credit-guard.ts";
 
 const log = (step: string, details?: unknown) =>
   console.log(`[STRIPE-WEBHOOK] ${step}`, details ? JSON.stringify(details) : "");
@@ -79,6 +81,23 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // Handle credit pack purchases (one-time payments)
+        if (session.metadata?.type === "credit_purchase") {
+          const channel = session.metadata.channel as CreditChannel;
+          const credits = parseInt(session.metadata.credits || "0", 10);
+          const wsId = session.metadata.workspaceId;
+
+          if (channel && credits > 0 && wsId) {
+            await addCredits(wsId, channel, credits, "purchase", session.id);
+            log("Credit purchase fulfilled", { channel, credits, workspaceId: wsId });
+          } else {
+            log("WARNING: Invalid credit purchase metadata", session.metadata);
+          }
+          break;
+        }
+
+        // Handle subscription checkout
         const userId = session.metadata?.userId;
         const plan = session.metadata?.plan || "pro";
         const billingCycle = session.metadata?.billingCycle || "monthly";
@@ -128,6 +147,12 @@ serve(async (req) => {
           log("ERROR upserting subscription", upsertErr);
         } else {
           log("Subscription created/updated", { userId, plan, status, workspaceId });
+        }
+
+        // Allocate plan-included credits
+        if (workspaceId) {
+          await allocatePlanCredits(workspaceId, plan, session.id);
+          log("Plan credits allocated", { workspaceId, plan });
         }
         break;
       }
@@ -191,7 +216,7 @@ serve(async (req) => {
 
         const { data: existingSub } = await supabase
           .from("subscriptions")
-          .select("id")
+          .select("id, plan, workspace_id")
           .eq("stripe_customer_id", customerId)
           .maybeSingle();
 
@@ -201,6 +226,12 @@ serve(async (req) => {
           }).eq("stripe_customer_id", customerId);
           if (error) log("ERROR on payment_succeeded update", error);
           else log("Payment succeeded, status set to active", { customerId });
+
+          // Allocate monthly credits on renewal
+          if (existingSub.workspace_id && existingSub.plan) {
+            await allocatePlanCredits(existingSub.workspace_id, existingSub.plan, `renewal_${event.id}`);
+            log("Renewal credits allocated", { workspaceId: existingSub.workspace_id, plan: existingSub.plan });
+          }
         } else {
           log("No subscription row found for customer, skipping", { customerId });
         }

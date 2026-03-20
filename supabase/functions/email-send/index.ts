@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
+import { deductCredit } from "../_shared/credit-guard.ts";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 
 const corsHeaders = {
@@ -55,6 +56,12 @@ Deno.serve(async (req) => {
       if (!isMember) {
         return new Response(JSON.stringify({ error: "Access denied" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+    }
+
+    // Check and deduct credits
+    const creditResult = await deductCredit(workspaceId, "email");
+    if (!creditResult.allowed) {
+      return new Response(JSON.stringify({ error: creditResult.error || "Insufficient email credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // Resolve credentials: workspace-specific → platform ENV fallback

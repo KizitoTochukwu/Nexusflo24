@@ -61,3 +61,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.nexus-ai-chat]
     verify_jwt = false
+  [functions.create-credit-purchase]
+    verify_jwt = false

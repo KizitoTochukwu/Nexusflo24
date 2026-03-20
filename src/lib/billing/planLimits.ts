@@ -15,6 +15,7 @@ export interface PlanLimits {
   teamInvites: boolean;
   apiAccess: boolean;
   watermarkedExports: boolean;
+  monthlyCredits: { email: number; sms: number; whatsapp: number };
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
@@ -33,6 +34,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     teamInvites: false,
     apiAccess: false,
     watermarkedExports: true,
+    monthlyCredits: { email: 500, sms: 0, whatsapp: 0 },
   },
   plus: {
     maxLeads: 2500,
@@ -49,6 +51,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     teamInvites: false,
     apiAccess: false,
     watermarkedExports: false,
+    monthlyCredits: { email: 2500, sms: 100, whatsapp: 100 },
   },
   pro: {
     maxLeads: Infinity,
@@ -65,6 +68,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     teamInvites: true,
     apiAccess: false,
     watermarkedExports: false,
+    monthlyCredits: { email: 10000, sms: 500, whatsapp: 500 },
   },
   enterprise: {
     maxLeads: Infinity,
@@ -81,6 +85,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     teamInvites: true,
     apiAccess: true,
     watermarkedExports: false,
+    monthlyCredits: { email: 50000, sms: 2000, whatsapp: 2000 },
   },
 };
 
