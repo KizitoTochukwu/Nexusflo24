@@ -9,9 +9,7 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Preview,
-  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -26,25 +24,20 @@ export const MagicLinkEmail = ({
 }: MagicLinkEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your NexusFlo24 login link</Preview>
+    <Preview>Your login link for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={logoSection}>
-          <Img src="https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png" width="56" height="56" alt="NexusFlo24" style={logo} />
-        </Section>
         <Heading style={h1}>Your login link</Heading>
         <Text style={text}>
-          Click below to log in to NexusFlo24. This link expires shortly — use it while it's hot! 🔥
+          Click the button below to log in to {siteName}. This link will expire
+          shortly.
         </Text>
-        <Section style={buttonSection}>
-          <Button style={button} href={confirmationUrl}>
-            Log In to NexusFlo24
-          </Button>
-        </Section>
+        <Button style={button} href={confirmationUrl}>
+          Log In
+        </Button>
         <Text style={footer}>
           If you didn't request this link, you can safely ignore this email.
         </Text>
-        <Text style={footerBrand}>© NexusFlo24 · AI-Powered Marketing Automation</Text>
       </Container>
     </Body>
   </Html>
@@ -52,31 +45,26 @@ export const MagicLinkEmail = ({
 
 export default MagicLinkEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: "'Inter', Arial, sans-serif" }
-const container = { padding: '40px 32px', maxWidth: '480px', margin: '0 auto' }
-const logoSection = { marginBottom: '24px' }
-const logo = { borderRadius: '10px' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
-  fontSize: '24px',
+  fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#0B1F3B',
-  margin: '0 0 16px',
-}
-const text = {
-  fontSize: '15px',
-  color: '#65758B',
-  lineHeight: '1.6',
+  color: '#000000',
   margin: '0 0 20px',
 }
-const buttonSection = { margin: '8px 0 32px' }
+const text = {
+  fontSize: '14px',
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
+}
 const button = {
-  backgroundColor: '#0B1F3B',
+  backgroundColor: '#000000',
   color: '#ffffff',
-  fontSize: '15px',
-  fontWeight: '600' as const,
-  borderRadius: '12px',
-  padding: '14px 28px',
+  fontSize: '14px',
+  borderRadius: '8px',
+  padding: '12px 20px',
   textDecoration: 'none',
 }
-const footer = { fontSize: '13px', color: '#999999', margin: '0 0 8px' }
-const footerBrand = { fontSize: '12px', color: '#C9A227', margin: '0' }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
