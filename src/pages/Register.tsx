@@ -15,6 +15,7 @@ import { Mail, Lock, User } from "lucide-react";
 const Register = () => {
   const [searchParams] = useSearchParams();
   const prefillEmail = searchParams.get("email") || "";
+  const refCode = searchParams.get("ref") || "";
   const [form, setForm] = useState({ name: "", email: prefillEmail, password: "" });
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
