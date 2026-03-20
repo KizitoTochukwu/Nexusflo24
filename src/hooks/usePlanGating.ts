@@ -17,6 +17,7 @@ const ADMIN_LIMITS: PlanLimits = {
   teamInvites: true,
   apiAccess: true,
   watermarkedExports: false,
+  monthlyCredits: { email: Infinity, sms: Infinity, whatsapp: Infinity },
 };
 
 export function usePlanGating() {
