@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AiReplyButton from "@/components/messages/AiReplyButton";
-import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate, AlertTriangle } from "lucide-react";
+import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils";

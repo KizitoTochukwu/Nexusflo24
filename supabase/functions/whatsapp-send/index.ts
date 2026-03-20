@@ -68,7 +68,6 @@ async function sendWhatsAppMessage(
 
   let waPayload: Record<string, unknown>;
   if (template) {
-    // Template message — works outside 24-hour window
     waPayload = {
       messaging_product: "whatsapp",
       to: waTo,
@@ -80,7 +79,6 @@ async function sendWhatsAppMessage(
       },
     };
   } else {
-    // Free-form text — only works within 24-hour conversation window
     waPayload = {
       messaging_product: "whatsapp",
       to: waTo,
@@ -102,6 +100,26 @@ async function sendWhatsAppMessage(
   return { ok: waRes.ok, data: waData, phoneNumberId, source };
 }
 
+/** Check if the 24-hour conversation window is open for a given phone number */
+async function isWindowOpen(
+  adminClient: ReturnType<typeof createClient>,
+  workspaceId: string,
+  phoneNumber: string,
+): Promise<boolean> {
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data } = await adminClient
+    .from("whatsapp_messages")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("phone_number", phoneNumber)
+    .eq("direction", "inbound")
+    .gte("created_at", twentyFourHoursAgo)
+    .limit(1);
+
+  return (data && data.length > 0);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -118,7 +136,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId, template } = body;
 
-    // For template messages, body is optional (template content is in the template object)
     if (!workspaceId || !to || (!msgBody && !template)) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body (or template)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -149,7 +166,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits (admin users are exempt)
+    // Check and deduct credits
     const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
     if (!creditResult.allowed) {
       return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -167,13 +184,27 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Auto-detect if we need to use a template message
+    // If no template was explicitly provided and the 24h window is closed, auto-fallback to hello_world template
+    let effectiveTemplate = template;
+    let autoTemplated = false;
+
+    if (!template && msgBody) {
+      const windowOpen = await isWindowOpen(adminClient, workspaceId, normalizedTo);
+      if (!windowOpen) {
+        console.log("24h window closed for", normalizedTo, "— auto-falling back to hello_world template");
+        effectiveTemplate = { name: "hello_world", language: "en_US" };
+        autoTemplated = true;
+      }
+    }
+
     let attempt = await sendWhatsAppMessage(
       creds.config.access_token.trim(),
       creds.config.phone_number_id.trim(),
       normalizedTo,
-      msgBody || `[Template: ${template?.name}]`,
+      msgBody || `[Template: ${effectiveTemplate?.name}]`,
       creds.source === "workspace" ? "workspace" : "platform",
-      template,
+      effectiveTemplate,
     );
 
     if (!attempt.ok && attempt.source === "workspace" && platformAccessToken && platformPhoneNumberId) {
@@ -189,9 +220,9 @@ Deno.serve(async (req) => {
           platformAccessToken,
           platformPhoneNumberId,
           normalizedTo,
-          msgBody || `[Template: ${template?.name}]`,
+          msgBody || `[Template: ${effectiveTemplate?.name}]`,
           "platform",
-          template,
+          effectiveTemplate,
         );
       }
     }
@@ -199,12 +230,12 @@ Deno.serve(async (req) => {
     if (!attempt.ok) {
       const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
 
-      const logBody = msgBody || `[Template: ${template?.name}]`;
+      const logBody = msgBody || `[Template: ${effectiveTemplate?.name}]`;
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
         direction: "outbound",
         phone_number: normalizedTo,
-        message_type: template ? "template" : type,
+        message_type: effectiveTemplate ? "template" : type,
         body: logBody,
         status: "failed",
         error: errMsg,
@@ -217,13 +248,17 @@ Deno.serve(async (req) => {
 
     const waMessageId = attempt.data?.messages?.[0]?.id || null;
 
-    const sentLogBody = msgBody || `[Template: ${template?.name}]`;
+    // Log the original message body even if auto-templated
+    const sentLogBody = autoTemplated
+      ? `${msgBody} [auto-sent as template: ${effectiveTemplate?.name}]`
+      : (msgBody || `[Template: ${effectiveTemplate?.name}]`);
+
     await adminClient.from("whatsapp_messages").insert({
       workspace_id: workspaceId,
       wa_message_id: waMessageId,
       direction: "outbound",
       phone_number: normalizedTo,
-      message_type: template ? "template" : type,
+      message_type: effectiveTemplate ? "template" : type,
       body: sentLogBody,
       status: "sent",
       ...(leadId ? { lead_id: leadId } : {}),
@@ -239,7 +274,7 @@ Deno.serve(async (req) => {
         .eq("delivery_status", "pending");
     }
 
-    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source, autoTemplated }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("whatsapp-send error:", err);
     return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send WhatsApp message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
