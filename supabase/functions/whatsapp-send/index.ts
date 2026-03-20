@@ -171,8 +171,9 @@ Deno.serve(async (req) => {
       creds.config.access_token.trim(),
       creds.config.phone_number_id.trim(),
       normalizedTo,
-      msgBody,
+      msgBody || `[Template: ${template?.name}]`,
       creds.source === "workspace" ? "workspace" : "platform",
+      template,
     );
 
     if (!attempt.ok && attempt.source === "workspace" && platformAccessToken && platformPhoneNumberId) {
