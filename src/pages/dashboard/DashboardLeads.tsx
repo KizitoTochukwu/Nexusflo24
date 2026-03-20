@@ -27,6 +27,7 @@ import FolderPanel from "@/components/leads/FolderPanel";
 import BulkActionBar from "@/components/leads/BulkActionBar";
 import DeleteAllDialog from "@/components/leads/DeleteAllDialog";
 import PipelineView from "@/components/leads/PipelineView";
+import SmartListPanel from "@/components/leads/SmartListPanel";
 import { useSearchParams } from "react-router-dom";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
