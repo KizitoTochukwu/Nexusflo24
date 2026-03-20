@@ -69,3 +69,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.resend-domain-verify]
     verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
