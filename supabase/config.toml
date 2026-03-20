@@ -63,3 +63,9 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.create-credit-purchase]
     verify_jwt = false
+  [functions.twilio-provision-subaccount]
+    verify_jwt = false
+  [functions.twilio-buy-number]
+    verify_jwt = false
+  [functions.resend-domain-verify]
+    verify_jwt = false
