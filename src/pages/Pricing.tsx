@@ -108,6 +108,7 @@ const tiers: PricingTier[] = [
         ],
       },
       { title: "Channels", features: ["Email + WhatsApp + SMS"] },
+      { title: "Monthly Credits", features: ["10,000 email", "500 SMS", "500 WhatsApp"] },
     ],
   },
   {
