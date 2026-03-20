@@ -28,6 +28,7 @@ import { useIsAdmin } from "@/hooks/useAdminRole";
 import { Bot, Radio } from "lucide-react";
 import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab";
 import ChannelSettingsTab from "@/components/settings/ChannelSettingsTab";
+import UsageCreditsTab from "@/components/settings/UsageCreditsTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
