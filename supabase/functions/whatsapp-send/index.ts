@@ -44,12 +44,19 @@ function buildWhatsAppError(waRes: Response, waData: any) {
   return { errMsg, graphCode, graphSubcode, isCredentialMismatch, isTokenOrPermissionError };
 }
 
+interface TemplatePayload {
+  name: string;
+  language: string;
+  components?: Array<Record<string, unknown>>;
+}
+
 async function sendWhatsAppMessage(
   accessToken: string,
   rawPhoneNumberId: string,
   to: string,
   msgBody: string,
   source: "workspace" | "platform",
+  template?: TemplatePayload,
 ): Promise<WhatsAppAttemptResult> {
   const phoneNumberId = rawPhoneNumberId.replace(/[^\d]/g, "");
 
@@ -58,12 +65,29 @@ async function sendWhatsAppMessage(
   }
 
   const waTo = to.startsWith("+") ? to.slice(1) : to;
-  const waPayload: Record<string, unknown> = {
-    messaging_product: "whatsapp",
-    to: waTo,
-    type: "text",
-    text: { body: msgBody },
-  };
+
+  let waPayload: Record<string, unknown>;
+  if (template) {
+    // Template message — works outside 24-hour window
+    waPayload = {
+      messaging_product: "whatsapp",
+      to: waTo,
+      type: "template",
+      template: {
+        name: template.name,
+        language: { code: template.language || "en" },
+        ...(template.components ? { components: template.components } : {}),
+      },
+    };
+  } else {
+    // Free-form text — only works within 24-hour conversation window
+    waPayload = {
+      messaging_product: "whatsapp",
+      to: waTo,
+      type: "text",
+      text: { body: msgBody },
+    };
+  }
 
   const waRes = await fetch(`https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}/messages`, {
     method: "POST",
@@ -92,10 +116,11 @@ Deno.serve(async (req) => {
     const isServiceRole = token === serviceRoleKey;
 
     const body = await req.json();
-    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId } = body;
+    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId, template } = body;
 
-    if (!workspaceId || !to || !msgBody) {
-      return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // For template messages, body is optional (template content is in the template object)
+    if (!workspaceId || !to || (!msgBody && !template)) {
+      return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body (or template)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const normalizedTo = normalizePhone(to);
@@ -146,8 +171,9 @@ Deno.serve(async (req) => {
       creds.config.access_token.trim(),
       creds.config.phone_number_id.trim(),
       normalizedTo,
-      msgBody,
+      msgBody || `[Template: ${template?.name}]`,
       creds.source === "workspace" ? "workspace" : "platform",
+      template,
     );
 
     if (!attempt.ok && attempt.source === "workspace" && platformAccessToken && platformPhoneNumberId) {
@@ -163,8 +189,9 @@ Deno.serve(async (req) => {
           platformAccessToken,
           platformPhoneNumberId,
           normalizedTo,
-          msgBody,
+          msgBody || `[Template: ${template?.name}]`,
           "platform",
+          template,
         );
       }
     }
@@ -172,12 +199,13 @@ Deno.serve(async (req) => {
     if (!attempt.ok) {
       const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
 
+      const logBody = msgBody || `[Template: ${template?.name}]`;
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
         direction: "outbound",
         phone_number: normalizedTo,
-        message_type: type,
-        body: msgBody,
+        message_type: template ? "template" : type,
+        body: logBody,
         status: "failed",
         error: errMsg,
         ...(leadId ? { lead_id: leadId } : {}),
@@ -189,13 +217,14 @@ Deno.serve(async (req) => {
 
     const waMessageId = attempt.data?.messages?.[0]?.id || null;
 
+    const sentLogBody = msgBody || `[Template: ${template?.name}]`;
     await adminClient.from("whatsapp_messages").insert({
       workspace_id: workspaceId,
       wa_message_id: waMessageId,
       direction: "outbound",
       phone_number: normalizedTo,
-      message_type: type,
-      body: msgBody,
+      message_type: template ? "template" : type,
+      body: sentLogBody,
       status: "sent",
       ...(leadId ? { lead_id: leadId } : {}),
     });

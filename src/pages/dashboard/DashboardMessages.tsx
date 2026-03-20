@@ -11,10 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AiReplyButton from "@/components/messages/AiReplyButton";
-import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox } from "lucide-react";
+import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInHours } from "date-fns";
 import { cn } from "@/lib/utils";
 
 type Channel = "all" | "whatsapp" | "email" | "sms";
@@ -37,6 +39,9 @@ export default function DashboardMessages() {
   const [search, setSearch] = useState("");
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [templateMode, setTemplateMode] = useState(false);
+  const [templateName, setTemplateName] = useState("hello_world");
+  const [templateLang, setTemplateLang] = useState("en_US");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Data sources
@@ -109,17 +114,35 @@ export default function DashboardMessages() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [currentMessages]);
 
+  // Detect if the WhatsApp 24-hour conversation window is expired
+  const lastInboundWa = selectedThread?.channel === "whatsapp"
+    ? waMessages.filter((m: any) => m.direction === "inbound").sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+    : null;
+
+  const waWindowExpired = selectedThread?.channel === "whatsapp" && (
+    !lastInboundWa || differenceInHours(new Date(), new Date(lastInboundWa.created_at)) >= 24
+  );
+
   const handleSend = async () => {
-    if (!reply.trim() || !selectedThread || !workspaceId) return;
+    if ((!reply.trim() && !templateMode) || !selectedThread || !workspaceId) return;
     setSending(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers = { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` };
 
       if (selectedThread.channel === "whatsapp") {
+        const payload: Record<string, unknown> = { workspaceId, to: selectedThread.identifier };
+
+        if (templateMode) {
+          payload.template = { name: templateName, language: templateLang };
+          payload.body = ""; // body is optional for templates
+        } else {
+          payload.body = reply.trim();
+        }
+
         const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-send`, {
           method: "POST", headers,
-          body: JSON.stringify({ workspaceId, to: selectedThread.identifier, body: reply.trim() }),
+          body: JSON.stringify(payload),
         });
         if (!resp.ok) throw new Error((await resp.json()).error || "Failed");
       } else if (selectedThread.channel === "sms") {
@@ -134,6 +157,7 @@ export default function DashboardMessages() {
         if (error) throw error;
       }
       setReply("");
+      setTemplateMode(false);
       toast.success("Message sent");
     } catch (err: any) {
       toast.error(err.message || "Failed to send");
@@ -270,23 +294,91 @@ export default function DashboardMessages() {
                   )}
                 </div>
 
+                {/* 24-hour window warning for WhatsApp */}
+                {selectedThread.channel === "whatsapp" && waWindowExpired && !templateMode && (
+                  <div className="mx-3 mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <div className="text-xs text-foreground">
+                      <p className="font-medium">24-hour conversation window expired</p>
+                      <p className="text-muted-foreground mt-0.5">
+                        Free-form messages can only be sent within 24 hours of the contact's last reply. 
+                        Use a <button onClick={() => setTemplateMode(true)} className="underline font-medium text-accent hover:text-accent/80">template message</button> to re-initiate the conversation.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Template selector */}
+                {templateMode && selectedThread.channel === "whatsapp" && (
+                  <div className="mx-3 mt-3 p-3 rounded-lg bg-muted/50 border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                        <LayoutTemplate className="h-3.5 w-3.5" />
+                        Send Template Message
+                      </p>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setTemplateMode(false)}>Cancel</Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={templateName}
+                        onChange={e => setTemplateName(e.target.value)}
+                        placeholder="Template name (e.g. hello_world)"
+                        className="flex-1 h-8 text-xs"
+                      />
+                      <Input
+                        value={templateLang}
+                        onChange={e => setTemplateLang(e.target.value)}
+                        placeholder="Language code"
+                        className="w-24 h-8 text-xs"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Enter the exact template name from your Meta Business Manager. The template must be approved before use.
+                    </p>
+                  </div>
+                )}
+
                 <div className="p-3 border-t flex gap-2">
-                  <Input
-                    value={reply}
-                    onChange={e => setReply(e.target.value)}
-                    placeholder={`Reply via ${selectedThread.channel}...`}
-                    className="flex-1"
-                    onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-                    disabled={sending}
-                  />
-                  <Button
-                    onClick={handleSend}
-                    disabled={sending || !reply.trim()}
-                    size="icon"
-                    className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
-                  >
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
+                  {selectedThread.channel === "whatsapp" && !templateMode && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      title="Send template message"
+                      onClick={() => setTemplateMode(true)}
+                    >
+                      <LayoutTemplate className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {templateMode ? (
+                    <Button
+                      onClick={handleSend}
+                      disabled={sending || !templateName.trim()}
+                      className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                    >
+                      {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                      Send Template
+                    </Button>
+                  ) : (
+                    <>
+                      <Input
+                        value={reply}
+                        onChange={e => setReply(e.target.value)}
+                        placeholder={`Reply via ${selectedThread.channel}...`}
+                        className="flex-1"
+                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+                        disabled={sending}
+                      />
+                      <Button
+                        onClick={handleSend}
+                        disabled={sending || !reply.trim()}
+                        size="icon"
+                        className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
+                      >
+                        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </>
             )}
