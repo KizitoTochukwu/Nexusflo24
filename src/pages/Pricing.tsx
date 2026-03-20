@@ -54,6 +54,7 @@ const tiers: PricingTier[] = [
       },
       { title: "AI-Powered", features: ["10 AI copy generations/day"] },
       { title: "Channels", features: ["Email only"] },
+      { title: "Monthly Credits", features: ["500 email credits"] },
     ],
   },
   {
