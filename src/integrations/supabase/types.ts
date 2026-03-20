@@ -474,6 +474,44 @@ export type Database = {
           },
         ]
       }
+      credit_transactions: {
+        Row: {
+          amount: number
+          channel: string
+          created_at: string
+          id: string
+          reason: string
+          reference_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          channel: string
+          created_at?: string
+          id?: string
+          reason: string
+          reference_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          channel?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reference_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_settings: {
         Row: {
           api_key_encrypted: string
@@ -1063,6 +1101,50 @@ export type Database = {
             foreignKeyName: "leads_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_credits: {
+        Row: {
+          email_balance: number
+          email_used: number
+          id: string
+          sms_balance: number
+          sms_used: number
+          updated_at: string
+          whatsapp_balance: number
+          whatsapp_used: number
+          workspace_id: string
+        }
+        Insert: {
+          email_balance?: number
+          email_used?: number
+          id?: string
+          sms_balance?: number
+          sms_used?: number
+          updated_at?: string
+          whatsapp_balance?: number
+          whatsapp_used?: number
+          workspace_id: string
+        }
+        Update: {
+          email_balance?: number
+          email_used?: number
+          id?: string
+          sms_balance?: number
+          sms_used?: number
+          updated_at?: string
+          whatsapp_balance?: number
+          whatsapp_used?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_credits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
