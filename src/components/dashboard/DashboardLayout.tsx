@@ -1,6 +1,8 @@
 import { useState } from "react";
 import SidebarLogo from "@/components/brand/SidebarLogo";
+import SidebarCreditWidget from "@/components/dashboard/SidebarCreditWidget";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLowCreditAlert } from "@/hooks/useLowCreditAlert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
