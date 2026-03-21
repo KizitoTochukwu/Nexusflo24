@@ -160,6 +160,15 @@ Deno.serve(async (req) => {
               if (lastSendTime > 0 && elapsed < 550) {
                 await sleep(550 - elapsed);
               }
+
+              // Credit deduction (admin bypass)
+              if (!ownerIsAdmin) {
+                const creditChannel = actionType === "send_email" ? "email" : actionType === "send_sms" ? "sms" : "whatsapp";
+                const creditResult = await deductCredit(workspace_id, creditChannel as any, `automation:${automation_id}`);
+                if (!creditResult.allowed) {
+                  throw new Error(creditResult.error || `Insufficient ${creditChannel} credits`);
+                }
+              }
             }
 
             if (actionType === "send_email") {
