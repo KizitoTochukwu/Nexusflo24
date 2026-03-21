@@ -37,6 +37,12 @@ Deno.serve(async (req) => {
     }
 
     const workspaceId = campaign.workspace_id;
+
+    // Check if workspace owner is admin → skip credits
+    const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
+    const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
+    if (ownerIsAdmin) console.log("[execute-campaign] Admin workspace — credits exempt");
+
     const channel = campaign.type;
     const content = (campaign.message_content || {}) as { subject?: string; body?: string; templateSettings?: Record<string, any> };
     const audienceFilter = (campaign.audience_filter || {}) as {
