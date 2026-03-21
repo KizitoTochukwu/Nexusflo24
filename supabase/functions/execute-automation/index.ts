@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
+import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
