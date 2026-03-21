@@ -153,6 +153,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
     let imported = 0;
     let updated = 0;
     let skipped = 0;
+    const newLeadIds: string[] = [];
 
     try {
       const seenPhones = new Set<string>();
@@ -204,7 +205,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         }
 
         // Insert new
-        const { error } = await supabase.from("leads").insert({
+        const { data: newLead, error } = await supabase.from("leads").insert({
           user_id: user.id,
           workspace_id: workspaceId,
           full_name: fullName,
@@ -215,13 +216,29 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
           score: parseInt(r.score) || 0,
           tags: r.tags ? r.tags.split(";").map((t: string) => t.trim()).filter(Boolean) : [],
           notes: r.notes || null,
-        } as any);
+        } as any).select("id").single();
 
         if (error) {
           errors.push({ data: r, _error: error.message, _row: i + 2 });
         } else {
           imported++;
+          if (newLead?.id) newLeadIds.push(newLead.id);
         }
+      }
+
+      // Assign imported leads to selected folder
+      const folderId = selectedFolderId !== "__none__" ? selectedFolderId : null;
+      if (folderId && newLeadIds.length > 0) {
+        const folderRows = newLeadIds.map((lead_id) => ({
+          folder_id: folderId,
+          lead_id,
+          workspace_id: workspaceId,
+        }));
+        // Insert in batches of 50
+        for (let i = 0; i < folderRows.length; i += 50) {
+          await supabase.from("lead_folder_leads").upsert(folderRows.slice(i, i + 50) as any, { onConflict: "folder_id,lead_id" });
+        }
+        qc.invalidateQueries({ queryKey: ["lead-folders"] });
       }
 
       setResult({ imported, updated, skipped, errors });
