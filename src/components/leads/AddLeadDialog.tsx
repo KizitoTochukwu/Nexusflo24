@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { PIPELINE_STAGES, type Lead } from "@/hooks/useLeads";
+import type { LeadFolder } from "@/hooks/useLeadFolders";
 
 const SOURCES = ["Landing Page", "WhatsApp", "Facebook Ad", "Referral", "Organic", "Other"];
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
@@ -25,6 +26,7 @@ const schema = z.object({
   score: z.coerce.number().min(0).max(100).default(0),
   tags: z.string().optional(),
   notes: z.string().trim().max(2000).optional(),
+  folder_id: z.string().optional(),
 }).refine((d) => d.full_name || d.email, { message: "Name or email is required", path: ["full_name"] });
 
 type FormValues = z.infer<typeof schema>;
@@ -32,13 +34,14 @@ type FormValues = z.infer<typeof schema>;
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSubmit: (values: Partial<Lead>) => void;
+  onSubmit: (values: Partial<Lead>, folderId?: string) => void;
   defaultValues?: Partial<Lead>;
   loading?: boolean;
   workspaceId?: string;
+  folders?: LeadFolder[];
 };
 
-const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, workspaceId }: Props) => {
+const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, workspaceId, folders = [] }: Props) => {
   const isEdit = !!defaultValues?.id;
 
   const form = useForm<FormValues>({
@@ -53,6 +56,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
       score: 0,
       tags: "",
       notes: "",
+      folder_id: "",
     },
   });
 
@@ -68,6 +72,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
         score: defaultValues.score ?? 0,
         tags: defaultValues.tags?.join(", ") || "",
         notes: defaultValues.notes || "",
+        folder_id: "",
       });
     } else if (open) {
       form.reset();
@@ -78,6 +83,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
     const tags = values.tags
       ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
+    const folderId = values.folder_id && values.folder_id !== "__none__" ? values.folder_id : undefined;
     onSubmit({
       ...(defaultValues?.id ? { id: defaultValues.id } : {}),
       full_name: values.full_name || null,
@@ -89,7 +95,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
       score: values.score,
       tags,
       notes: values.notes || null,
-    } as any);
+    } as any, folderId);
   };
 
   return (
@@ -170,6 +176,25 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
                 <FormMessage />
               </FormItem>
             )} />
+            {folders.length > 0 && (
+              <FormField control={form.control} name="folder_id" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Assign to Folder</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "__none__"}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="No folder" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">No folder</SelectItem>
+                      {folders.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.color ? `${f.color} ` : ""}{f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
             <FormField control={form.control} name="tags" render={({ field }) => (
               <FormItem>
                 <FormLabel>Tags (comma-separated)</FormLabel>

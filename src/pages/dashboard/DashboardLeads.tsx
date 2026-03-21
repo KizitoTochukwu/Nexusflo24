@@ -107,8 +107,15 @@ const DashboardLeads = () => {
   const [qualifyProgress, setQualifyProgress] = useState<{ done: number; total: number } | null>(null);
   const qualifyLead = useQualifyLead();
 
-  const handleCreate = (values: Partial<Lead>) => {
-    createLead.mutate({ ...values, workspace_id: workspaceId } as any, { onSuccess: () => setAddOpen(false) });
+  const handleCreate = (values: Partial<Lead>, folderId?: string) => {
+    createLead.mutate({ ...values, workspace_id: workspaceId } as any, {
+      onSuccess: (newLead: any) => {
+        if (folderId && newLead?.id) {
+          assignToFolder.mutate({ leadIds: [newLead.id], folderId, workspaceId });
+        }
+        setAddOpen(false);
+      },
+    });
   };
 
   const handleUpdate = (values: Partial<Lead>) => {
@@ -414,8 +421,8 @@ const DashboardLeads = () => {
         </div>
       </div>
 
-      <AddLeadDialog open={addOpen} onOpenChange={setAddOpen} onSubmit={handleCreate} loading={createLead.isPending} workspaceId={workspaceId} />
-      <AddLeadDialog open={!!editLead} onOpenChange={(v) => { if (!v) setEditLead(null); }} onSubmit={handleUpdate} defaultValues={editLead || undefined} loading={updateLead.isPending} workspaceId={workspaceId} />
+      <AddLeadDialog open={addOpen} onOpenChange={setAddOpen} onSubmit={handleCreate} loading={createLead.isPending} workspaceId={workspaceId} folders={folders} />
+      <AddLeadDialog open={!!editLead} onOpenChange={(v) => { if (!v) setEditLead(null); }} onSubmit={handleUpdate} defaultValues={editLead || undefined} loading={updateLead.isPending} workspaceId={workspaceId} folders={folders} />
       <LeadDetailsDrawer lead={detailLead} open={!!detailLead} onOpenChange={(v) => { if (!v) setDetailLead(null); }} workspaceId={workspaceId} />
       <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} workspaceId={workspaceId} />
       <DeleteAllDialog
