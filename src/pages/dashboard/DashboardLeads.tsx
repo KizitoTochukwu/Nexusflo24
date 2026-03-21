@@ -424,7 +424,7 @@ const DashboardLeads = () => {
       <AddLeadDialog open={addOpen} onOpenChange={setAddOpen} onSubmit={handleCreate} loading={createLead.isPending} workspaceId={workspaceId} folders={folders} />
       <AddLeadDialog open={!!editLead} onOpenChange={(v) => { if (!v) setEditLead(null); }} onSubmit={handleUpdate} defaultValues={editLead || undefined} loading={updateLead.isPending} workspaceId={workspaceId} folders={folders} />
       <LeadDetailsDrawer lead={detailLead} open={!!detailLead} onOpenChange={(v) => { if (!v) setDetailLead(null); }} workspaceId={workspaceId} />
-      <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} workspaceId={workspaceId} />
+      <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} workspaceId={workspaceId} folders={folders} />
       <DeleteAllDialog
         open={deleteAllOpen}
         onOpenChange={setDeleteAllOpen}

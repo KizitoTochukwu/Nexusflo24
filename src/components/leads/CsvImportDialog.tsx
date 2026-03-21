@@ -5,13 +5,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Upload, Download, AlertTriangle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, Download, AlertTriangle, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { LeadFolder } from "@/hooks/useLeadFolders";
 
-type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: string };
+type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: string; folders?: LeadFolder[] };
 
 type ImportMode = "skip" | "update" | "cancel";
 
@@ -57,7 +59,7 @@ function buildErrorCsv(rows: ErrorRow[]): string {
   return [header, ...body].join("\n");
 }
 
-const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
+const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Props) => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +69,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [allRows, setAllRows] = useState<ParsedRow[]>([]);
   const [mode, setMode] = useState<ImportMode>("skip");
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("__none__");
 
   // Analysis results
   const [dupsInFile, setDupsInFile] = useState<Set<string>>(new Set());
@@ -80,6 +83,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
     setFile(null);
     setAllRows([]);
     setMode("skip");
+    setSelectedFolderId("__none__");
     setDupsInFile(new Set());
     setExistingPhones(new Set());
     setAnalysed(false);
@@ -149,6 +153,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
     let imported = 0;
     let updated = 0;
     let skipped = 0;
+    const newLeadIds: string[] = [];
 
     try {
       const seenPhones = new Set<string>();
@@ -200,7 +205,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
         }
 
         // Insert new
-        const { error } = await supabase.from("leads").insert({
+        const { data: newLead, error } = await supabase.from("leads").insert({
           user_id: user.id,
           workspace_id: workspaceId,
           full_name: fullName,
@@ -211,13 +216,29 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
           score: parseInt(r.score) || 0,
           tags: r.tags ? r.tags.split(";").map((t: string) => t.trim()).filter(Boolean) : [],
           notes: r.notes || null,
-        } as any);
+        } as any).select("id").single();
 
         if (error) {
           errors.push({ data: r, _error: error.message, _row: i + 2 });
         } else {
           imported++;
+          if (newLead?.id) newLeadIds.push(newLead.id);
         }
+      }
+
+      // Assign imported leads to selected folder
+      const folderId = selectedFolderId !== "__none__" ? selectedFolderId : null;
+      if (folderId && newLeadIds.length > 0) {
+        const folderRows = newLeadIds.map((lead_id) => ({
+          folder_id: folderId,
+          lead_id,
+          workspace_id: workspaceId,
+        }));
+        // Insert in batches of 50
+        for (let i = 0; i < folderRows.length; i += 50) {
+          await supabase.from("lead_folder_leads").upsert(folderRows.slice(i, i + 50) as any, { onConflict: "folder_id,lead_id" });
+        }
+        qc.invalidateQueries({ queryKey: ["lead-folders"] });
       }
 
       setResult({ imported, updated, skipped, errors });
@@ -334,6 +355,29 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
                     <Label htmlFor="mode-cancel" className="text-sm font-normal">Cancel import</Label>
                   </div>
                 </RadioGroup>
+              </div>
+            )}
+
+            {/* Assign to folder */}
+            {folders.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  Assign imported leads to folder
+                </Label>
+                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No folder</SelectItem>
+                    {folders.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.color ? `${f.color} ` : ""}{f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
