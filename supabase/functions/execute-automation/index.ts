@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
+import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -125,6 +126,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve if workspace owner is admin → skip credit deduction
+    const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspace_id).single();
+    const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
+    if (ownerIsAdmin) console.log("[execute-automation] Admin workspace — credits exempt");
+
     const results: any[] = [];
     let skipRemaining = false;
     const startIndex = typeof start_from_step === "number" ? start_from_step : 0;
@@ -153,6 +159,15 @@ Deno.serve(async (req) => {
               const elapsed = Date.now() - lastSendTime;
               if (lastSendTime > 0 && elapsed < 550) {
                 await sleep(550 - elapsed);
+              }
+
+              // Credit deduction (admin bypass)
+              if (!ownerIsAdmin) {
+                const creditChannel = actionType === "send_email" ? "email" : actionType === "send_sms" ? "sms" : "whatsapp";
+                const creditResult = await deductCredit(workspace_id, creditChannel as any, `automation:${automation_id}`);
+                if (!creditResult.allowed) {
+                  throw new Error(creditResult.error || `Insufficient ${creditChannel} credits`);
+                }
               }
             }
 
@@ -201,7 +216,7 @@ Deno.serve(async (req) => {
                   Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id }),
+                body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true }),
               });
               const waData = await waRes.json();
               if (!waRes.ok || !waData.success) throw new Error(waData?.error || "WhatsApp send failed");
