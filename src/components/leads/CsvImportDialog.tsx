@@ -59,7 +59,7 @@ function buildErrorCsv(rows: ErrorRow[]): string {
   return [header, ...body].join("\n");
 }
 
-const CsvImportDialog = ({ open, onOpenChange, workspaceId }: Props) => {
+const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Props) => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
