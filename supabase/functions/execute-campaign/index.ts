@@ -191,6 +191,7 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
               workspaceId, to: lead.phone, message: messageBody,
+              ...(ownerIsAdmin ? { skipCredits: true } : {}),
             }),
           });
           const data = await res.json();
