@@ -93,7 +93,7 @@ const Dashboard = () => {
     {
       label: "Open Rate",
       value: metrics?.hasEmailData ? `${metrics.openRate}%` : "—",
-      change: metrics?.hasEmailData ? "From delivered messages" : "Connect email to unlock",
+      change: metrics?.hasEmailData ? "From delivered messages" : "Send a campaign to track opens",
       icon: Mail,
       color: "text-accent",
       to: `/dashboard/${workspaceId}/analytics`,
@@ -101,7 +101,7 @@ const Dashboard = () => {
     {
       label: "Click Rate",
       value: metrics?.hasEmailData ? `${metrics.clickRate}%` : "—",
-      change: metrics?.hasEmailData ? "From delivered messages" : "Connect email to unlock",
+      change: metrics?.hasEmailData ? "From delivered messages" : "Send a campaign to track clicks",
       icon: MousePointerClick,
       color: "text-accent",
       to: `/dashboard/${workspaceId}/analytics`,
@@ -109,7 +109,7 @@ const Dashboard = () => {
     {
       label: "Revenue",
       value: formatRevenue(metrics?.revenue),
-      change: metrics?.revenue != null ? "Total tracked" : "Connect payments to track revenue",
+      change: metrics?.revenue != null ? "Total tracked revenue" : "Subscribe to track revenue",
       icon: DollarSign,
       color: "text-accent",
       to: `/dashboard/${workspaceId}/analytics`,
