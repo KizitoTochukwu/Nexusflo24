@@ -160,6 +160,7 @@ Deno.serve(async (req) => {
               subject: messageSubject, html: messageBody,
               leadId: lead.id, campaignId: campaign_id,
               templateSettings: content.templateSettings || undefined,
+              ...(ownerIsAdmin ? { skipCredits: true } : {}),
             }),
           });
           const data = await res.json();
