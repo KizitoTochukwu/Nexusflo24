@@ -358,6 +358,29 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
               </div>
             )}
 
+            {/* Assign to folder */}
+            {folders.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  Assign imported leads to folder
+                </Label>
+                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No folder</SelectItem>
+                    {folders.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.color ? `${f.color} ` : ""}{f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Preview first 5 rows */}
             {allRows.length > 0 && (
               <div className="max-h-40 overflow-auto rounded border text-xs">
