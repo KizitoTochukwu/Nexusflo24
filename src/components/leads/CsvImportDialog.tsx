@@ -83,6 +83,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
     setFile(null);
     setAllRows([]);
     setMode("skip");
+    setSelectedFolderId("__none__");
     setDupsInFile(new Set());
     setExistingPhones(new Set());
     setAnalysed(false);
