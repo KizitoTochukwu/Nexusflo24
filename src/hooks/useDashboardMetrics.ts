@@ -110,6 +110,34 @@ export function useDashboardMetrics(workspaceId: string) {
         total: aiQualified.length,
       };
 
+      // Revenue from payment_events
+      const { data: paymentEvents } = await supabase
+        .from("payment_events")
+        .select("type, payload, created_at")
+        .eq("type", "invoice.payment_succeeded")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      const successfulPayments = paymentEvents ?? [];
+      const totalRevenue = successfulPayments.reduce((sum, e) => {
+        const p = e.payload as any;
+        const amount = p?.amount_paid || p?.total || 0;
+        return sum + amount / 100;
+      }, 0);
+
+      // MRR from current subscription
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      const mrr = sub?.status === "active"
+        ? (sub.plan === "pro" ? 49 : sub.plan === "agency" ? 149 : sub.plan === "starter" ? 19 : sub.plan === "plus" ? 39 : sub.plan === "enterprise" ? 249 : 0)
+        : 0;
+
+      const revenue = totalRevenue > 0 ? totalRevenue : mrr > 0 ? mrr : null;
+
       return {
         totalLeads,
         newLeadsToday,
@@ -120,7 +148,7 @@ export function useDashboardMetrics(workspaceId: string) {
         recentLeads,
         campaignChartData,
         hasCampaignData: campaignChartData.length > 0,
-        revenue: null as number | null,
+        revenue,
         isDemo: false,
         aiDistribution,
       };
