@@ -107,8 +107,15 @@ const DashboardLeads = () => {
   const [qualifyProgress, setQualifyProgress] = useState<{ done: number; total: number } | null>(null);
   const qualifyLead = useQualifyLead();
 
-  const handleCreate = (values: Partial<Lead>) => {
-    createLead.mutate({ ...values, workspace_id: workspaceId } as any, { onSuccess: () => setAddOpen(false) });
+  const handleCreate = (values: Partial<Lead>, folderId?: string) => {
+    createLead.mutate({ ...values, workspace_id: workspaceId } as any, {
+      onSuccess: (newLead: any) => {
+        if (folderId && newLead?.id) {
+          assignToFolder.mutate({ leadIds: [newLead.id], folderId, workspaceId });
+        }
+        setAddOpen(false);
+      },
+    });
   };
 
   const handleUpdate = (values: Partial<Lead>) => {
