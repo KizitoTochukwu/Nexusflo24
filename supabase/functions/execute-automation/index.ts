@@ -126,6 +126,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resolve if workspace owner is admin → skip credit deduction
+    const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspace_id).single();
+    const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
+    if (ownerIsAdmin) console.log("[execute-automation] Admin workspace — credits exempt");
+
     const results: any[] = [];
     let skipRemaining = false;
     const startIndex = typeof start_from_step === "number" ? start_from_step : 0;
