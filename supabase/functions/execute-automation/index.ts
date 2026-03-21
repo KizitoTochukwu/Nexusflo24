@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
                   Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id }),
+                body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true }),
               });
               const waData = await waRes.json();
               if (!waRes.ok || !waData.success) throw new Error(waData?.error || "WhatsApp send failed");
