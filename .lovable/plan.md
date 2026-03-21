@@ -1,32 +1,40 @@
 
 
-## Fix: Confirmation Emails Not Being Sent
+## Plan: Exempt Admin Users from Credit Deduction
 
-### Root Cause
+### Problem
+The admin bypass logic exists in `credit-guard.ts` (line 50-61) but only works when `userId` is passed. The `execute-automation` function:
+1. **Email**: Sends directly via Resend API, completely bypassing the credit guard
+2. **WhatsApp**: Calls `whatsapp-send` with service-role but doesn't pass `skipCredits: true`
+3. **SMS**: Sends directly via Twilio, completely bypassing the credit guard
 
-The email domain (`support.nexusflo24.com`) is verified and the `auth-email-hook` Edge Function code exists, but the email infrastructure was never fully set up:
+Additionally, the `skipCredits` flow in `email-send`, `sms-send`, and `whatsapp-send` requires the workspace **owner** to be admin — but the correct check should be whether the **caller** (or workspace owner) is admin.
 
-1. **No email queue infrastructure** — the `email_send_log` table doesn't exist, and there's no `process-email-queue` cron job. This means `setup_email_infra` was never called.
-2. **auth-email-hook has zero logs** — the function is either not deployed or not activated as the auth email hook. Without activation, the auth system uses default (built-in) email delivery, which may not be configured or working.
-3. **Old direct-send pattern** — the current `auth-email-hook` uses `sendLovableEmail` directly instead of the queue-based approach. This should be upgraded for retry safety.
+### Changes
 
-### Fix Steps
+#### 1. Update `execute-automation/index.ts`
+- Import `deductCredit` and `isAdminUser` from `credit-guard.ts`
+- Before executing send actions (email, SMS, WhatsApp), check if the workspace owner is an admin
+- For **email** and **SMS** (sent directly): add credit deduction calls with admin bypass
+- For **WhatsApp** (delegated to `whatsapp-send`): pass `skipCredits: true` when workspace owner is admin
 
-**1. Set up email infrastructure**
-- Call `setup_email_infra` to create the email queue tables (`email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens`), pgmq queues, RPC wrappers, and the `process-email-queue` cron job.
+#### 2. Update `execute-campaign/index.ts` (if applicable)
+- Ensure `skipCredits: true` is passed to channel send functions when workspace owner is admin
 
-**2. Re-scaffold auth email templates**
-- Call `scaffold_auth_email_templates` to upgrade the `auth-email-hook` to the queue-based pattern and properly activate it with the auth system.
-- Re-apply the existing NexusFlo24 brand styling (Navy #0B1F3B, Gold #C9A227, Inter font, profile logo) to the templates.
+#### 3. Verify existing `credit-guard.ts` admin bypass
+- The existing admin bypass logic is sound — no changes needed there
 
-**3. Deploy the updated Edge Functions**
-- Deploy `auth-email-hook` (and `process-email-queue` if created by infra setup) so the auth system can route signup confirmation emails through the hook.
+### Technical Detail
 
-### What This Fixes
-- Signup confirmation emails will be enqueued and delivered via the verified `support.nexusflo24.com` domain
-- Retry safety via the pgmq queue (rate-limit handling, dead-letter queue)
-- All 6 auth email types (signup, recovery, magic link, invite, email change, reauthentication) will work
+In `execute-automation/index.ts`, before the action loop, resolve whether the workspace owner is admin:
+```typescript
+const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspace_id).single();
+const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
+```
 
-### No Database Migration Needed
-The `setup_email_infra` tool handles all table creation internally.
+Then for each send action:
+- If `ownerIsAdmin` is false, call `deductCredit()` and abort on insufficient credits
+- If `ownerIsAdmin` is true, skip credit deduction (log as `admin_exempt`)
+
+For the WhatsApp delegated call, add `skipCredits: true` to the request body when `ownerIsAdmin`.
 
