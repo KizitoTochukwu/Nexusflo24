@@ -54,22 +54,22 @@ const faqs = [
 ];
 
 const integrations = [
-  { name: "Google", logo: "https://logo.clearbit.com/google.com" },
-  { name: "Zapier", logo: "https://logo.clearbit.com/zapier.com" },
-  { name: "Make", logo: "https://logo.clearbit.com/make.com" },
-  { name: "Meta", logo: "https://logo.clearbit.com/meta.com" },
-  { name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
-  { name: "PayPal", logo: "https://logo.clearbit.com/paypal.com" },
-  { name: "HubSpot", logo: "https://logo.clearbit.com/hubspot.com" },
-  { name: "Slack", logo: "https://logo.clearbit.com/slack.com" },
-  { name: "Mailchimp", logo: "https://logo.clearbit.com/mailchimp.com" },
-  { name: "Shopify", logo: "https://logo.clearbit.com/shopify.com" },
-  { name: "WordPress", logo: "https://logo.clearbit.com/wordpress.com" },
-  { name: "Salesforce", logo: "https://logo.clearbit.com/salesforce.com" },
-  { name: "Calendly", logo: "https://logo.clearbit.com/calendly.com" },
-  { name: "Notion", logo: "https://logo.clearbit.com/notion.so" },
-  { name: "Typeform", logo: "https://logo.clearbit.com/typeform.com" },
-  { name: "Twilio", logo: "https://logo.clearbit.com/twilio.com" },
+  { name: "Google", logo: "https://cdn.simpleicons.org/google" },
+  { name: "Zapier", logo: "https://cdn.simpleicons.org/zapier" },
+  { name: "Make", logo: "https://cdn.simpleicons.org/make" },
+  { name: "Meta", logo: "https://cdn.simpleicons.org/meta" },
+  { name: "Stripe", logo: "https://cdn.simpleicons.org/stripe" },
+  { name: "PayPal", logo: "https://cdn.simpleicons.org/paypal" },
+  { name: "HubSpot", logo: "https://cdn.simpleicons.org/hubspot" },
+  { name: "Slack", logo: "https://cdn.simpleicons.org/slack" },
+  { name: "Mailchimp", logo: "https://cdn.simpleicons.org/mailchimp" },
+  { name: "Shopify", logo: "https://cdn.simpleicons.org/shopify" },
+  { name: "WordPress", logo: "https://cdn.simpleicons.org/wordpress" },
+  { name: "Salesforce", logo: "https://cdn.simpleicons.org/salesforce" },
+  { name: "Calendly", logo: "https://cdn.simpleicons.org/calendly" },
+  { name: "Notion", logo: "https://cdn.simpleicons.org/notion" },
+  { name: "Typeform", logo: "https://cdn.simpleicons.org/typeform" },
+  { name: "Twilio", logo: "https://cdn.simpleicons.org/twilio" },
 ];
 
 const Index = () => {
@@ -158,7 +158,7 @@ const Index = () => {
                 key={`${item.name}-${i}`}
                 src={item.logo}
                 alt={item.name}
-                className="h-7 w-auto object-contain grayscale opacity-60 transition-all hover:grayscale-0 hover:opacity-100"
+                className="h-7 w-auto object-contain opacity-60 transition-all hover:opacity-100"
                 loading="lazy"
               />
             ))}
