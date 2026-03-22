@@ -160,17 +160,31 @@ const Index = () => {
           {features.map((f, i) => (
             <div
               key={f.title}
-              className="group rounded-xl border bg-card p-6 shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1"
+              className="group [perspective:1000px]"
               style={{ animationDelay: `${i * 100}ms` }}
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                <f.icon className="h-6 w-6 text-accent" />
+              <div className="relative h-[280px] w-full transition-transform duration-500 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+                {/* Front */}
+                <div className="absolute inset-0 rounded-xl border bg-card p-6 shadow-card [backface-visibility:hidden] flex flex-col">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
+                    <f.icon className="h-6 w-6 text-accent" />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground flex-1">{f.desc}</p>
+                  <span className="mt-3 text-xs text-muted-foreground/60">Hover to explore →</span>
+                </div>
+                {/* Back */}
+                <div className="absolute inset-0 rounded-xl border bg-primary p-6 shadow-card [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col items-center justify-center text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/20">
+                    <f.icon className="h-7 w-7 text-accent" />
+                  </div>
+                  <h3 className="mb-2 text-lg font-semibold text-primary-foreground">{f.title}</h3>
+                  <p className="text-sm text-primary-foreground/70 mb-4">{f.desc}</p>
+                  <Link to={`/features#${f.slug}`} className="inline-flex items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-gold-dark transition-colors">
+                    Learn more <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
-              <h3 className="mb-2 text-lg font-semibold">{f.title}</h3>
-              <p className="text-sm text-muted-foreground">{f.desc}</p>
-              <Link to={`/features#${f.slug}`} className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors">
-                Learn more <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
             </div>
           ))}
         </div>
