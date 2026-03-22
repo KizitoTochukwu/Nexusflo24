@@ -2,6 +2,7 @@ import Layout from "@/components/layout/Layout";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import TypewriterText from "@/components/TypewriterText";
 import {
   Brain, Users, Mail, MessageSquare, Workflow, LayoutTemplate,
   PenTool, BarChart3, ArrowRight, Star, CheckCircle, Zap, Target, TrendingUp
@@ -100,11 +101,18 @@ const Index = () => {
 
       {/* Content */}
       <div className="container relative z-10 flex flex-col items-center justify-center py-24 md:py-36 text-center">
-        <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary-foreground md:text-5xl lg:text-6xl max-w-4xl animate-fade-up">
-          Automate Your{" "}
-          <span className="text-accent">Sales & Marketing</span>
-          <br />
-          With <span className="text-accent">AI-Powered</span> Precision
+        <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-primary-foreground md:text-5xl lg:text-6xl max-w-4xl">
+          <TypewriterText
+            speed={40}
+            segments={[
+              { text: "Automate Your " },
+              { text: "Sales & Marketing", className: "text-accent" },
+              { text: "", isBreak: true },
+              { text: "With " },
+              { text: "AI-Powered", className: "text-accent" },
+              { text: " Precision" },
+            ]}
+          />
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-primary-foreground/70 animate-fade-up">
           Drive Leads, Engage Customers, and Grow Revenue — All From One Intelligent Platform.
