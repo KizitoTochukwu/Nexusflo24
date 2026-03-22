@@ -54,9 +54,22 @@ const faqs = [
 ];
 
 const integrations = [
-  "Google Sheets", "Zapier", "Make.com", "Meta Ads", "Stripe", "PayPal",
-  "HubSpot", "Slack", "Mailchimp", "Shopify", "WordPress", "Salesforce",
-  "Calendly", "Notion", "Typeform", "Twilio",
+  { name: "Google", logo: "https://logo.clearbit.com/google.com" },
+  { name: "Zapier", logo: "https://logo.clearbit.com/zapier.com" },
+  { name: "Make", logo: "https://logo.clearbit.com/make.com" },
+  { name: "Meta", logo: "https://logo.clearbit.com/meta.com" },
+  { name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
+  { name: "PayPal", logo: "https://logo.clearbit.com/paypal.com" },
+  { name: "HubSpot", logo: "https://logo.clearbit.com/hubspot.com" },
+  { name: "Slack", logo: "https://logo.clearbit.com/slack.com" },
+  { name: "Mailchimp", logo: "https://logo.clearbit.com/mailchimp.com" },
+  { name: "Shopify", logo: "https://logo.clearbit.com/shopify.com" },
+  { name: "WordPress", logo: "https://logo.clearbit.com/wordpress.com" },
+  { name: "Salesforce", logo: "https://logo.clearbit.com/salesforce.com" },
+  { name: "Calendly", logo: "https://logo.clearbit.com/calendly.com" },
+  { name: "Notion", logo: "https://logo.clearbit.com/notion.so" },
+  { name: "Typeform", logo: "https://logo.clearbit.com/typeform.com" },
+  { name: "Twilio", logo: "https://logo.clearbit.com/twilio.com" },
 ];
 
 const Index = () => {
@@ -139,17 +152,17 @@ const Index = () => {
           Integrates with your favorite tools
         </p>
         <div className="overflow-hidden">
-          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-10">
-            {[...integrations, ...integrations].map((name, i) => (
-              <span key={`${name}-${i}`} className="whitespace-nowrap text-sm font-semibold text-muted-foreground/60 transition-colors hover:text-muted-foreground">
-                {name}
-              </span>
+          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-12 items-center">
+            {[...integrations, ...integrations].map((item, i) => (
+              <img
+                key={`${item.name}-${i}`}
+                src={item.logo}
+                alt={item.name}
+                className="h-7 w-auto object-contain grayscale opacity-60 transition-all hover:grayscale-0 hover:opacity-100"
+                loading="lazy"
+              />
             ))}
           </div>
-        </div>
-        <div className="mt-4 flex items-center justify-center gap-4">
-          <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">GDPR Ready</span>
-          <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">99.9% Uptime</span>
         </div>
       </div>
     </section>
