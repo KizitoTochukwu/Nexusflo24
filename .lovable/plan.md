@@ -1,31 +1,47 @@
 
 
-## Plan: Typewriter Animation on Hero Heading
+## Plan: Navy Cards with AI-Generated Images for "How It Works"
 
-Add a typewriter effect to the hero `<h1>` that types out the text character by character, similar to the reference image.
-
-### Approach
-
-Create a reusable `TypewriterText` component using React state and `useEffect` to reveal characters one at a time with a blinking cursor.
+### Overview
+Add hyper-realistic AI-generated images to each of the three "How It Works" cards (Capture, Nurture, Convert) and change the card backgrounds from white to branded navy blue.
 
 ### Changes
 
-**1. New file: `src/components/TypewriterText.tsx`**
-- Accept an array of text segments (each with text, optional className, and whether it's a line break)
-- Use `useState` + `useEffect` with `setInterval` to increment a character counter
-- Render characters up to the current count, preserving spans and styling
-- Show a blinking cursor (`|`) at the end while typing
+**1. Generate three images using Lovable AI (google/gemini-3-pro-image-preview)**
 
-**2. Edit: `src/pages/Index.tsx`**
-- Import and use `TypewriterText` in the hero `<h1>` instead of static text
-- Pass segments: `"Automate Your "`, `"Sales & Marketing"` (accent), line break, `"With "`, `"AI-Powered"` (accent), `" Precision"`
-- Remove `animate-fade-up` from h1 (typewriter replaces it)
+Create three hyper-realistic images via an edge function or inline AI call:
+- **Capture**: A sleek digital form/chatbot interface capturing leads — glowing UI elements, professional lighting
+- **Nurture**: Multi-channel marketing flow with email/WhatsApp/SMS visual — connected nodes, warm tones
+- **Convert**: Sales dashboard with rising metrics and lead scoring — success/growth imagery
 
-**3. Edit: `src/index.css`**
-- Add a `@keyframes blink` animation for the cursor
+Save images to `src/assets/` as `step-capture.png`, `step-nurture.png`, `step-convert.png`.
+
+**2. Update the `steps` array** to include an `image` property pointing to each generated asset.
+
+**3. Restyle the cards in the "How It Works" section**:
+- Background: `bg-[#0B1F3A]` (branded navy) instead of `bg-card`
+- Text colors: `text-white`, `text-white/70` for descriptions
+- Add the image at the top of each card in a rounded container with `overflow-hidden`
+- Accent elements (number, icon circle, link) adjusted for contrast on dark background
+- Border: `border-navy-light` or subtle lighter border for definition
+
+### Card structure (per card)
+```text
+┌──────────────────────┐
+│   [hyper-realistic   │
+│      image]          │  ← rounded-t-xl, h-40, object-cover
+├──────────────────────┤
+│  01                  │
+│  [icon]              │  ← navy bg, white/gold text
+│  Capture             │
+│  Description text    │
+│  Learn more →        │
+└──────────────────────┘
+```
 
 ### Files modified
-- `src/components/TypewriterText.tsx` (new)
-- `src/pages/Index.tsx`
-- `src/index.css`
+- `src/pages/Index.tsx` — card styling + image rendering
+- `src/assets/step-capture.png` (new, AI-generated)
+- `src/assets/step-nurture.png` (new, AI-generated)
+- `src/assets/step-convert.png` (new, AI-generated)
 
