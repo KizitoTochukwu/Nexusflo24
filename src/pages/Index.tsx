@@ -152,17 +152,17 @@ const Index = () => {
           Integrates with your favorite tools
         </p>
         <div className="overflow-hidden">
-          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-10">
-            {[...integrations, ...integrations].map((name, i) => (
-              <span key={`${name}-${i}`} className="whitespace-nowrap text-sm font-semibold text-muted-foreground/60 transition-colors hover:text-muted-foreground">
-                {name}
-              </span>
+          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-12 items-center">
+            {[...integrations, ...integrations].map((item, i) => (
+              <img
+                key={`${item.name}-${i}`}
+                src={item.logo}
+                alt={item.name}
+                className="h-7 w-auto object-contain grayscale opacity-60 transition-all hover:grayscale-0 hover:opacity-100"
+                loading="lazy"
+              />
             ))}
           </div>
-        </div>
-        <div className="mt-4 flex items-center justify-center gap-4">
-          <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">GDPR Ready</span>
-          <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">99.9% Uptime</span>
         </div>
       </div>
     </section>
