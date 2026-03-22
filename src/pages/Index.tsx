@@ -158,7 +158,7 @@ const Index = () => {
                 key={`${item.name}-${i}`}
                 src={item.logo}
                 alt={item.name}
-                className="h-7 w-auto object-contain grayscale opacity-60 transition-all hover:grayscale-0 hover:opacity-100"
+                className="h-7 w-auto object-contain opacity-60 transition-all hover:opacity-100"
                 loading="lazy"
               />
             ))}
