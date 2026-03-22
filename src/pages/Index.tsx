@@ -147,7 +147,7 @@ const Index = () => {
     <section className="border-b bg-surface py-8">
       <div className="container">
         <p className="mb-4 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Integrates with your favorite tools
+          Trusted by teams using industry-leading tools
         </p>
         <div className="overflow-hidden">
           <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-6 items-center">
