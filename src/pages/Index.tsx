@@ -61,7 +61,6 @@ const integrations = [
   { name: "Stripe", logo: "https://cdn.simpleicons.org/stripe" },
   { name: "PayPal", logo: "https://cdn.simpleicons.org/paypal" },
   { name: "HubSpot", logo: "https://cdn.simpleicons.org/hubspot" },
-  { name: "Slack", logo: "https://cdn.simpleicons.org/slack" },
   { name: "Mailchimp", logo: "https://cdn.simpleicons.org/mailchimp" },
   { name: "Shopify", logo: "https://cdn.simpleicons.org/shopify" },
   { name: "WordPress", logo: "https://cdn.simpleicons.org/wordpress" },
@@ -69,7 +68,6 @@ const integrations = [
   { name: "Calendly", logo: "https://cdn.simpleicons.org/calendly" },
   { name: "Notion", logo: "https://cdn.simpleicons.org/notion" },
   { name: "Typeform", logo: "https://cdn.simpleicons.org/typeform" },
-  { name: "Twilio", logo: "https://cdn.simpleicons.org/twilio" },
 ];
 
 const Index = () => {
