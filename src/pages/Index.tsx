@@ -274,13 +274,25 @@ const Index = () => {
               </Button>
             </Link>
           </div>
-          <div className="rounded-xl border bg-surface p-4 shadow-card">
-            <img
-              src={heroDashboard}
-              alt="NexusFlo24 dashboard demo preview"
-              className="rounded-lg"
-              loading="lazy"
-            />
+          <div className="group relative rounded-xl border bg-surface p-4 shadow-card hover:shadow-card-hover transition-shadow duration-500 cursor-pointer"
+            onClick={() => navigate("/dashboard")}
+          >
+            {/* Glow effect on hover */}
+            <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-accent/0 via-accent/20 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-xl -z-10" />
+            <div className="overflow-hidden rounded-lg">
+              <img
+                src={heroDashboard}
+                alt="NexusFlo24 dashboard demo preview"
+                className="rounded-lg transition-transform duration-700 group-hover:scale-105"
+                loading="lazy"
+              />
+            </div>
+            {/* Overlay CTA on hover */}
+            <div className="absolute inset-4 rounded-lg bg-primary/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+              <span className="flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground shadow-gold scale-90 group-hover:scale-100 transition-transform duration-500">
+                Explore Live Demo <ArrowRight className="h-4 w-4" />
+              </span>
+            </div>
           </div>
         </div>
       </div>
