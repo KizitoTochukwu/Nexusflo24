@@ -1,37 +1,27 @@
 
 
-## Plan: Fix broken integration logos
+## Plan: Logo Cards in Marquee
 
-The Clearbit Logo API (`logo.clearbit.com`) is no longer reliably available, causing all logos to fail loading.
+### Changes to `src/pages/Index.tsx`
 
-### Fix
+**1. Remove Twilio and Slack** from the `integrations` array (their logos don't load from Simple Icons).
 
-Replace all Clearbit URLs with logos from a working source. Use **SVG logos from `cdn.simpleicons.org`** (Simple Icons CDN) which provides free, reliable brand logos.
+**2. Wrap each logo in a card container** styled to match the reference image:
+- Light gray rounded card (`rounded-xl bg-white/80 border border-gray-100 shadow-sm`)
+- Fixed dimensions (~100x60px) with centered logo
+- Keeps the marquee scroll and hover-pause behavior
 
-**File: `src/pages/Index.tsx`**
+**3. Update the marquee markup** to render each integration inside a card div instead of a bare `<img>`.
 
-Update the `integrations` array to use Simple Icons CDN URLs:
+### Rendering structure
 
-```ts
-{ name: "Google", logo: "https://cdn.simpleicons.org/google" },
-{ name: "Zapier", logo: "https://cdn.simpleicons.org/zapier" },
-{ name: "Make", logo: "https://cdn.simpleicons.org/make" },
-{ name: "Meta", logo: "https://cdn.simpleicons.org/meta" },
-{ name: "Stripe", logo: "https://cdn.simpleicons.org/stripe" },
-{ name: "PayPal", logo: "https://cdn.simpleicons.org/paypal" },
-{ name: "HubSpot", logo: "https://cdn.simpleicons.org/hubspot" },
-{ name: "Slack", logo: "https://cdn.simpleicons.org/slack" },
-{ name: "Mailchimp", logo: "https://cdn.simpleicons.org/mailchimp" },
-{ name: "Shopify", logo: "https://cdn.simpleicons.org/shopify" },
-{ name: "WordPress", logo: "https://cdn.simpleicons.org/wordpress" },
-{ name: "Salesforce", logo: "https://cdn.simpleicons.org/salesforce" },
-{ name: "Calendly", logo: "https://cdn.simpleicons.org/calendly" },
-{ name: "Notion", logo: "https://cdn.simpleicons.org/notion" },
-{ name: "Typeform", logo: "https://cdn.simpleicons.org/typeform" },
-{ name: "Twilio", logo: "https://cdn.simpleicons.org/twilio" },
+```text
+┌──────────┐  ┌──────────┐  ┌──────────┐
+│  [logo]  │  │  [logo]  │  │  [logo]  │  ← scrolling
+└──────────┘  └──────────┘  └──────────┘
 ```
 
-Also remove the `grayscale` filter since Simple Icons serves single-color SVGs (grayscale on a monochrome icon has no visual effect). Keep the opacity transition for the hover effect.
+Each card: `div.rounded-xl.border.bg-white/80.shadow-sm.p-4.flex.items-center.justify-center` containing the `<img>` tag.
 
 ### Files modified
 - `src/pages/Index.tsx`
