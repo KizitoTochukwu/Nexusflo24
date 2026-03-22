@@ -150,15 +150,19 @@ const Index = () => {
           Integrates with your favorite tools
         </p>
         <div className="overflow-hidden">
-          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-12 items-center">
+          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-6 items-center">
             {[...integrations, ...integrations].map((item, i) => (
-              <img
+              <div
                 key={`${item.name}-${i}`}
-                src={item.logo}
-                alt={item.name}
-                className="h-7 w-auto object-contain opacity-60 transition-all hover:opacity-100"
-                loading="lazy"
-              />
+                className="flex-shrink-0 w-28 h-16 flex items-center justify-center rounded-xl border border-border bg-card shadow-sm"
+              >
+                <img
+                  src={item.logo}
+                  alt={item.name}
+                  className="h-7 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                  loading="lazy"
+                />
+              </div>
             ))}
           </div>
         </div>
