@@ -1,37 +1,28 @@
 
 
-## Plan: Scrolling Logo Marquee for Integrations Bar
+## Plan: Company Logos Marquee with Real Logos
 
-### What changes
+### Changes
 
-**1. Expand the integrations list** (`Index.tsx`)
-Add more relevant company/tool names: Google Sheets, Zapier, Make.com, Meta Ads, Stripe, PayPal, HubSpot, Slack, Mailchimp, Shopify, WordPress, Salesforce, Calendly, Notion, Typeform, Twilio.
+**1. Remove badges** (`Index.tsx`)
+Delete the GDPR Ready / 99.9% Uptime badge row (lines 150-154).
 
-**2. Add a marquee keyframe animation** (`tailwind.config.ts`)
-Add a `marquee` keyframe that translates content from `0%` to `-50%` on the X axis, creating a seamless infinite scroll effect.
+**2. Replace text names with real logos** (`Index.tsx`)
+Update the `integrations` array from plain strings to objects with `name` and `logo` URL. Use Clearbit's logo API (`https://logo.clearbit.com/{domain}`) for high-quality company logos. Each entry renders as an `<img>` tag (height ~24-28px, grayscale filter, color on hover) instead of a `<span>`.
 
-**3. Replace the static grid with a scrolling marquee** (`Index.tsx`)
-- Use `overflow-hidden` on the container
-- Render the integrations list **twice** side-by-side inside a flex container with `animate-marquee`
-- This duplication creates the illusion of an infinite loop
-- Keep the GDPR Ready and 99.9% Uptime badges static below the marquee
-- Pause animation on hover using `hover:[animation-play-state:paused]`
-
-### Technical detail
-
-```
-┌─────────────────────────────────────────┐
-│  overflow-hidden container              │
-│ ┌─────────────────────────────────────┐ │
-│ │ [logos...] [logos...] ← animate-marquee│
-│ └─────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
-         ← scrolls left continuously
+Example entries:
+```ts
+{ name: "Google Sheets", logo: "https://logo.clearbit.com/google.com" },
+{ name: "Zapier", logo: "https://logo.clearbit.com/zapier.com" },
+{ name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
+// ... etc
 ```
 
-Tailwind keyframe:
-```js
-marquee: { "0%": { transform: "translateX(0)" }, "100%": { transform: "translateX(-50%)" } }
-```
-Animation: `marquee 30s linear infinite`
+**3. Styling**
+- `grayscale opacity-60 hover:grayscale-0 hover:opacity-100` for subtle-to-vivid effect
+- Fixed height (`h-7`) with `object-contain` for consistent sizing
+- Keep the existing marquee animation and hover-to-pause behavior
+
+### Files modified
+- `src/pages/Index.tsx`
 
