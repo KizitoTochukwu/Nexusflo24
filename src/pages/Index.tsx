@@ -53,7 +53,11 @@ const faqs = [
   { q: "How does AI personalization work?", a: "Our AI analyzes lead behavior, engagement patterns, and demographics to automatically personalize messaging, timing, and channel selection for maximum conversion." },
 ];
 
-const integrations = ["Google Sheets", "Zapier", "Make.com", "Meta Ads", "Stripe", "PayPal"];
+const integrations = [
+  "Google Sheets", "Zapier", "Make.com", "Meta Ads", "Stripe", "PayPal",
+  "HubSpot", "Slack", "Mailchimp", "Shopify", "WordPress", "Salesforce",
+  "Calendly", "Notion", "Typeform", "Twilio",
+];
 
 const Index = () => {
   const [heroEmail, setHeroEmail] = useState("");
