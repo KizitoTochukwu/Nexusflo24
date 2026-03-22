@@ -1,28 +1,31 @@
 
 
-## Plan: Logo Cards in Marquee
+## Plan: Typewriter Animation on Hero Heading
 
-### Changes to `src/pages/Index.tsx`
+Add a typewriter effect to the hero `<h1>` that types out the text character by character, similar to the reference image.
 
-**1. Remove Twilio and Slack** from the `integrations` array (their logos don't load from Simple Icons).
+### Approach
 
-**2. Wrap each logo in a card container** styled to match the reference image:
-- Light gray rounded card (`rounded-xl bg-white/80 border border-gray-100 shadow-sm`)
-- Fixed dimensions (~100x60px) with centered logo
-- Keeps the marquee scroll and hover-pause behavior
+Create a reusable `TypewriterText` component using React state and `useEffect` to reveal characters one at a time with a blinking cursor.
 
-**3. Update the marquee markup** to render each integration inside a card div instead of a bare `<img>`.
+### Changes
 
-### Rendering structure
+**1. New file: `src/components/TypewriterText.tsx`**
+- Accept an array of text segments (each with text, optional className, and whether it's a line break)
+- Use `useState` + `useEffect` with `setInterval` to increment a character counter
+- Render characters up to the current count, preserving spans and styling
+- Show a blinking cursor (`|`) at the end while typing
 
-```text
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│  [logo]  │  │  [logo]  │  │  [logo]  │  ← scrolling
-└──────────┘  └──────────┘  └──────────┘
-```
+**2. Edit: `src/pages/Index.tsx`**
+- Import and use `TypewriterText` in the hero `<h1>` instead of static text
+- Pass segments: `"Automate Your "`, `"Sales & Marketing"` (accent), line break, `"With "`, `"AI-Powered"` (accent), `" Precision"`
+- Remove `animate-fade-up` from h1 (typewriter replaces it)
 
-Each card: `div.rounded-xl.border.bg-white/80.shadow-sm.p-4.flex.items-center.justify-center` containing the `<img>` tag.
+**3. Edit: `src/index.css`**
+- Add a `@keyframes blink` animation for the cursor
 
 ### Files modified
+- `src/components/TypewriterText.tsx` (new)
 - `src/pages/Index.tsx`
+- `src/index.css`
 
