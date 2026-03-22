@@ -230,16 +230,20 @@ const Index = () => {
           <h2 className="mt-2 text-3xl font-bold md:text-4xl">Three Steps to Smarter Growth</h2>
         </div>
         <div className="grid gap-8 md:grid-cols-3">
-          {steps.map((s) => (
-            <div key={s.num} className="relative rounded-xl border bg-card p-8 text-center shadow-card">
-              <span className="mb-4 block text-5xl font-extrabold text-accent/20">{s.num}</span>
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10">
+          {steps.map((s, i) => (
+            <div
+              key={s.num}
+              className="group relative rounded-xl border bg-card p-8 text-center shadow-card hover:shadow-card-hover transition-all duration-500 hover:-translate-y-2 animate-fade-up"
+              style={{ animationDelay: `${i * 200}ms`, animationFillMode: "backwards" }}
+            >
+              <span className="mb-4 block text-5xl font-extrabold text-accent/20 group-hover:text-accent/40 transition-colors duration-500">{s.num}</span>
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 group-hover:bg-accent/20 group-hover:scale-110 transition-all duration-500">
                 <s.icon className="h-7 w-7 text-accent" />
               </div>
               <h3 className="mb-2 text-xl font-bold">{s.title}</h3>
               <p className="text-sm text-muted-foreground">{s.desc}</p>
-              <Link to={`/how-it-works/${s.slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors">
-                Learn more <ArrowRight className="h-3.5 w-3.5" />
+              <Link to={`/how-it-works/${s.slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors group-hover:gap-2">
+                Learn more <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </div>
           ))}
