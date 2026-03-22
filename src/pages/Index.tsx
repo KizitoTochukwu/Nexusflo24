@@ -53,7 +53,11 @@ const faqs = [
   { q: "How does AI personalization work?", a: "Our AI analyzes lead behavior, engagement patterns, and demographics to automatically personalize messaging, timing, and channel selection for maximum conversion." },
 ];
 
-const integrations = ["Google Sheets", "Zapier", "Make.com", "Meta Ads", "Stripe", "PayPal"];
+const integrations = [
+  "Google Sheets", "Zapier", "Make.com", "Meta Ads", "Stripe", "PayPal",
+  "HubSpot", "Slack", "Mailchimp", "Shopify", "WordPress", "Salesforce",
+  "Calendly", "Notion", "Typeform", "Twilio",
+];
 
 const Index = () => {
   const [heroEmail, setHeroEmail] = useState("");
@@ -134,12 +138,16 @@ const Index = () => {
         <p className="mb-4 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Integrates with your favorite tools
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-8">
-          {integrations.map((name) => (
-            <span key={name} className="text-sm font-semibold text-muted-foreground/60 transition-colors hover:text-muted-foreground">
-              {name}
-            </span>
-          ))}
+        <div className="overflow-hidden">
+          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-10">
+            {[...integrations, ...integrations].map((name, i) => (
+              <span key={`${name}-${i}`} className="whitespace-nowrap text-sm font-semibold text-muted-foreground/60 transition-colors hover:text-muted-foreground">
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-center gap-4">
           <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">GDPR Ready</span>
           <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">99.9% Uptime</span>
         </div>
