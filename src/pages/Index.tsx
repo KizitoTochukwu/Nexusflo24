@@ -2,6 +2,7 @@ import Layout from "@/components/layout/Layout";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import TypewriterText from "@/components/TypewriterText";
 import {
   Brain, Users, Mail, MessageSquare, Workflow, LayoutTemplate,
   PenTool, BarChart3, ArrowRight, Star, CheckCircle, Zap, Target, TrendingUp
