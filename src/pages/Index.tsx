@@ -236,18 +236,30 @@ const Index = () => {
           {steps.map((s, i) => (
             <div
               key={s.num}
-              className="group relative rounded-xl border bg-card p-8 text-center shadow-card hover:shadow-card-hover transition-all duration-500 hover:-translate-y-2 animate-fade-up"
+              className="group relative rounded-xl border border-primary/30 bg-primary overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-500 hover:-translate-y-2 animate-fade-up"
               style={{ animationDelay: `${i * 200}ms`, animationFillMode: "backwards" }}
             >
-              <span className="mb-4 block text-5xl font-extrabold text-accent/20 group-hover:text-accent/40 transition-colors duration-500">{s.num}</span>
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 group-hover:bg-accent/20 group-hover:scale-110 transition-all duration-500">
-                <s.icon className="h-7 w-7 text-accent" />
+              {/* Image */}
+              <div className="h-48 overflow-hidden">
+                <img
+                  src={s.image}
+                  alt={s.title}
+                  className="h-full w-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                  loading="lazy"
+                />
               </div>
-              <h3 className="mb-2 text-xl font-bold">{s.title}</h3>
-              <p className="text-sm text-muted-foreground">{s.desc}</p>
-              <Link to={`/how-it-works/${s.slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors group-hover:gap-2">
-                Learn more <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-              </Link>
+              {/* Content */}
+              <div className="p-8 text-center">
+                <span className="mb-4 block text-5xl font-extrabold text-accent/20 group-hover:text-accent/40 transition-colors duration-500">{s.num}</span>
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 group-hover:bg-accent/20 group-hover:scale-110 transition-all duration-500">
+                  <s.icon className="h-7 w-7 text-accent" />
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-primary-foreground">{s.title}</h3>
+                <p className="text-sm text-primary-foreground/70">{s.desc}</p>
+                <Link to={`/how-it-works/${s.slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-gold-dark transition-colors group-hover:gap-2">
+                  Learn more <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+                </Link>
+              </div>
             </div>
           ))}
         </div>
