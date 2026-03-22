@@ -54,9 +54,22 @@ const faqs = [
 ];
 
 const integrations = [
-  "Google Sheets", "Zapier", "Make.com", "Meta Ads", "Stripe", "PayPal",
-  "HubSpot", "Slack", "Mailchimp", "Shopify", "WordPress", "Salesforce",
-  "Calendly", "Notion", "Typeform", "Twilio",
+  { name: "Google", logo: "https://logo.clearbit.com/google.com" },
+  { name: "Zapier", logo: "https://logo.clearbit.com/zapier.com" },
+  { name: "Make", logo: "https://logo.clearbit.com/make.com" },
+  { name: "Meta", logo: "https://logo.clearbit.com/meta.com" },
+  { name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
+  { name: "PayPal", logo: "https://logo.clearbit.com/paypal.com" },
+  { name: "HubSpot", logo: "https://logo.clearbit.com/hubspot.com" },
+  { name: "Slack", logo: "https://logo.clearbit.com/slack.com" },
+  { name: "Mailchimp", logo: "https://logo.clearbit.com/mailchimp.com" },
+  { name: "Shopify", logo: "https://logo.clearbit.com/shopify.com" },
+  { name: "WordPress", logo: "https://logo.clearbit.com/wordpress.com" },
+  { name: "Salesforce", logo: "https://logo.clearbit.com/salesforce.com" },
+  { name: "Calendly", logo: "https://logo.clearbit.com/calendly.com" },
+  { name: "Notion", logo: "https://logo.clearbit.com/notion.so" },
+  { name: "Typeform", logo: "https://logo.clearbit.com/typeform.com" },
+  { name: "Twilio", logo: "https://logo.clearbit.com/twilio.com" },
 ];
 
 const Index = () => {
