@@ -318,15 +318,29 @@ Deno.serve(async (req) => {
             const nextStepIndex = i + 1;
 
             if (nextStepIndex < (steps || []).length) {
-              await supabase.from("scheduled_jobs").insert({
-                workspace_id,
-                automation_id,
-                lead_id,
-                step_index: nextStepIndex,
-                run_at: runAt,
-                payload: { automation_id, lead_id, workspace_id },
-                status: "pending",
-              });
+              // Prevent duplicate scheduled jobs for same automation+lead+step
+              const { data: existingDelay } = await supabase
+                .from("scheduled_jobs")
+                .select("id")
+                .eq("automation_id", automation_id)
+                .eq("lead_id", lead_id)
+                .eq("step_index", nextStepIndex)
+                .eq("status", "pending")
+                .limit(1);
+
+              if (existingDelay && existingDelay.length > 0) {
+                details = { message: "Delay already scheduled for this step", next_step_index: nextStepIndex };
+                status = "skipped";
+              } else {
+                await supabase.from("scheduled_jobs").insert({
+                  workspace_id,
+                  automation_id,
+                  lead_id,
+                  step_index: nextStepIndex,
+                  run_at: runAt,
+                  payload: { automation_id, lead_id, workspace_id },
+                  status: "pending",
+                });
               details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
               status = "scheduled";
             } else {
