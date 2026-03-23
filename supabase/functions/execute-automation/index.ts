@@ -94,6 +94,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Deduplication: if this is a fresh trigger (not a scheduled resume),
+    // check if there are already pending scheduled jobs for this automation+lead.
+    // If so, skip to prevent duplicate emails.
+    if (typeof start_from_step !== "number") {
+      const { data: existingJobs } = await supabase
+        .from("scheduled_jobs")
+        .select("id")
+        .eq("automation_id", automation_id)
+        .eq("lead_id", lead_id)
+        .eq("status", "pending")
+        .limit(1);
+
+      if (existingJobs && existingJobs.length > 0) {
+        console.log(`[execute-automation] Skipping duplicate trigger — pending jobs exist for automation=${automation_id} lead=${lead_id}`);
+        return new Response(JSON.stringify({ ok: true, skipped: true, reason: "Automation already in progress for this lead" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Fetch automation
     const { data: automation, error: autoErr } = await supabase
       .from("automations")
@@ -298,17 +318,32 @@ Deno.serve(async (req) => {
             const nextStepIndex = i + 1;
 
             if (nextStepIndex < (steps || []).length) {
-              await supabase.from("scheduled_jobs").insert({
-                workspace_id,
-                automation_id,
-                lead_id,
-                step_index: nextStepIndex,
-                run_at: runAt,
-                payload: { automation_id, lead_id, workspace_id },
-                status: "pending",
-              });
-              details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
-              status = "scheduled";
+              // Prevent duplicate scheduled jobs for same automation+lead+step
+              const { data: existingDelay } = await supabase
+                .from("scheduled_jobs")
+                .select("id")
+                .eq("automation_id", automation_id)
+                .eq("lead_id", lead_id)
+                .eq("step_index", nextStepIndex)
+                .eq("status", "pending")
+                .limit(1);
+
+              if (existingDelay && existingDelay.length > 0) {
+                details = { message: "Delay already scheduled for this step", next_step_index: nextStepIndex };
+                status = "skipped";
+              } else {
+                await supabase.from("scheduled_jobs").insert({
+                  workspace_id,
+                  automation_id,
+                  lead_id,
+                  step_index: nextStepIndex,
+                  run_at: runAt,
+                  payload: { automation_id, lead_id, workspace_id },
+                  status: "pending",
+                });
+                details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
+                status = "scheduled";
+              }
             } else {
               details = { message: "Delay is last step, nothing to schedule", delay: config.delay };
               status = "completed";
