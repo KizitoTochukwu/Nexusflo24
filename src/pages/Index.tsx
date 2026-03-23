@@ -328,7 +328,7 @@ const Index = () => {
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {testimonials.map((t) => (
-            <div key={t.name} className="rounded-xl border border-navy-light bg-navy-light/30 p-6 backdrop-blur">
+            <div key={t.name} className="rounded-xl border border-border bg-card p-6 shadow-card">
               <div className="mb-3 flex gap-1">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-gold text-gold" />
