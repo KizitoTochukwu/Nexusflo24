@@ -187,6 +187,18 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
                               <CheckCircle2 className="h-3 w-3" /> Success
                             </Badge>
+                          ) : log.status === "scheduled" ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
+                              <Clock className="h-3 w-3" /> Scheduled
+                            </Badge>
+                          ) : log.status === "skipped" || log.status === "condition_failed" ? (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
+                              <Clock className="h-3 w-3" /> {log.status === "condition_failed" ? "Condition Failed" : "Skipped"}
+                            </Badge>
+                          ) : log.status === "completed" ? (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
+                              <CheckCircle2 className="h-3 w-3" /> Completed
+                            </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1">
                               <XCircle className="h-3 w-3" /> Failed
