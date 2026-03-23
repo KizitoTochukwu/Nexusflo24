@@ -341,8 +341,9 @@ Deno.serve(async (req) => {
                   payload: { automation_id, lead_id, workspace_id },
                   status: "pending",
                 });
-              details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
-              status = "scheduled";
+                details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
+                status = "scheduled";
+              }
             } else {
               details = { message: "Delay is last step, nothing to schedule", delay: config.delay };
               status = "completed";
