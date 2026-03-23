@@ -328,23 +328,23 @@ const Index = () => {
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {testimonials.map((t) => (
-            <div key={t.name} className="rounded-xl border border-navy-light bg-navy-light/30 p-6 backdrop-blur">
+            <div key={t.name} className="rounded-xl border border-border bg-card p-6 shadow-card">
               <div className="mb-3 flex gap-1">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-gold text-gold" />
                 ))}
               </div>
-              <p className="mb-4 text-sm text-primary-foreground/80">"{t.text}"</p>
+              <p className="mb-4 text-sm text-muted-foreground">"{t.text}"</p>
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
                   {t.avatar}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-primary-foreground">{t.name}</p>
-                  <p className="text-xs text-primary-foreground/60">{t.role}</p>
+                  <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
                 </div>
               </div>
-              <div className="mt-3 rounded-md bg-accent/10 px-3 py-1 text-center text-xs font-semibold text-gold">
+              <div className="mt-3 rounded-md bg-accent/10 px-3 py-1 text-center text-xs font-semibold text-accent">
                 {t.metric}
               </div>
             </div>
