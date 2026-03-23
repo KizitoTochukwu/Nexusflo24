@@ -334,17 +334,17 @@ const Index = () => {
                   <Star key={i} className="h-4 w-4 fill-gold text-gold" />
                 ))}
               </div>
-              <p className="mb-4 text-sm text-primary-foreground/80">"{t.text}"</p>
+              <p className="mb-4 text-sm text-muted-foreground">"{t.text}"</p>
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
                   {t.avatar}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-primary-foreground">{t.name}</p>
-                  <p className="text-xs text-primary-foreground/60">{t.role}</p>
+                  <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.role}</p>
                 </div>
               </div>
-              <div className="mt-3 rounded-md bg-accent/10 px-3 py-1 text-center text-xs font-semibold text-gold">
+              <div className="mt-3 rounded-md bg-accent/10 px-3 py-1 text-center text-xs font-semibold text-accent">
                 {t.metric}
               </div>
             </div>
