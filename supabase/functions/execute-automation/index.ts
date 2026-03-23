@@ -94,6 +94,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Deduplication: if this is a fresh trigger (not a scheduled resume),
+    // check if there are already pending scheduled jobs for this automation+lead.
+    // If so, skip to prevent duplicate emails.
+    if (typeof start_from_step !== "number") {
+      const { data: existingJobs } = await supabase
+        .from("scheduled_jobs")
+        .select("id")
+        .eq("automation_id", automation_id)
+        .eq("lead_id", lead_id)
+        .eq("status", "pending")
+        .limit(1);
+
+      if (existingJobs && existingJobs.length > 0) {
+        console.log(`[execute-automation] Skipping duplicate trigger — pending jobs exist for automation=${automation_id} lead=${lead_id}`);
+        return new Response(JSON.stringify({ ok: true, skipped: true, reason: "Automation already in progress for this lead" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Fetch automation
     const { data: automation, error: autoErr } = await supabase
       .from("automations")
