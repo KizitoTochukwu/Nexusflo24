@@ -42,7 +42,7 @@ const Academy = () =>
         </p>
         <div className="flex gap-4 justify-center animate-fade-up animation-delay-400">
           <Button size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">Start Learning</Button>
-          <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-primary-foreground text-primary">Join the Program    </Button>
+          <a href="https://nas.io/nexusflo24/courses/nhza" target="_blank" rel="noopener noreferrer"><Button size="lg" variant="outline" className="border-primary-foreground/30 bg-primary-foreground text-primary">Join the Program</Button></a>
         </div>
       </div>
     </section>
