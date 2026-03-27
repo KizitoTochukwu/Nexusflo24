@@ -129,7 +129,7 @@ const Academy = () =>
       <div className="container max-w-2xl">
         <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground mb-4">Ready to Level Up Your Marketing?</h2>
         <p className="text-primary-foreground/80 mb-6">Join thousands of marketers learning AI automation with NexusFlo24 Academy.</p>
-        <Button size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">Join Academy Now</Button>
+        <a href="https://nas.io/nexusflo24" target="_blank" rel="noopener noreferrer"><Button size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">Join Academy Now</Button></a>
       </div>
     </section>
   </Layout>;
