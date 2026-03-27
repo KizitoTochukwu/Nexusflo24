@@ -225,6 +225,31 @@ const Index = () => {
       </div>
     </section>
 
+    {/* Why We Created NexusFlo24 */}
+    <section className="py-20 md:py-28 bg-surface">
+      <div className="container">
+        <div className="mx-auto mb-12 max-w-2xl text-center">
+          <span className="text-sm font-semibold uppercase tracking-widest text-accent">Our Story</span>
+          <h2 className="mt-2 text-3xl font-bold md:text-4xl">Why We Created NexusFlo24</h2>
+          <p className="mt-4 text-muted-foreground">
+            Hear directly from our team about the mission behind the platform.
+          </p>
+        </div>
+        <div className="mx-auto max-w-4xl overflow-hidden rounded-xl shadow-card">
+          <div className="aspect-video">
+            <iframe
+              className="h-full w-full"
+              src="https://www.youtube.com/embed/814S7T-Kcqw?si=c65o6TQcWfseAFAU"
+              title="Why We Created NexusFlo24"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
     {/* How it works */}
     <section className="bg-surface py-20 md:py-28">
       <div className="container">
