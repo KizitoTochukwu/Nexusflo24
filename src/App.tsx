@@ -49,6 +49,7 @@ import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
 import DashboardMessages from "./pages/dashboard/DashboardMessages";
+import EmbedForm from "./pages/EmbedForm";
 import PublicBooking from "./pages/PublicBooking";
 import RescheduleBooking from "./pages/RescheduleBooking";
 import HowCapture from "./pages/HowCapture";
