@@ -98,7 +98,7 @@ window.addEventListener("message",function(e){
           <Code className="mr-1.5 h-4 w-4" /> Embed Form
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Embed Lead Capture Form</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -118,7 +118,7 @@ window.addEventListener("message",function(e){
                 return (
                   <label
                     key={opt.value}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors cursor-pointer ${
+                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors cursor-pointer ${
                       checked
                         ? "border-primary bg-primary/5 font-medium"
                         : "border-border hover:border-primary/40"
@@ -138,7 +138,7 @@ window.addEventListener("message",function(e){
           </div>
 
           {/* Config row */}
-          <div className="grid gap-2 grid-cols-2">
+          <div className="space-y-2">
             <div>
               <Label className="text-xs">Lead Source</Label>
               <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. homepage" className="mt-1 h-9 text-xs" />
