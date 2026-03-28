@@ -40,18 +40,18 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, capturedLead } = await req.json();
+    const { messages, capturedLead, humanHandoff } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     // If frontend sends captured lead data, store it
     if (capturedLead?.email) {
       try {
-        const adminClient = createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-        );
-        // Find the first workspace (platform default) for chatbot leads
         const { data: ws } = await adminClient.from("workspaces").select("id, owner_user_id").limit(1).single();
         if (ws) {
           await adminClient.from("leads").insert({
@@ -67,6 +67,28 @@ serve(async (req) => {
         }
       } catch (err) {
         console.warn("Failed to capture chatbot lead:", err);
+      }
+    }
+
+    // Human handoff: create a notification for the workspace owner
+    if (humanHandoff) {
+      try {
+        const { data: ws } = await adminClient.from("workspaces").select("id, owner_user_id").limit(1).single();
+        if (ws) {
+          await adminClient.from("notifications").insert({
+            workspace_id: ws.id,
+            user_id: ws.owner_user_id,
+            title: "🙋 Human Agent Requested",
+            body: humanHandoff.name
+              ? `${humanHandoff.name} (${humanHandoff.email || "no email"}) wants to speak with a team member.`
+              : "A visitor requested to speak with a human agent via the chatbot.",
+            type: "human_handoff",
+            meta: { name: humanHandoff.name || null, email: humanHandoff.email || null },
+          });
+          console.log("Human handoff notification created");
+        }
+      } catch (err) {
+        console.warn("Failed to create handoff notification:", err);
       }
     }
 
