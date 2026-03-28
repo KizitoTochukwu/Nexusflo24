@@ -17,7 +17,8 @@ import {
   getYearlyTotal,
   getYearlySavings,
 } from "@/lib/stripe/plans";
-import { PLAN_CREDITS, CREDIT_PACKS } from "@/lib/stripe/creditPacks";
+import { PLAN_CREDITS } from "@/lib/stripe/creditPacks";
+import CreditPackCards from "@/components/pricing/CreditPackCards";
 import { toast } from "sonner";
 
 interface PlanFeatureGroup {
