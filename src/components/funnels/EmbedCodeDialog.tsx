@@ -138,47 +138,24 @@ window.addEventListener("message",function(e){
           </div>
 
           {/* Config row */}
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 grid-cols-2">
             <div>
               <Label className="text-xs">Lead Source</Label>
-              <Input
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                placeholder="e.g. homepage, landing-page"
-                className="mt-1"
-              />
+              <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. homepage" className="mt-1 h-9 text-xs" />
             </div>
             <div>
-              <Label className="text-xs">Tags (comma separated)</Label>
-              <Input
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="e.g. website, organic"
-                className="mt-1"
-              />
+              <Label className="text-xs">Tags</Label>
+              <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. website, organic" className="mt-1 h-9 text-xs" />
             </div>
             <div>
               <Label className="text-xs">Button Text</Label>
-              <Input
-                value={buttonText}
-                onChange={(e) => setButtonText(e.target.value)}
-                className="mt-1"
-              />
+              <Input value={buttonText} onChange={(e) => setButtonText(e.target.value)} className="mt-1 h-9 text-xs" />
             </div>
             <div>
               <Label className="text-xs">Accent Color</Label>
-              <div className="mt-1 flex items-center gap-2">
-                <input
-                  type="color"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="h-10 w-10 cursor-pointer rounded border p-0.5"
-                />
-                <Input
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="flex-1"
-                />
+              <div className="mt-1 flex items-center gap-1.5">
+                <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="h-9 w-9 cursor-pointer rounded border p-0.5 shrink-0" />
+                <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="flex-1 h-9 text-xs" />
               </div>
             </div>
           </div>
