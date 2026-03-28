@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, FileText, Upload, Loader2 } from "lucide-react";
 import BlogContentEditor from "@/components/admin/BlogContentEditor";
 import { format } from "date-fns";
 
@@ -58,6 +58,34 @@ const AdminBlogManager = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyPost);
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast({ title: "Invalid file type", description: "Only JPG, PNG, GIF, and WebP allowed.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 5 MB.", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("blog-assets").upload(path, file);
+    if (error) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("blog-assets").getPublicUrl(path);
+    setForm((f) => ({ ...f, image_url: urlData.publicUrl }));
+    toast({ title: "Image uploaded" });
+    setUploading(false);
+  };
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["admin-blog-posts"],
@@ -200,8 +228,17 @@ const AdminBlogManager = () => {
                   <Textarea value={form.excerpt} onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))} placeholder="Short description..." rows={2} />
                 </div>
                 <div>
-                  <Label>Image URL</Label>
-                  <Input value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="https://..." />
+                  <Label>Cover Image</Label>
+                  <div className="flex gap-2">
+                    <Input value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="https://... or upload" className="flex-1" />
+                    <Button type="button" variant="outline" size="icon" className="shrink-0" disabled={uploading} onClick={() => document.getElementById("blog-image-upload")?.click()}>
+                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    </Button>
+                    <input id="blog-image-upload" type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
+                  </div>
+                  {form.image_url && (
+                    <img src={form.image_url} alt="Preview" className="mt-2 rounded-md max-h-32 object-cover border border-border" />
+                  )}
                 </div>
                 <div>
                   <Label>Author</Label>
