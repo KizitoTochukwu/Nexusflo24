@@ -244,7 +244,7 @@ const Pricing = () => {
         </div>
       </section>
 
-      <CreditPackCards />
+      
 
       {/* Pricing Cards */}
       <section className="pb-20">
