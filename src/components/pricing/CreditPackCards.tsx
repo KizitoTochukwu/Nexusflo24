@@ -65,7 +65,7 @@ export default function CreditPackCards() {
   return (
     <section className="bg-muted/40 py-12">
       <div className="container">
-        <h2 className="mb-2 text-center text-2xl font-bold text-primary-foreground">
+        <h2 className="mb-2 text-center text-2xl font-bold text-foreground">
           Need More Credits?
         </h2>
         <p className="mx-auto mb-6 max-w-md text-center text-foreground/70">
