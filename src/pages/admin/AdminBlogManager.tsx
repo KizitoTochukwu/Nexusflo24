@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, FileText } from "lucide-react";
+import BlogContentEditor from "@/components/admin/BlogContentEditor";
 import { format } from "date-fns";
 
 type BlogPost = {
@@ -207,8 +208,8 @@ const AdminBlogManager = () => {
                   <Input value={form.author} onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>Content (Markdown)</Label>
-                  <Textarea value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} placeholder="Write your article content here..." rows={12} className="font-mono text-sm" />
+                  <Label>Content</Label>
+                  <BlogContentEditor value={form.content} onChange={(v) => setForm((f) => ({ ...f, content: v }))} />
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
