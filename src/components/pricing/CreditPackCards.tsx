@@ -68,7 +68,7 @@ export default function CreditPackCards() {
         <h2 className="mb-2 text-center text-2xl font-bold text-primary-foreground">
           Need More Credits?
         </h2>
-        <p className="mx-auto mb-6 max-w-md text-center text-primary-foreground/70">
+        <p className="mx-auto mb-6 max-w-md text-center text-foreground/70">
           Purchase additional credit packs anytime — no subscription change required.
         </p>
 
