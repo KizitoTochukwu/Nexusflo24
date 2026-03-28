@@ -11,10 +11,10 @@
 
 | Plan | Monthly Price ID | Yearly Price ID |
 |------|-----------------|-----------------|
-| Starter ($15/mo · $144/yr) | `price_1T9bcOCvKm9Paj6GxlTolt4h` | `price_1T9bvNCvKm9Paj6GhL3wIoV5` |
-| Plus ($39/mo · $374.40/yr) | `price_1T9bcnCvKm9Paj6GpHVLemoS` | `price_1T9bvvCvKm9Paj6G7cu39HN7` |
-| Pro ($79/mo · $758.40/yr) | `price_1T9bdICvKm9Paj6GJAwLkNMW` | `price_1T9bwOCvKm9Paj6GuvLk2302` |
-| Enterprise ($199/mo · $1,910.40/yr) | `price_1T9bdnCvKm9Paj6GslqdiDIe` | `price_1T9bwrCvKm9Paj6GvFJKQrSl` |
+| Starter ($15/mo · $144/yr) | `price_1T9mXPE524oup9rkk8iIwV9V` | `price_1T9mYOE524oup9rkkZdWRQFx` |
+| Plus ($39/mo · $374.40/yr) | `price_1T9marE524oup9rkld15YfyQ` | `price_1T9mbVE524oup9rkVF3I4II2` |
+| Pro ($79/mo · $758.40/yr) | `price_1T9mcBE524oup9rkNpX4MfLj` | `price_1T9mdJE524oup9rkt4IgzlT6` |
+| Enterprise ($199/mo · $1,910.40/yr) | `price_1T9mf7E524oup9rkAFzF9Yae` | `price_1T9mfeE524oup9rk66YsGrWs` |
 
 Yearly pricing = Monthly × 12 × 0.8 (20% discount).
 
