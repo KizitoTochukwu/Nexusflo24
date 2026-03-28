@@ -163,6 +163,24 @@ const ChatbotWidget = () => {
               }),
             }).catch(() => {});
           }
+          // Send human handoff notification
+          if (pendingHandoff && !handoffTriggered) {
+            setHandoffTriggered(true);
+            fetch(CHAT_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({
+                messages: [{ role: "user", content: "ping" }],
+                humanHandoff: {
+                  name: pendingLead?.name || null,
+                  email: pendingLead?.email || null,
+                },
+              }),
+            }).catch(() => {});
+          }
         },
         onError: (err) => {
           setMessages((prev) => [...prev, { role: "assistant", content: `Sorry, I ran into an issue: ${err}` }]);
