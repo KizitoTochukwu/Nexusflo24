@@ -27,7 +27,14 @@ Important links:
 LEAD CAPTURE RULES:
 When a visitor provides their name AND email address in conversation, respond normally but also include a special hidden tag at the very end of your message in this exact format:
 [LEAD_CAPTURED:name=Their Name;email=their@email.com]
-This tag will be processed by the system and hidden from the user. Only include it when BOTH name and email are explicitly provided by the visitor.`;
+This tag will be processed by the system and hidden from the user. Only include it when BOTH name and email are explicitly provided by the visitor.
+
+HUMAN HANDOFF RULES:
+When a visitor asks to speak with a human, connect with a real person, talk to support, or similar requests:
+1. Respond helpfully — mention they can book a demo at /contact or reach the team directly.
+2. If the visitor already provided their name and email earlier in the conversation, proactively offer that a team member will reach out.
+3. Always include the hidden tag [HUMAN_HANDOFF] at the very end of your message (after any LEAD_CAPTURED tag if present).
+4. Encourage them to share their name and email if they haven't already, so the team can follow up.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
