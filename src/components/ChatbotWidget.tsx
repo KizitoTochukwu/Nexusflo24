@@ -9,7 +9,7 @@ type Message = { role: "assistant" | "user"; content: string };
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexus-ai-chat`;
 
 const LEAD_TAG_RE = /\[LEAD_CAPTURED:name=([^;]+);email=([^\]]+)\]/;
-
+const HANDOFF_TAG_RE = /\[HUMAN_HANDOFF\]/;
 async function streamChat({
   messages,
   capturedLead,
