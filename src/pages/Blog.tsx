@@ -1,27 +1,34 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Calendar, Clock, ArrowRight, User } from "lucide-react";
+import { Search, Calendar, Clock, ArrowRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const categoriesList = ["All", "AI Marketing", "Automation Tips", "SaaS Growth", "Digital Business"];
-
-const posts = [
-  { slug: "ai-marketing-trends-2026", title: "Top 10 AI Marketing Trends Shaping 2026", excerpt: "Discover the cutting-edge AI technologies transforming digital marketing this year and how to leverage them for your business.", category: "AI Marketing", date: "Feb 18, 2026", readTime: "6 min", author: "NexusFlo24 Team", featured: true, image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop" },
-  { slug: "automate-lead-follow-up", title: "How to Automate Your Lead Follow-Up in 5 Steps", excerpt: "Stop losing leads. Learn how to set up automated follow-up sequences that convert prospects into customers.", category: "Automation Tips", date: "Feb 15, 2026", readTime: "4 min", author: "NexusFlo24 Team", featured: false, image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=225&fit=crop" },
-  { slug: "saas-growth-playbook", title: "The SaaS Growth Playbook for 2026", excerpt: "Proven strategies for scaling your SaaS business using AI-powered marketing automation and data-driven decisions.", category: "SaaS Growth", date: "Feb 12, 2026", readTime: "8 min", author: "NexusFlo24 Team", featured: false, image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=225&fit=crop" },
-  { slug: "whatsapp-marketing-guide", title: "The Ultimate WhatsApp Marketing Guide", excerpt: "WhatsApp has 2B+ users. Learn how to use it as a powerful marketing channel with automation and personalization.", category: "Digital Business", date: "Feb 10, 2026", readTime: "5 min", author: "NexusFlo24 Team", featured: false, image: "https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=400&h=225&fit=crop" },
-  { slug: "crm-automation-mistakes", title: "5 CRM Automation Mistakes That Cost You Leads", excerpt: "Avoid these common pitfalls when setting up your CRM automation and keep your pipeline healthy.", category: "Automation Tips", date: "Feb 8, 2026", readTime: "4 min", author: "NexusFlo24 Team", featured: false, image: "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=400&h=225&fit=crop" },
-  { slug: "ai-email-personalization", title: "AI-Powered Email Personalization That Actually Works", excerpt: "Generic emails are dead. Here's how AI can craft hyper-personalized emails that get opened and clicked.", category: "AI Marketing", date: "Feb 5, 2026", readTime: "5 min", author: "NexusFlo24 Team", featured: false, image: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=400&h=225&fit=crop" },
-];
 
 const Blog = () => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [email, setEmail] = useState("");
+
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ["blog-posts-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("blog_posts")
+        .select("*")
+        .eq("status", "published")
+        .order("published_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const filtered = posts.filter((p) => {
     const matchCat = activeCategory === "All" || p.category === activeCategory;
@@ -63,50 +70,67 @@ const Blog = () => {
 
       <section className="py-12 md:py-20">
         <div className="container max-w-6xl">
-          {/* Featured */}
-          {featured && (
-            <Link to={`/blog/${featured.slug}`} className="block mb-12 group">
-              <Card className="overflow-hidden shadow-card hover:shadow-card-hover transition-shadow md:flex">
-                <div className="md:w-1/2 h-56 md:h-auto overflow-hidden">
-                  <img src={featured.image} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
-                </div>
-                <CardContent className="md:w-1/2 p-6 md:p-8 flex flex-col justify-center">
-                  <Badge className="w-fit mb-3 bg-accent/10 text-accent border-accent/30">{featured.category}</Badge>
-                  <h2 className="text-xl md:text-2xl font-bold mb-3 group-hover:text-accent transition-colors">{featured.title}</h2>
-                  <p className="text-muted-foreground text-sm mb-4">{featured.excerpt}</p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {featured.date}</span>
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {featured.readTime}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
-
-          {/* Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {rest.map((p) => (
-              <Link key={p.slug} to={`/blog/${p.slug}`} className="group">
-                <Card className="overflow-hidden shadow-card hover:shadow-card-hover transition-shadow h-full">
-                  <div className="h-44 overflow-hidden">
-                    <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
-                  </div>
+          {isLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="h-44 w-full" />
                   <CardContent className="pt-4 space-y-2">
-                    <Badge variant="outline" className="text-xs">{p.category}</Badge>
-                    <h3 className="font-semibold leading-tight group-hover:text-accent transition-colors">{p.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{p.excerpt}</p>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {p.date}</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {p.readTime}</span>
-                    </div>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
                   </CardContent>
                 </Card>
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Featured */}
+              {featured && (
+                <Link to={`/blog/${featured.slug}`} className="block mb-12 group">
+                  <Card className="overflow-hidden shadow-card hover:shadow-card-hover transition-shadow md:flex">
+                    <div className="md:w-1/2 h-56 md:h-auto overflow-hidden">
+                      <img src={featured.image_url || ""} alt={featured.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                    </div>
+                    <CardContent className="md:w-1/2 p-6 md:p-8 flex flex-col justify-center">
+                      <Badge className="w-fit mb-3 bg-accent/10 text-accent border-accent/30">{featured.category}</Badge>
+                      <h2 className="text-xl md:text-2xl font-bold mb-3 group-hover:text-accent transition-colors">{featured.title}</h2>
+                      <p className="text-muted-foreground text-sm mb-4">{featured.excerpt}</p>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {featured.published_at ? new Date(featured.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}</span>
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {featured.read_time}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
 
-          {filtered.length === 0 && (
-            <p className="text-center text-muted-foreground py-12">No articles found. Try a different search or category.</p>
+              {/* Grid */}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {rest.map((p) => (
+                  <Link key={p.slug} to={`/blog/${p.slug}`} className="group">
+                    <Card className="overflow-hidden shadow-card hover:shadow-card-hover transition-shadow h-full">
+                      <div className="h-44 overflow-hidden">
+                        <img src={p.image_url || ""} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                      </div>
+                      <CardContent className="pt-4 space-y-2">
+                        <Badge variant="outline" className="text-xs">{p.category}</Badge>
+                        <h3 className="font-semibold leading-tight group-hover:text-accent transition-colors">{p.title}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{p.excerpt}</p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {p.published_at ? new Date(p.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}</span>
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {p.read_time}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+
+              {filtered.length === 0 && (
+                <p className="text-center text-muted-foreground py-12">No articles found. Try a different search or category.</p>
+              )}
+            </>
           )}
         </div>
       </section>

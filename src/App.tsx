@@ -111,6 +111,7 @@ const App = () => (
                 <Route path="settings/*" element={<DashboardSettings />} />
                 <Route element={<AdminGuard />}>
                   <Route path="admin" element={<AdminDashboard />} />
+                  <Route path="admin/blog" element={<AdminBlogManager />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>

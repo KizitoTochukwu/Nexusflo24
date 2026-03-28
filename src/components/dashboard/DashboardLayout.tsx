@@ -43,7 +43,10 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
   { icon: ShoppingBag, label: "Templates", to: `/dashboard/${workspaceId}/templates` },
   { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
-  ...(isAdmin ? [{ icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` }] : [])];
+  ...(isAdmin ? [
+    { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
+    { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
+  ] : [])];
 
 
   const handleLogout = async () => {
