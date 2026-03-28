@@ -118,7 +118,7 @@ window.addEventListener("message",function(e){
                 return (
                   <label
                     key={opt.value}
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors cursor-pointer ${
+                    className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition-colors cursor-pointer ${
                       checked
                         ? "border-primary bg-primary/5 font-medium"
                         : "border-border hover:border-primary/40"
