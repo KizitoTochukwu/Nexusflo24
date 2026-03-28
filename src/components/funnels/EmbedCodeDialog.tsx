@@ -98,7 +98,7 @@ window.addEventListener("message",function(e){
           <Code className="mr-1.5 h-4 w-4" /> Embed Form
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Embed Lead Capture Form</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -111,7 +111,7 @@ window.addEventListener("message",function(e){
           <div>
             <Label className="text-sm font-medium">Form Fields</Label>
             <p className="text-xs text-muted-foreground mb-2">Select the fields to include in your form.</p>
-            <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="mt-1 grid grid-cols-2 gap-1.5">
               {FIELD_OPTIONS.map((opt) => {
                 const isEmail = opt.value === "email";
                 const checked = finalFields.includes(opt.value);
