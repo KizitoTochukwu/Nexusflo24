@@ -96,19 +96,19 @@ export default function CreditPackCards() {
                 </p>
 
                 {/* Quantity stepper */}
-                <div className="flex items-center gap-3 rounded-lg border bg-background px-2 py-1">
+                <div className="flex items-center gap-3 rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 px-2 py-1">
                   <button
                     type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-primary-foreground/60 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground disabled:opacity-40"
                     onClick={() => updateQty(ch, -1)}
                     disabled={qty <= 1 || isLoading}
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="w-6 text-center text-sm font-semibold">{qty}</span>
+                  <span className="w-6 text-center text-sm font-semibold text-primary-foreground">{qty}</span>
                   <button
                     type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-primary-foreground/60 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground disabled:opacity-40"
                     onClick={() => updateQty(ch, 1)}
                     disabled={qty >= 10 || isLoading}
                   >
