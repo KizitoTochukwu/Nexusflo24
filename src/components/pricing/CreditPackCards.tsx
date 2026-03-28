@@ -83,16 +83,16 @@ export default function CreditPackCards() {
                 key={ch}
                 className="group relative flex flex-col items-center gap-3 rounded-2xl border border-primary/20 bg-primary p-6 text-center shadow-card transition-all duration-300 hover:border-accent hover:shadow-gold"
               >
-                <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider">
+                <Badge variant="outline" className="border-primary-foreground/30 text-xs font-bold uppercase tracking-wider text-primary-foreground">
                   {ch}
                 </Badge>
 
-                <p className="text-3xl font-extrabold">{pack.credits.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">{pack.unit} per pack</p>
+                <p className="text-3xl font-extrabold text-primary-foreground">{pack.credits.toLocaleString()}</p>
+                <p className="text-sm text-primary-foreground/60">{pack.unit} per pack</p>
 
                 <p className="text-lg font-semibold text-accent">
                   ${pack.price}
-                  <span className="text-sm font-normal text-muted-foreground"> / pack</span>
+                  <span className="text-sm font-normal text-primary-foreground/60"> / pack</span>
                 </p>
 
                 {/* Quantity stepper */}
