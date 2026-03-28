@@ -337,6 +337,32 @@ const Pricing = () => {
         </div>
       </section>
 
+      {/* Credit Top-Up Packs */}
+      <section className="py-8">
+        <div className="container">
+          <h2 className="mb-2 text-center text-2xl font-bold">Need More Credits?</h2>
+          <p className="mx-auto mb-8 max-w-md text-center text-muted-foreground">
+            Purchase additional credit packs anytime — no subscription change required.
+          </p>
+          <div className="mx-auto grid max-w-2xl gap-4 sm:grid-cols-3">
+            {(["email", "sms", "whatsapp"] as const).map((ch) => {
+              const pack = CREDIT_PACKS[ch];
+              return (
+                <div
+                  key={ch}
+                  className="flex flex-col items-center gap-2 rounded-xl border bg-card p-6 text-center shadow-card"
+                >
+                  <Badge variant="outline" className="text-xs uppercase">{ch}</Badge>
+                  <p className="text-2xl font-bold">{pack.credits.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">{pack.unit}</p>
+                  <p className="text-lg font-semibold text-accent">${pack.price}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Feature Comparison */}
       <section className="bg-surface py-20">
         <div className="container">
@@ -364,32 +390,6 @@ const Pricing = () => {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      </section>
-
-      {/* Credit Top-Up Packs */}
-      <section className="py-8">
-        <div className="container">
-          <h2 className="mb-2 text-center text-2xl font-bold">Need More Credits?</h2>
-          <p className="mx-auto mb-8 max-w-md text-center text-muted-foreground">
-            Purchase additional credit packs anytime — no subscription change required.
-          </p>
-          <div className="mx-auto grid max-w-2xl gap-4 sm:grid-cols-3">
-            {(["email", "sms", "whatsapp"] as const).map((ch) => {
-              const pack = CREDIT_PACKS[ch];
-              return (
-                <div
-                  key={ch}
-                  className="flex flex-col items-center gap-2 rounded-xl border bg-card p-6 text-center shadow-card"
-                >
-                  <Badge variant="outline" className="text-xs uppercase">{ch}</Badge>
-                  <p className="text-2xl font-bold">{pack.credits.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">{pack.unit}</p>
-                  <p className="text-lg font-semibold text-accent">${pack.price}</p>
-                </div>
-              );
-            })}
           </div>
         </div>
       </section>
