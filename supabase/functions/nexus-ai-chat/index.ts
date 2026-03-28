@@ -134,10 +134,9 @@ serve(async (req) => {
               .single();
 
             if (profile?.phone) {
-              const visitorInfo = humanHandoff.name
-                ? `${humanHandoff.name} (${humanHandoff.email || "no email"})`
-                : humanHandoff.email || "A visitor";
-              const alertMsg = `🙋 Human Agent Requested\n${visitorInfo} wants to speak with a team member.\nContinue here: https://nexusflo24.lovable.app/dashboard/messages`;
+              const visitorName = humanHandoff.name || "Unknown";
+              const email = humanHandoff.email || "not provided";
+              const alertMsg = `🚨🚨 URGENT: Human Agent Needed! 🚨🚨\n\nA website visitor wants to speak with your team RIGHT NOW.\n\n👤 Visitor: ${visitorName}\n📧 Email: ${email}\n\n⚡ Respond quickly — don't lose this lead!\n\n👉 Continue the conversation here:\nhttps://nexusflo24.lovable.app/dashboard/messages`;
 
               const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
               const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
