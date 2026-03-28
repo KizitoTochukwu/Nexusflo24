@@ -159,10 +159,6 @@ window.addEventListener("message",function(e){
               </div>
             </div>
           </div>
-                />
-              </div>
-            </div>
-          </div>
 
           {/* Code snippets */}
           <Tabs defaultValue="iframe">
