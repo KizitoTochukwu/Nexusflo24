@@ -24,8 +24,8 @@ export const PLANS = {
   enterprise: {
     name: "Enterprise",
     monthlyPrice: 199,
-    monthlyPriceId: "price_1T9bdnCvKm9Paj6GslqdiDIe",
-    yearlyPriceId: "price_1T9bwrCvKm9Paj6GvFJKQrSl",
+    monthlyPriceId: "price_1T9mf7E524oup9rkAFzF9Yae",
+    yearlyPriceId: "price_1T9mfeE524oup9rk66YsGrWs",
   },
 } as const;
 
