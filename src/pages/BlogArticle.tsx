@@ -81,7 +81,7 @@ const BlogArticle = () => {
         {/* Content */}
         <div
           className="prose prose-slate max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-accent hover:prose-a:text-accent/80"
-          dangerouslySetInnerHTML={{ __html: article.content }}
+          dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br />') }}
         />
 
         {/* Share */}
