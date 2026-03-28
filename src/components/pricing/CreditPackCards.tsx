@@ -81,7 +81,7 @@ export default function CreditPackCards() {
             return (
               <div
                 key={ch}
-                className="group relative flex flex-col items-center gap-3 rounded-2xl border border-border/50 bg-card p-6 text-center shadow-card transition-all duration-300 hover:border-accent hover:shadow-gold"
+                className="group relative flex flex-col items-center gap-3 rounded-2xl border border-primary/20 bg-primary p-6 text-center shadow-card transition-all duration-300 hover:border-accent hover:shadow-gold"
               >
                 <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider">
                   {ch}
