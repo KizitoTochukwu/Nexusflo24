@@ -228,8 +228,17 @@ const AdminBlogManager = () => {
                   <Textarea value={form.excerpt} onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))} placeholder="Short description..." rows={2} />
                 </div>
                 <div>
-                  <Label>Image URL</Label>
-                  <Input value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="https://..." />
+                  <Label>Cover Image</Label>
+                  <div className="flex gap-2">
+                    <Input value={form.image_url} onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))} placeholder="https://... or upload" className="flex-1" />
+                    <Button type="button" variant="outline" size="icon" className="shrink-0" disabled={uploading} onClick={() => document.getElementById("blog-image-upload")?.click()}>
+                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    </Button>
+                    <input id="blog-image-upload" type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
+                  </div>
+                  {form.image_url && (
+                    <img src={form.image_url} alt="Preview" className="mt-2 rounded-md max-h-32 object-cover border border-border" />
+                  )}
                 </div>
                 <div>
                   <Label>Author</Label>
