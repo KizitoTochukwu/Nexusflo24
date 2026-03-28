@@ -81,34 +81,34 @@ export default function CreditPackCards() {
             return (
               <div
                 key={ch}
-                className="group relative flex flex-col items-center gap-3 rounded-2xl border border-border/50 bg-card p-6 text-center shadow-card transition-all duration-300 hover:border-accent hover:shadow-gold"
+                className="group relative flex flex-col items-center gap-3 rounded-2xl border border-primary/20 bg-primary p-6 text-center shadow-card transition-all duration-300 hover:border-accent hover:shadow-gold"
               >
-                <Badge variant="outline" className="text-xs font-bold uppercase tracking-wider">
+                <Badge variant="outline" className="border-primary-foreground/30 text-xs font-bold uppercase tracking-wider text-primary-foreground">
                   {ch}
                 </Badge>
 
-                <p className="text-3xl font-extrabold">{pack.credits.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">{pack.unit} per pack</p>
+                <p className="text-3xl font-extrabold text-primary-foreground">{pack.credits.toLocaleString()}</p>
+                <p className="text-sm text-primary-foreground/60">{pack.unit} per pack</p>
 
                 <p className="text-lg font-semibold text-accent">
                   ${pack.price}
-                  <span className="text-sm font-normal text-muted-foreground"> / pack</span>
+                  <span className="text-sm font-normal text-primary-foreground/60"> / pack</span>
                 </p>
 
                 {/* Quantity stepper */}
-                <div className="flex items-center gap-3 rounded-lg border bg-background px-2 py-1">
+                <div className="flex items-center gap-3 rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 px-2 py-1">
                   <button
                     type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-primary-foreground/60 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground disabled:opacity-40"
                     onClick={() => updateQty(ch, -1)}
                     disabled={qty <= 1 || isLoading}
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="w-6 text-center text-sm font-semibold">{qty}</span>
+                  <span className="w-6 text-center text-sm font-semibold text-primary-foreground">{qty}</span>
                   <button
                     type="button"
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-primary-foreground/60 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground disabled:opacity-40"
                     onClick={() => updateQty(ch, 1)}
                     disabled={qty >= 10 || isLoading}
                   >
@@ -117,7 +117,7 @@ export default function CreditPackCards() {
                 </div>
 
                 {qty > 1 && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-primary-foreground/60">
                     {(pack.credits * qty).toLocaleString()} {pack.unit} · ${pack.price * qty}
                   </p>
                 )}
