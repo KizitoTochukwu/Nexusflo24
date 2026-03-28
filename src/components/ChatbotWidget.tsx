@@ -116,6 +116,7 @@ const ChatbotWidget = () => {
 
     let assistantSoFar = "";
     let pendingLead: { name: string; email: string } | null = null;
+    let pendingHandoff = false;
 
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
