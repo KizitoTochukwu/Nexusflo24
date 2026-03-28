@@ -111,14 +111,14 @@ window.addEventListener("message",function(e){
           <div>
             <Label className="text-sm font-medium">Form Fields</Label>
             <p className="text-xs text-muted-foreground mb-2">Select the fields to include in your form.</p>
-            <div className="mt-1 grid grid-cols-2 gap-1.5">
+            <div className="mt-1 flex flex-col gap-1.5">
               {FIELD_OPTIONS.map((opt) => {
                 const isEmail = opt.value === "email";
                 const checked = finalFields.includes(opt.value);
                 return (
                   <label
                     key={opt.value}
-                    className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition-colors cursor-pointer ${
+                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors cursor-pointer ${
                       checked
                         ? "border-primary bg-primary/5 font-medium"
                         : "border-border hover:border-primary/40"
