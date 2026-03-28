@@ -12,8 +12,8 @@ export const PLANS = {
   plus: {
     name: "Plus",
     monthlyPrice: 39,
-    monthlyPriceId: "price_1T9bcnCvKm9Paj6GpHVLemoS",
-    yearlyPriceId: "price_1T9bvvCvKm9Paj6G7cu39HN7",
+    monthlyPriceId: "price_1T9marE524oup9rkld15YfyQ",
+    yearlyPriceId: "price_1T9mbVE524oup9rkVF3I4II2",
   },
   pro: {
     name: "Pro",
