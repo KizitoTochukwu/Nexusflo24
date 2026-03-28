@@ -43,6 +43,7 @@ import Disclaimer from "./pages/legal/Disclaimer";
 import AntiSpamPolicy from "./pages/legal/AntiSpamPolicy";
 import GdprRights from "./pages/legal/GdprRights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminBlogManager from "./pages/admin/AdminBlogManager";
 import AdminGuard from "./components/admin/AdminGuard";
 import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
