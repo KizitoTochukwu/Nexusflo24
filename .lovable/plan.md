@@ -1,85 +1,41 @@
 
 
-## Plan: Database-Backed Blog CMS (Admin Only)
+## Plan: WhatsApp/SMS Alert to Admin on Human Handoff
 
 ### Overview
-Create a `blog_posts` table and an admin-only Blog Manager page inside the dashboard. Public Blog and BlogArticle pages will fetch from the database instead of hardcoded arrays.
+When a visitor requests a human agent in the chatbot, send an SMS or WhatsApp message to the workspace owner's phone number (from their profile) with a link to the dashboard messages page. This extends the existing handoff flow in the `nexus-ai-chat` edge function.
 
-### 1. Database Migration — `blog_posts` table
+### How It Works
 
-```sql
-CREATE TABLE public.blog_posts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
-  slug text NOT NULL UNIQUE,
-  excerpt text NOT NULL DEFAULT '',
-  content text NOT NULL DEFAULT '',
-  category text NOT NULL DEFAULT 'General',
-  image_url text,
-  author text NOT NULL DEFAULT 'NexusFlo24 Team',
-  read_time text NOT NULL DEFAULT '5 min',
-  status text NOT NULL DEFAULT 'draft',  -- draft | published
-  featured boolean NOT NULL DEFAULT false,
-  published_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+1. Visitor asks to speak to a human in the chatbot
+2. The existing `[HUMAN_HANDOFF]` tag is detected
+3. The edge function already creates an in-app notification
+4. **New**: After creating the notification, the function will:
+   - Look up the workspace owner's phone number from `profiles.phone`
+   - If a phone number exists, attempt to send a WhatsApp message first (via internal call to `whatsapp-send`), falling back to SMS (via `sms-send`) if WhatsApp is not configured
+   - The message includes the visitor's name/email and a link to the dashboard messages page
 
-ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
+### Changes
 
--- Anyone can read published posts
-CREATE POLICY "Public can view published posts"
-  ON public.blog_posts FOR SELECT TO public
-  USING (status = 'published');
+**File: `supabase/functions/nexus-ai-chat/index.ts`**
 
--- Admins have full access
-CREATE POLICY "Admins can manage blog_posts"
-  ON public.blog_posts FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'admin'))
-  WITH CHECK (has_role(auth.uid(), 'admin'));
+After the existing notification insert block (line ~88), add:
+
+- Query the owner's profile for their `phone` number
+- Build a message like: `"🙋 Human agent requested! [Visitor Name] ([email]) wants to chat. Continue the conversation: {published_url}/dashboard/messages"`
+- Call `whatsapp-send` edge function internally (using service role key). If it fails or WhatsApp is not configured, fall back to `sms-send`
+- Wrap in try/catch so failures don't break the main chat flow
+
+### Message Content
+```
+🙋 Human Agent Requested
+{Name} ({email}) wants to speak with a team member.
+Continue here: https://nexusflo24.lovable.app/dashboard/messages
 ```
 
-Seed the 6 existing hardcoded posts as published rows so no content is lost.
-
-### 2. New Page — `src/pages/admin/AdminBlogManager.tsx`
-
-Admin-only page at `/dashboard/:workspaceId/admin/blog` with:
-- Table listing all posts (title, status, category, date) with search/filter
-- "New Post" button opens a create/edit form
-- Form fields: title, slug (auto-generated from title), category, excerpt, image URL, content (textarea with markdown), featured toggle, status (draft/published)
-- Edit and Delete actions per row
-- Uses `useIsAdmin` hook for protection (already handled by `AdminGuard` route)
-
-### 3. Route Registration — `src/App.tsx`
-
-Add route inside the existing `AdminGuard` block:
-```
-<Route path="admin/blog" element={<AdminBlogManager />} />
-```
-
-### 4. Admin Sidebar Link
-
-Add a "Blog Manager" link in the admin section of the dashboard sidebar (visible only to admins).
-
-### 5. Refactor Public Pages
-
-**`src/pages/Blog.tsx`** — Replace hardcoded `posts` array with a query:
-```ts
-supabase.from("blog_posts").select("*").eq("status", "published").order("published_at", { ascending: false })
-```
-
-**`src/pages/BlogArticle.tsx`** — Replace hardcoded `articles` map with a query by slug:
-```ts
-supabase.from("blog_posts").select("*").eq("slug", slug).eq("status", "published").single()
-```
-
-Both pages get loading/empty states.
-
-### Files Modified
-- **New**: `src/pages/admin/AdminBlogManager.tsx`
-- **Edit**: `src/App.tsx` (add route)
-- **Edit**: `src/pages/Blog.tsx` (fetch from DB)
-- **Edit**: `src/pages/BlogArticle.tsx` (fetch from DB)
-- **Edit**: `src/components/dashboard/DashboardLayout.tsx` (add sidebar link for admins)
-- **Migration**: Create `blog_posts` table + seed data
+### Technical Details
+- Uses internal `fetch()` to call the existing `whatsapp-send` and `sms-send` edge functions with the service role key (same pattern used by `execute-automation`)
+- No new secrets needed — reuses existing channel credentials resolved per workspace
+- No database changes required — `profiles.phone` already exists
+- Graceful degradation: if no phone number is set, only the in-app notification fires (current behavior)
 
