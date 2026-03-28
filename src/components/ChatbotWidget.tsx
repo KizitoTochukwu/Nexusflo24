@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X, Send, Zap, Loader2, UserPlus } from "lucide-react";
+import { MessageCircle, X, Send, Zap, Loader2, UserPlus, PhoneCall } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -9,7 +9,7 @@ type Message = { role: "assistant" | "user"; content: string };
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexus-ai-chat`;
 
 const LEAD_TAG_RE = /\[LEAD_CAPTURED:name=([^;]+);email=([^\]]+)\]/;
-
+const HANDOFF_TAG_RE = /\[HUMAN_HANDOFF\]/;
 async function streamChat({
   messages,
   capturedLead,
@@ -89,7 +89,7 @@ async function streamChat({
 }
 
 function stripLeadTag(text: string) {
-  return text.replace(LEAD_TAG_RE, "").trim();
+  return text.replace(LEAD_TAG_RE, "").replace(HANDOFF_TAG_RE, "").trim();
 }
 
 const ChatbotWidget = () => {
@@ -100,6 +100,7 @@ const ChatbotWidget = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [leadCaptured, setLeadCaptured] = useState(false);
+  const [handoffTriggered, setHandoffTriggered] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -116,6 +117,7 @@ const ChatbotWidget = () => {
 
     let assistantSoFar = "";
     let pendingLead: { name: string; email: string } | null = null;
+    let pendingHandoff = false;
 
     const upsertAssistant = (chunk: string) => {
       assistantSoFar += chunk;
@@ -124,6 +126,10 @@ const ChatbotWidget = () => {
       const match = assistantSoFar.match(LEAD_TAG_RE);
       if (match && !leadCaptured) {
         pendingLead = { name: match[1], email: match[2] };
+      }
+
+      if (HANDOFF_TAG_RE.test(assistantSoFar) && !handoffTriggered) {
+        pendingHandoff = true;
       }
 
       const displayText = stripLeadTag(assistantSoFar);
@@ -158,6 +164,24 @@ const ChatbotWidget = () => {
               }),
             }).catch(() => {});
           }
+          // Send human handoff notification
+          if (pendingHandoff && !handoffTriggered) {
+            setHandoffTriggered(true);
+            fetch(CHAT_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({
+                messages: [{ role: "user", content: "ping" }],
+                humanHandoff: {
+                  name: pendingLead?.name || null,
+                  email: pendingLead?.email || null,
+                },
+              }),
+            }).catch(() => {});
+          }
         },
         onError: (err) => {
           setMessages((prev) => [...prev, { role: "assistant", content: `Sorry, I ran into an issue: ${err}` }]);
@@ -168,7 +192,7 @@ const ChatbotWidget = () => {
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, leadCaptured]);
+  }, [input, isLoading, messages, leadCaptured, handoffTriggered]);
 
   return (
     <>
@@ -227,6 +251,20 @@ const ChatbotWidget = () => {
             )}
             <div ref={messagesEnd} />
           </div>
+
+          {handoffTriggered && (
+            <div className="border-t px-3 py-2">
+              <a
+                href="/contact"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <PhoneCall className="h-4 w-4" />
+                Contact Our Team
+              </a>
+            </div>
+          )}
 
           <div className="border-t p-3">
             <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex gap-2">

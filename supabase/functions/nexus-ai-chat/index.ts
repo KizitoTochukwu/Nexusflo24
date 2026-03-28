@@ -27,24 +27,31 @@ Important links:
 LEAD CAPTURE RULES:
 When a visitor provides their name AND email address in conversation, respond normally but also include a special hidden tag at the very end of your message in this exact format:
 [LEAD_CAPTURED:name=Their Name;email=their@email.com]
-This tag will be processed by the system and hidden from the user. Only include it when BOTH name and email are explicitly provided by the visitor.`;
+This tag will be processed by the system and hidden from the user. Only include it when BOTH name and email are explicitly provided by the visitor.
+
+HUMAN HANDOFF RULES:
+When a visitor asks to speak with a human, connect with a real person, talk to support, or similar requests:
+1. Respond helpfully — mention they can book a demo at /contact or reach the team directly.
+2. If the visitor already provided their name and email earlier in the conversation, proactively offer that a team member will reach out.
+3. Always include the hidden tag [HUMAN_HANDOFF] at the very end of your message (after any LEAD_CAPTURED tag if present).
+4. Encourage them to share their name and email if they haven't already, so the team can follow up.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, capturedLead } = await req.json();
+    const { messages, capturedLead, humanHandoff } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     // If frontend sends captured lead data, store it
     if (capturedLead?.email) {
       try {
-        const adminClient = createClient(
-          Deno.env.get("SUPABASE_URL")!,
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-        );
-        // Find the first workspace (platform default) for chatbot leads
         const { data: ws } = await adminClient.from("workspaces").select("id, owner_user_id").limit(1).single();
         if (ws) {
           await adminClient.from("leads").insert({
@@ -60,6 +67,28 @@ serve(async (req) => {
         }
       } catch (err) {
         console.warn("Failed to capture chatbot lead:", err);
+      }
+    }
+
+    // Human handoff: create a notification for the workspace owner
+    if (humanHandoff) {
+      try {
+        const { data: ws } = await adminClient.from("workspaces").select("id, owner_user_id").limit(1).single();
+        if (ws) {
+          await adminClient.from("notifications").insert({
+            workspace_id: ws.id,
+            user_id: ws.owner_user_id,
+            title: "🙋 Human Agent Requested",
+            body: humanHandoff.name
+              ? `${humanHandoff.name} (${humanHandoff.email || "no email"}) wants to speak with a team member.`
+              : "A visitor requested to speak with a human agent via the chatbot.",
+            type: "human_handoff",
+            meta: { name: humanHandoff.name || null, email: humanHandoff.email || null },
+          });
+          console.log("Human handoff notification created");
+        }
+      } catch (err) {
+        console.warn("Failed to create handoff notification:", err);
       }
     }
 
