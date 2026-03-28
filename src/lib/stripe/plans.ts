@@ -6,26 +6,26 @@ export const PLANS = {
   starter: {
     name: "Starter",
     monthlyPrice: 15,
-    monthlyPriceId: "price_1T9bcOCvKm9Paj6GxlTolt4h",
-    yearlyPriceId: "price_1T9bvNCvKm9Paj6GhL3wIoV5",
+    monthlyPriceId: "price_1T9mXPE524oup9rkk8iIwV9V",
+    yearlyPriceId: "price_1T9mYOE524oup9rkkZdWRQFx",
   },
   plus: {
     name: "Plus",
     monthlyPrice: 39,
-    monthlyPriceId: "price_1T9bcnCvKm9Paj6GpHVLemoS",
-    yearlyPriceId: "price_1T9bvvCvKm9Paj6G7cu39HN7",
+    monthlyPriceId: "price_1T9marE524oup9rkld15YfyQ",
+    yearlyPriceId: "price_1T9mbVE524oup9rkVF3I4II2",
   },
   pro: {
     name: "Pro",
     monthlyPrice: 79,
-    monthlyPriceId: "price_1T9bdICvKm9Paj6GJAwLkNMW",
-    yearlyPriceId: "price_1T9bwOCvKm9Paj6GuvLk2302",
+    monthlyPriceId: "price_1T9mcBE524oup9rkNpX4MfLj",
+    yearlyPriceId: "price_1T9mdJE524oup9rkt4IgzlT6",
   },
   enterprise: {
     name: "Enterprise",
     monthlyPrice: 199,
-    monthlyPriceId: "price_1T9bdnCvKm9Paj6GslqdiDIe",
-    yearlyPriceId: "price_1T9bwrCvKm9Paj6GvFJKQrSl",
+    monthlyPriceId: "price_1T9mf7E524oup9rkAFzF9Yae",
+    yearlyPriceId: "price_1T9mfeE524oup9rk66YsGrWs",
   },
 } as const;
 

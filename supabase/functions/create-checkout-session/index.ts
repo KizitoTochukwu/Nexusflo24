@@ -9,14 +9,14 @@ const corsHeaders = {
 
 // Allowed price IDs (public Stripe identifiers, safe to hardcode)
 const ALLOWED_PRICE_IDS = new Set([
-  "price_1T9bcOCvKm9Paj6GxlTolt4h", // Starter Monthly
-  "price_1T9bvNCvKm9Paj6GhL3wIoV5", // Starter Yearly
-  "price_1T9bcnCvKm9Paj6GpHVLemoS", // Plus Monthly
-  "price_1T9bvvCvKm9Paj6G7cu39HN7", // Plus Yearly
-  "price_1T9bdICvKm9Paj6GJAwLkNMW", // Pro Monthly
-  "price_1T9bwOCvKm9Paj6GuvLk2302", // Pro Yearly
-  "price_1T9bdnCvKm9Paj6GslqdiDIe", // Enterprise Monthly
-  "price_1T9bwrCvKm9Paj6GvFJKQrSl", // Enterprise Yearly
+  "price_1T9mXPE524oup9rkk8iIwV9V", // Starter Monthly
+  "price_1T9mYOE524oup9rkkZdWRQFx", // Starter Yearly
+  "price_1T9marE524oup9rkld15YfyQ", // Plus Monthly
+  "price_1T9mbVE524oup9rkVF3I4II2", // Plus Yearly
+  "price_1T9mcBE524oup9rkNpX4MfLj", // Pro Monthly
+  "price_1T9mdJE524oup9rkt4IgzlT6", // Pro Yearly
+  "price_1T9mf7E524oup9rkAFzF9Yae", // Enterprise Monthly
+  "price_1T9mfeE524oup9rk66YsGrWs", // Enterprise Yearly
 ]);
 
 serve(async (req) => {
