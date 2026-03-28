@@ -127,6 +127,10 @@ const ChatbotWidget = () => {
         pendingLead = { name: match[1], email: match[2] };
       }
 
+      if (HANDOFF_TAG_RE.test(assistantSoFar) && !handoffTriggered) {
+        pendingHandoff = true;
+      }
+
       const displayText = stripLeadTag(assistantSoFar);
 
       setMessages((prev) => {
