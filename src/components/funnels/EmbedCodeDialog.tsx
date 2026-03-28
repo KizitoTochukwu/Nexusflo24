@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Code, Copy, Check } from "lucide-react";
 
@@ -109,20 +110,30 @@ window.addEventListener("message",function(e){
           {/* Field selector */}
           <div>
             <Label className="text-sm font-medium">Form Fields</Label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {FIELD_OPTIONS.map((opt) => (
-                <Badge
-                  key={opt.value}
-                  variant={finalFields.includes(opt.value) ? "default" : "outline"}
-                  className={`cursor-pointer transition-colors ${
-                    opt.value === "email" ? "opacity-80 cursor-not-allowed" : "hover:bg-accent"
-                  }`}
-                  onClick={() => opt.value !== "email" && toggleField(opt.value)}
-                >
-                  {opt.label}
-                  {opt.value === "email" && " (required)"}
-                </Badge>
-              ))}
+            <p className="text-xs text-muted-foreground mb-2">Select the fields to include in your form.</p>
+            <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {FIELD_OPTIONS.map((opt) => {
+                const isEmail = opt.value === "email";
+                const checked = finalFields.includes(opt.value);
+                return (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors cursor-pointer ${
+                      checked
+                        ? "border-primary bg-primary/5 font-medium"
+                        : "border-border hover:border-primary/40"
+                    } ${isEmail ? "opacity-80 cursor-not-allowed" : ""}`}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      disabled={isEmail}
+                      onCheckedChange={() => !isEmail && toggleField(opt.value)}
+                    />
+                    <span>{opt.label}</span>
+                    {isEmail && <span className="text-[10px] text-muted-foreground ml-auto">required</span>}
+                  </label>
+                );
+              })}
             </div>
           </div>
 
