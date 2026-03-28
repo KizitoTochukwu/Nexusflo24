@@ -88,8 +88,12 @@ async function streamChat({
   onDone();
 }
 
+// Strip completed tags and hide partial tags that are still streaming in
 function stripLeadTag(text: string) {
-  return text.replace(LEAD_TAG_RE, "").replace(HANDOFF_TAG_RE, "").trim();
+  let cleaned = text.replace(LEAD_TAG_RE, "").replace(HANDOFF_TAG_RE, "");
+  // Hide partial tags at the end of the stream (e.g. "[HUMAN_HAN" or "[LEAD_CAPT")
+  cleaned = cleaned.replace(/\[(?:HUMAN_HANDOFF|LEAD_CAPTURED[:;=\w@.]*)?$/i, "");
+  return cleaned.trim();
 }
 
 const ChatbotWidget = () => {
