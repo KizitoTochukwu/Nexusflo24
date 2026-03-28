@@ -63,7 +63,7 @@ export default function CreditPackCards() {
   };
 
   return (
-    <section className="-mt-4 pb-8">
+    <section className="bg-muted/40 py-12">
       <div className="container">
         <h2 className="mb-2 text-center text-2xl font-bold text-primary-foreground">
           Need More Credits?
