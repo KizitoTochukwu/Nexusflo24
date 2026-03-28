@@ -70,7 +70,7 @@ serve(async (req) => {
       }
     }
 
-    // Human handoff: create a notification for the workspace owner
+    // Human handoff: create a notification for the workspace owner + WhatsApp/SMS alert
     if (humanHandoff) {
       try {
         const { data: ws } = await adminClient.from("workspaces").select("id, owner_user_id").limit(1).single();
@@ -86,6 +86,81 @@ serve(async (req) => {
             meta: { name: humanHandoff.name || null, email: humanHandoff.email || null },
           });
           console.log("Human handoff notification created");
+
+          // Send WhatsApp/SMS alert to workspace owner
+          try {
+            const { data: profile } = await adminClient
+              .from("profiles")
+              .select("phone, full_name")
+              .eq("id", ws.owner_user_id)
+              .single();
+
+            if (profile?.phone) {
+              const visitorInfo = humanHandoff.name
+                ? `${humanHandoff.name} (${humanHandoff.email || "no email"})`
+                : humanHandoff.email || "A visitor";
+              const alertMsg = `🙋 Human Agent Requested\n${visitorInfo} wants to speak with a team member.\nContinue here: https://nexusflo24.lovable.app/dashboard/messages`;
+
+              const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+              const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+              // Try WhatsApp first
+              let sent = false;
+              try {
+                const waRes = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${serviceRoleKey}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    workspaceId: ws.id,
+                    to: profile.phone,
+                    body: alertMsg,
+                    skipCredits: true,
+                  }),
+                });
+                if (waRes.ok) {
+                  sent = true;
+                  console.log("Human handoff WhatsApp alert sent to", profile.phone);
+                } else {
+                  console.warn("WhatsApp alert failed, will try SMS:", await waRes.text());
+                }
+              } catch (waErr) {
+                console.warn("WhatsApp alert error, will try SMS:", waErr);
+              }
+
+              // Fallback to SMS
+              if (!sent) {
+                try {
+                  const smsRes = await fetch(`${supabaseUrl}/functions/v1/sms-send`, {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${serviceRoleKey}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      workspaceId: ws.id,
+                      to: profile.phone,
+                      message: alertMsg,
+                      skipCredits: true,
+                    }),
+                  });
+                  if (smsRes.ok) {
+                    console.log("Human handoff SMS alert sent to", profile.phone);
+                  } else {
+                    console.warn("SMS alert also failed:", await smsRes.text());
+                  }
+                } catch (smsErr) {
+                  console.warn("SMS alert error:", smsErr);
+                }
+              }
+            } else {
+              console.log("No phone number on owner profile, skipping WhatsApp/SMS alert");
+            }
+          } catch (alertErr) {
+            console.warn("Failed to send WhatsApp/SMS handoff alert:", alertErr);
+          }
         }
       } catch (err) {
         console.warn("Failed to create handoff notification:", err);
