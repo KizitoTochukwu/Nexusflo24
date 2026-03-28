@@ -111,7 +111,7 @@ window.addEventListener("message",function(e){
           <div>
             <Label className="text-sm font-medium">Form Fields</Label>
             <p className="text-xs text-muted-foreground mb-2">Select the fields to include in your form.</p>
-            <div className="mt-1 flex flex-col gap-1.5">
+            <div className="mt-1 grid grid-cols-2 gap-1.5">
               {FIELD_OPTIONS.map((opt) => {
                 const isEmail = opt.value === "email";
                 const checked = finalFields.includes(opt.value);
