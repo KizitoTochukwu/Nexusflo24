@@ -369,7 +369,7 @@ const Pricing = () => {
       </section>
 
       {/* Credit Top-Up Packs */}
-      <section className="py-16">
+      <section className="py-8">
         <div className="container">
           <h2 className="mb-2 text-center text-2xl font-bold">Need More Credits?</h2>
           <p className="mx-auto mb-8 max-w-md text-center text-muted-foreground">
