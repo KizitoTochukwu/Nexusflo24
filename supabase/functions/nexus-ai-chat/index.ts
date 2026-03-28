@@ -36,11 +36,50 @@ When a visitor asks to speak with a human, connect with a real person, talk to s
 3. Always include the hidden tag [HUMAN_HANDOFF] at the very end of your message (after any LEAD_CAPTURED tag if present).
 4. Encourage them to share their name and email if they haven't already, so the team can follow up.`;
 
+async function resolveWorkspace(
+  adminClient: ReturnType<typeof createClient>,
+  workspaceId?: string | null,
+) {
+  if (workspaceId) {
+    const { data } = await adminClient
+      .from("workspaces")
+      .select("id, owner_user_id")
+      .eq("id", workspaceId)
+      .maybeSingle();
+
+    if (data) return data;
+    console.warn("Requested workspace not found for nexus-ai-chat:", workspaceId);
+  }
+
+  const ownerUserId = Deno.env.get("OWNER_USER_ID");
+  if (ownerUserId) {
+    const { data } = await adminClient
+      .from("workspaces")
+      .select("id, owner_user_id")
+      .eq("owner_user_id", ownerUserId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (data) return data;
+    console.warn("No workspace found for OWNER_USER_ID in nexus-ai-chat");
+  }
+
+  const { data } = await adminClient
+    .from("workspaces")
+    .select("id, owner_user_id")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return data;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, capturedLead, humanHandoff } = await req.json();
+    const { messages, capturedLead, humanHandoff, workspaceId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -48,22 +87,22 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    const workspace = await resolveWorkspace(adminClient, workspaceId);
 
     // If frontend sends captured lead data, store it
     if (capturedLead?.email) {
       try {
-        const { data: ws } = await adminClient.from("workspaces").select("id, owner_user_id").limit(1).single();
-        if (ws) {
+        if (workspace) {
           await adminClient.from("leads").insert({
-            workspace_id: ws.id,
-            user_id: ws.owner_user_id,
+            workspace_id: workspace.id,
+            user_id: workspace.owner_user_id,
             full_name: capturedLead.name || null,
             email: capturedLead.email,
             source: "AI Chatbot",
             status: "New",
             notes: `Captured via Nexus AI chatbot conversation. Intent: ${capturedLead.intent || "General inquiry"}`,
           });
-          console.log("Chatbot lead captured:", capturedLead.email);
+          console.log("Chatbot lead captured:", capturedLead.email, "workspace:", workspace.id);
         }
       } catch (err) {
         console.warn("Failed to capture chatbot lead:", err);
@@ -73,11 +112,10 @@ serve(async (req) => {
     // Human handoff: create a notification for the workspace owner + WhatsApp/SMS alert
     if (humanHandoff) {
       try {
-        const { data: ws } = await adminClient.from("workspaces").select("id, owner_user_id").limit(1).single();
-        if (ws) {
+        if (workspace) {
           await adminClient.from("notifications").insert({
-            workspace_id: ws.id,
-            user_id: ws.owner_user_id,
+            workspace_id: workspace.id,
+            user_id: workspace.owner_user_id,
             title: "🙋 Human Agent Requested",
             body: humanHandoff.name
               ? `${humanHandoff.name} (${humanHandoff.email || "no email"}) wants to speak with a team member.`
@@ -85,14 +123,14 @@ serve(async (req) => {
             type: "human_handoff",
             meta: { name: humanHandoff.name || null, email: humanHandoff.email || null },
           });
-          console.log("Human handoff notification created");
+          console.log("Human handoff notification created for workspace", workspace.id);
 
           // Send WhatsApp/SMS alert to workspace owner
           try {
             const { data: profile } = await adminClient
               .from("profiles")
               .select("phone, full_name")
-              .eq("id", ws.owner_user_id)
+              .eq("id", workspace.owner_user_id)
               .single();
 
             if (profile?.phone) {
@@ -114,7 +152,7 @@ serve(async (req) => {
                     "Content-Type": "application/json",
                   },
                   body: JSON.stringify({
-                    workspaceId: ws.id,
+                    workspaceId: workspace.id,
                     to: profile.phone,
                     body: alertMsg,
                     skipCredits: true,
@@ -140,7 +178,7 @@ serve(async (req) => {
                       "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                      workspaceId: ws.id,
+                    workspaceId: workspace.id,
                       to: profile.phone,
                       message: alertMsg,
                       skipCredits: true,
@@ -156,7 +194,7 @@ serve(async (req) => {
                 }
               }
             } else {
-              console.log("No phone number on owner profile, skipping WhatsApp/SMS alert");
+              console.log("No phone number on owner profile, skipping WhatsApp/SMS alert for workspace", workspace.id);
             }
           } catch (alertErr) {
             console.warn("Failed to send WhatsApp/SMS handoff alert:", alertErr);
