@@ -18,8 +18,8 @@ export const PLANS = {
   pro: {
     name: "Pro",
     monthlyPrice: 79,
-    monthlyPriceId: "price_1T9bdICvKm9Paj6GJAwLkNMW",
-    yearlyPriceId: "price_1T9bwOCvKm9Paj6GuvLk2302",
+    monthlyPriceId: "price_1T9mcBE524oup9rkNpX4MfLj",
+    yearlyPriceId: "price_1T9mdJE524oup9rkt4IgzlT6",
   },
   enterprise: {
     name: "Enterprise",
