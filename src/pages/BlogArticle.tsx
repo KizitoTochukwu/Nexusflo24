@@ -79,13 +79,10 @@ const BlogArticle = () => {
         </div>
 
         {/* Content */}
-        <div className="prose prose-slate max-w-none">
-          {article.content.split("\n\n").map((block: string, i: number) => {
-            if (block.startsWith("## ")) return <h2 key={i} className="text-xl font-bold mt-8 mb-3">{block.replace("## ", "")}</h2>;
-            if (block === "---") return <hr key={i} className="my-8 border-border" />;
-            return <p key={i} className="text-muted-foreground leading-relaxed mb-4">{block}</p>;
-          })}
-        </div>
+        <div
+          className="prose prose-slate max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-accent hover:prose-a:text-accent/80"
+          dangerouslySetInnerHTML={{ __html: article.content }}
+        />
 
         {/* Share */}
         <div className="border-t mt-12 pt-6 flex items-center gap-3">
