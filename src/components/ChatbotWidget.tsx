@@ -252,6 +252,20 @@ const ChatbotWidget = () => {
             <div ref={messagesEnd} />
           </div>
 
+          {handoffTriggered && (
+            <div className="border-t px-3 py-2">
+              <a
+                href="/contact"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <PhoneCall className="h-4 w-4" />
+                Contact Our Team
+              </a>
+            </div>
+          )}
+
           <div className="border-t p-3">
             <form onSubmit={(e) => { e.preventDefault(); send(); }} className="flex gap-2">
               <Input
