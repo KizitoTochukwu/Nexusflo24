@@ -138,7 +138,7 @@ window.addEventListener("message",function(e){
           </div>
 
           {/* Config row */}
-          <div className="grid gap-2 grid-cols-2">
+          <div className="space-y-2">
             <div>
               <Label className="text-xs">Lead Source</Label>
               <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="e.g. homepage" className="mt-1 h-9 text-xs" />
