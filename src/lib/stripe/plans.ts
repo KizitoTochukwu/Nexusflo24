@@ -6,8 +6,8 @@ export const PLANS = {
   starter: {
     name: "Starter",
     monthlyPrice: 15,
-    monthlyPriceId: "price_1T9bcOCvKm9Paj6GxlTolt4h",
-    yearlyPriceId: "price_1T9bvNCvKm9Paj6GhL3wIoV5",
+    monthlyPriceId: "price_1T9mXPE524oup9rkk8iIwV9V",
+    yearlyPriceId: "price_1T9mYOE524oup9rkkZdWRQFx",
   },
   plus: {
     name: "Plus",
