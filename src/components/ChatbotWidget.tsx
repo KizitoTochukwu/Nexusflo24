@@ -89,7 +89,7 @@ async function streamChat({
 }
 
 function stripLeadTag(text: string) {
-  return text.replace(LEAD_TAG_RE, "").trim();
+  return text.replace(LEAD_TAG_RE, "").replace(HANDOFF_TAG_RE, "").trim();
 }
 
 const ChatbotWidget = () => {
