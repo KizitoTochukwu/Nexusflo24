@@ -8,7 +8,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, ShoppingBag } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, ShoppingBag, FileText } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
@@ -43,7 +43,10 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
   { icon: ShoppingBag, label: "Templates", to: `/dashboard/${workspaceId}/templates` },
   { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
-  ...(isAdmin ? [{ icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` }] : [])];
+  ...(isAdmin ? [
+    { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
+    { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
+  ] : [])];
 
 
   const handleLogout = async () => {
