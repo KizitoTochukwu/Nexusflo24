@@ -151,6 +151,7 @@ export default function FunnelDetailPage() {
           <Button variant="outline" size="sm" onClick={toggleStatus}>
             {funnel.status === "active" ? <><Pause className="mr-1.5 h-4 w-4" /> Pause</> : <><Play className="mr-1.5 h-4 w-4" /> Activate</>}
           </Button>
+          <EmbedCodeDialog workspaceId={workspaceId} funnelName={funnel.name} />
           <Button variant="outline" size="sm" onClick={() => window.open(`/f/${funnel.slug || editSlug}`, "_blank")}>
             <ExternalLink className="mr-1.5 h-4 w-4" /> Preview
           </Button>

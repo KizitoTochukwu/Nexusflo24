@@ -121,6 +121,9 @@ const App = () => (
               <Route path="/f/:slug" element={<PublicFunnel />} />
               <Route path="/f/:slug/:stepPath" element={<PublicFunnel />} />
 
+              {/* Embeddable form */}
+              <Route path="/embed/form" element={<EmbedForm />} />
+
               {/* Public booking routes */}
               <Route path="/book/:slug" element={<PublicBooking />} />
               <Route path="/reschedule/:token" element={<RescheduleBooking />} />
