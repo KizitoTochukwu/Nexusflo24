@@ -117,7 +117,7 @@ export default function CreditPackCards() {
                 </div>
 
                 {qty > 1 && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-primary-foreground/60">
                     {(pack.credits * qty).toLocaleString()} {pack.unit} · ${pack.price * qty}
                   </p>
                 )}
