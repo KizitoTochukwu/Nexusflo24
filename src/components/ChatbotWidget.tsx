@@ -13,12 +13,14 @@ const HANDOFF_TAG_RE = /\[HUMAN_HANDOFF\]/;
 async function streamChat({
   messages,
   capturedLead,
+  workspaceId,
   onDelta,
   onDone,
   onError,
 }: {
   messages: Message[];
   capturedLead?: { name: string; email: string; intent?: string } | null;
+  workspaceId?: string | null;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;
@@ -29,7 +31,7 @@ async function streamChat({
       "Content-Type": "application/json",
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
     },
-    body: JSON.stringify({ messages, capturedLead }),
+    body: JSON.stringify({ messages, capturedLead, workspaceId }),
   });
 
   if (!resp.ok) {
@@ -96,6 +98,12 @@ function stripLeadTag(text: string) {
   return cleaned.trim();
 }
 
+function getCurrentWorkspaceId() {
+  if (typeof window === "undefined") return null;
+  const match = window.location.pathname.match(/^\/dashboard\/([^/]+)/);
+  return match?.[1] ?? null;
+}
+
 const ChatbotWidget = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -106,6 +114,7 @@ const ChatbotWidget = () => {
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [handoffTriggered, setHandoffTriggered] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
+  const workspaceId = getCurrentWorkspaceId();
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -150,6 +159,7 @@ const ChatbotWidget = () => {
     try {
       await streamChat({
         messages: allMessages,
+        workspaceId,
         onDelta: (chunk) => upsertAssistant(chunk),
         onDone: () => {
           setIsLoading(false);
@@ -165,6 +175,7 @@ const ChatbotWidget = () => {
               body: JSON.stringify({
                 messages: [{ role: "user", content: "ping" }],
                 capturedLead: { ...pendingLead, intent: "Chatbot conversation" },
+                workspaceId,
               }),
             }).catch(() => {});
           }
@@ -179,6 +190,7 @@ const ChatbotWidget = () => {
               },
               body: JSON.stringify({
                 messages: [{ role: "user", content: "ping" }],
+                workspaceId,
                 humanHandoff: {
                   name: pendingLead?.name || null,
                   email: pendingLead?.email || null,
@@ -196,7 +208,7 @@ const ChatbotWidget = () => {
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, leadCaptured, handoffTriggered]);
+  }, [input, isLoading, messages, leadCaptured, handoffTriggered, workspaceId]);
 
   return (
     <>
