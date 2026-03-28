@@ -339,6 +339,8 @@ const Pricing = () => {
         </div>
       </section>
 
+      <CreditPackCards />
+
       {/* Feature Comparison */}
       <section className="bg-surface py-20">
         <div className="container">
