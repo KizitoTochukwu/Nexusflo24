@@ -23,6 +23,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import FunnelStepEditor from "@/components/funnels/FunnelStepEditor";
 import StepPageBuilder from "@/components/funnels/builder/StepPageBuilder";
 import type { Block } from "@/components/funnels/builder/blockTypes";
+import EmbedCodeDialog from "@/components/funnels/EmbedCodeDialog";
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -150,6 +151,7 @@ export default function FunnelDetailPage() {
           <Button variant="outline" size="sm" onClick={toggleStatus}>
             {funnel.status === "active" ? <><Pause className="mr-1.5 h-4 w-4" /> Pause</> : <><Play className="mr-1.5 h-4 w-4" /> Activate</>}
           </Button>
+          <EmbedCodeDialog workspaceId={workspaceId} funnelName={funnel.name} />
           <Button variant="outline" size="sm" onClick={() => window.open(`/f/${funnel.slug || editSlug}`, "_blank")}>
             <ExternalLink className="mr-1.5 h-4 w-4" /> Preview
           </Button>
