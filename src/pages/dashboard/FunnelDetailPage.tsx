@@ -23,6 +23,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import FunnelStepEditor from "@/components/funnels/FunnelStepEditor";
 import StepPageBuilder from "@/components/funnels/builder/StepPageBuilder";
 import type { Block } from "@/components/funnels/builder/blockTypes";
+import EmbedCodeDialog from "@/components/funnels/EmbedCodeDialog";
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 border-emerald-200",
