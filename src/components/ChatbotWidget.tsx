@@ -191,7 +191,7 @@ const ChatbotWidget = () => {
       setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, leadCaptured]);
+  }, [input, isLoading, messages, leadCaptured, handoffTriggered]);
 
   return (
     <>
