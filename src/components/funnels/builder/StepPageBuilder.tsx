@@ -48,9 +48,11 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
   }, [initialBlocks]);
 
   const pushHistory = useCallback((next: Block[]) => {
-    setHistory((prev) => [...prev.slice(0, historyIndex + 1), next]);
-    setHistoryIndex((prev) => prev + 1);
-  }, [historyIndex]);
+    setHistoryIndex((prevIdx) => {
+      setHistory((prevHist) => [...prevHist.slice(0, prevIdx + 1), next]);
+      return prevIdx + 1;
+    });
+  }, []);
 
   const updateBlocks = useCallback((next: Block[]) => {
     setBlocks(next);
