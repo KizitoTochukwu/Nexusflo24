@@ -178,7 +178,11 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
             <Button variant="ghost" size="sm" onClick={undo} disabled={historyIndex === 0}>
               <Undo2 className="mr-1 h-4 w-4" /> Undo
             </Button>
-            <Button size="sm" onClick={() => onSave(blocks)} disabled={saving}>
+            <span className="text-[10px] text-muted-foreground/60 mr-2">Auto-saves</span>
+            <Button size="sm" onClick={() => {
+              if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+              onSave(blocks);
+            }} disabled={saving}>
               <Save className="mr-1 h-4 w-4" /> {saving ? "Saving…" : "Save"}
             </Button>
           </div>
