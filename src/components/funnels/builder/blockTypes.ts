@@ -206,6 +206,7 @@ export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = 
   embed: { label: "Embed", icon: "Code" },
   video: { label: "Video", icon: "Video" },
   booking: { label: "Booking", icon: "CalendarDays" },
+  cards: { label: "Cards", icon: "LayoutGrid" },
 };
 
 export function createBlock(type: BlockType): Block {
