@@ -22,8 +22,58 @@ import {
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import FunnelStepEditor from "@/components/funnels/FunnelStepEditor";
 import StepPageBuilder from "@/components/funnels/builder/StepPageBuilder";
-import type { Block } from "@/components/funnels/builder/blockTypes";
+import { type Block, generateId, BLOCK_DEFAULTS, type BlockType } from "@/components/funnels/builder/blockTypes";
 import EmbedCodeDialog from "@/components/funnels/EmbedCodeDialog";
+
+/** Ensure every block from the DB has an id and full default props merged in */
+function normalizeBlocks(raw: unknown): Block[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((b: any) => {
+    const type: BlockType = b.type && b.type in BLOCK_DEFAULTS ? b.type : "text";
+    const defaults = BLOCK_DEFAULTS[type]();
+    // Map AI-generated prop names to builder prop names
+    const incomingProps = b.props || {};
+    const mappedProps: Record<string, unknown> = {};
+
+    if (type === "heading") {
+      mappedProps.text = incomingProps.text || incomingProps.content || defaults.text;
+      mappedProps.level = incomingProps.level || defaults.level;
+      mappedProps.align = incomingProps.align || defaults.align;
+    } else if (type === "text") {
+      mappedProps.text = incomingProps.content || incomingProps.text || defaults.text;
+      mappedProps.align = incomingProps.align || defaults.align;
+    } else if (type === "button") {
+      mappedProps.text = incomingProps.label || incomingProps.text || defaults.text;
+      mappedProps.link = incomingProps.url || incomingProps.link || defaults.link;
+      mappedProps.align = incomingProps.align || defaults.align;
+      if (incomingProps.variant === "secondary") {
+        mappedProps.backgroundColor = "#0B1F3B";
+      } else if (incomingProps.variant === "outline") {
+        mappedProps.backgroundColor = "transparent";
+        mappedProps.textColor = "#D4AF37";
+      }
+    } else if (type === "form") {
+      mappedProps.fields = incomingProps.fields || defaults.fields;
+      mappedProps.buttonText = incomingProps.buttonText || defaults.buttonText;
+    } else if (type === "image") {
+      mappedProps.alt = incomingProps.alt || defaults.alt;
+      if (incomingProps.width === "medium") mappedProps.width = "60%";
+      else if (incomingProps.width === "small") mappedProps.width = "40%";
+    } else if (type === "spacer") {
+      const h = incomingProps.height;
+      if (h === "sm") mappedProps.height = "20px";
+      else if (h === "md") mappedProps.height = "40px";
+      else if (h === "lg") mappedProps.height = "60px";
+    }
+
+    return {
+      id: b.id || generateId(),
+      type,
+      props: { ...defaults, ...incomingProps, ...mappedProps },
+      children: b.children ? normalizeBlocks(b.children) : undefined,
+    };
+  });
+}
 
 const statusColors: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -189,7 +239,7 @@ export default function FunnelDetailPage() {
             const activeStep = steps.find((s) => s.id === editingStepId);
             if (!activeStep) return null;
             const stepLabel = `${STEP_TYPE_OPTIONS.find((o) => o.value === activeStep.step_type)?.label || activeStep.step_type} — Step ${activeStep.step_order + 1}`;
-            const initialBlocks = Array.isArray(activeStep.page_content?.blocks) ? activeStep.page_content.blocks as Block[] : [];
+            const initialBlocks = normalizeBlocks((activeStep.page_content as any)?.blocks);
             return (
               <div>
                 <div className="mb-2 flex items-center justify-between">
