@@ -101,8 +101,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("RAW AI RESPONSE:", JSON.stringify(data).substring(0, 2000));
-    const rawContent = data.choices?.[0]?.message?.content || (data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments);
+    const rawContent = data.choices?.[0]?.message?.content;
     if (!rawContent) {
       console.error("No content in response:", JSON.stringify(data));
       return new Response(
