@@ -231,14 +231,14 @@ function ColumnsProps({ p, update, type }: { p: Record<string, unknown>; update:
   const presets = type === "columns2"
     ? ["50/50", "60/40", "40/60", "70/30", "30/70"]
     : ["33/33/33", "50/25/25", "25/50/25", "25/25/50"];
-  const [useCustom, setUseCustom] = useState(!presets.includes((p.columnWidths as string) || presets[0]));
+  const useCustom = !presets.includes((p.columnWidths as string) || presets[0]);
   
   return (
     <>
       <Field label="Gap"><Input value={(p.gap as string) || "24px"} onChange={(e) => update("gap", e.target.value)} /></Field>
       <SwitchField label="Custom Widths" checked={useCustom} onChange={(v) => {
-        setUseCustom(v);
         if (!v) update("columnWidths", presets[0]);
+        else update("columnWidths", "custom");
       }} />
       {!useCustom ? (
         <Field label="Column Widths">
