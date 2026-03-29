@@ -171,6 +171,22 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     buttonText: "Book a Call",
     buttonColor: "#D4AF37",
   }),
+  cards: () => ({
+    columns: 3,
+    backgroundColor: "#f1f5f9",
+    cardBg: "#ffffff",
+    cardBorderRadius: "12px",
+    iconBg: "#fef3c7",
+    iconColor: "#d4af37",
+    titleColor: "#0B1F3B",
+    textColor: "#64748b",
+    gap: "24px",
+    items: [
+      { icon: "Layers", title: "Feature One", description: "Describe the first key feature or benefit." },
+      { icon: "Target", title: "Feature Two", description: "Describe the second key feature or benefit." },
+      { icon: "MessageSquare", title: "Feature Three", description: "Describe the third key feature or benefit." },
+    ],
+  }),
 };
 
 export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = {
