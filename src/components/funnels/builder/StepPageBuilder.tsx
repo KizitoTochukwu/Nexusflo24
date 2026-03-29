@@ -22,34 +22,49 @@ interface Props {
   onSave: (blocks: Block[]) => void;
   saving?: boolean;
   stepLabel?: string;
+  stepId?: string;
 }
 
-export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLabel }: Props) {
+export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLabel, stepId }: Props) {
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [history, setHistory] = useState<Block[][]>([initialBlocks]);
   const [historyIndex, setHistoryIndex] = useState(0);
-  const initialSignatureRef = useRef(JSON.stringify(initialBlocks));
+
+  // Track the step we're editing — only reset editor on actual step change
+  const currentStepIdRef = useRef(stepId);
   const onSaveRef = useRef(onSave);
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
 
   useEffect(() => {
     onSaveRef.current = onSave;
   }, [onSave]);
 
+  // Only reset editor state when switching to a DIFFERENT step
   useEffect(() => {
-    const nextSignature = JSON.stringify(initialBlocks);
-    if (nextSignature === initialSignatureRef.current) return;
-
-    initialSignatureRef.current = nextSignature;
+    if (stepId === currentStepIdRef.current) {
+      // Same step — this is a save echo or query refetch, ignore it
+      return;
+    }
+    // Truly different step — reset everything
+    currentStepIdRef.current = stepId;
     setBlocks(initialBlocks);
     setHistory([initialBlocks]);
     setHistoryIndex(0);
-    // Don't clear selection — user may still be editing
-  }, [initialBlocks]);
+    setSelectedId(null);
+  }, [stepId, initialBlocks]);
 
   const pushHistory = useCallback((next: Block[]) => {
     setHistoryIndex((prevIdx) => {
-      setHistory((prevHist) => [...prevHist.slice(0, prevIdx + 1), next]);
+      setHistory((prevHist) => {
+        // Prevent duplicate consecutive snapshots
+        const last = prevHist[prevIdx];
+        if (last && JSON.stringify(last) === JSON.stringify(next)) {
+          return prevHist;
+        }
+        return [...prevHist.slice(0, prevIdx + 1), next];
+      });
       return prevIdx + 1;
     });
   }, []);
@@ -74,7 +89,6 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
   // Add block — if a container is selected, add inside it; otherwise add at root
   const addBlock = (type: BlockType) => {
     const b = createBlock(type);
-    // Initialize children array for containers
     if (isContainer(type)) {
       b.children = [];
     }
@@ -93,7 +107,6 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
   };
 
   const moveBlock = (id: string, direction: "up" | "down") => {
-    // Find the block's sibling list and move within it
     const findAndMove = (list: Block[]): Block[] | null => {
       const idx = list.findIndex((b) => b.id === id);
       if (idx !== -1) {
@@ -138,18 +151,12 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
 
   // Auto-save: debounce 2s after any block change
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const blocksRef = useRef(blocks);
-  blocksRef.current = blocks;
-  const initialRef = useRef(initialBlocks);
 
   useEffect(() => {
-    // Skip auto-save on initial load or if blocks haven't changed
     if (historyIndex === 0) return;
 
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      // Update signature before saving so the returning data won't reset state
-      initialSignatureRef.current = JSON.stringify(blocksRef.current);
       onSaveRef.current(blocksRef.current);
     }, 2000);
 
@@ -163,10 +170,7 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     return () => {
       if (autoSaveTimer.current) {
         clearTimeout(autoSaveTimer.current);
-        // Only save if there were changes
-        if (blocksRef.current !== initialRef.current) {
-          onSaveRef.current(blocksRef.current);
-        }
+        onSaveRef.current(blocksRef.current);
       }
     };
   }, []);
@@ -216,7 +220,6 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
               onDelete={deleteBlock}
               onReorder={reorderBlock}
               onDropIntoContainer={(blockId, containerId, index) => {
-                // Move a block into a container
                 const block = findBlockById(blocks, blockId);
                 if (!block) return;
                 let next = deleteBlockInTree(blocks, blockId);
