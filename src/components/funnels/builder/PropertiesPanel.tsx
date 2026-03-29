@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import FunnelTextEditor from "./FunnelTextEditor";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Plus, Trash2, RotateCcw, Upload, Loader2 } from "lucide-react";
@@ -100,9 +100,17 @@ function AlignField({ value, onChange }: { value: string; onChange: (v: string) 
 
 function SwitchField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between text-xs">
+    <label className="flex items-center justify-between text-xs cursor-pointer select-none">
       <span>{label}</span>
-      <Switch checked={checked} onCheckedChange={onChange} />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${checked ? "bg-primary" : "bg-muted"}`}
+      >
+        <span className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-background shadow-sm transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
+      </button>
     </label>
   );
 }
@@ -493,11 +501,18 @@ function FormProps({ p, update }: { p: Record<string, unknown>; update: (k: stri
             const fields = (p.fields as string[]) || ["email"];
             const checked = fields.includes(f);
             return (
-              <label key={f} className="flex items-center gap-2 text-sm">
-                <Switch checked={checked} disabled={f === "email"} onCheckedChange={(v) => {
-                  const next = v ? [...fields, f] : fields.filter((x) => x !== f);
-                  update("fields", next);
-                }} />
+              <label key={f} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={f === "email"}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    const next = v ? [...fields, f] : fields.filter((x) => x !== f);
+                    update("fields", next);
+                  }}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
                 {f}{f === "email" && " (required)"}
               </label>
             );
