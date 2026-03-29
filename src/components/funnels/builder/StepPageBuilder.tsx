@@ -148,6 +148,8 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
 
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
+      // Update signature before saving so the returning data won't reset state
+      initialSignatureRef.current = JSON.stringify(blocksRef.current);
       onSaveRef.current(blocksRef.current);
     }, 2000);
 
