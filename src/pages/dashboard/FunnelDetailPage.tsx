@@ -22,6 +22,7 @@ import {
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import FunnelStepEditor from "@/components/funnels/FunnelStepEditor";
 import StepPageBuilder from "@/components/funnels/builder/StepPageBuilder";
+import { EditorErrorBoundary } from "@/components/funnels/builder/EditorErrorBoundary";
 import { type Block, generateId, BLOCK_DEFAULTS, type BlockType } from "@/components/funnels/builder/blockTypes";
 import EmbedCodeDialog from "@/components/funnels/EmbedCodeDialog";
 
