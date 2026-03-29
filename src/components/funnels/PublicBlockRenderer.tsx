@@ -351,6 +351,23 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       if (!bpId) return null;
       return <BookingButton props={p} bookingPageId={bpId} />;
     }
+    case "cards": {
+      const items = (p.items as { icon: string; title: string; description: string }[]) || [];
+      const cols = (p.columns as number) || 3;
+      return (
+        <div className={`grid gap-6 ${cols === 2 ? "sm:grid-cols-2" : cols === 3 ? "sm:grid-cols-2 lg:grid-cols-3" : ""}`}>
+          {items.map((item, i) => (
+            <div key={i} className="p-6 border shadow-sm" style={{ backgroundColor: (p.cardBg as string) || "#ffffff", borderRadius: (p.cardBorderRadius as string) || "12px" }}>
+              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold" style={{ backgroundColor: (p.iconBg as string) || "#fef3c7", color: (p.iconColor as string) || "#d4af37" }}>
+                {item.icon?.charAt(0) || "★"}
+              </div>
+              <h4 className="mb-2 text-lg font-bold" style={{ color: (p.titleColor as string) || "#0B1F3B" }}>{item.title}</h4>
+              <p className="text-sm leading-relaxed" style={{ color: (p.textColor as string) || "#64748b" }}>{item.description}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
     default:
       return null;
   }
