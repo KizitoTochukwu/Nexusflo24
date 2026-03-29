@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Block, BlockType, createBlock, generateId } from "./blockTypes";
 import {
   findBlockById,
@@ -120,6 +120,39 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     updateBlocks(next);
   };
 
+  // Auto-save: debounce 2s after any block change
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blocksRef = useRef(blocks);
+  blocksRef.current = blocks;
+  const initialRef = useRef(initialBlocks);
+
+  useEffect(() => {
+    // Skip auto-save on initial load or if blocks haven't changed
+    if (historyIndex === 0) return;
+
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      onSave(blocksRef.current);
+    }, 2000);
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [historyIndex, onSave]);
+
+  // Save on unmount if there are unsaved changes
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimer.current) {
+        clearTimeout(autoSaveTimer.current);
+        // Only save if there were changes
+        if (blocksRef.current !== initialRef.current) {
+          onSave(blocksRef.current);
+        }
+      }
+    };
+  }, [onSave]);
+
   const selectedBlock = selectedId ? findBlockById(blocks, selectedId) : null;
   const blockPath = selectedId ? getBlockPath(blocks, selectedId) : null;
 
@@ -145,7 +178,11 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
             <Button variant="ghost" size="sm" onClick={undo} disabled={historyIndex === 0}>
               <Undo2 className="mr-1 h-4 w-4" /> Undo
             </Button>
-            <Button size="sm" onClick={() => onSave(blocks)} disabled={saving}>
+            <span className="text-[10px] text-muted-foreground/60 mr-2">Auto-saves</span>
+            <Button size="sm" onClick={() => {
+              if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+              onSave(blocks);
+            }} disabled={saving}>
               <Save className="mr-1 h-4 w-4" /> {saving ? "Saving…" : "Save"}
             </Button>
           </div>
