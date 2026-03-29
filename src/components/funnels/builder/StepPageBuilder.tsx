@@ -44,7 +44,7 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     setBlocks(initialBlocks);
     setHistory([initialBlocks]);
     setHistoryIndex(0);
-    setSelectedId(null);
+    // Don't clear selection — user may still be editing
   }, [initialBlocks]);
 
   const pushHistory = useCallback((next: Block[]) => {
