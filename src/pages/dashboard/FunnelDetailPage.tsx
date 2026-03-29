@@ -22,6 +22,7 @@ import {
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import FunnelStepEditor from "@/components/funnels/FunnelStepEditor";
 import StepPageBuilder from "@/components/funnels/builder/StepPageBuilder";
+import { EditorErrorBoundary } from "@/components/funnels/builder/EditorErrorBoundary";
 import { type Block, generateId, BLOCK_DEFAULTS, type BlockType } from "@/components/funnels/builder/blockTypes";
 import EmbedCodeDialog from "@/components/funnels/EmbedCodeDialog";
 
@@ -246,18 +247,20 @@ export default function FunnelDetailPage() {
                   <h3 className="text-sm font-semibold">Editing: {stepLabel}</h3>
                   <Button variant="ghost" size="sm" onClick={() => setEditingStepId(null)}>Close Editor</Button>
                 </div>
-                <StepPageBuilder
-                  key={editingStepId}
-                  initialBlocks={initialBlocks}
-                  stepLabel={stepLabel}
-                  saving={updateStep.isPending}
-                  onSave={(blocks) => {
-                    updateStep.mutate({
-                      id: activeStep.id,
-                      page_content: { ...activeStep.page_content, blocks } as Record<string, unknown>,
-                    });
-                  }}
-                />
+                <EditorErrorBoundary onReset={() => setEditingStepId(null)}>
+                  <StepPageBuilder
+                    key={editingStepId}
+                    initialBlocks={initialBlocks}
+                    stepLabel={stepLabel}
+                    saving={updateStep.isPending}
+                    onSave={(blocks) => {
+                      updateStep.mutate({
+                        id: activeStep.id,
+                        page_content: { ...activeStep.page_content, blocks } as Record<string, unknown>,
+                      });
+                    }}
+                  />
+                </EditorErrorBoundary>
               </div>
             );
           })()}
