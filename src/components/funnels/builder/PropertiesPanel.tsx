@@ -724,3 +724,62 @@ function BookingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
     </>
   );
 }
+
+/* ─── Cards ─── */
+function CardsProps({ p, update, onChange, blockId }: { p: Record<string, unknown>; update: (k: string, v: unknown) => void; onChange: (id: string, props: Record<string, unknown>) => void; blockId: string }) {
+  const items = (p.items as { icon: string; title: string; description: string }[]) || [];
+
+  const updateItem = (index: number, field: string, value: string) => {
+    const next = items.map((item, i) => i === index ? { ...item, [field]: value } : item);
+    update("items", next);
+  };
+
+  const addItem = () => {
+    update("items", [...items, { icon: "Star", title: "New Card", description: "Card description here." }]);
+  };
+
+  const removeItem = (index: number) => {
+    update("items", items.filter((_, i) => i !== index));
+  };
+
+  return (
+    <>
+      <Field label="Columns">
+        <Select value={String(p.columns ?? 3)} onValueChange={(v) => update("columns", Number(v))}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1 Column</SelectItem>
+            <SelectItem value="2">2 Columns</SelectItem>
+            <SelectItem value="3">3 Columns</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <ColorField label="Card Background" value={(p.cardBg as string) || "#ffffff"} onChange={(v) => update("cardBg", v)} />
+      <ColorField label="Icon Background" value={(p.iconBg as string) || "#fef3c7"} onChange={(v) => update("iconBg", v)} />
+      <ColorField label="Icon Color" value={(p.iconColor as string) || "#d4af37"} onChange={(v) => update("iconColor", v)} />
+      <ColorField label="Title Color" value={(p.titleColor as string) || "#0B1F3B"} onChange={(v) => update("titleColor", v)} />
+      <ColorField label="Text Color" value={(p.textColor as string) || "#64748b"} onChange={(v) => update("textColor", v)} />
+      <Field label="Card Border Radius">
+        <Input value={(p.cardBorderRadius as string) || "12px"} onChange={(e) => update("cardBorderRadius", e.target.value)} className="h-8 text-xs" />
+      </Field>
+
+      <div className="pt-2 space-y-3">
+        <p className="text-[11px] font-medium text-muted-foreground uppercase">Cards</p>
+        {items.map((item, i) => (
+          <div key={i} className="space-y-1.5 rounded-lg border p-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium text-muted-foreground">Card {i + 1}</span>
+              <button onClick={() => removeItem(i)} className="p-0.5 text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+            </div>
+            <Input value={item.icon} onChange={(e) => updateItem(i, "icon", e.target.value)} placeholder="Icon name" className="h-7 text-xs" />
+            <Input value={item.title} onChange={(e) => updateItem(i, "title", e.target.value)} placeholder="Title" className="h-7 text-xs" />
+            <Textarea value={item.description} onChange={(e) => updateItem(i, "description", e.target.value)} placeholder="Description" className="text-xs min-h-[50px]" />
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="w-full" onClick={addItem}>
+          <Plus className="mr-1 h-3 w-3" /> Add Card
+        </Button>
+      </div>
+    </>
+  );
+}
