@@ -119,6 +119,8 @@ serve(async (req) => {
                                     },
                                     props: {
                                       type: "object",
+                                      description:
+                                        "Block properties. For 'heading': {text, level, align}. For 'text': {content, align}. For 'button': {label, url, variant, align}. For 'image': {src, alt, width}. For 'form': {fields, buttonText}. For 'divider': {}. For 'spacer': {height}. ALWAYS populate text/content/label with compelling marketing copy.",
                                     },
                                   },
                                   required: ["type", "props"],
