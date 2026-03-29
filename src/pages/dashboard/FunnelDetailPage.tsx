@@ -239,7 +239,7 @@ export default function FunnelDetailPage() {
             const activeStep = steps.find((s) => s.id === editingStepId);
             if (!activeStep) return null;
             const stepLabel = `${STEP_TYPE_OPTIONS.find((o) => o.value === activeStep.step_type)?.label || activeStep.step_type} — Step ${activeStep.step_order + 1}`;
-            const initialBlocks = Array.isArray(activeStep.page_content?.blocks) ? activeStep.page_content.blocks as Block[] : [];
+            const initialBlocks = normalizeBlocks((activeStep.page_content as any)?.blocks);
             return (
               <div>
                 <div className="mb-2 flex items-center justify-between">
