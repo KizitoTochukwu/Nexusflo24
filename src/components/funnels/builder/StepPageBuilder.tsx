@@ -59,13 +59,17 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     pushHistory(next);
   }, [pushHistory]);
 
-  const undo = () => {
-    if (historyIndex > 0) {
-      const prev = history[historyIndex - 1];
-      setBlocks(prev);
-      setHistoryIndex(historyIndex - 1);
-    }
-  };
+  const undo = useCallback(() => {
+    setHistoryIndex((prevIdx) => {
+      if (prevIdx <= 0) return prevIdx;
+      setHistory((prevHist) => {
+        const prev = prevHist[prevIdx - 1];
+        if (prev) setBlocks(prev);
+        return prevHist;
+      });
+      return prevIdx - 1;
+    });
+  }, []);
 
   // Add block — if a container is selected, add inside it; otherwise add at root
   const addBlock = (type: BlockType) => {
