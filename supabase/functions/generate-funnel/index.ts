@@ -69,10 +69,11 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
+          response_format: { type: "json_object" },
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `Create a complete marketing funnel for: ${prompt}` },
+            { role: "user", content: `Create a complete marketing funnel for: ${prompt}\n\nRespond with ONLY the JSON object.` },
           ],
         }),
       },
