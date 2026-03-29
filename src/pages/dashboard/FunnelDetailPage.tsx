@@ -22,7 +22,7 @@ import {
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import FunnelStepEditor from "@/components/funnels/FunnelStepEditor";
 import StepPageBuilder from "@/components/funnels/builder/StepPageBuilder";
-import type { Block } from "@/components/funnels/builder/blockTypes";
+import { type Block, generateId, BLOCK_DEFAULTS, type BlockType } from "@/components/funnels/builder/blockTypes";
 import EmbedCodeDialog from "@/components/funnels/EmbedCodeDialog";
 
 const statusColors: Record<string, string> = {
