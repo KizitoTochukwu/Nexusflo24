@@ -229,6 +229,23 @@ function renderBlockContent(block: Block) {
         </div>
       );
     }
+    case "cards": {
+      const items = (p.items as { icon: string; title: string; description: string }[]) || [];
+      const cols = (p.columns as number) || 3;
+      return (
+        <div className={`grid gap-4 ${cols === 2 ? "grid-cols-2" : cols === 3 ? "grid-cols-3" : "grid-cols-1"}`}>
+          {items.map((item, i) => (
+            <div key={i} className="rounded-xl border p-5" style={{ backgroundColor: (p.cardBg as string) || "#ffffff", borderRadius: (p.cardBorderRadius as string) || "12px" }}>
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold" style={{ backgroundColor: (p.iconBg as string) || "#fef3c7", color: (p.iconColor as string) || "#d4af37" }}>
+                {item.icon?.charAt(0) || "★"}
+              </div>
+              <h4 className="mb-1 text-sm font-bold" style={{ color: (p.titleColor as string) || "#0B1F3B" }}>{item.title}</h4>
+              <p className="text-xs leading-relaxed" style={{ color: (p.textColor as string) || "#64748b" }}>{item.description}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
     default:
       return <div className="p-2 text-xs text-muted-foreground">Unknown block: {block.type}</div>;
   }
