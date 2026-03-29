@@ -44,7 +44,7 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     setBlocks(initialBlocks);
     setHistory([initialBlocks]);
     setHistoryIndex(0);
-    setSelectedId(null);
+    // Don't clear selection — user may still be editing
   }, [initialBlocks]);
 
   const pushHistory = useCallback((next: Block[]) => {
@@ -59,13 +59,17 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
     pushHistory(next);
   }, [pushHistory]);
 
-  const undo = () => {
-    if (historyIndex > 0) {
-      const prev = history[historyIndex - 1];
-      setBlocks(prev);
-      setHistoryIndex(historyIndex - 1);
-    }
-  };
+  const undo = useCallback(() => {
+    setHistoryIndex((prevIdx) => {
+      if (prevIdx <= 0) return prevIdx;
+      setHistory((prevHist) => {
+        const prev = prevHist[prevIdx - 1];
+        if (prev) setBlocks(prev);
+        return prevHist;
+      });
+      return prevIdx - 1;
+    });
+  }, []);
 
   // Add block — if a container is selected, add inside it; otherwise add at root
   const addBlock = (type: BlockType) => {
@@ -144,6 +148,8 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
 
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
+      // Update signature before saving so the returning data won't reset state
+      initialSignatureRef.current = JSON.stringify(blocksRef.current);
       onSaveRef.current(blocksRef.current);
     }, 2000);
 
