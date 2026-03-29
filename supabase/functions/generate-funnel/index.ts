@@ -6,22 +6,43 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an expert marketing funnel architect for NexusFlo24. Given a user's business description or goal, generate a complete funnel structure with compelling page content.
+const SYSTEM_PROMPT = `You are an expert marketing funnel architect for NexusFlo24.
+Given a user's business description or goal, generate a complete funnel structure as JSON.
 
-Available step types: landing, optin, sales, checkout, upsell, thankyou.
-Available objectives: lead_capture, webinar, product_sale, upsell, booking.
+RESPOND WITH ONLY VALID JSON — no markdown, no code fences, no explanation.
 
-For each step, generate page_content as an array of blocks. Each block has a "type" and "props".
-Supported block types and their props:
-- heading: { text: string, level: "h1"|"h2"|"h3", align: "left"|"center"|"right" }
-- text: { content: string, align: "left"|"center"|"right" }
-- button: { label: string, url: string, variant: "primary"|"secondary"|"outline", align: "left"|"center"|"right" }
-- image: { src: "", alt: string, width: "full"|"medium"|"small" }
-- form: { fields: ["name","email","phone"], buttonText: string }
-- divider: {}
-- spacer: { height: "sm"|"md"|"lg" }
+The JSON must follow this exact schema:
+{
+  "name": "short funnel name",
+  "description": "one-sentence purpose",
+  "objective": "lead_capture" | "webinar" | "product_sale" | "upsell" | "booking",
+  "steps": [
+    {
+      "step_type": "landing" | "optin" | "sales" | "checkout" | "upsell" | "thankyou",
+      "page_content": {
+        "blocks": [
+          { "type": "heading", "props": { "text": "...", "level": "h1", "align": "center" } },
+          { "type": "text", "props": { "content": "...", "align": "center" } },
+          { "type": "button", "props": { "label": "...", "url": "#", "variant": "primary", "align": "center" } },
+          { "type": "image", "props": { "src": "", "alt": "...", "width": "full" } },
+          { "type": "form", "props": { "fields": ["name","email"], "buttonText": "..." } },
+          { "type": "divider", "props": {} },
+          { "type": "spacer", "props": { "height": "md" } }
+        ]
+      }
+    }
+  ]
+}
 
-Generate compelling, conversion-focused copy. Use power words, clear value propositions, and strong CTAs.`;
+CRITICAL RULES:
+- Every heading block MUST have "text" with compelling marketing copy
+- Every text block MUST have "content" with persuasive body copy
+- Every button block MUST have "label" with an action-oriented CTA
+- Every form block MUST have "fields" array and "buttonText"
+- Generate at least 3 steps (typically: landing, optin, thankyou)
+- Use power words, clear value propositions, and strong CTAs
+- Each step should have 5-8 blocks minimum
+- DO NOT return empty props — every block must have meaningful content`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -48,105 +69,11 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: `Create a complete marketing funnel for: ${prompt}` },
           ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "create_funnel",
-                description:
-                  "Generate a complete marketing funnel structure with steps and page content",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    name: {
-                      type: "string",
-                      description: "Funnel name (short, descriptive)",
-                    },
-                    description: {
-                      type: "string",
-                      description: "Brief description of the funnel purpose",
-                    },
-                    objective: {
-                      type: "string",
-                      enum: [
-                        "lead_capture",
-                        "webinar",
-                        "product_sale",
-                        "upsell",
-                        "booking",
-                      ],
-                    },
-                    steps: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          step_type: {
-                            type: "string",
-                            enum: [
-                              "landing",
-                              "optin",
-                              "sales",
-                              "checkout",
-                              "upsell",
-                              "thankyou",
-                            ],
-                          },
-                          page_content: {
-                            type: "object",
-                            properties: {
-                              blocks: {
-                                type: "array",
-                                items: {
-                                  type: "object",
-                                  properties: {
-                                    type: {
-                                      type: "string",
-                                      enum: [
-                                        "heading",
-                                        "text",
-                                        "button",
-                                        "image",
-                                        "form",
-                                        "divider",
-                                        "spacer",
-                                      ],
-                                    },
-                                    props: {
-                                      type: "object",
-                                      description:
-                                        "Block properties. For 'heading': {text, level, align}. For 'text': {content, align}. For 'button': {label, url, variant, align}. For 'image': {src, alt, width}. For 'form': {fields, buttonText}. For 'divider': {}. For 'spacer': {height}. ALWAYS populate text/content/label with compelling marketing copy.",
-                                    },
-                                  },
-                                  required: ["type", "props"],
-                                  additionalProperties: false,
-                                },
-                              },
-                            },
-                            required: ["blocks"],
-                            additionalProperties: false,
-                          },
-                        },
-                        required: ["step_type", "page_content"],
-                        additionalProperties: false,
-                      },
-                    },
-                  },
-                  required: ["name", "description", "objective", "steps"],
-                  additionalProperties: false,
-                },
-              },
-            },
-          ],
-          tool_choice: {
-            type: "function",
-            function: { name: "create_funnel" },
-          },
         }),
       },
     );
@@ -173,16 +100,40 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      console.error("No tool call in response:", JSON.stringify(data));
+    const rawContent = data.choices?.[0]?.message?.content;
+    if (!rawContent) {
+      console.error("No content in response:", JSON.stringify(data));
       return new Response(
         JSON.stringify({ error: "AI did not return a valid funnel structure" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const funnel = JSON.parse(toolCall.function.arguments);
+    // Strip markdown code fences if present
+    let jsonStr = rawContent.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+    }
+
+    let funnel;
+    try {
+      funnel = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      console.error("Failed to parse AI JSON:", jsonStr);
+      return new Response(
+        JSON.stringify({ error: "AI returned invalid JSON. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Validate minimal structure
+    if (!funnel.name || !funnel.steps || !Array.isArray(funnel.steps)) {
+      console.error("Invalid funnel structure:", JSON.stringify(funnel));
+      return new Response(
+        JSON.stringify({ error: "AI returned incomplete funnel. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     return new Response(JSON.stringify({ funnel }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
