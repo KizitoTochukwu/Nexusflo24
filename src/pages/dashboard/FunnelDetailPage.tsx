@@ -251,6 +251,7 @@ export default function FunnelDetailPage() {
                 <EditorErrorBoundary onReset={() => setEditingStepId(null)}>
                   <StepPageBuilder
                     key={editingStepId}
+                    stepId={editingStepId}
                     initialBlocks={initialBlocks}
                     stepLabel={stepLabel}
                     saving={updateStep.isPending}
