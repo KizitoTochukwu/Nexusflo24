@@ -29,8 +29,18 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [history, setHistory] = useState<Block[][]>([initialBlocks]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const initialSignatureRef = useRef(JSON.stringify(initialBlocks));
+  const onSaveRef = useRef(onSave);
 
   useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  useEffect(() => {
+    const nextSignature = JSON.stringify(initialBlocks);
+    if (nextSignature === initialSignatureRef.current) return;
+
+    initialSignatureRef.current = nextSignature;
     setBlocks(initialBlocks);
     setHistory([initialBlocks]);
     setHistoryIndex(0);
@@ -132,13 +142,13 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
 
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      onSave(blocksRef.current);
+      onSaveRef.current(blocksRef.current);
     }, 2000);
 
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     };
-  }, [historyIndex, onSave]);
+  }, [historyIndex]);
 
   // Save on unmount if there are unsaved changes
   useEffect(() => {
@@ -147,11 +157,11 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
         clearTimeout(autoSaveTimer.current);
         // Only save if there were changes
         if (blocksRef.current !== initialRef.current) {
-          onSave(blocksRef.current);
+          onSaveRef.current(blocksRef.current);
         }
       }
     };
-  }, [onSave]);
+  }, []);
 
   const selectedBlock = selectedId ? findBlockById(blocks, selectedId) : null;
   const blockPath = selectedId ? getBlockPath(blocks, selectedId) : null;
@@ -181,7 +191,7 @@ export default function StepPageBuilder({ initialBlocks, onSave, saving, stepLab
             <span className="text-[10px] text-muted-foreground/60 mr-2">Auto-saves</span>
             <Button size="sm" onClick={() => {
               if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-              onSave(blocks);
+              onSaveRef.current(blocks);
             }} disabled={saving}>
               <Save className="mr-1 h-4 w-4" /> {saving ? "Saving…" : "Save"}
             </Button>

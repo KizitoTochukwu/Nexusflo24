@@ -241,6 +241,7 @@ export default function FunnelDetailPage() {
             if (!activeStep) return null;
             const stepLabel = `${STEP_TYPE_OPTIONS.find((o) => o.value === activeStep.step_type)?.label || activeStep.step_type} — Step ${activeStep.step_order + 1}`;
             const initialBlocks = normalizeBlocks((activeStep.page_content as any)?.blocks);
+            const activePageContent = (activeStep.page_content as Record<string, unknown>) || {};
             return (
               <div>
                 <div className="mb-2 flex items-center justify-between">
@@ -256,7 +257,7 @@ export default function FunnelDetailPage() {
                     onSave={(blocks) => {
                       updateStep.mutate({
                         id: activeStep.id,
-                        page_content: { ...activeStep.page_content, blocks } as Record<string, unknown>,
+                        page_content: { ...activePageContent, blocks } as Record<string, unknown>,
                       });
                     }}
                   />
