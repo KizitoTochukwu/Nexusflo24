@@ -501,11 +501,18 @@ function FormProps({ p, update }: { p: Record<string, unknown>; update: (k: stri
             const fields = (p.fields as string[]) || ["email"];
             const checked = fields.includes(f);
             return (
-              <label key={f} className="flex items-center gap-2 text-sm">
-                <Switch checked={checked} disabled={f === "email"} onCheckedChange={(v) => {
-                  const next = v ? [...fields, f] : fields.filter((x) => x !== f);
-                  update("fields", next);
-                }} />
+              <label key={f} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={f === "email"}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    const next = v ? [...fields, f] : fields.filter((x) => x !== f);
+                    update("fields", next);
+                  }}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
                 {f}{f === "email" && " (required)"}
               </label>
             );
