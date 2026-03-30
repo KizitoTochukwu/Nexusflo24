@@ -87,13 +87,31 @@ Deno.serve(async (req) => {
     const workspaceId = membership.workspace_id;
     const normalizedEmail = email.toLowerCase();
 
-    const { data: existing } = await supabase
+    // Deduplicate by email first, then by phone if no email match
+    let existing: { id: string; tags: string[] | null } | null = null;
+
+    const { data: emailMatch } = await supabase
       .from("leads")
       .select("id, tags")
       .eq("workspace_id", workspaceId)
       .eq("user_id", ownerId)
       .ilike("email", normalizedEmail)
       .maybeSingle();
+
+    existing = emailMatch;
+
+    // If no email match but phone is provided, check for phone match
+    if (!existing && phone) {
+      const { data: phoneMatch } = await supabase
+        .from("leads")
+        .select("id, tags")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", ownerId)
+        .eq("phone", phone)
+        .maybeSingle();
+
+      existing = phoneMatch;
+    }
 
     let leadId: string;
     const now = new Date().toISOString();
