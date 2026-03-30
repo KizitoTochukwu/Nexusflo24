@@ -82,9 +82,12 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
             <div className={`rounded-lg border p-3 ${meta.color}`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <button onClick={() => moveStep(i, i - 1)} className="cursor-grab opacity-50 hover:opacity-100">
-                    <GripVertical className="h-4 w-4" />
-                  </button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveStep(i, i - 1)} disabled={i === 0} title="Move up">
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveStep(i, i + 1)} disabled={i === steps.length - 1} title="Move down">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
                   {meta.icon}
                   <Badge variant="outline" className={meta.color}>{meta.label}</Badge>
                 </div>
