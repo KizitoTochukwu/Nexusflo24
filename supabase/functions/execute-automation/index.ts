@@ -295,8 +295,12 @@ Deno.serve(async (req) => {
               passed = (lead.tags || []).includes(String(value));
             } else if (conditionType === "source_equals") {
               passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
-            } else if (conditionType === "has_replied" || conditionType === "no_reply") {
-              // Check sales_conversations for any inbound message from this lead
+            } else if (conditionType === "reply_status" || conditionType === "has_replied" || conditionType === "no_reply") {
+              // Support new UI format (reply_status + reply_check) and legacy (has_replied / no_reply)
+              let replyCheck = conditionType;
+              if (conditionType === "reply_status") {
+                replyCheck = String(config.reply_check || "has_replied");
+              }
               const { data: replies } = await supabase
                 .from("sales_conversations")
                 .select("id")
@@ -304,7 +308,7 @@ Deno.serve(async (req) => {
                 .eq("direction", "inbound")
                 .limit(1);
               const hasReply = (replies && replies.length > 0);
-              passed = conditionType === "has_replied" ? hasReply : !hasReply;
+              passed = replyCheck === "has_replied" ? hasReply : !hasReply;
             }
             // Fallback: legacy field/operator format
             else if (config.field && config.operator) {
