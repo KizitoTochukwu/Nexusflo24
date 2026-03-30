@@ -285,22 +285,31 @@ Deno.serve(async (req) => {
           }
 
           case "condition": {
-            const field = config.field;
-            const operator = config.operator;
+            const conditionType = config.condition;
             const value = config.value;
-            const leadValue = (lead as any)[field];
             let passed = false;
 
-            if (operator === "equals") passed = String(leadValue) === String(value);
-            else if (operator === "not_equals") passed = String(leadValue) !== String(value);
-            else if (operator === "contains") passed = String(leadValue || "").includes(String(value));
-            else if (operator === "greater_than") passed = Number(leadValue) > Number(value);
-            else if (operator === "less_than") passed = Number(leadValue) < Number(value);
-            else if (operator === "has_tag") passed = (lead.tags || []).includes(value);
-            else if (operator === "not_has_tag") passed = !(lead.tags || []).includes(value);
+            if (conditionType === "score_gt") {
+              passed = Number(lead.score || 0) > Number(value);
+            } else if (conditionType === "has_tag") {
+              passed = (lead.tags || []).includes(String(value));
+            } else if (conditionType === "source_equals") {
+              passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
+            }
+            // Fallback: legacy field/operator format
+            else if (config.field && config.operator) {
+              const leadValue = (lead as any)[config.field];
+              if (config.operator === "equals") passed = String(leadValue) === String(value);
+              else if (config.operator === "not_equals") passed = String(leadValue) !== String(value);
+              else if (config.operator === "contains") passed = String(leadValue || "").includes(String(value));
+              else if (config.operator === "greater_than") passed = Number(leadValue) > Number(value);
+              else if (config.operator === "less_than") passed = Number(leadValue) < Number(value);
+              else if (config.operator === "has_tag") passed = (lead.tags || []).includes(value);
+              else if (config.operator === "not_has_tag") passed = !(lead.tags || []).includes(value);
+            }
 
             if (!passed) skipRemaining = true;
-            details = { field, operator, value, passed };
+            details = { conditionType: conditionType || config.field, value, passed };
             status = passed ? "success" : "condition_failed";
             break;
           }
