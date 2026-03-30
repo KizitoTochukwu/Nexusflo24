@@ -9,6 +9,7 @@ import {
   DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
   BLOCK_META,
 } from "./emailBlockTypes";
+import InsertDropdown from "../InsertDropdown";
 
 interface EmailBlockPropertiesProps {
   block: EmailBlock | null;
@@ -41,14 +42,18 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
   const p = block.props as TextBlockProps;
   return (
     <>
-      <Field label="Content">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground">Content</Label>
+        <InsertDropdown onInsert={(v) => onChange({ ...p, content: p.content + v })} />
+      </div>
+      <div>
         <Textarea
           className="min-h-[120px] text-sm font-mono"
           value={p.content}
           onChange={(e) => onChange({ ...p, content: e.target.value })}
           placeholder="Use {{first_name}} for variables..."
         />
-      </Field>
+      </div>
       <Field label="Font Size">
         <div className="flex items-center gap-2">
           <Slider value={[p.fontSize]} min={10} max={36} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
@@ -127,9 +132,13 @@ function ButtonProps({ block, onChange }: { block: EmailBlock; onChange: (p: But
   const p = block.props as ButtonBlockProps;
   return (
     <>
-      <Field label="Button Label">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground">Button Label</Label>
+        <InsertDropdown onInsert={(v) => onChange({ ...p, label: p.label + v })} />
+      </div>
+      <div>
         <Input className="h-8 text-xs" value={p.label} onChange={(e) => onChange({ ...p, label: e.target.value })} />
-      </Field>
+      </div>
       <Field label="Button URL">
         <Input className="h-8 text-xs" value={p.url} onChange={(e) => onChange({ ...p, url: e.target.value })} placeholder="https://..." />
       </Field>
@@ -271,7 +280,15 @@ function ColumnsProps({ block, onChange }: { block: EmailBlock; onChange: (p: Co
         </div>
       </Field>
       {p.columns.map((col, i) => (
-        <Field key={i} label={`Column ${i + 1}`}>
+        <div key={i} className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground">{`Column ${i + 1}`}</Label>
+            <InsertDropdown onInsert={(v) => {
+              const cols = [...p.columns];
+              cols[i] = cols[i] + v;
+              onChange({ ...p, columns: cols });
+            }} />
+          </div>
           <Textarea
             className="min-h-[60px] text-xs"
             value={col}
@@ -281,7 +298,7 @@ function ColumnsProps({ block, onChange }: { block: EmailBlock; onChange: (p: Co
               onChange({ ...p, columns: cols });
             }}
           />
-        </Field>
+        </div>
       ))}
     </>
   );
