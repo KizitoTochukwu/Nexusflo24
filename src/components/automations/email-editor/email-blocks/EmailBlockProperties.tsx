@@ -280,7 +280,15 @@ function ColumnsProps({ block, onChange }: { block: EmailBlock; onChange: (p: Co
         </div>
       </Field>
       {p.columns.map((col, i) => (
-        <Field key={i} label={`Column ${i + 1}`}>
+        <div key={i} className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground">{`Column ${i + 1}`}</Label>
+            <InsertDropdown onInsert={(v) => {
+              const cols = [...p.columns];
+              cols[i] = cols[i] + v;
+              onChange({ ...p, columns: cols });
+            }} />
+          </div>
           <Textarea
             className="min-h-[60px] text-xs"
             value={col}
