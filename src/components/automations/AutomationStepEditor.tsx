@@ -32,6 +32,8 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   notify_sales: <Bell className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
 };
+
+const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Lost"];
 interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
