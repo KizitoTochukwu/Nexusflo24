@@ -119,45 +119,47 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
               )}
 
               {step.step_type === "action" && (
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Select
-                    value={(step.config.action as string) || ""}
-                    onValueChange={(v) => updateStep(i, { action: v })}
-                  >
-                    <SelectTrigger className="w-[200px] bg-background">
-                      <SelectValue placeholder="Select action" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACTION_OPTIONS.map((a) => (
-                        <SelectItem key={a.value} value={a.value}>
-                          <span className="flex items-center gap-2">{ACTION_ICONS[a.value]} {a.label}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {((step.config.action as string) === "add_tag" || (step.config.action as string) === "remove_tag") && (
-                    <Input
-                      placeholder="Tag name"
-                      className="w-[140px] bg-background"
-                      value={(step.config.tag as string) || ""}
-                      onChange={(e) => updateStep(i, { tag: e.target.value })}
-                    />
-                  )}
-                  {(step.config.action as string) === "update_status" && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <Select
-                      value={(step.config.new_status as string) || ""}
-                      onValueChange={(v) => updateStep(i, { new_status: v })}
+                      value={(step.config.action as string) || ""}
+                      onValueChange={(v) => updateStep(i, { action: v })}
                     >
-                      <SelectTrigger className="w-[140px] bg-background">
-                        <SelectValue placeholder="New status" />
+                      <SelectTrigger className="w-[200px] bg-background">
+                        <SelectValue placeholder="Select action" />
                       </SelectTrigger>
                       <SelectContent>
-                        {["New", "Warm", "Hot", "Won", "Lost"].map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        {ACTION_OPTIONS.map((a) => (
+                          <SelectItem key={a.value} value={a.value}>
+                            <span className="flex items-center gap-2">{ACTION_ICONS[a.value]} {a.label}</span>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  )}
+                    {((step.config.action as string) === "add_tag" || (step.config.action as string) === "remove_tag") && (
+                      <Input
+                        placeholder="Tag name"
+                        className="w-[140px] bg-background"
+                        value={(step.config.tag as string) || ""}
+                        onChange={(e) => updateStep(i, { tag: e.target.value })}
+                      />
+                    )}
+                    {(step.config.action as string) === "update_status" && (
+                      <Select
+                        value={(step.config.new_status as string) || ""}
+                        onValueChange={(v) => updateStep(i, { new_status: v })}
+                      >
+                        <SelectTrigger className="w-[140px] bg-background">
+                          <SelectValue placeholder="New status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["New", "Warm", "Hot", "Won", "Lost"].map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
                     <AutomationEmailEditor
                       isEmail={(step.config.action as string) === "send_email"}
@@ -168,6 +170,16 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                       templateSettings={step.config.templateSettings as any}
                       onTemplateSettingsChange={(ts) => updateStep(i, { templateSettings: ts })}
                     />
+                  )}
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
+                    <InsertDropdown onInsert={(v) => {
+                      const action = step.config.action as string;
+                      if (action === "add_tag" || action === "remove_tag") {
+                        updateStep(i, { tag: ((step.config.tag as string) || "") + v });
+                      } else if (action === "notify_sales") {
+                        updateStep(i, { message: ((step.config.message as string) || "") + v });
+                      }
+                    }} />
                   )}
                 </div>
               )}
