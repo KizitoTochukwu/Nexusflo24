@@ -295,6 +295,16 @@ Deno.serve(async (req) => {
               passed = (lead.tags || []).includes(String(value));
             } else if (conditionType === "source_equals") {
               passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
+            } else if (conditionType === "has_replied" || conditionType === "no_reply") {
+              // Check sales_conversations for any inbound message from this lead
+              const { data: replies } = await supabase
+                .from("sales_conversations")
+                .select("id")
+                .eq("lead_id", lead_id)
+                .eq("direction", "inbound")
+                .limit(1);
+              const hasReply = (replies && replies.length > 0);
+              passed = conditionType === "has_replied" ? hasReply : !hasReply;
             }
             // Fallback: legacy field/operator format
             else if (config.field && config.operator) {
