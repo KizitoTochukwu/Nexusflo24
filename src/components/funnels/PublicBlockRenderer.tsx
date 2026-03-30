@@ -465,9 +465,20 @@ function BookingButton({ props: p, bookingPageId }: { props: Record<string, unkn
 export default function PublicBlockRenderer({ blocks, onFormSubmit, formSubmitting, leadData = {} }: Props) {
   return (
     <div className="space-y-6">
-      {blocks.map((block) => (
-        <RenderBlock key={block.id} block={block} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
-      ))}
+      {blocks.map((block) => {
+        // Section blocks render full-width (they manage their own maxWidth internally)
+        if (block.type === "section") {
+          return (
+            <RenderBlock key={block.id} block={block} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
+          );
+        }
+        // All other top-level blocks get a centered container so they don't stretch edge-to-edge
+        return (
+          <div key={block.id} className="mx-auto max-w-4xl px-4">
+            <RenderBlock block={block} onFormSubmit={onFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
+          </div>
+        );
+      })}
     </div>
   );
 }
