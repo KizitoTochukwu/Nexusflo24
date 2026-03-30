@@ -94,7 +94,7 @@ function renderPage(title: string, message: string): string {
   <div class="card">
     <h1>${title}</h1>
     <p>${message}</p>
-    <span class="brand">© NexusFlo24 · AI-Powered Marketing Automation</span>
+    <span class="brand">&copy; NexusFlo24 &middot; AI-Powered Marketing Automation</span>
   </div>
 </body>
 </html>`;
