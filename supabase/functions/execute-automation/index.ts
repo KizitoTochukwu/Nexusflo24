@@ -305,17 +305,16 @@ Deno.serve(async (req) => {
               const hasReply = (replies && replies.length > 0);
 
               if (conditionType === "reply_status") {
-                // New UI: move lead based on reply outcome using replied_action / no_reply_action
                 const targetStage = hasReply
                   ? String(config.replied_action || "")
-                  : String(config.no_reply_action || "");
-                if (targetStage) {
+                  : String(config.no_reply_action || "continue");
+                if (targetStage && targetStage !== "continue") {
                   await supabase.from("leads").update({ pipeline_stage: targetStage }).eq("id", lead_id);
                   details = { hasReply, movedTo: targetStage };
                 } else {
-                  details = { hasReply, movedTo: null, message: "No target stage configured" };
+                  details = { hasReply, movedTo: null, action: "continue_sequence" };
                 }
-                passed = true; // Always pass — both outcomes are handled
+                passed = true; // Always pass — both outcomes handled, sequence continues
               } else {
                 // Legacy: has_replied / no_reply as gate conditions
                 passed = conditionType === "has_replied" ? hasReply : !hasReply;
