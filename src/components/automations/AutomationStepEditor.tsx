@@ -116,19 +116,40 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                     </SelectContent>
                   </Select>
                   {(step.config.condition as string) === "reply_status" && (
-                    <Select
-                      value={(step.config.reply_check as string) || "has_replied"}
-                      onValueChange={(v) => updateStep(i, { reply_check: v })}
-                    >
-                      <SelectTrigger className="w-[200px] bg-background">
-                        <SelectValue placeholder="Select reply status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REPLY_STATUS_OPTIONS.map((r) => (
-                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="w-full space-y-2 mt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium min-w-[100px]">If replied →</span>
+                        <Select
+                          value={(step.config.replied_action as string) || ""}
+                          onValueChange={(v) => updateStep(i, { replied_action: v })}
+                        >
+                          <SelectTrigger className="w-[160px] bg-background">
+                            <SelectValue placeholder="Move to..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PIPELINE_STAGES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium min-w-[100px]">If no reply →</span>
+                        <Select
+                          value={(step.config.no_reply_action as string) || ""}
+                          onValueChange={(v) => updateStep(i, { no_reply_action: v })}
+                        >
+                          <SelectTrigger className="w-[160px] bg-background">
+                            <SelectValue placeholder="Move to..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PIPELINE_STAGES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   )}
                   {!["reply_status"].includes((step.config.condition as string) || "") && (
                     <Input
