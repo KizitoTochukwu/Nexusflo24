@@ -98,7 +98,13 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                 <div className="flex flex-wrap gap-2">
                   <Select
                     value={(step.config.condition as string) || ""}
-                    onValueChange={(v) => updateStep(i, { condition: v })}
+                    onValueChange={(v) => {
+                      if (v === "reply_status") {
+                        updateStep(i, { condition: v, reply_check: "has_replied", value: "" });
+                      } else {
+                        updateStep(i, { condition: v, reply_check: undefined });
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-[200px] bg-background">
                       <SelectValue placeholder="Select condition" />
@@ -109,7 +115,22 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                       ))}
                     </SelectContent>
                   </Select>
-                  {!["has_replied", "no_reply"].includes((step.config.condition as string) || "") && (
+                  {(step.config.condition as string) === "reply_status" && (
+                    <Select
+                      value={(step.config.reply_check as string) || "has_replied"}
+                      onValueChange={(v) => updateStep(i, { reply_check: v })}
+                    >
+                      <SelectTrigger className="w-[200px] bg-background">
+                        <SelectValue placeholder="Select reply status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REPLY_STATUS_OPTIONS.map((r) => (
+                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {!["reply_status"].includes((step.config.condition as string) || "") && (
                     <Input
                       placeholder="Value"
                       className="w-[140px] bg-background"
