@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, Zap, Filter, Play, Clock,
+  Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
 } from "lucide-react";
 import { CONDITION_OPTIONS, ACTION_OPTIONS } from "@/hooks/useAutomations";
@@ -82,12 +82,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
             <div className={`rounded-lg border p-3 ${meta.color}`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveStep(i, i - 1)} disabled={i === 0} title="Move up">
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveStep(i, i + 1)} disabled={i === steps.length - 1} title="Move down">
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </Button>
+                  <button onClick={() => moveStep(i, i - 1)} className="cursor-grab opacity-50 hover:opacity-100">
+                    <GripVertical className="h-4 w-4" />
+                  </button>
                   {meta.icon}
                   <Badge variant="outline" className={meta.color}>{meta.label}</Badge>
                 </div>
