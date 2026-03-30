@@ -101,7 +101,8 @@ Deno.serve(async (req) => {
 
     // Format and wrap in branded template with optional user settings
     const ts = templateSettings as Record<string, any> | undefined;
-    const unsubUrl = leadId && workspaceId ? `${baseUrl}/functions/v1/unsubscribe?lid=${leadId}&wid=${workspaceId}` : undefined;
+    const appBaseUrl = "https://nexusflo24.lovable.app";
+    const unsubUrl = leadId && workspaceId ? `${appBaseUrl}/unsubscribe?lid=${leadId}&wid=${workspaceId}` : undefined;
     let trackedHtml = wrapEmailTemplate(formatEmailBody(html), {
       logo: ts?.logo,
       unsubscribe: ts?.unsubscribe,
