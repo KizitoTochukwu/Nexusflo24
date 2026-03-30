@@ -109,12 +109,14 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    placeholder="Value"
-                    className="w-[140px] bg-background"
-                    value={(step.config.value as string) || ""}
-                    onChange={(e) => updateStep(i, { value: e.target.value })}
-                  />
+                  {!["has_replied", "no_reply"].includes((step.config.condition as string) || "") && (
+                    <Input
+                      placeholder="Value"
+                      className="w-[140px] bg-background"
+                      value={(step.config.value as string) || ""}
+                      onChange={(e) => updateStep(i, { value: e.target.value })}
+                    />
+                  )}
                 </div>
               )}
 

@@ -55,6 +55,8 @@ export const CONDITION_OPTIONS = [
   { value: "score_gt", label: "Lead score greater than X", configKey: "threshold" },
   { value: "has_tag", label: "Lead has tag", configKey: "tag" },
   { value: "source_equals", label: "Lead source equals X", configKey: "source" },
+  { value: "has_replied", label: "Lead has replied", configKey: "" },
+  { value: "no_reply", label: "Lead has not replied", configKey: "" },
 ] as const;
 
 export const ACTION_OPTIONS = [
