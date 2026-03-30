@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { CONDITION_OPTIONS, ACTION_OPTIONS } from "@/hooks/useAutomations";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
+import InsertDropdown from "./email-editor/InsertDropdown";
 
 export type StepData = {
   step_type: "trigger" | "condition" | "action" | "delay";
