@@ -1,40 +1,18 @@
 
 
-## Fix Content Cut-Off on Public Funnel Pages
+## Fix Automation Step Reorder Buttons
 
-The public funnel page (`PublicFunnel.tsx`) wraps all content in `max-w-4xl px-4 py-12`, which clips section blocks that are designed to be full-width (e.g., sections with background colors/images, columns with wide content, images).
+The `GripVertical` button in `AutomationStepEditor.tsx` only moves steps up (`moveStep(i, i - 1)`). There's no button to move steps down. The grip icon also misleadingly uses `cursor-grab` despite being a click handler.
 
-### Changes
+### Changes — `src/components/automations/AutomationStepEditor.tsx`
 
-**File: `src/pages/PublicFunnel.tsx`** (lines 186-191)
+Replace the single `GripVertical` drag button (line ~86) with two proper buttons using `ChevronUp` and `ChevronDown` icons (already imported pattern from `EmailBlockCanvas`):
 
-Remove the constraining `max-w-4xl px-4 py-12` wrapper. Let each section block manage its own max-width internally (sections already have a `maxWidth` prop with `mx-auto`). Keep `min-h-screen bg-white` on the outer div.
+- Add `ChevronUp` and `ChevronDown` to the lucide imports
+- Replace the grip button with two icon buttons:
+  - **Up**: `onClick={() => moveStep(i, i - 1)}`, disabled when `i === 0`
+  - **Down**: `onClick={() => moveStep(i, i + 1)}`, disabled when `i === steps.length - 1`
+- Style them similarly to the block canvas pattern (small ghost buttons, visible on hover)
 
-Change:
-```tsx
-<div className="min-h-screen bg-white">
-  <div className="mx-auto max-w-4xl px-4 py-12">
-    <PublicBlockRenderer ... />
-  </div>
-</div>
-```
-
-To:
-```tsx
-<div className="min-h-screen bg-white">
-  <PublicBlockRenderer ... />
-</div>
-```
-
-**File: `src/components/funnels/PublicBlockRenderer.tsx`**
-
-In the main `PublicBlockRenderer` component, wrap the block list in a container that provides sensible defaults for non-section blocks (headings, text, buttons, images etc. that are not inside a section). Section blocks will break out to full width.
-
-Update the root render to:
-- Wrap each block: if it's a `section`, render it full-width (no extra container). For all other top-level blocks, wrap in `max-w-4xl mx-auto px-4` so they don't stretch edge-to-edge but also don't get clipped.
-
-This ensures:
-- Sections with backgrounds span full width as designed
-- Text, headings, buttons, images at root level stay centered and readable
-- Nothing gets clipped on the left or right
+Single file change, no backend work needed.
 
