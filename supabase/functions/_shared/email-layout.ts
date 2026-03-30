@@ -8,7 +8,8 @@ const DEFAULT_LOGO_URL =
 
 export interface TemplateOptions {
   preheader?: string;
-  logo?: { url?: string; alignment?: string; size?: number; visible?: boolean };
+  logo?: { url?: string; alignment?: string; size?: number; width?: number; height?: number; autoHeight?: boolean; visible?: boolean };
+  header?: { color?: string };
   unsubscribe?: { enabled?: boolean; text?: string };
   footer?: { text?: string; color?: string; alignment?: string };
   unsubUrl?: string;
