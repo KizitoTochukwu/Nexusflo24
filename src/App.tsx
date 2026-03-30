@@ -56,6 +56,7 @@ import HowCapture from "./pages/HowCapture";
 import HowNurture from "./pages/HowNurture";
 import HowConvert from "./pages/HowConvert";
 import DashboardTemplates from "./pages/dashboard/DashboardTemplates";
+import Unsubscribe from "./pages/Unsubscribe";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -127,6 +128,9 @@ const App = () => (
               {/* Public booking routes */}
               <Route path="/book/:slug" element={<PublicBooking />} />
               <Route path="/reschedule/:token" element={<RescheduleBooking />} />
+
+              {/* Public unsubscribe */}
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>

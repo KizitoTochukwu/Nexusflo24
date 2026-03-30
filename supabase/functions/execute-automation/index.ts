@@ -206,7 +206,8 @@ Deno.serve(async (req) => {
               let html = interpolate(config.body || config.message || "", lead);
               // Format content and wrap in branded template with user settings
               const baseUrl = Deno.env.get("SUPABASE_URL")!;
-              const unsubUrl = `${baseUrl}/functions/v1/unsubscribe?lid=${lead_id}&wid=${workspace_id}`;
+              const appBaseUrl = "https://nexusflo24.lovable.app";
+              const unsubUrl = `${appBaseUrl}/unsubscribe?lid=${lead_id}&wid=${workspace_id}`;
               const ts = config.templateSettings as Record<string, any> | undefined;
               html = wrapEmailTemplate(formatEmailBody(html), {
                 logo: ts?.logo,
