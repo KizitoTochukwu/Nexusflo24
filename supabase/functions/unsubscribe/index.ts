@@ -81,7 +81,7 @@ function renderPage(title: string, message: string): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${title} — NexusFlo24</title>
+  <title>${title} &mdash; NexusFlo24</title>
   <style>
     body { margin: 0; font-family: 'Inter', Arial, sans-serif; background: #f9fafb; color: #0B1F3B; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
     .card { background: #fff; border-radius: 16px; padding: 48px 40px; max-width: 440px; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
