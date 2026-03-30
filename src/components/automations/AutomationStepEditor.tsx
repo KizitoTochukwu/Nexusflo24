@@ -138,15 +138,16 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium min-w-[100px]">If no reply →</span>
                         <Select
-                          value={(step.config.no_reply_action as string) || ""}
+                          value={(step.config.no_reply_action as string) || "continue"}
                           onValueChange={(v) => updateStep(i, { no_reply_action: v })}
                         >
-                          <SelectTrigger className="w-[160px] bg-background">
-                            <SelectValue placeholder="Move to..." />
+                          <SelectTrigger className="w-[180px] bg-background">
+                            <SelectValue placeholder="Choose action..." />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="continue">Continue sequence</SelectItem>
                             {PIPELINE_STAGES.map((s) => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                              <SelectItem key={s} value={s}>Move to {s}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
