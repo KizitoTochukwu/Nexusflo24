@@ -6,7 +6,7 @@ import {
   Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
 } from "lucide-react";
-import { CONDITION_OPTIONS, ACTION_OPTIONS } from "@/hooks/useAutomations";
+import { CONDITION_OPTIONS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS } from "@/hooks/useAutomations";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 
