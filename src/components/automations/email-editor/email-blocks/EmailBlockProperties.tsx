@@ -9,6 +9,7 @@ import {
   DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
   BLOCK_META,
 } from "./emailBlockTypes";
+import InsertDropdown from "../InsertDropdown";
 
 interface EmailBlockPropertiesProps {
   block: EmailBlock | null;
