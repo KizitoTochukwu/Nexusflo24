@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
+  Plus, Trash2, ChevronUp, ChevronDown, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
 } from "lucide-react";
 import { CONDITION_OPTIONS, ACTION_OPTIONS } from "@/hooks/useAutomations";
