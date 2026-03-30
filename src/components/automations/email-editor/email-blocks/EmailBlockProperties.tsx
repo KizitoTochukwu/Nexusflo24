@@ -103,10 +103,60 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
 
 function ImageProps({ block, onChange }: { block: EmailBlock; onChange: (p: ImageBlockProps) => void }) {
   const p = block.props as ImageBlockProps;
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Please upload a PNG, JPEG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `images/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("email-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("email-assets").getPublicUrl(path);
+      onChange({ ...p, src: data.publicUrl, alt: p.alt || file.name.replace(/\.[^.]+$/, "") });
+      toast.success("Image uploaded!");
+    } catch (err: any) {
+      toast.error(err?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <>
       <Field label="Image URL">
-        <Input className="h-8 text-xs" value={p.src} onChange={(e) => onChange({ ...p, src: e.target.value })} placeholder="https://..." />
+        <div className="flex gap-1.5">
+          <Input className="h-8 text-xs flex-1" value={p.src} onChange={(e) => onChange({ ...p, src: e.target.value })} placeholder="https://..." />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            disabled={uploading}
+            onClick={() => document.getElementById(`img-upload-${block.id}`)?.click()}
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          </Button>
+          <input
+            id={`img-upload-${block.id}`}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={handleUpload}
+            disabled={uploading}
+          />
+        </div>
       </Field>
       <Field label="Alt Text">
         <Input className="h-8 text-xs" value={p.alt} onChange={(e) => onChange({ ...p, alt: e.target.value })} />
