@@ -53,7 +53,7 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
           onChange={(e) => onChange({ ...p, content: e.target.value })}
           placeholder="Use {{first_name}} for variables..."
         />
-      </Field>
+      </div>
       <Field label="Font Size">
         <div className="flex items-center gap-2">
           <Slider value={[p.fontSize]} min={10} max={36} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
