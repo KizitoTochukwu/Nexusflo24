@@ -129,6 +129,9 @@ const App = () => (
               <Route path="/book/:slug" element={<PublicBooking />} />
               <Route path="/reschedule/:token" element={<RescheduleBooking />} />
 
+              {/* Public unsubscribe */}
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
             <InactivityManager />
