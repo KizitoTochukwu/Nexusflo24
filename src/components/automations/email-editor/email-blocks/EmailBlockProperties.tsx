@@ -42,7 +42,11 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
   const p = block.props as TextBlockProps;
   return (
     <>
-      <Field label="Content">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground">Content</Label>
+        <InsertDropdown onInsert={(v) => onChange({ ...p, content: p.content + v })} />
+      </div>
+      <div>
         <Textarea
           className="min-h-[120px] text-sm font-mono"
           value={p.content}
