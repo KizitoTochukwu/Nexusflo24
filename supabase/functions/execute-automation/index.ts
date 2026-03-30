@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
                 details = { tag, action: "removed" };
               }
             } else if (actionType === "update_status") {
-              const newStatus = config.status;
+              const newStatus = config.new_status || config.status;
               if (newStatus) {
                 await supabase.from("leads").update({ status: newStatus }).eq("id", lead_id);
                 details = { newStatus };
