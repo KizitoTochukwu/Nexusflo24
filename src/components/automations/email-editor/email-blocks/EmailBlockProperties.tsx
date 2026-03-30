@@ -132,9 +132,13 @@ function ButtonProps({ block, onChange }: { block: EmailBlock; onChange: (p: But
   const p = block.props as ButtonBlockProps;
   return (
     <>
-      <Field label="Button Label">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground">Button Label</Label>
+        <InsertDropdown onInsert={(v) => onChange({ ...p, label: p.label + v })} />
+      </div>
+      <div>
         <Input className="h-8 text-xs" value={p.label} onChange={(e) => onChange({ ...p, label: e.target.value })} />
-      </Field>
+      </div>
       <Field label="Button URL">
         <Input className="h-8 text-xs" value={p.url} onChange={(e) => onChange({ ...p, url: e.target.value })} placeholder="https://..." />
       </Field>
