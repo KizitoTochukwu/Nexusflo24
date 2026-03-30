@@ -298,7 +298,7 @@ function ColumnsProps({ block, onChange }: { block: EmailBlock; onChange: (p: Co
               onChange({ ...p, columns: cols });
             }}
           />
-        </Field>
+        </div>
       ))}
     </>
   );
