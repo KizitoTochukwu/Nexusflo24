@@ -55,8 +55,12 @@ export const CONDITION_OPTIONS = [
   { value: "score_gt", label: "Lead score greater than X", configKey: "threshold" },
   { value: "has_tag", label: "Lead has tag", configKey: "tag" },
   { value: "source_equals", label: "Lead source equals X", configKey: "source" },
-  { value: "has_replied", label: "Lead has replied", configKey: "" },
-  { value: "no_reply", label: "Lead has not replied", configKey: "" },
+  { value: "reply_status", label: "Reply status", configKey: "" },
+] as const;
+
+export const REPLY_STATUS_OPTIONS = [
+  { value: "has_replied", label: "Lead has replied" },
+  { value: "no_reply", label: "Lead has not replied" },
 ] as const;
 
 export const ACTION_OPTIONS = [
