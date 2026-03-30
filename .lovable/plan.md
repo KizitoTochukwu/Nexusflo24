@@ -1,40 +1,19 @@
 
 
-## Fix Content Cut-Off on Public Funnel Pages
+## Add Insert Variables to Email Block Editor Properties Panel
 
-The public funnel page (`PublicFunnel.tsx`) wraps all content in `max-w-4xl px-4 py-12`, which clips section blocks that are designed to be full-width (e.g., sections with background colors/images, columns with wide content, images).
+The `InsertDropdown` currently only appears for SMS/WhatsApp actions. For the email block editor, variables need to be insertable into text content, button labels/URLs, and column text via the properties panel.
 
 ### Changes
 
-**File: `src/pages/PublicFunnel.tsx`** (lines 186-191)
+**File: `src/components/automations/email-editor/email-blocks/EmailBlockProperties.tsx`**
 
-Remove the constraining `max-w-4xl px-4 py-12` wrapper. Let each section block manage its own max-width internally (sections already have a `maxWidth` prop with `mx-auto`). Keep `min-h-screen bg-white` on the outer div.
+1. Import `InsertDropdown` from `../InsertDropdown`
+2. Add the Insert Variables dropdown to `TextProps` — place it next to the "Content" label, so clicking a variable appends it to the textarea content
+3. Add it to `ButtonProps` — for inserting variables into button label or URL fields
+4. Add it to `ColumnsProps` — for inserting variables into column text fields
 
-Change:
-```tsx
-<div className="min-h-screen bg-white">
-  <div className="mx-auto max-w-4xl px-4 py-12">
-    <PublicBlockRenderer ... />
-  </div>
-</div>
-```
+The dropdown will append the selected variable at the end of the relevant text field (content, label, or column text). This matches the existing pattern used for SMS/WhatsApp.
 
-To:
-```tsx
-<div className="min-h-screen bg-white">
-  <PublicBlockRenderer ... />
-</div>
-```
-
-**File: `src/components/funnels/PublicBlockRenderer.tsx`**
-
-In the main `PublicBlockRenderer` component, wrap the block list in a container that provides sensible defaults for non-section blocks (headings, text, buttons, images etc. that are not inside a section). Section blocks will break out to full width.
-
-Update the root render to:
-- Wrap each block: if it's a `section`, render it full-width (no extra container). For all other top-level blocks, wrap in `max-w-4xl mx-auto px-4` so they don't stretch edge-to-edge but also don't get clipped.
-
-This ensures:
-- Sections with backgrounds span full width as designed
-- Text, headings, buttons, images at root level stay centered and readable
-- Nothing gets clipped on the left or right
+**No other files need changes.**
 
