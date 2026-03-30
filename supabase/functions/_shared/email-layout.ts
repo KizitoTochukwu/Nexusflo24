@@ -8,7 +8,8 @@ const DEFAULT_LOGO_URL =
 
 export interface TemplateOptions {
   preheader?: string;
-  logo?: { url?: string; alignment?: string; size?: number; visible?: boolean };
+  logo?: { url?: string; alignment?: string; size?: number; width?: number; height?: number; autoHeight?: boolean; visible?: boolean };
+  header?: { color?: string };
   unsubscribe?: { enabled?: boolean; text?: string };
   footer?: { text?: string; color?: string; alignment?: string };
   unsubUrl?: string;
@@ -113,9 +114,13 @@ export function wrapEmailTemplate(
     url: DEFAULT_LOGO_URL,
     alignment: "center",
     size: 56,
+    width: 120,
+    height: 56,
+    autoHeight: true,
     visible: true,
     ...options?.logo,
   };
+  const headerColor = options?.header?.color || "#0B1F3B";
   const unsub = {
     enabled: true,
     text: "You received this email because you subscribed to NexusFlo24.",
@@ -132,8 +137,12 @@ export function wrapEmailTemplate(
     ? `<span style="display:none;font-size:1px;color:#f4f5f7;max-height:0;overflow:hidden;">${options.preheader}</span>`
     : "";
 
+  const logoWidth = logo.width || logo.size || 120;
+  const logoHeightAttr = logo.autoHeight ? "auto" : String(logo.height || logo.size || 56);
+  const logoHeightStyle = logo.autoHeight ? "height:auto;" : `height:${logo.height || logo.size || 56}px;`;
+
   const logoBlock = logo.visible && logo.url
-    ? `<tr><td align="${logo.alignment}" style="padding:0 0 24px;"><img src="${logo.url}" width="${logo.size}" height="${logo.size}" alt="NexusFlo24" style="border-radius:10px;display:block;" /></td></tr>`
+    ? `<tr><td align="${logo.alignment}" style="padding:16px 0 24px;"><img src="${logo.url}" width="${logoWidth}" height="${logoHeightAttr}" alt="NexusFlo24" style="border-radius:10px;display:block;width:${logoWidth}px;${logoHeightStyle}" /></td></tr>`
     : "";
 
   // Unsubscribe footer inside the body card
