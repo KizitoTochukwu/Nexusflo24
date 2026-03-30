@@ -296,11 +296,6 @@ Deno.serve(async (req) => {
             } else if (conditionType === "source_equals") {
               passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
             } else if (conditionType === "reply_status" || conditionType === "has_replied" || conditionType === "no_reply") {
-              // Support new UI format (reply_status + reply_check) and legacy (has_replied / no_reply)
-              let replyCheck = conditionType;
-              if (conditionType === "reply_status") {
-                replyCheck = String(config.reply_check || "has_replied");
-              }
               const { data: replies } = await supabase
                 .from("sales_conversations")
                 .select("id")
@@ -308,7 +303,23 @@ Deno.serve(async (req) => {
                 .eq("direction", "inbound")
                 .limit(1);
               const hasReply = (replies && replies.length > 0);
-              passed = replyCheck === "has_replied" ? hasReply : !hasReply;
+
+              if (conditionType === "reply_status") {
+                // New UI: move lead based on reply outcome using replied_action / no_reply_action
+                const targetStage = hasReply
+                  ? String(config.replied_action || "")
+                  : String(config.no_reply_action || "");
+                if (targetStage) {
+                  await supabase.from("leads").update({ pipeline_stage: targetStage }).eq("id", lead_id);
+                  details = { hasReply, movedTo: targetStage };
+                } else {
+                  details = { hasReply, movedTo: null, message: "No target stage configured" };
+                }
+                passed = true; // Always pass — both outcomes are handled
+              } else {
+                // Legacy: has_replied / no_reply as gate conditions
+                passed = conditionType === "has_replied" ? hasReply : !hasReply;
+              }
             }
             // Fallback: legacy field/operator format
             else if (config.field && config.operator) {
