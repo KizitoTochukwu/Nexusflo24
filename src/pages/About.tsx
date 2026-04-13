@@ -45,6 +45,48 @@ const About = () => (
       </div>
     </section>
 
+    {/* Message from the CEO */}
+    <section className="py-20">
+      <div className="container">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-accent/30 bg-card shadow-card">
+          <div className="grid items-center md:grid-cols-5">
+            {/* CEO Photo */}
+            <div className="flex items-center justify-center bg-surface p-8 md:col-span-2 md:p-10">
+              <img
+                src="/lovable-uploads/kizito-ceo-message.png"
+                alt="Kizito Tochukwu — CEO & Co-Founder of NexusFlo24"
+                className="h-64 w-64 rounded-2xl object-cover shadow-card-hover md:h-72 md:w-72"
+              />
+            </div>
+
+            {/* Message */}
+            <div className="border-t border-accent/20 p-8 md:col-span-3 md:border-l md:border-t-0 md:p-10">
+              <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1 text-sm font-medium text-accent-foreground">
+                A Message from Our CEO
+              </span>
+              <p className="mt-4 leading-relaxed text-muted-foreground">
+                I started NexusFlo24 because I lived the frustration firsthand — juggling five different tools just to capture a lead, send a follow-up, and track results. For most businesses, marketing automation felt like a privilege reserved for large corporations with big budgets and dedicated teams.
+              </p>
+              <p className="mt-4 leading-relaxed text-muted-foreground">
+                I believed there had to be a better way. A single platform where AI does the heavy lifting — generating copy, qualifying leads, sending the right message on the right channel at the right time — so you can focus on what matters: building relationships and closing deals.
+              </p>
+              <p className="mt-4 leading-relaxed text-muted-foreground">
+                That belief became NexusFlo24. Our mission is simple: help every business — from solo creators to growing agencies — grow smarter, respond faster, and sell more with AI. We are committed to continuous innovation, intuitive design, and delivering real, measurable results for every customer we serve.
+              </p>
+              <p className="mt-4 leading-relaxed text-muted-foreground">
+                Thank you for trusting us on your growth journey. We're just getting started.
+              </p>
+
+              <div className="mt-8 border-t border-border pt-6">
+                <p className="font-semibold text-foreground">Kizito Tochukwu</p>
+                <p className="text-sm text-muted-foreground">CEO & Co-Founder, NexusFlo24</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     {/* Values */}
     <section className="bg-surface py-20">
       <div className="container">
