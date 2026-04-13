@@ -111,16 +111,16 @@ const About = () => (
               <span className="mb-4 inline-block rounded-full border border-accent/30 bg-accent/10 px-4 py-1 text-sm font-medium text-accent-foreground">
                 A Message from Our CEO
               </span>
-              <p className="mt-4 leading-relaxed text-muted-foreground">
+              <p className="mt-4 leading-relaxed text-muted-foreground text-justify">
                 I started NexusFlo24 because I lived the frustration firsthand — juggling five different tools just to capture a lead, send a follow-up, and track results. For most businesses, marketing automation felt like a privilege reserved for large corporations with big budgets and dedicated teams.
               </p>
-              <p className="mt-4 leading-relaxed text-muted-foreground">
+              <p className="mt-4 leading-relaxed text-muted-foreground text-justify">
                 I believed there had to be a better way. A single platform where AI does the heavy lifting — generating copy, qualifying leads, sending the right message on the right channel at the right time — so you can focus on what matters: building relationships and closing deals.
               </p>
-              <p className="mt-4 leading-relaxed text-muted-foreground">
+              <p className="mt-4 leading-relaxed text-muted-foreground text-justify">
                 That belief became NexusFlo24. Our mission is simple: help every business — from solo creators to growing agencies — grow smarter, respond faster, and sell more with AI. We are committed to continuous innovation, intuitive design, and delivering real, measurable results for every customer we serve.
               </p>
-              <p className="mt-4 leading-relaxed text-muted-foreground">
+              <p className="mt-4 leading-relaxed text-muted-foreground text-justify">
                 Thank you for trusting us on your growth journey. We're just getting started.
               </p>
 
