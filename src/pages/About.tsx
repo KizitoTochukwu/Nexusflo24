@@ -119,8 +119,8 @@ const About = () => (
     </section>
 
     {/* Company Stats & Culture */}
-    <section className="py-20">
-      <div className="container text-primary-foreground bg-primary">
+    <section className="py-20 bg-primary">
+      <div className="container text-primary-foreground">
         <h2 className="mb-4 text-center text-3xl font-bold text-primary-foreground">NexusFlo24 by the Numbers</h2>
         <p className="mx-auto mb-12 max-w-xl text-center text-muted-foreground">
           Our growing impact across industries and borders.
@@ -136,7 +136,7 @@ const About = () => (
               key={s.label}
               className="group rounded-2xl border border-accent/20 bg-card p-8 text-center shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50"
             >
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 transition-colors duration-300 group-hover:bg-accent/20">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full transition-colors duration-300 bg-navy-light">
                 <s.icon className={`h-7 w-7 ${s.color}`} />
               </div>
               <p className="text-3xl font-extrabold text-foreground">{s.stat}</p>
