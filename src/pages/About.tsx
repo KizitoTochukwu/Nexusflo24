@@ -15,6 +15,7 @@ const timeline = [
   { year: "2023", event: "Launched beta with 500 early adopters. Raised seed funding." },
   { year: "2024", event: "10,000+ active users. WhatsApp & SMS channels launched." },
   { year: "2025", event: "Agency platform, white-label, and advanced AI features." },
+  { year: "2026", event: "AI Sales Closer, smart funnels, and global expansion." },
 ];
 
 const About = () => (
