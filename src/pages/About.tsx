@@ -45,6 +45,45 @@ const About = () => (
       </div>
     </section>
 
+    {/* Vision & Mission */}
+    <section className="py-20">
+      <div className="container">
+        <h2 className="mb-4 text-center text-3xl font-bold">Our Vision & Mission</h2>
+        <p className="mx-auto mb-12 max-w-xl text-center text-muted-foreground">
+          The principles that drive everything we build.
+        </p>
+        <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
+          {/* Vision */}
+          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15">
+                <Eye className="h-5 w-5 text-accent" />
+              </div>
+              <h3 className="text-xl font-bold">Our Vision</h3>
+            </div>
+            <p className="text-sm uppercase tracking-wider text-accent-foreground/60 mb-3">Where we're headed</p>
+            <p className="leading-relaxed text-muted-foreground">
+              We envision a world where every business — regardless of size, budget, or technical skill — has access to the same intelligent automation that powers the world's fastest-growing companies. NexusFlo24 is building the future of growth: one where AI captures, nurtures, and converts leads around the clock, so entrepreneurs and creators can focus on what they do best.
+            </p>
+          </div>
+
+          {/* Mission */}
+          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15">
+                <Rocket className="h-5 w-5 text-accent" />
+              </div>
+              <h3 className="text-xl font-bold">Our Mission</h3>
+            </div>
+            <p className="text-sm uppercase tracking-wider text-accent-foreground/60 mb-3">What we do every day</p>
+            <p className="leading-relaxed text-muted-foreground">
+              NexusFlo24's mission is to simplify AI-powered marketing and sales automation for everyday businesses. We combine CRM, email, WhatsApp, SMS, funnels, and analytics into a single intuitive platform — helping our customers attract more leads, respond faster, and close more deals without the complexity or cost of juggling multiple tools.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     {/* Message from the CEO */}
     <section className="py-20">
       <div className="container">
@@ -82,45 +121,6 @@ const About = () => (
                 <p className="text-sm text-muted-foreground">CEO & Co-Founder, NexusFlo24</p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    {/* Vision & Mission */}
-    <section className="py-20">
-      <div className="container">
-        <h2 className="mb-4 text-center text-3xl font-bold">Our Vision & Mission</h2>
-        <p className="mx-auto mb-12 max-w-xl text-center text-muted-foreground">
-          The principles that drive everything we build.
-        </p>
-        <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
-          {/* Vision */}
-          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15">
-                <Eye className="h-5 w-5 text-accent" />
-              </div>
-              <h3 className="text-xl font-bold">Our Vision</h3>
-            </div>
-            <p className="text-sm uppercase tracking-wider text-accent-foreground/60 mb-3">Where we're headed</p>
-            <p className="leading-relaxed text-muted-foreground">
-              We envision a world where every business — regardless of size, budget, or technical skill — has access to the same intelligent automation that powers the world's fastest-growing companies. NexusFlo24 is building the future of growth: one where AI captures, nurtures, and converts leads around the clock, so entrepreneurs and creators can focus on what they do best.
-            </p>
-          </div>
-
-          {/* Mission */}
-          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15">
-                <Rocket className="h-5 w-5 text-accent" />
-              </div>
-              <h3 className="text-xl font-bold">Our Mission</h3>
-            </div>
-            <p className="text-sm uppercase tracking-wider text-accent-foreground/60 mb-3">What we do every day</p>
-            <p className="leading-relaxed text-muted-foreground">
-              NexusFlo24's mission is to simplify AI-powered marketing and sales automation for everyday businesses. We combine CRM, email, WhatsApp, SMS, funnels, and analytics into a single intuitive platform — helping our customers attract more leads, respond faster, and close more deals without the complexity or cost of juggling multiple tools.
-            </p>
           </div>
         </div>
       </div>
