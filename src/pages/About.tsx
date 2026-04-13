@@ -1,7 +1,7 @@
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Lightbulb, Heart, Target, Users, Zap } from "lucide-react";
+import { ArrowRight, Lightbulb, Heart, Target, Users, Zap, Eye, Rocket } from "lucide-react";
 
 const values = [
   { icon: Lightbulb, title: "Innovation First", desc: "We push the boundaries of what AI can do for marketing." },
