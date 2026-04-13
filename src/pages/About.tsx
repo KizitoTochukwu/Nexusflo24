@@ -76,6 +76,22 @@ const About = () => (
       </div>
     </section>
 
+    {/* Values */}
+    <section className="bg-surface py-20">
+      <div className="container">
+        <h2 className="mb-12 text-center text-3xl font-bold">Our Values</h2>
+        <div className="grid gap-6 md:grid-cols-4">
+          {values.map((v) => (
+            <div key={v.title} className="rounded-xl border p-6 text-center shadow-card bg-accent text-primary-foreground">
+              <v.icon className="mx-auto mb-3 h-8 w-8 text-accent" />
+              <h3 className="bg-primary text-primary-foreground font-normal">{v.title}</h3>
+              <p className="mt-2 text-sm text-primary">{v.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
     {/* Message from the CEO */}
     <section className="py-20">
       <div className="container">
@@ -165,21 +181,6 @@ const About = () => (
       </div>
     </section>
 
-    {/* Values */}
-    <section className="bg-surface py-20">
-      <div className="container">
-        <h2 className="mb-12 text-center text-3xl font-bold">Our Values</h2>
-        <div className="grid gap-6 md:grid-cols-4">
-          {values.map((v) => (
-            <div key={v.title} className="rounded-xl border p-6 text-center shadow-card bg-accent text-primary-foreground">
-              <v.icon className="mx-auto mb-3 h-8 w-8 text-accent" />
-              <h3 className="bg-primary text-primary-foreground font-normal">{v.title}</h3>
-              <p className="mt-2 text-sm text-primary">{v.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
 
     {/* Timeline */}
     <section className="py-20">
