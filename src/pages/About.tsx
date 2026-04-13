@@ -150,7 +150,7 @@ const About = () => (
           ].map((s) => (
             <div
               key={s.label}
-              className="group rounded-2xl border border-accent/20 bg-card p-8 text-center shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50"
+              className="group rounded-2xl border border-accent/20 bg-card p-8 text-center shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50 hover:bg-accent/10"
             >
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full transition-colors duration-300 bg-navy-light">
                 <s.icon className={`h-7 w-7 ${s.color}`} />
@@ -170,7 +170,7 @@ const About = () => (
           ].map((c) => (
             <div
               key={c.title}
-              className="rounded-xl border border-border bg-surface p-6 text-center transition-all duration-300 hover:shadow-card hover:-translate-y-0.5"
+              className="rounded-xl border border-border bg-surface p-6 text-center transition-all duration-300 hover:shadow-card hover:-translate-y-0.5 hover:bg-accent/10"
             >
               <c.icon className="mx-auto mb-3 h-7 w-7 text-accent" />
               <h3 className="font-semibold text-foreground">{c.title}</h3>
