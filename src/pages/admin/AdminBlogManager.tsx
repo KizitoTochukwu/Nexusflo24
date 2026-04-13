@@ -47,7 +47,7 @@ const emptyPost = {
   featured: false,
 };
 
-const categories = ["General", "AI Marketing", "Automation Tips", "SaaS Growth", "Digital Business"];
+const categories = ["AI Sales Automation", "Lead Generation Systems", "Marketing Automation Tools", "Sales Funnels & Conversion", "WhatsApp & Email Automation"];
 
 const slugify = (text: string) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");

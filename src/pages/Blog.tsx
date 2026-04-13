@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Calendar, Clock, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const categoriesList = ["All", "AI Marketing", "Automation Tips", "SaaS Growth", "Digital Business"];
+const categoriesList = ["All", "AI Sales Automation", "Lead Generation Systems", "Marketing Automation Tools", "Sales Funnels & Conversion", "WhatsApp & Email Automation"];
 
 const Blog = () => {
   const [search, setSearch] = useState("");
