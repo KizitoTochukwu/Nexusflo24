@@ -1,7 +1,7 @@
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Lightbulb, Heart, Target, Users, Zap, Eye, Rocket } from "lucide-react";
+import { ArrowRight, Lightbulb, Heart, Target, Users, Zap, Eye, Rocket, Globe, TrendingUp, MessageSquare, BarChart3 } from "lucide-react";
 
 const values = [
   { icon: Lightbulb, title: "Innovation First", desc: "We push the boundaries of what AI can do for marketing." },
@@ -113,6 +113,53 @@ const About = () => (
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    {/* Company Stats & Culture */}
+    <section className="py-20">
+      <div className="container">
+        <h2 className="mb-4 text-center text-3xl font-bold">NexusFlo24 by the Numbers</h2>
+        <p className="mx-auto mb-12 max-w-xl text-center text-muted-foreground">
+          Our growing impact across industries and borders.
+        </p>
+        <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-4">
+          {[
+            { icon: Users, stat: "10,000+", label: "Active Users", color: "text-accent" },
+            { icon: Globe, stat: "40+", label: "Countries Served", color: "text-accent" },
+            { icon: MessageSquare, stat: "2M+", label: "Messages Automated", color: "text-accent" },
+            { icon: BarChart3, stat: "35%", label: "Avg. Conversion Lift", color: "text-accent" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="group rounded-2xl border border-accent/20 bg-card p-8 text-center shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50"
+            >
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10 transition-colors duration-300 group-hover:bg-accent/20">
+                <s.icon className={`h-7 w-7 ${s.color}`} />
+              </div>
+              <p className="text-3xl font-extrabold text-foreground">{s.stat}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Culture highlights */}
+        <div className="mx-auto mt-16 grid max-w-4xl gap-6 md:grid-cols-3">
+          {[
+            { icon: TrendingUp, title: "Growth-First Culture", desc: "We ship fast, learn faster, and celebrate wins — big or small." },
+            { icon: Lightbulb, title: "Radical Innovation", desc: "Every team member is empowered to challenge the status quo with bold ideas." },
+            { icon: Heart, title: "People Over Process", desc: "We invest in our people — flexible work, continuous learning, and real impact." },
+          ].map((c) => (
+            <div
+              key={c.title}
+              className="rounded-xl border border-border bg-surface p-6 text-center transition-all duration-300 hover:shadow-card hover:-translate-y-0.5"
+            >
+              <c.icon className="mx-auto mb-3 h-7 w-7 text-accent" />
+              <h3 className="font-semibold text-foreground">{c.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{c.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
