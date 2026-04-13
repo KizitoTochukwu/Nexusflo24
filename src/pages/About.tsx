@@ -55,7 +55,7 @@ const About = () => (
               <img
                 src="/lovable-uploads/kizito-ceo-message.png"
                 alt="Kizito Tochukwu — CEO & Co-Founder of NexusFlo24"
-                className="h-64 w-64 rounded-2xl object-cover shadow-card-hover md:h-72 md:w-72"
+                className="w-full max-w-xs rounded-2xl object-contain shadow-card-hover"
               />
             </div>
 
