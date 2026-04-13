@@ -120,8 +120,8 @@ const About = () => (
 
     {/* Company Stats & Culture */}
     <section className="py-20">
-      <div className="container">
-        <h2 className="mb-4 text-center text-3xl font-bold">NexusFlo24 by the Numbers</h2>
+      <div className="container text-primary-foreground bg-primary">
+        <h2 className="mb-4 text-center text-3xl font-bold text-primary-foreground">NexusFlo24 by the Numbers</h2>
         <p className="mx-auto mb-12 max-w-xl text-center text-muted-foreground">
           Our growing impact across industries and borders.
         </p>
