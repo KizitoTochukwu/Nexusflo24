@@ -54,7 +54,7 @@ const About = () => (
               <h3 className="text-xl font-bold">Our Vision</h3>
             </div>
             <p className="text-sm uppercase tracking-wider text-accent-foreground/60 mb-3">Where we're headed</p>
-            <p className="leading-relaxed text-muted-foreground">
+            <p className="leading-relaxed text-muted-foreground text-justify">
               We envision a world where every business — regardless of size, budget, or technical skill — has access to the same intelligent automation that powers the world's fastest-growing companies. NexusFlo24 is building the future of growth: one where AI captures, nurtures, and converts leads around the clock, so entrepreneurs and creators can focus on what they do best.
             </p>
           </div>
@@ -68,7 +68,7 @@ const About = () => (
               <h3 className="text-xl font-bold">Our Mission</h3>
             </div>
             <p className="text-sm uppercase tracking-wider text-accent-foreground/60 mb-3">What we do every day</p>
-            <p className="leading-relaxed text-muted-foreground">
+            <p className="leading-relaxed text-muted-foreground text-justify">
               NexusFlo24's mission is to simplify AI-powered marketing and sales automation for everyday businesses. We combine CRM, email, WhatsApp, SMS, funnels, and analytics into a single intuitive platform — helping our customers attract more leads, respond faster, and close more deals without the complexity or cost of juggling multiple tools.
             </p>
           </div>
