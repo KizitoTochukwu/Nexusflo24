@@ -46,7 +46,7 @@ const About = () => (
         </p>
         <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
           {/* Vision */}
-          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50">
+          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50 hover:bg-accent/5">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15">
                 <Eye className="h-5 w-5 text-accent" />
@@ -60,7 +60,7 @@ const About = () => (
           </div>
 
           {/* Mission */}
-          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50">
+          <div className="rounded-2xl border border-accent/30 bg-card p-8 shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 hover:border-accent/50 hover:bg-accent/5">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15">
                 <Rocket className="h-5 w-5 text-accent" />
