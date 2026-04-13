@@ -33,17 +33,8 @@ const About = () => (
       </div>
     </section>
 
-    {/* Story */}
-    <section className="py-20">
-      <div className="container">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-3xl font-bold">Our Story</h2>
-          <p className="mt-4 text-muted-foreground leading-relaxed">
-            NexusFlo24 was born from a simple frustration: marketing automation was too complex, too expensive, and too fragmented for small businesses and creators. We set out to build the platform we wished existed — one that combines AI intelligence with human simplicity. Today, thousands of businesses use NexusFlo24 to grow smarter, not harder.
-          </p>
-        </div>
-      </div>
-    </section>
+
+
 
     {/* Vision & Mission */}
     <section className="py-20">
