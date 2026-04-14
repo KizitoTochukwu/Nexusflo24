@@ -87,6 +87,8 @@ const BlogArticle = () => {
         {/* Share */}
         <div className="border-t mt-12 pt-6 flex items-center gap-3">
           <span className="text-sm font-medium">Share:</span>
+          <Button variant="outline" size="sm" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank")}>Facebook</Button>
+          <Button variant="outline" size="sm" onClick={() => window.open(`https://www.instagram.com/`, "_blank")}>Instagram</Button>
           <Button variant="outline" size="sm" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(article.title)}`, "_blank")}>Twitter</Button>
           <Button variant="outline" size="sm" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, "_blank")}>LinkedIn</Button>
           <Button variant="outline" size="sm" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`${article.title} ${shareUrl}`)}`, "_blank")}>WhatsApp</Button>
