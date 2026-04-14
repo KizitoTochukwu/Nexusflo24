@@ -93,7 +93,7 @@ const BlogArticle = () => {
           <Button variant="outline" size="sm" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(article.title)}`, "_blank")}>Twitter</Button>
           <Button variant="outline" size="sm" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, "_blank")}>LinkedIn</Button>
           <Button variant="outline" size="sm" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`${article.title} ${shareUrl}`)}`, "_blank")}>WhatsApp</Button>
-          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(shareUrl); }}><Share2 className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(shareUrl); toast.success("Link copied to clipboard!"); }}><Share2 className="h-4 w-4" /></Button>
         </div>
       </article>
 
