@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, ArrowLeft, Share2, User } from "lucide-react";
+import { toast } from "sonner";
 
 const BlogArticle = () => {
   const { slug } = useParams<{ slug: string }>();
