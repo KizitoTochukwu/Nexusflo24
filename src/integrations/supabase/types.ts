@@ -1821,44 +1821,6 @@ export type Database = {
           },
         ]
       }
-      social_share_log: {
-        Row: {
-          blog_post_id: string
-          created_at: string
-          error: string | null
-          external_id: string | null
-          id: string
-          platform: string
-          status: string
-        }
-        Insert: {
-          blog_post_id: string
-          created_at?: string
-          error?: string | null
-          external_id?: string | null
-          id?: string
-          platform: string
-          status?: string
-        }
-        Update: {
-          blog_post_id?: string
-          created_at?: string
-          error?: string | null
-          external_id?: string | null
-          id?: string
-          platform?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "social_share_log_blog_post_id_fkey"
-            columns: ["blog_post_id"]
-            isOneToOne: false
-            referencedRelation: "blog_posts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       subscriptions: {
         Row: {
           billing_cycle: string | null
