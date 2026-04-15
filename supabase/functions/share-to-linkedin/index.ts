@@ -45,47 +45,49 @@ serve(async (req) => {
     }
 
     const accessToken = Deno.env.get("LINKEDIN_ACCESS_TOKEN");
-    const personUrn = Deno.env.get("LINKEDIN_PERSON_URN");
+    const authorUrn = Deno.env.get("LINKEDIN_PERSON_URN");
 
-    if (!accessToken || !personUrn) {
+    if (!accessToken || !authorUrn) {
       return new Response(JSON.stringify({ error: "LinkedIn credentials not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Build LinkedIn share payload
-    const sharePayload: Record<string, unknown> = {
-      author: personUrn,
-      lifecycleState: "PUBLISHED",
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: {
-            text: `${title}\n\n${excerpt || ""}`.trim(),
-          },
-          shareMediaCategory: url ? "ARTICLE" : "NONE",
-          media: [
-            {
-              status: "READY",
-              originalUrl: url,
-              ...(image_url ? { description: { text: excerpt || title } } : {}),
-            },
-          ],
-        },
+    // Use the newer LinkedIn Posts API (v2/posts) which supports organization URNs
+    const postBody: Record<string, unknown> = {
+      author: authorUrn,
+      commentary: `${title}\n\n${excerpt || ""}`.trim(),
+      visibility: "PUBLIC",
+      distribution: {
+        feedDistribution: "MAIN_FEED",
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
       },
-      visibility: {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
+      lifecycleState: "PUBLISHED",
+      isReshareDisabledByAuthor: false,
+    };
+
+    // Attach article content
+    postBody.content = {
+      article: {
+        source: url,
+        title: title,
+        description: excerpt || title,
       },
     };
 
-    const linkedinRes = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+    console.log("Posting to LinkedIn Posts API with author:", authorUrn);
+
+    const linkedinRes = await fetch("https://api.linkedin.com/rest/posts", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        "LinkedIn-Version": "202401",
         "X-Restli-Protocol-Version": "2.0.0",
       },
-      body: JSON.stringify(sharePayload),
+      body: JSON.stringify(postBody),
     });
 
     if (!linkedinRes.ok) {
@@ -97,10 +99,13 @@ serve(async (req) => {
       );
     }
 
-    const result = await linkedinRes.json();
-    console.log("LinkedIn post shared successfully:", result.id);
+    // The Posts API returns the post ID in the x-restli-id header
+    const postId = linkedinRes.headers.get("x-restli-id") || "unknown";
+    // Consume response body
+    await linkedinRes.text();
+    console.log("LinkedIn post shared successfully:", postId);
 
-    return new Response(JSON.stringify({ success: true, linkedin_post_id: result.id }), {
+    return new Response(JSON.stringify({ success: true, linkedin_post_id: postId }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
