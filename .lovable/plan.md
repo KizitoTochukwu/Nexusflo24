@@ -1,27 +1,16 @@
 
 
-## Add "Message from the CEO" Section to About Page
+# Update LinkedIn Secrets
 
-### Overview
-Add a premium two-column section to the About page featuring a personal message from CEO Kizito Tochukwu, with the uploaded photo on one side and a visionary message on the other.
+## What we'll do
+Update the two existing secrets with your new credentials:
 
-### Changes
+1. **LINKEDIN_ACCESS_TOKEN** — Your new OAuth access token generated from the LinkedIn Developer Portal with the `w_member_social` scope
+2. **LINKEDIN_PERSON_URN** — Your Person URN in the format `urn:li:person:YOUR_SUB_VALUE` (retrieved from the LinkedIn userinfo API)
 
-**1. Copy uploaded image to project assets**
-- Copy `user-uploads://ChatGPT_Image_Feb_6_2026_09_01_26_AM-2.png` to `public/lovable-uploads/kizito-ceo-message.png`
+## Steps
+1. Use the `add_secret` tool to prompt you to enter the new **LINKEDIN_ACCESS_TOKEN**
+2. Use the `add_secret` tool to prompt you to enter the new **LINKEDIN_PERSON_URN**
 
-**2. Edit `src/pages/About.tsx`**
-- Insert a new section between the "Our Story" and "Our Values" sections
-- Two-column layout: CEO photo on the left, message on the right
-- Gold accent border/line on the message card for premium feel
-- Content covers: why NexusFlo24 was created, the problem with fragmented tools, the mission of accessible AI automation, commitment to results
-- Closing signature: "Kizito Tochukwu — CEO & Co-Founder, NexusFlo24"
-- Responsive: stacks vertically on mobile
-- Styling: white/card background, navy text, gold accent border, consistent with existing brand tokens
-
-### Technical Details
-- Uses existing Tailwind classes (`bg-card`, `text-foreground`, `border-accent`, etc.)
-- No new dependencies needed
-- Photo rendered as a rounded image with `object-cover`
-- Section wrapped in standard `container` with `py-20` spacing matching adjacent sections
+No code changes needed — just updating the secret values.
 
