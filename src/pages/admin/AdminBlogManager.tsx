@@ -99,6 +99,24 @@ const AdminBlogManager = () => {
     },
   });
 
+  const shareToLinkedIn = async (post: { title: string; slug: string; excerpt: string; image_url: string | null }) => {
+    try {
+      const publicUrl = `${window.location.origin}/blog/${post.slug}`;
+      const { data, error } = await supabase.functions.invoke("share-to-linkedin", {
+        body: { title: post.title, excerpt: post.excerpt, url: publicUrl, image_url: post.image_url },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: "Shared to LinkedIn ✓" });
+      } else {
+        toast({ title: "LinkedIn share failed", description: data?.error || "Unknown error", variant: "destructive" });
+      }
+    } catch (err: any) {
+      console.error("LinkedIn share error:", err);
+      toast({ title: "LinkedIn share failed", description: err.message, variant: "destructive" });
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (post: typeof form & { id?: string }) => {
       const payload = {
@@ -116,6 +134,11 @@ const AdminBlogManager = () => {
         updated_at: new Date().toISOString(),
       };
 
+      // Check if this is a new publish (not already published)
+      const isNewPublish = post.status === "published" && (
+        !editingId || posts.find((p) => p.id === editingId)?.status !== "published"
+      );
+
       if (editingId) {
         const { error } = await supabase.from("blog_posts").update(payload).eq("id", editingId);
         if (error) throw error;
@@ -123,10 +146,18 @@ const AdminBlogManager = () => {
         const { error } = await supabase.from("blog_posts").insert(payload);
         if (error) throw error;
       }
+
+      return { isNewPublish, title: post.title, slug: post.slug, excerpt: post.excerpt, image_url: post.image_url };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["admin-blog-posts"] });
       toast({ title: editingId ? "Post updated" : "Post created" });
+
+      // Auto-share to LinkedIn on first publish
+      if (result?.isNewPublish) {
+        shareToLinkedIn({ title: result.title, slug: result.slug, excerpt: result.excerpt, image_url: result.image_url });
+      }
+
       resetForm();
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
