@@ -1,18 +1,27 @@
 
 
-# Update LinkedIn Secrets for Company Page Posting
+# Replace NexusFlo24 Logo Across the App
 
-## What will happen
-I'll use the secret management tool to prompt you to enter new values for:
-
-1. **LINKEDIN_PERSON_URN** — Enter your organization URN: `urn:li:organization:109866249`
-2. **LINKEDIN_ACCESS_TOKEN** — Enter your new access token (the one with `w_organization_social` scope)
-
-## No code changes needed
-The existing `share-to-linkedin` edge function already uses the `LINKEDIN_PERSON_URN` secret as the `author` field in the API payload, so it will automatically post to the Company Page once the URN is updated.
+## Summary
+Replace the existing logo files (`nexusflo24-logo-full.png` and `nexusflo24-logo.png`) with the new uploaded logo image. The new image will serve as the full logo. A cropped/icon version will also be created for the sidebar icon and footer.
 
 ## Steps
-1. Update `LINKEDIN_PERSON_URN` secret with `urn:li:organization:109866249`
-2. Update `LINKEDIN_ACCESS_TOKEN` secret with the new token
-3. Test by publishing a blog post or manually invoking the edge function
+
+1. **Copy the new logo** into `src/assets/nexusflo24-logo-full.png` (replacing the existing full logo)
+2. **Create an icon version** — crop/resize the uploaded image to extract just the circular icon portion and save as `src/assets/nexusflo24-logo.png`
+3. **Upload to storage** — upload the new logo to the `email-assets` bucket as `nexusflo24-logo-profile.png` so email templates also use the updated branding
+
+## Files affected (no code changes needed)
+The following files already import from the same asset paths, so replacing the files in-place updates everything automatically:
+- `src/components/brand/SidebarLogo.tsx` — sidebar logo
+- `src/components/layout/Header.tsx` — public header
+- `src/components/layout/Footer.tsx` — footer icon
+- `src/components/auth/AuthLayout.tsx` — auth panel branding
+- `src/pages/Login.tsx`, `src/pages/Register.tsx` — login/register pages
+
+## Question
+Since the uploaded image contains both the icon (circular mark) and the wordmark, I need to know: should I use the full image (icon + wordmark) as the full logo and crop just the circular part for the icon? Or do you have a separate icon-only file to upload?
+
+## Technical note
+The email templates reference a hosted URL in storage. I'll upload the new logo there as well to keep email branding consistent.
 
