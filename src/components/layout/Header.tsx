@@ -22,7 +22,7 @@ const Header = () => {
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center">
-          <img alt="NexusFlo24" className="h-8 w-auto object-contain rounded" src={logoFull} />
+          <img alt="NexusFlo24" className="h-11 w-auto object-contain rounded" src={logoFull} />
         </Link>
 
         {/* Desktop nav */}

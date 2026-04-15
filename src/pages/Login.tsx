@@ -69,7 +69,7 @@ const Login = () => {
       {/* Mobile logo */}
       <div className="mb-6 text-center lg:hidden">
         <Link to="/">
-          <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-9 sm:h-10 object-contain mx-auto" />
+          <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-11 sm:h-12 object-contain mx-auto" />
         </Link>
       </div>
 

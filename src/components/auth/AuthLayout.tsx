@@ -24,7 +24,7 @@ const AuthLayout = ({ children }: {children: ReactNode;}) => {
 
         <div className="relative z-10">
           <Link to="/" className="inline-flex items-center">
-            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-12 object-contain rounded" />
+            <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-14 object-contain rounded" />
           </Link>
         </div>
 
