@@ -16,7 +16,7 @@ const SidebarLogo = ({ collapsed = false }: { collapsed?: boolean }) => {
     <img
       src={logoFull}
       alt="NexusFlo24"
-      className="h-8 w-auto object-contain shrink-0"
+      className="h-10 w-auto object-contain shrink-0"
     />
   );
 };
