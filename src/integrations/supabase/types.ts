@@ -2372,6 +2372,9 @@ export type Database = {
           created_at: string
           demo_mode_enabled: boolean
           demo_seed_variant: string
+          hot_lead_notify_phone: string | null
+          hot_lead_sms_enabled: boolean
+          hot_lead_whatsapp_enabled: boolean
           id: string
           name: string
           owner_user_id: string
@@ -2381,6 +2384,9 @@ export type Database = {
           created_at?: string
           demo_mode_enabled?: boolean
           demo_seed_variant?: string
+          hot_lead_notify_phone?: string | null
+          hot_lead_sms_enabled?: boolean
+          hot_lead_whatsapp_enabled?: boolean
           id?: string
           name: string
           owner_user_id: string
@@ -2390,6 +2396,9 @@ export type Database = {
           created_at?: string
           demo_mode_enabled?: boolean
           demo_seed_variant?: string
+          hot_lead_notify_phone?: string | null
+          hot_lead_sms_enabled?: boolean
+          hot_lead_whatsapp_enabled?: boolean
           id?: string
           name?: string
           owner_user_id?: string
