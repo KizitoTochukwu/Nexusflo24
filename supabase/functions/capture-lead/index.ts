@@ -119,6 +119,23 @@ Deno.serve(async (req) => {
     const newTags = allTags.length > 0 ? allTags : ["website-signup"];
     const finalSource = destSource || source || "Landing Page";
 
+    // --- Round-robin assignment (only for brand-new leads) ---
+    let assignedOwnerId: string | null = null;
+    if (!existing) {
+      try {
+        const { data: rrUserId } = await supabase.rpc("assign_next_round_robin", {
+          _workspace_id: workspaceId,
+        });
+        if (rrUserId && typeof rrUserId === "string") {
+          assignedOwnerId = rrUserId;
+        }
+      } catch (rrErr) {
+        console.error("Round-robin assignment failed:", rrErr);
+      }
+    }
+    // Fallback: assign to owner if round-robin disabled or unavailable
+    const notifyUserId = assignedOwnerId || ownerId;
+
     if (existing) {
       const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
       const { error } = await supabase
