@@ -2145,6 +2145,35 @@ export type Database = {
           },
         ]
       }
+      workspace_assignment_state: {
+        Row: {
+          last_assigned_user_id: string | null
+          round_robin_enabled: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          last_assigned_user_id?: string | null
+          round_robin_enabled?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          last_assigned_user_id?: string | null
+          round_robin_enabled?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_assignment_state_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_branding: {
         Row: {
           brand_color: string | null
@@ -2373,6 +2402,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_next_round_robin: {
+        Args: { _workspace_id: string }
+        Returns: string
+      }
       decay_inactive_leads: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }
