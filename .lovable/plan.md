@@ -1,19 +1,12 @@
 
+The user wants to replace the hero background image with the uploaded business team meeting photo.
 
-# Increase Favicon Size
+Current setup (src/pages/Index.tsx line 144):
+- Uses `heroTeam` imported from `@/assets/hero-team.jpg`
+- Rendered as a full-cover background `<img>` with a navy gradient overlay
 
-Favicons are fixed-size icons determined by the image file itself, not by HTML attributes. The browser renders them at standard sizes (16x16, 32x32, etc.) in the tab bar regardless of the source image dimensions.
+Plan:
+1. Copy `user-uploads://Screenshot_18-4-2026_22513_chatgpt.com.jpeg` to `src/assets/hero-team.jpg`, replacing the existing file.
+2. No code changes needed — the import path stays the same, so the new image will automatically be used in the hero section.
 
-## What I'll do
-
-1. **Copy the uploaded image** (`user-uploads://ChatGPT_Image_Apr_15_2026_10_52_00_PM-2.png`) to `public/favicon.png`, replacing the current one
-2. **Generate properly sized favicon variants** using ImageMagick to create a multi-size `.ico` file (16x16, 32x32, 48x48) and a 180x180 Apple touch icon — this ensures the favicon renders crisply at every size the browser requests
-3. **Update `index.html`** to reference both the `.ico` for standard browsers and a separate 180x180 PNG for Apple touch icon:
-   ```html
-   <link rel="icon" href="/favicon.ico" type="image/x-icon">
-   <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
-   <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
-   ```
-
-This gives you the largest, sharpest favicon possible across all browsers and devices.
-
+The navy gradient overlay (`from-navy/70 via-navy/50 to-navy/80`) will continue to ensure the white text remains readable over the bright meeting room photo.
