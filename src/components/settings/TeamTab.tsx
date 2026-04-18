@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useWorkspaceMembers, useWorkspaceInvites, useSendInvite, useRevokeInvite, useUpdateMemberRole, useRemoveMember } from "@/hooks/useWorkspaceInvites";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+import { useAssignmentState, useSetRoundRobin, useResetRotation } from "@/hooks/useRoundRobin";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Users, Mail, Loader2, Trash2, Shield, Crown, Eye, UserCheck } from "lucide-react";
+import { Users, Mail, Loader2, Trash2, Shield, Crown, Eye, UserCheck, Repeat, RotateCcw } from "lucide-react";
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "bg-amber-100 text-amber-800",
@@ -31,6 +33,9 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
   const { canManage } = useWorkspaceRole();
   const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(workspaceId);
   const { data: invites = [], isLoading: invitesLoading } = useWorkspaceInvites(workspaceId);
+  const { data: assignment } = useAssignmentState(workspaceId);
+  const setRR = useSetRoundRobin();
+  const resetRot = useResetRotation();
   const sendInvite = useSendInvite();
   const revokeInvite = useRevokeInvite();
   const updateRole = useUpdateMemberRole();
@@ -38,6 +43,9 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
+
+  const rrEnabled = assignment?.round_robin_enabled ?? true;
+  const lastAssignedMember = (members as any[]).find((m: any) => m.user_id === assignment?.last_assigned_user_id);
 
   const handleInvite = async () => {
     if (!email.trim()) { toast.error("Enter an email address."); return; }
@@ -116,6 +124,51 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Round-Robin Lead Assignment */}
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><Repeat className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Round-Robin Lead Assignment</CardTitle></div>
+            <CardDescription>
+              When enabled, every new lead is auto-assigned to the next sales rep in rotation. Only the assigned rep gets the new-lead notification (in-app + email).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Enable round-robin</Label>
+                <p className="text-xs text-muted-foreground">Distribute incoming leads across all workspace members.</p>
+              </div>
+              <Switch
+                checked={rrEnabled}
+                onCheckedChange={(checked) =>
+                  setRR.mutate(
+                    { workspaceId, enabled: checked },
+                    { onSuccess: () => toast.success(checked ? "Round-robin enabled" : "Round-robin disabled") }
+                  )
+                }
+                disabled={setRR.isPending}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Last assigned</Label>
+                <p className="text-xs text-muted-foreground">
+                  {lastAssignedMember?.profile?.full_name || lastAssignedMember?.profile?.email || "—"}
+                </p>
+              </div>
+              <Button
+                variant="outline" size="sm"
+                onClick={() => resetRot.mutate(workspaceId, { onSuccess: () => toast.success("Rotation reset") })}
+                disabled={resetRot.isPending}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Invite */}
       {canManage && (

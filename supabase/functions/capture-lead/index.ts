@@ -119,6 +119,23 @@ Deno.serve(async (req) => {
     const newTags = allTags.length > 0 ? allTags : ["website-signup"];
     const finalSource = destSource || source || "Landing Page";
 
+    // --- Round-robin assignment (only for brand-new leads) ---
+    let assignedOwnerId: string | null = null;
+    if (!existing) {
+      try {
+        const { data: rrUserId } = await supabase.rpc("assign_next_round_robin", {
+          _workspace_id: workspaceId,
+        });
+        if (rrUserId && typeof rrUserId === "string") {
+          assignedOwnerId = rrUserId;
+        }
+      } catch (rrErr) {
+        console.error("Round-robin assignment failed:", rrErr);
+      }
+    }
+    // Fallback: assign to owner if round-robin disabled or unavailable
+    const notifyUserId = assignedOwnerId || ownerId;
+
     if (existing) {
       const mergedTags = Array.from(new Set([...(existing.tags || []), ...newTags]));
       const { error } = await supabase
@@ -154,12 +171,22 @@ Deno.serve(async (req) => {
           pipeline_stage: destPipelineStage,
           campaign_name: campaignName || null,
           funnel_name: funnelName || null,
+          assigned_owner_id: assignedOwnerId,
         })
         .select("id")
         .single();
       if (error) throw error;
       leadId = newLead.id;
     }
+
+    // Log activity
+    await supabase.from("lead_activities").insert({
+      lead_id: leadId,
+      user_id: ownerId,
+      workspace_id: workspaceId,
+      type: "form_submit",
+      meta: meta,
+    });
 
     // Log activity
     await supabase.from("lead_activities").insert({
@@ -244,17 +271,17 @@ Deno.serve(async (req) => {
       console.error("Routing error:", routeErr);
     }
 
-    // --- New lead notification (only for brand-new leads) ---
+    // --- New lead notification (only for brand-new leads, only to assigned rep) ---
     if (!existing) {
       const leadName = full_name || normalizedEmail;
 
       await supabase.from("notifications").insert({
         workspace_id: workspaceId,
-        user_id: ownerId,
+        user_id: notifyUserId,
         title: `New lead: ${leadName}`,
-        body: `${normalizedEmail}${finalSource ? ` via ${finalSource}` : ""}`,
+        body: `${normalizedEmail}${finalSource ? ` via ${finalSource}` : ""}${assignedOwnerId ? " (assigned to you)" : ""}`,
         type: "new_lead",
-        meta: { lead_id: leadId, email: normalizedEmail, source: finalSource },
+        meta: { lead_id: leadId, email: normalizedEmail, source: finalSource, assigned_owner_id: assignedOwnerId },
       });
 
       try {
@@ -265,7 +292,7 @@ Deno.serve(async (req) => {
           const { data: ownerProfile } = await supabase
             .from("profiles")
             .select("email, full_name")
-            .eq("id", ownerId)
+            .eq("id", notifyUserId)
             .single();
 
           if (ownerProfile?.email) {
