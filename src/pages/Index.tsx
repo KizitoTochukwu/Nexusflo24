@@ -181,7 +181,7 @@ const Index = () => {
     </section>
 
     {/* Features */}
-    <section className="py-20 md:py-28" id="features">
+    <section className="py-20 md:py-28 bg-[#c9c5c5]" id="features">
       <div className="container">
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <span className="text-sm font-semibold uppercase tracking-widest text-accent">Features</span>
