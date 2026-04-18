@@ -10,9 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { useWorkspaceMembers, useWorkspaceInvites, useSendInvite, useRevokeInvite, useUpdateMemberRole, useRemoveMember } from "@/hooks/useWorkspaceInvites";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useAssignmentState, useSetRoundRobin, useResetRotation } from "@/hooks/useRoundRobin";
+import { useHotLeadPrefs, useUpdateHotLeadPrefs } from "@/hooks/useHotLeadPrefs";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Users, Mail, Loader2, Trash2, Shield, Crown, Eye, UserCheck, Repeat, RotateCcw } from "lucide-react";
+import { Users, Mail, Loader2, Trash2, Shield, Crown, Eye, UserCheck, Repeat, RotateCcw, Flame } from "lucide-react";
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "bg-amber-100 text-amber-800",
@@ -34,6 +35,8 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
   const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(workspaceId);
   const { data: invites = [], isLoading: invitesLoading } = useWorkspaceInvites(workspaceId);
   const { data: assignment } = useAssignmentState(workspaceId);
+  const { data: hotPrefs } = useHotLeadPrefs(workspaceId);
+  const updateHotPrefs = useUpdateHotLeadPrefs();
   const setRR = useSetRoundRobin();
   const resetRot = useResetRotation();
   const sendInvite = useSendInvite();
@@ -43,9 +46,11 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
+  const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
 
   const rrEnabled = assignment?.round_robin_enabled ?? true;
   const lastAssignedMember = (members as any[]).find((m: any) => m.user_id === assignment?.last_assigned_user_id);
+  const phoneValue = phoneDraft !== null ? phoneDraft : (hotPrefs?.hot_lead_notify_phone ?? "");
 
   const handleInvite = async () => {
     if (!email.trim()) { toast.error("Enter an email address."); return; }
@@ -170,7 +175,77 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
         </Card>
       )}
 
-      {/* Invite */}
+      {/* Hot Lead Phone Alerts */}
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2"><Flame className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Hot Lead Phone Alerts</CardTitle></div>
+            <CardDescription>
+              Get an instant SMS or WhatsApp message when any lead's score crosses 81 and becomes Hot. Sent to the assigned rep's phone (from their profile) or to the override number below.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">SMS alert</Label>
+                <p className="text-xs text-muted-foreground">Sends via the workspace's SMS provider. Free for admin accounts; otherwise uses 1 SMS credit.</p>
+              </div>
+              <Switch
+                checked={hotPrefs?.hot_lead_sms_enabled ?? true}
+                onCheckedChange={(checked) =>
+                  updateHotPrefs.mutate(
+                    { workspaceId, patch: { hot_lead_sms_enabled: checked } },
+                    { onSuccess: () => toast.success(checked ? "SMS Hot Lead alerts on" : "SMS Hot Lead alerts off") }
+                  )
+                }
+                disabled={updateHotPrefs.isPending}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">WhatsApp alert</Label>
+                <p className="text-xs text-muted-foreground">Sends via the WhatsApp Cloud API. Off by default — enable if you've messaged your number in the last 24h.</p>
+              </div>
+              <Switch
+                checked={hotPrefs?.hot_lead_whatsapp_enabled ?? false}
+                onCheckedChange={(checked) =>
+                  updateHotPrefs.mutate(
+                    { workspaceId, patch: { hot_lead_whatsapp_enabled: checked } },
+                    { onSuccess: () => toast.success(checked ? "WhatsApp Hot Lead alerts on" : "WhatsApp Hot Lead alerts off") }
+                  )
+                }
+                disabled={updateHotPrefs.isPending}
+              />
+            </div>
+            <div className="rounded-lg border p-3 space-y-2">
+              <Label className="text-sm font-medium">Override phone number (optional)</Label>
+              <p className="text-xs text-muted-foreground">If set, alerts go here instead of the assigned rep's profile phone. Use international format, e.g. +447517327597.</p>
+              <div className="flex gap-2">
+                <Input
+                  value={phoneValue}
+                  onChange={(e) => setPhoneDraft(e.target.value)}
+                  placeholder="+447517327597"
+                  className="flex-1"
+                  maxLength={20}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    updateHotPrefs.mutate(
+                      { workspaceId, patch: { hot_lead_notify_phone: phoneValue.trim() || null } },
+                      { onSuccess: () => { toast.success("Phone updated"); setPhoneDraft(null); } }
+                    )
+                  }
+                  disabled={updateHotPrefs.isPending || phoneDraft === null}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {canManage && (
         <Card>
           <CardHeader>

@@ -71,3 +71,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.notify-hot-lead]
+    verify_jwt = false
