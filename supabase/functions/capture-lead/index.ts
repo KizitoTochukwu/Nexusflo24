@@ -171,12 +171,22 @@ Deno.serve(async (req) => {
           pipeline_stage: destPipelineStage,
           campaign_name: campaignName || null,
           funnel_name: funnelName || null,
+          assigned_owner_id: assignedOwnerId,
         })
         .select("id")
         .single();
       if (error) throw error;
       leadId = newLead.id;
     }
+
+    // Log activity
+    await supabase.from("lead_activities").insert({
+      lead_id: leadId,
+      user_id: ownerId,
+      workspace_id: workspaceId,
+      type: "form_submit",
+      meta: meta,
+    });
 
     // Log activity
     await supabase.from("lead_activities").insert({
