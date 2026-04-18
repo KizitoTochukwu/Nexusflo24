@@ -271,17 +271,17 @@ Deno.serve(async (req) => {
       console.error("Routing error:", routeErr);
     }
 
-    // --- New lead notification (only for brand-new leads) ---
+    // --- New lead notification (only for brand-new leads, only to assigned rep) ---
     if (!existing) {
       const leadName = full_name || normalizedEmail;
 
       await supabase.from("notifications").insert({
         workspace_id: workspaceId,
-        user_id: ownerId,
+        user_id: notifyUserId,
         title: `New lead: ${leadName}`,
-        body: `${normalizedEmail}${finalSource ? ` via ${finalSource}` : ""}`,
+        body: `${normalizedEmail}${finalSource ? ` via ${finalSource}` : ""}${assignedOwnerId ? " (assigned to you)" : ""}`,
         type: "new_lead",
-        meta: { lead_id: leadId, email: normalizedEmail, source: finalSource },
+        meta: { lead_id: leadId, email: normalizedEmail, source: finalSource, assigned_owner_id: assignedOwnerId },
       });
 
       try {
@@ -292,7 +292,7 @@ Deno.serve(async (req) => {
           const { data: ownerProfile } = await supabase
             .from("profiles")
             .select("email, full_name")
-            .eq("id", ownerId)
+            .eq("id", notifyUserId)
             .single();
 
           if (ownerProfile?.email) {
