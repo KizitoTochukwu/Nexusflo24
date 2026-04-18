@@ -35,6 +35,8 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
   const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers(workspaceId);
   const { data: invites = [], isLoading: invitesLoading } = useWorkspaceInvites(workspaceId);
   const { data: assignment } = useAssignmentState(workspaceId);
+  const { data: hotPrefs } = useHotLeadPrefs(workspaceId);
+  const updateHotPrefs = useUpdateHotLeadPrefs();
   const setRR = useSetRoundRobin();
   const resetRot = useResetRotation();
   const sendInvite = useSendInvite();
@@ -44,9 +46,11 @@ export default function TeamTab({ workspaceId }: { workspaceId: string }) {
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
+  const [phoneDraft, setPhoneDraft] = useState<string | null>(null);
 
   const rrEnabled = assignment?.round_robin_enabled ?? true;
   const lastAssignedMember = (members as any[]).find((m: any) => m.user_id === assignment?.last_assigned_user_id);
+  const phoneValue = phoneDraft !== null ? phoneDraft : (hotPrefs?.hot_lead_notify_phone ?? "");
 
   const handleInvite = async () => {
     if (!email.trim()) { toast.error("Enter an email address."); return; }
