@@ -20,6 +20,7 @@ import stepNurture from "@/assets/step-nurture.png";
 import stepConvert from "@/assets/step-convert.png";
 import { useState } from "react";
 import { toast } from "sonner";
+import MotionShowcaseSection from "@/components/home/MotionShowcaseSection";
 
 
 const features = [
@@ -224,6 +225,8 @@ const Index = () => {
         </div>
       </div>
     </section>
+
+    <MotionShowcaseSection />
 
     {/* Why We Created NexusFlo24 */}
     <section className="py-20 md:py-28 bg-surface">
