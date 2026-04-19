@@ -226,6 +226,8 @@ const Index = () => {
       </div>
     </section>
 
+    <MotionShowcaseSection />
+
     {/* Why We Created NexusFlo24 */}
     <section className="py-20 md:py-28 bg-surface">
       <div className="container">
