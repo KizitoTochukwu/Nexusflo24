@@ -90,11 +90,26 @@ export default {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        "flow-particle": {
+          "0%": { strokeDashoffset: "200" },
+          "100%": { strokeDashoffset: "0" },
+        },
+        "pulse-glow": {
+          "0%, 100%": { opacity: "0.85", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.04)" },
+        },
+        "orbit-soft": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         marquee: "marquee 30s linear infinite",
+        "flow-particle": "flow-particle 2.4s linear infinite",
+        "pulse-glow": "pulse-glow 2.8s ease-in-out infinite",
+        "orbit-soft": "orbit-soft 4s ease-in-out infinite",
       },
     },
   },
