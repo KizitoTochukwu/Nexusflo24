@@ -6,6 +6,46 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Best-effort: fire automations matching trigger_type=lead_added_to_folder for a single lead
+async function fireFolderAutomations(
+  supabase: any,
+  workspaceId: string,
+  leadId: string,
+  folderId: string,
+) {
+  try {
+    const { data: autos } = await supabase
+      .from("automations")
+      .select("id, trigger_config")
+      .eq("workspace_id", workspaceId)
+      .eq("status", "active")
+      .eq("trigger_type", "lead_added_to_folder");
+
+    const matched = (autos ?? []).filter((a: any) => {
+      const cfg = a.trigger_config ?? {};
+      const cfgFolder = cfg.folder_id;
+      if (!cfgFolder) return true; // any folder
+      return String(cfgFolder) === String(folderId);
+    });
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    for (const auto of matched) {
+      fetch(`${supabaseUrl}/functions/v1/execute-automation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
+        body: JSON.stringify({
+          automation_id: auto.id,
+          workspace_id: workspaceId,
+          lead_id: leadId,
+        }),
+      }).catch(() => { /* best effort */ });
+    }
+  } catch (e) {
+    console.error("[capture-lead] fireFolderAutomations error:", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
