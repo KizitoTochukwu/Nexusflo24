@@ -18,6 +18,7 @@ import {
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
+import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { format } from "date-fns";
 
 interface Props {
@@ -31,6 +32,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs } = useAutomationLogs(automation?.id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
+  const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
 
@@ -38,6 +40,8 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("new_lead");
   const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
+  const [tagValue, setTagValue] = useState<string>("");
   const [steps, setSteps] = useState<StepData[]>([]);
 
   useEffect(() => {
@@ -45,8 +49,10 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       setName(automation.name);
       setDescription(automation.description || "");
       setTriggerType(automation.trigger_type);
-      const fId = (automation.trigger_config as Record<string, unknown>)?.funnel_id as string | undefined;
-      setSelectedFunnelId(fId || "all");
+      const cfg = (automation.trigger_config ?? {}) as Record<string, unknown>;
+      setSelectedFunnelId((cfg.funnel_id as string) || "all");
+      setSelectedFolderId((cfg.folder_id as string) || "any");
+      setTagValue((cfg.tag as string) || "");
     }
   }, [automation]);
 
@@ -60,7 +66,11 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
 
   const handleSave = () => {
     const triggerConfig: Record<string, unknown> = {};
-    if (selectedFunnelId !== "all") {
+    if (triggerType === "lead_added_to_folder") {
+      if (selectedFolderId !== "any") triggerConfig.folder_id = selectedFolderId;
+    } else if (triggerType === "lead_tagged") {
+      if (tagValue.trim()) triggerConfig.tag = tagValue.trim();
+    } else if (selectedFunnelId !== "all") {
       triggerConfig.funnel_id = selectedFunnelId;
     }
     updateAutomation.mutate({
