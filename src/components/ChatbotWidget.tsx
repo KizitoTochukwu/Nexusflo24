@@ -356,7 +356,7 @@ const ChatbotWidget = () => {
                   <UserPlus className="h-2.5 w-2.5" /> Lead saved
                 </span>
               )}
-              <button onClick={() => setOpen(false)} className="text-primary-foreground/60 hover:text-primary-foreground">
+              <button onClick={handleClose} className="text-primary-foreground/60 hover:text-primary-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
