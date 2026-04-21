@@ -8,9 +8,9 @@ const corsHeaders = {
 };
 
 const CREDIT_PACKS: Record<string, { priceId: string; credits: number }> = {
-  email: { priceId: "price_1TD8KhCvKm9Paj6GuxBTFprN", credits: 1000 },
-  sms: { priceId: "price_1TD8MHCvKm9Paj6GPnQcHNSH", credits: 100 },
-  whatsapp: { priceId: "price_1TD8MbCvKm9Paj6GGTS0dqQ3", credits: 100 },
+  email: { priceId: "price_1TOfYVE524oup9rkOupWd3vN", credits: 1000 },
+  sms: { priceId: "price_1TOfc8E524oup9rkWQWIhwrf", credits: 100 },
+  whatsapp: { priceId: "price_1TOfeBE524oup9rkcPlroL47", credits: 100 },
 };
 
 serve(async (req) => {
