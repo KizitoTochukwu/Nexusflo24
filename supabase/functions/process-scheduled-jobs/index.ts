@@ -77,20 +77,30 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Call execute-automation with start_from_step
+        // Branch by payload type: workflows vs legacy automations
         const payload = job.payload as Record<string, any> || {};
-        const execRes = await fetch(`${supabaseUrl}/functions/v1/execute-automation`, {
+        const isWorkflow = !!(payload.workflow_id && payload.enrollment_id);
+        const targetUrl = isWorkflow
+          ? `${supabaseUrl}/functions/v1/execute-workflow`
+          : `${supabaseUrl}/functions/v1/execute-automation`;
+        const targetBody = isWorkflow
+          ? {
+              enrollment_id: payload.enrollment_id,
+              start_from_node: payload.start_from_node,
+            }
+          : {
+              automation_id: payload.automation_id || job.automation_id,
+              lead_id: payload.lead_id || job.lead_id,
+              workspace_id: payload.workspace_id || job.workspace_id,
+              start_from_step: job.step_index,
+            };
+        const execRes = await fetch(targetUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${serviceRoleKey}`,
           },
-          body: JSON.stringify({
-            automation_id: payload.automation_id || job.automation_id,
-            lead_id: payload.lead_id || job.lead_id,
-            workspace_id: payload.workspace_id || job.workspace_id,
-            start_from_step: job.step_index,
-          }),
+          body: JSON.stringify(targetBody),
         });
 
         const execData = await execRes.json();

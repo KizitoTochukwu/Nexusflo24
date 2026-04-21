@@ -55,4 +55,20 @@ export async function fireAutomationsForLeads(params: {
   } catch (e) {
     console.error("[fireAutomationsForLeads] lookup error:", e);
   }
+
+  // Also dispatch to the new Workflows engine — it has its own matching logic.
+  try {
+    supabase.functions
+      .invoke("enroll-workflow-leads", {
+        body: {
+          workspace_id: workspaceId,
+          lead_ids: leadIds,
+          event_type: triggerType,
+          event_config: triggerConfigMatch || {},
+        },
+      })
+      .catch((e) => console.error("[fireAutomationsForLeads] workflow invoke error:", e));
+  } catch (e) {
+    console.error("[fireAutomationsForLeads] workflow dispatch error:", e);
+  }
 }
