@@ -150,21 +150,52 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
-              <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-                <SelectTrigger className="max-w-sm"><SelectValue placeholder="All funnels" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All funnels (global)</SelectItem>
-                  {(funnels ?? []).map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
-              </p>
-            </div>
+            {triggerType === "lead_added_to_folder" ? (
+              <div>
+                <label className="text-sm font-medium text-foreground">Scope to folder</label>
+                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="Any folder" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any folder</SelectItem>
+                    {(folders ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fires when a lead is added to this folder (manual move, CSV import, or auto-routing).
+                </p>
+              </div>
+            ) : triggerType === "lead_tagged" ? (
+              <div>
+                <label className="text-sm font-medium text-foreground">Tag</label>
+                <Input
+                  className="max-w-sm"
+                  placeholder="e.g. csv-march-2026"
+                  value={tagValue}
+                  onChange={(e) => setTagValue(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fires whenever this exact tag is added. Leave blank to match any tag.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
+                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="All funnels" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All funnels (global)</SelectItem>
+                    {(funnels ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
