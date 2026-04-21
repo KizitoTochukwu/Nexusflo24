@@ -300,6 +300,135 @@ Deno.serve(async (req) => {
                 meta: { lead_id, automation_id },
               });
               details = { notification: "sent" };
+            } else if (actionType === "move_to_stage") {
+              const stage = config.stage || config.new_stage;
+              if (stage) {
+                await supabase.from("leads").update({ pipeline_stage: stage }).eq("id", lead_id);
+                details = { pipeline_stage: stage };
+              } else {
+                status = "skipped";
+                details = { message: "No pipeline stage configured" };
+              }
+            } else if (actionType === "move_to_folder") {
+              const folderId = config.folder_id;
+              if (folderId) {
+                // Insert into folder (idempotent on (folder_id, lead_id))
+                const { data: existing } = await supabase
+                  .from("lead_folder_leads")
+                  .select("id")
+                  .eq("folder_id", folderId)
+                  .eq("lead_id", lead_id)
+                  .limit(1);
+                if (!existing || existing.length === 0) {
+                  await supabase.from("lead_folder_leads").insert({
+                    workspace_id, folder_id: folderId, lead_id,
+                  });
+                }
+                details = { folder_id: folderId };
+              } else {
+                status = "skipped";
+                details = { message: "No folder configured" };
+              }
+            } else if (actionType === "assign_to_team") {
+              const assignee = config.assignee;
+              let assignedUser: string | null = null;
+              if (assignee && assignee !== "round_robin") {
+                assignedUser = String(assignee);
+              } else {
+                // Round-robin via DB function
+                const { data: rr } = await supabase.rpc("assign_next_round_robin", { _workspace_id: workspace_id });
+                assignedUser = rr as string | null;
+              }
+              if (assignedUser) {
+                await supabase.from("leads").update({ assigned_owner_id: assignedUser }).eq("id", lead_id);
+                details = { assigned_owner_id: assignedUser, mode: assignee === "round_robin" || !assignee ? "round_robin" : "specific" };
+              } else {
+                status = "skipped";
+                details = { message: "No assignee resolved (round-robin disabled?)" };
+              }
+            } else if (actionType === "create_task") {
+              const title = interpolate(String(config.task_title || config.title || "Follow up with lead"), lead);
+              const dueDays = parseInt(String(config.due_in_days ?? "0"), 10);
+              const dueDate = !isNaN(dueDays) && dueDays > 0
+                ? new Date(Date.now() + dueDays * 86400_000).toISOString()
+                : null;
+              await supabase.from("lead_tasks").insert({
+                workspace_id,
+                lead_id,
+                user_id: automation.user_id,
+                title,
+                description: interpolate(String(config.message || ""), lead) || null,
+                due_date: dueDate,
+              });
+              details = { task: title, due_date: dueDate };
+            } else if (actionType === "webhook_out") {
+              const url = String(config.webhook_url || "");
+              if (!url || !/^https?:\/\//i.test(url)) {
+                status = "error";
+                details = { message: "Invalid webhook URL" };
+                break;
+              }
+              let extraHeaders: Record<string, string> = {};
+              try {
+                if (config.webhook_headers) extraHeaders = JSON.parse(String(config.webhook_headers));
+              } catch { /* ignore parse errors */ }
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 8000);
+              try {
+                const wRes = await fetch(url, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...extraHeaders },
+                  body: JSON.stringify({ lead, automation_id, workspace_id, event: "automation_webhook" }),
+                  signal: controller.signal,
+                });
+                details = { status: wRes.status, ok: wRes.ok };
+                if (!wRes.ok) status = "error";
+              } catch (whErr: any) {
+                status = "error";
+                details = { message: whErr?.message || "Webhook failed" };
+              } finally {
+                clearTimeout(timeout);
+              }
+            } else if (actionType === "trigger_ai_closer") {
+              try {
+                const aiRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-sales-closer`, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ workspace_id, lead_id, source: `automation:${automation_id}` }),
+                });
+                const aiData = await aiRes.json().catch(() => ({}));
+                if (!aiRes.ok) throw new Error(aiData?.error || `AI closer error: ${aiRes.status}`);
+                details = { ai_closer: "triggered", response: aiData };
+              } catch (aiErr: any) {
+                status = "error";
+                details = { message: aiErr?.message || "AI closer handoff failed" };
+              }
+            } else if (actionType === "add_to_campaign") {
+              const campaignId = config.campaign_id;
+              if (!campaignId) {
+                status = "skipped";
+                details = { message: "No campaign configured" };
+                break;
+              }
+              try {
+                const cRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/execute-campaign`, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ campaign_id: campaignId, lead_ids: [lead_id] }),
+                });
+                const cData = await cRes.json().catch(() => ({}));
+                if (!cRes.ok) throw new Error(cData?.error || `Campaign error: ${cRes.status}`);
+                details = { campaign_id: campaignId, enrolled: true };
+              } catch (cErr: any) {
+                status = "error";
+                details = { message: cErr?.message || "Campaign enrollment failed" };
+              }
             } else {
               details = { message: `Unknown action type: ${actionType}` };
               status = "skipped";
@@ -313,11 +442,61 @@ Deno.serve(async (req) => {
             let passed = false;
 
             if (conditionType === "score_gt") {
-              passed = Number(lead.score || 0) > Number(value);
+              passed = Number(lead.score || 0) > Number(value ?? config.threshold);
+            } else if (conditionType === "score_lt") {
+              passed = Number(lead.score || 0) < Number(value ?? config.threshold);
+            } else if (conditionType === "score_between") {
+              const min = Number(config.min ?? 0);
+              const max = Number(config.max ?? 0);
+              const s = Number(lead.score || 0);
+              passed = s >= min && s <= max;
             } else if (conditionType === "has_tag") {
               passed = (lead.tags || []).includes(String(value));
             } else if (conditionType === "source_equals") {
-              passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
+              passed = String(lead.source || "").toLowerCase() === String(value || config.source || "").toLowerCase();
+            } else if (conditionType === "status_equals") {
+              passed = String(lead.status || "").toLowerCase() === String(config.status || value || "").toLowerCase();
+            } else if (conditionType === "pipeline_stage_equals") {
+              passed = String(lead.pipeline_stage || "") === String(config.stage || value || "");
+            } else if (conditionType === "has_email") {
+              passed = !!lead.email;
+            } else if (conditionType === "has_phone") {
+              passed = !!lead.phone;
+            } else if (conditionType === "has_unsubscribed") {
+              passed = (lead.tags || []).includes("unsubscribed");
+            } else if (conditionType === "in_folder") {
+              const fid = String(config.folder_id || value || "");
+              if (!fid) { passed = false; }
+              else {
+                const { data: fm } = await supabase
+                  .from("lead_folder_leads")
+                  .select("id").eq("folder_id", fid).eq("lead_id", lead_id).limit(1);
+                passed = !!(fm && fm.length > 0);
+              }
+            } else if (conditionType === "has_booked_appointment") {
+              const { data: bks } = await supabase
+                .from("bookings").select("id").eq("lead_id", lead_id).limit(1);
+              passed = !!(bks && bks.length > 0);
+            } else if (conditionType === "email_opened" || conditionType === "email_not_opened" || conditionType === "link_clicked") {
+              const days = Math.max(1, parseInt(String(config.days ?? value ?? 7), 10));
+              const since = new Date(Date.now() - days * 86400_000).toISOString();
+              const evtType = conditionType === "link_clicked" ? "link_click" : "email_open";
+              const { data: ev } = await supabase
+                .from("lead_activities").select("id")
+                .eq("lead_id", lead_id).eq("type", evtType).gte("created_at", since).limit(1);
+              const has = !!(ev && ev.length > 0);
+              passed = conditionType === "email_not_opened" ? !has : has;
+            } else if (conditionType === "lead_age_gt") {
+              const days = parseInt(String(config.days ?? value ?? 0), 10);
+              const created = new Date(lead.created_at).getTime();
+              passed = (Date.now() - created) > days * 86400_000;
+            } else if (conditionType === "inactive_days_gt") {
+              const days = parseInt(String(config.days ?? value ?? 0), 10);
+              const last = lead.last_activity_at ? new Date(lead.last_activity_at).getTime() : new Date(lead.created_at).getTime();
+              passed = (Date.now() - last) > days * 86400_000;
+            } else if (conditionType === "day_of_week_is") {
+              const allowed = String(config.days_of_week || "").split(",").filter(Boolean);
+              passed = allowed.includes(String(new Date().getDay()));
             } else if (conditionType === "reply_status" || conditionType === "has_replied" || conditionType === "no_reply") {
               const { data: replies } = await supabase
                 .from("sales_conversations")
@@ -337,9 +516,8 @@ Deno.serve(async (req) => {
                 } else {
                   details = { hasReply, movedTo: null, action: "continue_sequence" };
                 }
-                passed = true; // Always pass — both outcomes handled, sequence continues
+                passed = true;
               } else {
-                // Legacy: has_replied / no_reply as gate conditions
                 passed = conditionType === "has_replied" ? hasReply : !hasReply;
               }
             }

@@ -6,12 +6,14 @@ const corsHeaders = {
 };
 
 /**
- * Reusable edge function to check and fire triggered campaigns.
+     * Reusable edge function to check and fire triggered campaigns/automations.
  * Called by DB triggers (via pg_net) or other edge functions when events occur.
  *
  * Body: { workspace_id, lead_id, trigger_type, trigger_value? }
  *   trigger_type: "tag_added" | "tag_removed" | "score_threshold"
- *   trigger_value: the specific tag name or score value (optional filtering)
+ *                 | "form_submitted" | "pipeline_stage_changed" | "lead_replied"
+ *                 | "booking_cancelled" | "inactivity_detected"
+ *   trigger_value: the specific tag name, score, stage, or N-days (optional filtering)
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

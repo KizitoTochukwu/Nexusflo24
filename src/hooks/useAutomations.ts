@@ -49,12 +49,37 @@ export const TRIGGER_OPTIONS = [
   { value: "campaign_completed", label: "Campaign completed" },
   { value: "purchase_event", label: "Purchase event (placeholder)" },
   { value: "book_appointment", label: "Appointment booked" },
+  { value: "form_submitted", label: "Form submitted" },
+  { value: "pipeline_stage_changed", label: "Pipeline stage changed" },
+  { value: "lead_replied", label: "Lead replied (any channel)" },
+  { value: "booking_cancelled", label: "Booking cancelled" },
+  { value: "inactivity_detected", label: "Inactivity detected (N days)" },
 ] as const;
 
+// secondaryConfigKey lets the editor render a 2nd input when the condition needs more than one value.
 export const CONDITION_OPTIONS = [
+  // Engagement & behavior
+  { value: "email_opened", label: "Email opened in last N days", configKey: "days" },
+  { value: "email_not_opened", label: "Email NOT opened in last N days", configKey: "days" },
+  { value: "link_clicked", label: "Link clicked in last N days", configKey: "days" },
+  { value: "has_booked_appointment", label: "Has booked appointment", configKey: "" },
+  { value: "has_unsubscribed", label: "Has unsubscribed", configKey: "" },
+  // Lead profile
+  { value: "has_email", label: "Has email address", configKey: "" },
+  { value: "has_phone", label: "Has phone number", configKey: "" },
   { value: "score_gt", label: "Lead score greater than X", configKey: "threshold" },
+  { value: "score_lt", label: "Lead score less than X", configKey: "threshold" },
+  { value: "score_between", label: "Lead score between X and Y", configKey: "min", secondaryConfigKey: "max" },
   { value: "has_tag", label: "Lead has tag", configKey: "tag" },
   { value: "source_equals", label: "Lead source equals X", configKey: "source" },
+  { value: "status_equals", label: "Lead status equals", configKey: "status" },
+  { value: "pipeline_stage_equals", label: "Pipeline stage equals", configKey: "stage" },
+  { value: "in_folder", label: "Lead is in folder", configKey: "folder_id" },
+  // Time-based
+  { value: "lead_age_gt", label: "Lead age greater than N days", configKey: "days" },
+  { value: "inactive_days_gt", label: "Days since last activity greater than N", configKey: "days" },
+  { value: "day_of_week_is", label: "Day of week is", configKey: "days_of_week" },
+  // Reply branching (preserved)
   { value: "reply_status", label: "Reply status", configKey: "" },
 ] as const;
 
@@ -70,6 +95,13 @@ export const ACTION_OPTIONS = [
   { value: "add_tag", label: "Add Tag", icon: "Tag" },
   { value: "remove_tag", label: "Remove Tag", icon: "XCircle" },
   { value: "update_status", label: "Update Lead Status", icon: "RefreshCw" },
+  { value: "move_to_stage", label: "Move to Pipeline Stage", icon: "RefreshCw" },
+  { value: "assign_to_team", label: "Assign to Team Member", icon: "Bell" },
+  { value: "move_to_folder", label: "Move Lead to Folder", icon: "Tag" },
+  { value: "trigger_ai_closer", label: "Trigger AI Sales Closer", icon: "MessageCircle" },
+  { value: "create_task", label: "Create Task / Reminder", icon: "Bell" },
+  { value: "webhook_out", label: "Webhook Out (POST)", icon: "Zap" },
+  { value: "add_to_campaign", label: "Add to Campaign", icon: "Mail" },
   { value: "notify_sales", label: "Notify Sales", icon: "Bell" },
   { value: "delay", label: "Wait / Delay", icon: "Clock" },
 ] as const;
