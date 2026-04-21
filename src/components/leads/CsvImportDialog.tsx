@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCreateFolder, type LeadFolder } from "@/hooks/useLeadFolders";
+import { fireAutomationsForLeads } from "@/lib/automations/fireTriggers";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: string; folders?: LeadFolder[] };
 
@@ -422,6 +423,14 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
           await supabase.from("lead_folder_leads").upsert(folderRows.slice(i, i + 50) as any, { onConflict: "folder_id,lead_id" });
         }
         qc.invalidateQueries({ queryKey: ["lead-folders"] });
+
+        // Fire matching automations for the imported batch (best-effort)
+        fireAutomationsForLeads({
+          workspaceId,
+          leadIds: newLeadIds,
+          triggerType: "lead_added_to_folder",
+          triggerConfigMatch: { folder_id: folderId },
+        });
       }
 
       setResult({ imported, updated, skipped, errors });

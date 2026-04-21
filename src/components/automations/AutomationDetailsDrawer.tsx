@@ -18,6 +18,7 @@ import {
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
+import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { format } from "date-fns";
 
 interface Props {
@@ -31,6 +32,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs } = useAutomationLogs(automation?.id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
+  const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
 
@@ -38,6 +40,8 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("new_lead");
   const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
+  const [tagValue, setTagValue] = useState<string>("");
   const [steps, setSteps] = useState<StepData[]>([]);
 
   useEffect(() => {
@@ -45,8 +49,10 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       setName(automation.name);
       setDescription(automation.description || "");
       setTriggerType(automation.trigger_type);
-      const fId = (automation.trigger_config as Record<string, unknown>)?.funnel_id as string | undefined;
-      setSelectedFunnelId(fId || "all");
+      const cfg = (automation.trigger_config ?? {}) as Record<string, unknown>;
+      setSelectedFunnelId((cfg.funnel_id as string) || "all");
+      setSelectedFolderId((cfg.folder_id as string) || "any");
+      setTagValue((cfg.tag as string) || "");
     }
   }, [automation]);
 
@@ -60,7 +66,11 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
 
   const handleSave = () => {
     const triggerConfig: Record<string, unknown> = {};
-    if (selectedFunnelId !== "all") {
+    if (triggerType === "lead_added_to_folder") {
+      if (selectedFolderId !== "any") triggerConfig.folder_id = selectedFolderId;
+    } else if (triggerType === "lead_tagged") {
+      if (tagValue.trim()) triggerConfig.tag = tagValue.trim();
+    } else if (selectedFunnelId !== "all") {
       triggerConfig.funnel_id = selectedFunnelId;
     }
     updateAutomation.mutate({
@@ -140,21 +150,52 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
-              <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-                <SelectTrigger className="max-w-sm"><SelectValue placeholder="All funnels" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All funnels (global)</SelectItem>
-                  {(funnels ?? []).map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
-              </p>
-            </div>
+            {triggerType === "lead_added_to_folder" ? (
+              <div>
+                <label className="text-sm font-medium text-foreground">Scope to folder</label>
+                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="Any folder" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any folder</SelectItem>
+                    {(folders ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fires when a lead is added to this folder (manual move, CSV import, or auto-routing).
+                </p>
+              </div>
+            ) : triggerType === "lead_tagged" ? (
+              <div>
+                <label className="text-sm font-medium text-foreground">Tag</label>
+                <Input
+                  className="max-w-sm"
+                  placeholder="e.g. csv-march-2026"
+                  value={tagValue}
+                  onChange={(e) => setTagValue(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fires whenever this exact tag is added. Leave blank to match any tag.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
+                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="All funnels" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All funnels (global)</SelectItem>
+                    {(funnels ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>

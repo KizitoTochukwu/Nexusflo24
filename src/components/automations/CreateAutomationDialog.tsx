@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { useCreateAutomation, TRIGGER_OPTIONS } from "@/hooks/useAutomations";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
+import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 
 export default function CreateAutomationDialog() {
@@ -15,11 +16,14 @@ export default function CreateAutomationDialog() {
   const workspaceId = useWorkspaceId();
   const createAutomation = useCreateAutomation();
   const { data: funnels } = useFunnels(workspaceId);
+  const { data: folders } = useLeadFolders(workspaceId);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [triggerType, setTriggerType] = useState("new_lead");
   const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
+  const [tagValue, setTagValue] = useState<string>("");
   const [steps, setSteps] = useState<StepData[]>([]);
 
   const reset = () => {
@@ -27,13 +31,19 @@ export default function CreateAutomationDialog() {
     setDescription("");
     setTriggerType("new_lead");
     setSelectedFunnelId("all");
+    setSelectedFolderId("any");
+    setTagValue("");
     setSteps([]);
   };
 
   const handleCreate = () => {
     if (!name.trim()) return;
     const triggerConfig: Record<string, unknown> = {};
-    if (selectedFunnelId !== "all") {
+    if (triggerType === "lead_added_to_folder") {
+      if (selectedFolderId !== "any") triggerConfig.folder_id = selectedFolderId;
+    } else if (triggerType === "lead_tagged") {
+      if (tagValue.trim()) triggerConfig.tag = tagValue.trim();
+    } else if (selectedFunnelId !== "all") {
       triggerConfig.funnel_id = selectedFunnelId;
     }
     createAutomation.mutate(
@@ -53,6 +63,10 @@ export default function CreateAutomationDialog() {
       }
     );
   };
+
+  const showFolderPicker = triggerType === "lead_added_to_folder";
+  const showTagInput = triggerType === "lead_tagged";
+  const showFunnelScope = !showFolderPicker && !showTagInput;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
@@ -89,21 +103,55 @@ export default function CreateAutomationDialog() {
             </Select>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
-            <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-              <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All funnels (global)</SelectItem>
-                {(funnels ?? []).map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-1">
-              {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
-            </p>
-          </div>
+          {showFolderPicker && (
+            <div>
+              <label className="text-sm font-medium text-foreground">Scope to folder</label>
+              <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+                <SelectTrigger><SelectValue placeholder="Any folder" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any folder</SelectItem>
+                  {(folders ?? []).map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Fires when a lead is added to this folder (manual move, CSV import, or auto-routing).
+              </p>
+            </div>
+          )}
+
+          {showTagInput && (
+            <div>
+              <label className="text-sm font-medium text-foreground">Tag</label>
+              <Input
+                placeholder="e.g. csv-march-2026"
+                value={tagValue}
+                onChange={(e) => setTagValue(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Fires whenever this exact tag is added to a lead. Leave blank to match any tag.
+              </p>
+            </div>
+          )}
+
+          {showFunnelScope && (
+            <div>
+              <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
+              <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All funnels (global)</SelectItem>
+                  {(funnels ?? []).map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">Workflow Steps</label>
@@ -121,3 +169,4 @@ export default function CreateAutomationDialog() {
     </Dialog>
   );
 }
+

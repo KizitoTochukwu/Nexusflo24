@@ -41,7 +41,9 @@ export type AutomationLog = {
 
 export const TRIGGER_OPTIONS = [
   { value: "new_lead", label: "New lead created" },
-  { value: "tag_added", label: "Tag added" },
+  { value: "lead_added_to_folder", label: "Lead added to folder (great for CSV imports)" },
+  { value: "lead_tagged", label: "Lead tagged" },
+  { value: "tag_added", label: "Tag added (any tag)" },
   { value: "score_threshold", label: "Lead score threshold reached" },
   { value: "email_opened", label: "Email opened" },
   { value: "link_clicked", label: "Link clicked" },

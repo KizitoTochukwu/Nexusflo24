@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { fireAutomationsForLeads } from "@/lib/automations/fireTriggers";
 
 export type LeadFolder = {
   id: string;
@@ -119,6 +120,14 @@ export function useAssignLeadsToFolder() {
         .from("lead_folder_leads")
         .upsert(rows as any, { onConflict: "folder_id,lead_id" });
       if (error) throw error;
+
+      // Fire matching automations (best-effort, non-blocking)
+      fireAutomationsForLeads({
+        workspaceId,
+        leadIds,
+        triggerType: "lead_added_to_folder",
+        triggerConfigMatch: { folder_id: folderId },
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lead-folders"] });

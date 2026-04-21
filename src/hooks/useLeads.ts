@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { usePlanGating } from "@/hooks/usePlanGating";
+import { fireAutomationsForLeads } from "@/lib/automations/fireTriggers";
 
 export const PIPELINE_STAGES = [
   { value: "new_lead", label: "New Lead", color: "bg-blue-100 text-blue-700" },
@@ -202,7 +203,7 @@ export function useUpdateLead() {
         } as any);
       }
 
-      // Fire tag campaign triggers if tags changed
+      // Fire tag campaign + automation triggers if tags changed
       if (workspace_id && updates.tags && prev?.tags) {
         const oldTags = prev.tags || [];
         const newTags = updates.tags || [];
@@ -210,9 +211,23 @@ export function useUpdateLead() {
         const removed = oldTags.filter((t) => !newTags.includes(t));
 
         for (const tag of added) {
+          // Existing campaign-trigger flow
           supabase.functions.invoke("check-campaign-triggers", {
             body: { workspace_id, lead_id: id, trigger_type: "tag_added", trigger_value: tag },
           }).catch((e) => console.error("tag_added trigger error:", e));
+
+          // Fire matching automations: lead_tagged (specific tag) + tag_added (any tag)
+          fireAutomationsForLeads({
+            workspaceId: workspace_id,
+            leadIds: [id],
+            triggerType: "lead_tagged",
+            triggerConfigMatch: { tag },
+          });
+          fireAutomationsForLeads({
+            workspaceId: workspace_id,
+            leadIds: [id],
+            triggerType: "tag_added",
+          });
         }
         for (const tag of removed) {
           supabase.functions.invoke("check-campaign-triggers", {
