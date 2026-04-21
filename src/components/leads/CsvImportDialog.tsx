@@ -88,12 +88,27 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
     setAllRows([]);
     setMode("skip");
     setSelectedFolderId("__none__");
+    setShowNewFolder(false);
+    setNewFolderName("");
     setDupsInFile(new Set());
     setExistingPhones(new Set());
     setAnalysed(false);
     setResult(null);
     setLoading(false);
     setAnalysing(false);
+  };
+
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    try {
+      const folder = await createFolder.mutateAsync({ name, workspace_id: workspaceId });
+      setSelectedFolderId((folder as any).id);
+      setShowNewFolder(false);
+      setNewFolderName("");
+    } catch {
+      // toast handled in hook
+    }
   };
 
   // ── Step 1: parse file & analyse duplicates ──────────────────
