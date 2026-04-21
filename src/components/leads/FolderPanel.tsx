@@ -12,7 +12,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Inbox, Route } from "lucide-react";
+import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Route, Lock } from "lucide-react";
 import { type LeadFolder, useCreateFolder, useRenameFolder, useDeleteFolder } from "@/hooks/useLeadFolders";
 import { useRoutingRules, useCreateRoutingRule, useDeleteRoutingRule, type LeadRoutingRule } from "@/hooks/useLeadRouting";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,8 @@ type Props = {
   workspaceId: string;
   totalLeadCount: number;
 };
+
+const isUncategorized = (name: string) => name.trim().toLowerCase() === "uncategorized";
 
 const FOLDER_COLORS = ["#D4AF37", "#3B82F6", "#EF4444", "#10B981", "#8B5CF6", "#F59E0B", "#EC4899"];
 const MATCH_FIELDS = [
@@ -93,50 +95,49 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
         </Button>
       </div>
 
-      <button
-        onClick={() => onSelectFolder(null)}
-        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${!activeFolderId ? "bg-accent/10 text-accent font-medium" : "hover:bg-muted"}`}
-      >
-        <Inbox className="h-4 w-4" />
-        <span className="flex-1 text-left">All Leads</span>
-        <span className="text-xs text-muted-foreground">{totalLeadCount}</span>
-      </button>
-
-      {folders.map((f) => (
-        <div key={f.id} className="group flex items-center">
-          <button
-            onClick={() => onSelectFolder(f.id)}
-            className={`flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${activeFolderId === f.id ? "bg-accent/10 text-accent font-medium" : "hover:bg-muted"}`}
-          >
-            <FolderOpen className="h-4 w-4" style={{ color: f.color || undefined }} />
-            <span className="flex-1 text-left truncate">{f.name}</span>
-            <div className="flex items-center gap-1">
-              {folderRules(f.id).length > 0 && (
-                <Route className="h-3 w-3 text-accent" />
-              )}
-              <span className="text-xs text-muted-foreground">{f.lead_count ?? 0}</span>
-            </div>
-          </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { setRenameId(f.id); setRenameName(f.name); }}>
-                <Pencil className="mr-2 h-3.5 w-3.5" /> Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setRouteOpen(f.id); setRuleField("source"); setRuleValue(""); }}>
-                <Route className="mr-2 h-3.5 w-3.5" /> Auto-Route Rules
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDeleteId(f.id)} className="text-destructive">
-                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ))}
+      {folders.map((f) => {
+        const protectedFolder = isUncategorized(f.name);
+        return (
+          <div key={f.id} className="group flex items-center">
+            <button
+              onClick={() => onSelectFolder(f.id)}
+              className={`flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${activeFolderId === f.id ? "bg-accent/10 text-accent font-medium" : "hover:bg-muted"}`}
+            >
+              <FolderOpen className="h-4 w-4" style={{ color: f.color || undefined }} />
+              <span className="flex-1 text-left truncate">{f.name}</span>
+              <div className="flex items-center gap-1">
+                {protectedFolder && <Lock className="h-3 w-3 text-muted-foreground" />}
+                {folderRules(f.id).length > 0 && (
+                  <Route className="h-3 w-3 text-accent" />
+                )}
+                <span className="text-xs text-muted-foreground">{f.lead_count ?? 0}</span>
+              </div>
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!protectedFolder && (
+                  <DropdownMenuItem onClick={() => { setRenameId(f.id); setRenameName(f.name); }}>
+                    <Pencil className="mr-2 h-3.5 w-3.5" /> Rename
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => { setRouteOpen(f.id); setRuleField("source"); setRuleValue(""); }}>
+                  <Route className="mr-2 h-3.5 w-3.5" /> Auto-Route Rules
+                </DropdownMenuItem>
+                {!protectedFolder && (
+                  <DropdownMenuItem onClick={() => setDeleteId(f.id)} className="text-destructive">
+                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      })}
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

@@ -395,8 +395,22 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         }
       }
 
-      // Assign imported leads to selected folder
-      const folderId = selectedFolderId !== "__none__" ? selectedFolderId : null;
+      // Determine destination folder: user-picked or fall back to "Uncategorized"
+      let folderId: string | null = selectedFolderId !== "__none__" ? selectedFolderId : null;
+      if (!folderId) {
+        const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
+        if (uncategorized) {
+          folderId = uncategorized.id;
+        } else {
+          // Create one if it doesn't exist (defensive — migration should have made it)
+          try {
+            const created = await createFolder.mutateAsync({ name: "Uncategorized", color: "#94A3B8", workspace_id: workspaceId });
+            folderId = (created as any).id;
+          } catch {
+            folderId = null;
+          }
+        }
+      }
       if (folderId && newLeadIds.length > 0) {
         const folderRows = newLeadIds.map((lead_id) => ({
           folder_id: folderId,
@@ -538,15 +552,15 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
             <div className="space-y-2 rounded-lg border bg-card p-3">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 <FolderOpen className="h-3.5 w-3.5" />
-                Add imported leads to a folder (optional)
+                Add imported leads to a folder
               </Label>
               <div className="flex items-center gap-2">
                 <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="No folder — keep in All Leads" />
+                    <SelectValue placeholder="Default — Uncategorized" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">No folder — keep in All Leads</SelectItem>
+                    <SelectItem value="__none__">Default — Uncategorized</SelectItem>
                     {folders.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.name}{typeof f.lead_count === "number" ? ` (${f.lead_count})` : ""}
@@ -590,7 +604,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
               <p className="text-xs text-muted-foreground">
                 {selectedFolderId !== "__none__"
                   ? "All newly imported leads will be added to this folder."
-                  : "Leads will stay in All Leads. You can move them to a folder later."}
+                  : "Leads will land in the Uncategorized folder. You can move them later."}
               </p>
             </div>
 
