@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,14 @@ const DashboardLeads = () => {
   const { data: allLeads = [], isLoading } = useLeads(workspaceId, filters);
   const { data: folders = [] } = useLeadFolders(workspaceId);
   const { data: folderLeadIds } = useFolderLeadIds(activeFolderId, workspaceId);
+
+  // Auto-select first folder (preferring "Uncategorized") once folders load
+  useEffect(() => {
+    if (!activeFolderId && folders.length > 0) {
+      const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
+      setActiveFolderId((uncategorized || folders[0]).id);
+    }
+  }, [folders, activeFolderId]);
 
   const leads = useMemo(() => {
     let filtered = allLeads;
@@ -249,10 +257,9 @@ const DashboardLeads = () => {
               </div>
 
               <div className="lg:hidden">
-                <Select value={activeFolderId || "__all__"} onValueChange={(v) => { setActiveFolderId(v === "__all__" ? null : v); clearSelection(); }}>
+                <Select value={activeFolderId || ""} onValueChange={(v) => { setActiveFolderId(v); clearSelection(); }}>
                   <SelectTrigger className="w-36"><SelectValue placeholder="Folder" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">All Leads</SelectItem>
                     {folders.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -262,9 +269,13 @@ const DashboardLeads = () => {
                   <Button variant="outline" size="icon"><MoreVertical className="h-4 w-4" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setDeleteAllOpen(true)} className="text-destructive">
+                  <DropdownMenuItem
+                    onClick={() => setDeleteAllOpen(true)}
+                    disabled={!activeFolder}
+                    className="text-destructive"
+                  >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete {activeFolder ? `all in "${activeFolder.name}"` : "all leads"}
+                    Delete all in {activeFolder ? `"${activeFolder.name}"` : "current folder"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -430,7 +441,7 @@ const DashboardLeads = () => {
         onOpenChange={setDeleteAllOpen}
         onConfirm={handleDeleteAll}
         loading={deleteAll.isPending}
-        context={activeFolder ? `all leads in "${activeFolder.name}"` : "all leads"}
+        context={activeFolder ? `all leads in "${activeFolder.name}"` : "leads in this folder"}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null); }}>
