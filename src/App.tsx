@@ -56,6 +56,8 @@ import HowCapture from "./pages/HowCapture";
 import HowNurture from "./pages/HowNurture";
 import HowConvert from "./pages/HowConvert";
 import DashboardTemplates from "./pages/dashboard/DashboardTemplates";
+import DashboardWorkflows from "./pages/dashboard/DashboardWorkflows";
+import WorkflowEditor from "./pages/dashboard/WorkflowEditor";
 import Unsubscribe from "./pages/Unsubscribe";
 const queryClient = new QueryClient();
 
@@ -103,6 +105,9 @@ const App = () => (
                 <Route path="leads" element={<DashboardLeads />} />
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
+                <Route path="workflows" element={<DashboardWorkflows />} />
+                <Route path="workflows/new" element={<WorkflowEditor />} />
+                <Route path="workflows/:workflowId" element={<WorkflowEditor />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="bookings" element={<DashboardBookings />} />

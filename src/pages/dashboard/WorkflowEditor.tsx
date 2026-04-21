@@ -257,7 +257,7 @@ function PaletteSection({ title, items, onAdd }: { title: string; items: Palette
 }
 
 function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d: any) => void; onDelete: () => void }) {
-  const data = node.data as NodeData;
+  const data = node.data as unknown as NodeData;
   const palette = findPaletteItem(data.subType || "");
   const updateConfig = (key: string, value: any) => {
     onChange({ ...data, config: { ...(data.config || {}), [key]: value } });
@@ -393,9 +393,9 @@ function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d:
 }
 
 function WorkflowSettings({ workflow, onUpdate }: { workflow: any; onUpdate: (p: any) => Promise<void> }) {
+  const [reEnroll, setReEnroll] = useState(!!workflow?.enrollment_config?.reEnrollment);
+  const [suppressTags, setSuppressTags] = useState((workflow?.suppression_config?.tags || []).join(", "));
   if (!workflow) return null;
-  const [reEnroll, setReEnroll] = useState(!!workflow.enrollment_config?.reEnrollment);
-  const [suppressTags, setSuppressTags] = useState((workflow.suppression_config?.tags || []).join(", "));
   const issues = validateWorkflow(workflow.canvas_json);
 
   return (
@@ -405,7 +405,7 @@ function WorkflowSettings({ workflow, onUpdate }: { workflow: any; onUpdate: (p:
       <div className="rounded-md border p-3">
         <div className="mb-2 flex items-center gap-2">
           {issues.filter(i => i.level === "error").length === 0
-            ? <><CheckCircle2 className="h-4 w-4 text-emerald-500" /><span className="text-sm font-medium">Ready to publish</span></>
+            ? <><CheckCircle2 className="h-4 w-4 text-accent" /><span className="text-sm font-medium">Ready to publish</span></>
             : <><AlertTriangle className="h-4 w-4 text-destructive" /><span className="text-sm font-medium">Fix before publishing</span></>}
         </div>
         {issues.length === 0 ? (

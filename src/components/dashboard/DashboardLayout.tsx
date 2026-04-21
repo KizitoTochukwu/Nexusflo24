@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
-  LayoutDashboard, Users, Megaphone, Workflow, LayoutTemplate, CalendarDays,
+  LayoutDashboard, Users, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
   BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, ShoppingBag, FileText } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
@@ -37,6 +37,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
   { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
+  { icon: Zap, label: "Workflows", to: `/dashboard/${workspaceId}/workflows` },
   { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
   { icon: MessageCircle, label: "Messages", to: `/dashboard/${workspaceId}/messages` },
   { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
