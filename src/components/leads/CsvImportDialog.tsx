@@ -224,6 +224,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
 
     try {
       const seenPhones = new Set<string>();
+      const seenEmails = new Set<string>();
 
       for (let i = 0; i < allRows.length; i++) {
         const r = allRows[i];
@@ -231,36 +232,54 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         const email = (r.email || "").trim().toLowerCase() || null;
         const fullName = r.full_name || r.name || null;
 
+        // Need at least one identifier
+        if (!phone && !email) {
+          skipped++;
+          errors.push({ data: r, _error: "Row has no phone or email — skipped", _row: i + 2 });
+          continue;
+        }
+
         // Skip in-file duplicates (keep first occurrence)
         if (phone && seenPhones.has(phone)) {
           skipped++;
           errors.push({ data: r, _error: "Duplicate phone in file (kept first occurrence)", _row: i + 2 });
           continue;
         }
+        if (email && seenEmails.has(email)) {
+          skipped++;
+          errors.push({ data: r, _error: "Duplicate email in file (kept first occurrence)", _row: i + 2 });
+          continue;
+        }
         if (phone) seenPhones.add(phone);
+        if (email) seenEmails.add(email);
 
-        // Check if exists in DB
-        const isExisting = phone ? existingPhones.has(phone) : false;
+        // Check if exists in DB (by phone OR email)
+        const phoneExists = phone ? existingPhones.has("phone:" + phone) : false;
+        const emailExists = email ? existingPhones.has("email:" + email) : false;
+        const isExisting = phoneExists || emailExists;
 
         if (isExisting && mode === "skip") {
           skipped++;
-          errors.push({ data: r, _error: "Phone already exists in workspace (skipped)", _row: i + 2 });
+          errors.push({ data: r, _error: `${phoneExists ? "Phone" : "Email"} already exists in workspace (skipped)`, _row: i + 2 });
           continue;
         }
 
         if (isExisting && mode === "update") {
-          // Update existing lead
-          const { error } = await supabase
+          let updateQuery = supabase
             .from("leads")
             .update({
               full_name: fullName,
               email,
+              phone: phone || undefined,
               source: r.source || undefined,
               status: r.status || undefined,
               tags: r.tags ? r.tags.split(";").map((t: string) => t.trim()).filter(Boolean) : undefined,
             })
-            .eq("workspace_id", workspaceId)
-            .eq("phone", phone);
+            .eq("workspace_id", workspaceId);
+          updateQuery = phoneExists && phone
+            ? updateQuery.eq("phone", phone)
+            : updateQuery.eq("email", email!);
+          const { error } = await updateQuery;
           if (error) {
             errors.push({ data: r, _error: error.message, _row: i + 2 });
           } else {
