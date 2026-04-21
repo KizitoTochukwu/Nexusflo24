@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Zap, Loader2, UserPlus, PhoneCall } from "lucid
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
+import nexusAiLogo from "@/assets/nexus-ai-logo.png";
 
 type Message = { role: "assistant" | "user"; content: string };
 
@@ -218,7 +219,7 @@ const ChatbotWidget = () => {
           className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-gold transition-transform hover:scale-105 active:scale-95"
           aria-label="Open Nexus AI chat"
         >
-          <MessageCircle className="h-6 w-6 text-accent-foreground" />
+          <img src={nexusAiLogo} alt="Nexus AI" className="h-8 w-8 rounded-lg object-cover" />
         </button>
       )}
 
@@ -226,7 +227,7 @@ const ChatbotWidget = () => {
         <div className="fixed bottom-6 right-6 z-50 flex h-[520px] w-[380px] flex-col overflow-hidden rounded-2xl border bg-card shadow-card-hover animate-fade-up">
           <div className="flex items-center justify-between bg-primary px-4 py-3">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-accent" />
+              <img src={nexusAiLogo} alt="Nexus AI" className="h-6 w-6 rounded-md object-cover" />
               <span className="text-sm font-semibold text-primary-foreground">Nexus AI</span>
               <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
             </div>
