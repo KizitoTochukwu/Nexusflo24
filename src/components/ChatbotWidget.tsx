@@ -1,5 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MessageCircle, X, Send, Zap, Loader2, UserPlus, PhoneCall } from "lucide-react";
+
+const AUTO_OPEN_KEY = "nexus_ai_auto_opened";
+const DISMISSED_KEY = "nexus_ai_dismissed";
+const SKIP_ROUTES = [/^\/login/, /^\/register/, /^\/auth\/callback/, /^\/embed\//, /^\/f\//, /^\/book\//, /^\/unsubscribe/];
+
+function shouldSkipAutoOpen() {
+  if (typeof window === "undefined") return true;
+  const path = window.location.pathname;
+  if (SKIP_ROUTES.some((re) => re.test(path))) return true;
+  if (sessionStorage.getItem(AUTO_OPEN_KEY) === "1") return true;
+  if (sessionStorage.getItem(DISMISSED_KEY) === "1") return true;
+  return false;
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
@@ -114,8 +127,88 @@ const ChatbotWidget = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [handoffTriggered, setHandoffTriggered] = useState(false);
+  const [hasNotification, setHasNotification] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const workspaceId = getCurrentWorkspaceId();
+
+  const isDashboard = useMemo(
+    () => typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard"),
+    []
+  );
+  const prefersReducedMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
+  const isMobile = useMemo(
+    () => typeof window !== "undefined" && window.innerWidth < 768,
+    []
+  );
+
+  const triggerAutoOpen = useCallback(() => {
+    if (shouldSkipAutoOpen()) return;
+    sessionStorage.setItem(AUTO_OPEN_KEY, "1");
+    setHasNotification(true);
+    setShowPreview(false);
+    setOpen(true);
+  }, []);
+
+  // Auto-open triggers: time, scroll, exit-intent
+  useEffect(() => {
+    if (shouldSkipAutoOpen()) return;
+
+    const timeDelay = isDashboard ? 15000 : 8000;
+    const timeTimer = window.setTimeout(triggerAutoOpen, timeDelay);
+
+    const previewTimer = !isMobile && !prefersReducedMotion
+      ? window.setTimeout(() => {
+          if (!shouldSkipAutoOpen()) {
+            setHasNotification(true);
+            setShowPreview(true);
+          }
+        }, 4000)
+      : null;
+
+    const onScroll = () => {
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      if (total > 0 && scrolled / total >= 0.4) triggerAutoOpen();
+    };
+
+    const onMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0) triggerAutoOpen();
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    if (!isMobile) document.addEventListener("mouseleave", onMouseLeave);
+
+    return () => {
+      window.clearTimeout(timeTimer);
+      if (previewTimer) window.clearTimeout(previewTimer);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("mouseleave", onMouseLeave);
+    };
+  }, [triggerAutoOpen, isDashboard, isMobile, prefersReducedMotion]);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setHasNotification(false);
+    if (sessionStorage.getItem(AUTO_OPEN_KEY) === "1") {
+      sessionStorage.setItem(DISMISSED_KEY, "1");
+    }
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    setOpen(true);
+    setHasNotification(false);
+    setShowPreview(false);
+  }, []);
+
+  const dismissPreview = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowPreview(false);
+    sessionStorage.setItem(DISMISSED_KEY, "1");
+  }, []);
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -214,13 +307,39 @@ const ChatbotWidget = () => {
   return (
     <>
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-gold transition-transform hover:scale-105 active:scale-95"
-          aria-label="Open Nexus AI chat"
-        >
-          <img src={nexusAiLogo} alt="Nexus AI" className="h-8 w-8 rounded-lg object-cover" />
-        </button>
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+          {showPreview && !isMobile && (
+            <button
+              onClick={handleOpen}
+              className="group relative flex items-center gap-2 rounded-2xl rounded-br-sm border bg-card px-4 py-2.5 pr-8 text-sm text-foreground shadow-card-hover animate-fade-in hover:bg-muted/50"
+            >
+              <span>👋 Need help getting started?</span>
+              <span
+                role="button"
+                aria-label="Dismiss"
+                onClick={dismissPreview}
+                className="absolute right-2 top-1.5 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </span>
+            </button>
+          )}
+          <button
+            onClick={handleOpen}
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-gold transition-transform hover:scale-105 active:scale-95"
+            aria-label="Open Nexus AI chat"
+          >
+            {hasNotification && !prefersReducedMotion && (
+              <span className="absolute inset-0 rounded-full bg-accent animate-ping opacity-60" />
+            )}
+            <img src={nexusAiLogo} alt="Nexus AI" className="relative h-8 w-8 rounded-lg object-cover" />
+            {hasNotification && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
+                1
+              </span>
+            )}
+          </button>
+        </div>
       )}
 
       {open && (
@@ -237,7 +356,7 @@ const ChatbotWidget = () => {
                   <UserPlus className="h-2.5 w-2.5" /> Lead saved
                 </span>
               )}
-              <button onClick={() => setOpen(false)} className="text-primary-foreground/60 hover:text-primary-foreground">
+              <button onClick={handleClose} className="text-primary-foreground/60 hover:text-primary-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
