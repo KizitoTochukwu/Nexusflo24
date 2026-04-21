@@ -27,8 +27,16 @@ const HEADER_ALIASES: Record<string, string> = {
   name: "full_name",
   fullname: "full_name",
   full_name: "full_name",
+  contact: "full_name",
   contact_name: "full_name",
+  customer: "full_name",
+  customer_name: "full_name",
+  lead: "full_name",
+  lead_name: "full_name",
   first_name: "full_name",
+  firstname: "full_name",
+  last_name: "full_name",
+  lastname: "full_name",
   email: "email",
   email_address: "email",
   e_mail: "email",
@@ -71,15 +79,89 @@ function normalizePhone(raw: string): string {
   return p;
 }
 
-// ─── CSV parser ────────────────────────────────────────────────
+// ─── CSV parser (RFC 4180 — handles quoted fields, embedded commas & newlines) ──
+function parseCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        cur += ch;
+      }
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ",") { out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map((v) => v.trim());
+}
+
 function parseCsv(text: string): ParsedRow[] {
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map(canonicalHeader);
-  return lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim());
+  // Strip BOM
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+
+  // Walk char-by-char to honour quoted newlines
+  const rows: string[][] = [];
+  let cur = "";
+  let row: string[] = [];
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cur += '"'; i++; }
+        else { inQuotes = false; }
+      } else {
+        cur += ch;
+      }
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ",") { row.push(cur.trim()); cur = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(cur.trim());
+        if (row.some((c) => c.length > 0)) rows.push(row);
+        row = [];
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+  }
+  if (cur.length > 0 || row.length > 0) {
+    row.push(cur.trim());
+    if (row.some((c) => c.length > 0)) rows.push(row);
+  }
+
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(canonicalHeader);
+
+  // Track which raw headers map to full_name so we can combine first+last name
+  const rawHeaders = rows[0].map((h) => h.trim().toLowerCase().replace(/[\s-]+/g, "_"));
+  const firstNameIdx = rawHeaders.indexOf("first_name") !== -1 ? rawHeaders.indexOf("first_name") : rawHeaders.indexOf("firstname");
+  const lastNameIdx = rawHeaders.indexOf("last_name") !== -1 ? rawHeaders.indexOf("last_name") : rawHeaders.indexOf("lastname");
+  const hasSplitName = firstNameIdx !== -1 && lastNameIdx !== -1;
+
+  return rows.slice(1).map((values) => {
     const obj: ParsedRow = {};
-    headers.forEach((h, i) => { obj[h] = values[i] || ""; });
+    headers.forEach((h, i) => {
+      // If we have BOTH first_name and last_name columns, skip overwriting full_name from individual cols
+      if (hasSplitName && (i === firstNameIdx || i === lastNameIdx)) return;
+      if (!obj[h]) obj[h] = values[i] || "";
+    });
+    if (hasSplitName) {
+      const fn = (values[firstNameIdx] || "").trim();
+      const ln = (values[lastNameIdx] || "").trim();
+      const combined = [fn, ln].filter(Boolean).join(" ");
+      if (combined) obj.full_name = combined;
+    }
     return obj;
   });
 }
