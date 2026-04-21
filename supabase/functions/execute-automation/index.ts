@@ -127,6 +127,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Folder-scope guard: if automation has trigger_config.folder_id and this is a fresh
+    // (non-manual, non-resume) trigger, only fire when the lead is in that folder.
+    if (
+      typeof start_from_step !== "number" &&
+      !manual_enrollment &&
+      automation.trigger_config &&
+      typeof (automation.trigger_config as Record<string, any>).folder_id === "string"
+    ) {
+      const folderId = (automation.trigger_config as Record<string, any>).folder_id;
+      const { data: folderMatch } = await supabase
+        .from("lead_folder_leads")
+        .select("id")
+        .eq("folder_id", folderId)
+        .eq("lead_id", lead_id)
+        .limit(1);
+      if (!folderMatch || folderMatch.length === 0) {
+        console.log(`[execute-automation] Folder-scope skip — lead ${lead_id} not in folder ${folderId}`);
+        return new Response(JSON.stringify({ ok: true, skipped: true, reason: "Lead not in scoped folder" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Fetch steps ordered
     const { data: steps } = await supabase
       .from("automation_steps")
