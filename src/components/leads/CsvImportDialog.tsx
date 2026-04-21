@@ -22,16 +22,51 @@ type ParsedRow = Record<string, string>;
 
 type ErrorRow = { data: ParsedRow; _error: string; _row: number };
 
+// ─── Header aliasing — map common variants to canonical names ──
+const HEADER_ALIASES: Record<string, string> = {
+  name: "full_name",
+  fullname: "full_name",
+  full_name: "full_name",
+  contact_name: "full_name",
+  first_name: "full_name",
+  email: "email",
+  email_address: "email",
+  e_mail: "email",
+  phone: "phone",
+  phone_number: "phone",
+  mobile: "phone",
+  mobile_number: "phone",
+  whatsapp: "phone",
+  whatsapp_number: "phone",
+  source: "source",
+  lead_source: "source",
+  status: "status",
+  lead_status: "status",
+  tags: "tags",
+  tag: "tags",
+};
+
+function canonicalHeader(h: string): string {
+  const key = h.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return HEADER_ALIASES[key] || key;
+}
+
 // ─── Phone normalisation ───────────────────────────────────────
 function normalizePhone(raw: string): string {
-  let p = raw.trim().replace(/[\s\-().]/g, "");
+  if (!raw) return "";
+  let p = raw.trim();
+  // Reject Excel scientific notation (e.g. 2.35E+12) — data is unrecoverable
+  if (/e\+?\d+/i.test(p) || /\.\d+E/i.test(p)) {
+    return "";
+  }
+  p = p.replace(/[\s\-().]/g, "");
   // UK local → E.164
   if (/^0[1-9]\d{8,9}$/.test(p)) {
     p = "+44" + p.slice(1);
   }
-  // ensure leading +
+  // Add + for plain international digits
   if (/^\d{10,15}$/.test(p) && !p.startsWith("+")) {
-    // leave as-is if ambiguous
+    p = "+" + p;
   }
   return p;
 }
@@ -40,7 +75,7 @@ function normalizePhone(raw: string): string {
 function parseCsv(text: string): ParsedRow[] {
   const lines = text.split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
+  const headers = lines[0].split(",").map(canonicalHeader);
   return lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim());
     const obj: ParsedRow = {};
@@ -126,24 +161,37 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
 
       // Detect in-file phone duplicates
       const phoneCount = new Map<string, number>();
+      const emailCount = new Map<string, number>();
       rows.forEach((r) => {
         const p = normalizePhone(r.phone || "");
         if (p) phoneCount.set(p, (phoneCount.get(p) || 0) + 1);
+        const e = (r.email || "").trim().toLowerCase();
+        if (e) emailCount.set(e, (emailCount.get(e) || 0) + 1);
       });
       const fileDups = new Set<string>();
       phoneCount.forEach((count, phone) => { if (count > 1) fileDups.add(phone); });
+      emailCount.forEach((count, em) => { if (count > 1) fileDups.add("email:" + em); });
       setDupsInFile(fileDups);
 
-      // Detect phones already in DB for this workspace
+      // Detect phones AND emails already in DB for this workspace
       const phonesInFile = [...new Set(rows.map((r) => normalizePhone(r.phone || "")).filter(Boolean))];
+      const emailsInFile = [...new Set(rows.map((r) => (r.email || "").trim().toLowerCase()).filter(Boolean))];
+      const existing = new Set<string>();
       if (phonesInFile.length > 0) {
         const { data } = await supabase
-          .from("leads")
-          .select("phone")
-          .eq("workspace_id", workspaceId)
-          .in("phone", phonesInFile);
-        setExistingPhones(new Set((data || []).map((d: any) => d.phone).filter(Boolean)));
+          .from("leads").select("phone").eq("workspace_id", workspaceId).in("phone", phonesInFile);
+        (data || []).forEach((d: any) => { if (d.phone) existing.add("phone:" + d.phone); });
       }
+      if (emailsInFile.length > 0) {
+        // Chunk into batches of 200 to avoid URL length limits
+        for (let i = 0; i < emailsInFile.length; i += 200) {
+          const chunk = emailsInFile.slice(i, i + 200);
+          const { data } = await supabase
+            .from("leads").select("email").eq("workspace_id", workspaceId).in("email", chunk);
+          (data || []).forEach((d: any) => { if (d.email) existing.add("email:" + d.email.toLowerCase()); });
+        }
+      }
+      setExistingPhones(existing);
 
       setAnalysed(true);
     } catch {
@@ -176,6 +224,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
 
     try {
       const seenPhones = new Set<string>();
+      const seenEmails = new Set<string>();
 
       for (let i = 0; i < allRows.length; i++) {
         const r = allRows[i];
@@ -183,36 +232,54 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         const email = (r.email || "").trim().toLowerCase() || null;
         const fullName = r.full_name || r.name || null;
 
+        // Need at least one identifier
+        if (!phone && !email) {
+          skipped++;
+          errors.push({ data: r, _error: "Row has no phone or email — skipped", _row: i + 2 });
+          continue;
+        }
+
         // Skip in-file duplicates (keep first occurrence)
         if (phone && seenPhones.has(phone)) {
           skipped++;
           errors.push({ data: r, _error: "Duplicate phone in file (kept first occurrence)", _row: i + 2 });
           continue;
         }
+        if (email && seenEmails.has(email)) {
+          skipped++;
+          errors.push({ data: r, _error: "Duplicate email in file (kept first occurrence)", _row: i + 2 });
+          continue;
+        }
         if (phone) seenPhones.add(phone);
+        if (email) seenEmails.add(email);
 
-        // Check if exists in DB
-        const isExisting = phone ? existingPhones.has(phone) : false;
+        // Check if exists in DB (by phone OR email)
+        const phoneExists = phone ? existingPhones.has("phone:" + phone) : false;
+        const emailExists = email ? existingPhones.has("email:" + email) : false;
+        const isExisting = phoneExists || emailExists;
 
         if (isExisting && mode === "skip") {
           skipped++;
-          errors.push({ data: r, _error: "Phone already exists in workspace (skipped)", _row: i + 2 });
+          errors.push({ data: r, _error: `${phoneExists ? "Phone" : "Email"} already exists in workspace (skipped)`, _row: i + 2 });
           continue;
         }
 
         if (isExisting && mode === "update") {
-          // Update existing lead
-          const { error } = await supabase
+          let updateQuery = supabase
             .from("leads")
             .update({
               full_name: fullName,
               email,
+              phone: phone || undefined,
               source: r.source || undefined,
               status: r.status || undefined,
               tags: r.tags ? r.tags.split(";").map((t: string) => t.trim()).filter(Boolean) : undefined,
             })
-            .eq("workspace_id", workspaceId)
-            .eq("phone", phone);
+            .eq("workspace_id", workspaceId);
+          updateQuery = phoneExists && phone
+            ? updateQuery.eq("phone", phone)
+            : updateQuery.eq("email", email!);
+          const { error } = await updateQuery;
           if (error) {
             errors.push({ data: r, _error: error.message, _row: i + 2 });
           } else {
