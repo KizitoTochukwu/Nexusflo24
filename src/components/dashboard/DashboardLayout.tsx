@@ -14,7 +14,6 @@ import NotificationBell from "@/components/dashboard/NotificationBell";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
-import FreePlanBanner from "@/components/billing/FreePlanBanner";
 import { useIsAdmin } from "@/hooks/useAdminRole";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
