@@ -1,79 +1,70 @@
 
 
 ## Goal
-Expand the **Condition** dropdown in the Automation Step Editor so users can branch on more lead signals — engagement, channel activity, pipeline state, time, and bookings — and add a few matching **Trigger** and **Action** options so the new conditions are useful end-to-end.
+Build a 14-day, multi-channel nurture automation that warms up your **Nasio Contacts** folder (and only that folder) and pushes every lead toward booking a discovery call.
 
-## New Condition options (added to `CONDITION_OPTIONS`)
+## How it works
+The automation is scoped to the Nasio Contacts folder. When a lead lands there, it enters a 6-touch sequence across Email → WhatsApp → SMS, with smart branching: if a lead replies or books a call, the sequence auto-stops and they move into the sales pipeline.
 
-Engagement & behavior
-- **Email opened** — fired in last N days
-- **Email NOT opened** — no opens in last N days
-- **Link clicked** — clicked any tracked link in last N days
-- **Has booked appointment** — yes/no
-- **Has unsubscribed** — yes/no (auto-skip messaging if true)
+## The 14-day sequence
 
-Lead profile
-- **Has email address** / **Has phone number** (channel-readiness gate before sending WhatsApp/SMS)
-- **Lead source equals** *(already exists — keep)*
-- **Lead status equals** — picks from CRM statuses (New/Warm/Hot/Won/Lost)
-- **Pipeline stage equals** — picks from 8-stage sales pipeline
-- **Folder membership** — lead is in folder X
-- **Lead score between X and Y** — range (complements existing `score_gt`)
-- **Lead score less than X**
+```text
+Day 0  →  Email #1   "Welcome — quick intro + value"
+Day 2  →  WhatsApp   "Personal hello + soft CTA to book"
+Day 4  →  Email #2   "Case study / social proof + booking link"
+Day 7  →  Email #3   "Address top objection + booking link"
+Day 10 →  SMS        "Short nudge — limited slots this week"
+Day 14 →  Email #4   "Final value email — last chance to book"
+```
 
-Time-based
-- **Lead age greater than N days** — created_at older than N
-- **Days since last activity greater than N** — for re-engagement branches
-- **Day of week is** — only branch on Mon–Fri etc. (avoid weekend sends)
+Branching at every step:
+- If **lead replies** on any channel → stop sequence, tag `engaged`, move to pipeline stage **Engaged**.
+- If **booking is made** (`book_appointment` event) → stop sequence, move to **Demo Booked**.
+- If **no reply by Day 14** → tag `cold`, move to pipeline stage **Cold**, hand off to AI Sales Closer for one final attempt.
 
-Each new condition reuses the existing `value` input pattern, except those needing two inputs (range, days+unit) which get a small inline second field.
+## What gets built
 
-## New Trigger options (added to `TRIGGER_OPTIONS`)
-- **Form submitted** — funnel/embed form submission
-- **Pipeline stage changed** — fires when lead moves to a chosen stage
-- **Lead replied (any channel)** — unifies email/WA/SMS inbound
-- **Booking cancelled** — pair with `book_appointment`
-- **Inactivity detected** — no activity for N days (for win-back automations)
+### 1. One automation: "Nasio Contacts — 14-Day Nurture to Booking"
+- **Trigger:** New lead added (scoped to Nasio Contacts folder via `trigger_config.folder_id`)
+- **Steps:** 6 sends + 5 delays + 2 reply-status conditions = ~13 steps
+- **Status:** Created as **Draft** so you can review every email body before activating
 
-## New Action options (added to `ACTION_OPTIONS`)
-- **Move to pipeline stage** — direct stage update (today only `update_status` exists)
-- **Assign to team member** — round-robin or specific user
-- **Move lead to folder** — reorganize CRM
-- **Trigger AI Sales Closer** — hand off to Nexus AI for live conversation
-- **Create task / reminder** — internal task with due date
-- **Webhook out** — POST lead payload to an external URL (Zapier/Make)
-- **Add to campaign** — enroll lead in a chosen broadcast/sequence
+### 2. Pre-filled message copy (your branded voice)
+Each email uses the existing AutomationEmailEditor with your brand colors (Navy/Gold) and a primary CTA button pointing to your booking page (`{{booking_link}}`). Subject lines and bodies are written specifically for the Nasio audience — not generic presets — and personalized with `{{first_name}}` and `{{company}}`.
 
-## Implementation
+WhatsApp + SMS messages are short, conversational, and end with the same booking link.
 
-### 1. `src/hooks/useAutomations.ts`
-Extend the three constant arrays. Each entry keeps the same `{ value, label }` shape so the existing dropdowns auto-render them. New conditions that need a secondary input declare a `secondaryConfigKey` (e.g. `days`, `max`, `folder_id`).
+### 3. One-time enrollment of the existing 653 leads
+The trigger only fires for *new* leads going forward. Since your Nasio Contacts are already imported, we'll add a **"Enroll existing folder leads"** button in the automation details drawer. Clicking it queues every lead in the chosen folder into the workflow via the existing `execute-automation` infrastructure.
 
-### 2. `src/components/automations/AutomationStepEditor.tsx`
-- Render the right input(s) per condition: text, number, date-range, folder picker, pipeline stage picker, day-of-week multi-select.
-- Same pattern for new actions: pipeline stage picker, folder picker, team-member picker, webhook URL input, campaign picker.
-- Keep the existing reply-status branching UI as-is.
+### 4. Trigger scope guard
+Update `check-campaign-triggers` / `execute-automation` to honor `trigger_config.folder_id` so this automation only fires for leads in the Nasio Contacts folder, not your future folders.
 
-### 3. `supabase/functions/execute-automation/index.ts`
-Add evaluators for each new condition and executors for each new action:
-- Engagement queries hit `lead_events` / `email_events` / `tracking_events` (already used by event tracking).
-- Booking checks query `bookings` table by `lead_id`.
-- Folder/pipeline/status updates write to `lead_folder_leads` and `leads`.
-- Webhook out uses `fetch()` with timeout + retry; logs to `automation_logs`.
-- AI Sales Closer handoff invokes existing `ai-sales-closer` edge function.
-- Add-to-campaign inserts into `campaign_recipients` and triggers `execute-campaign`.
+## What you'll see in the UI
+1. New automation row in **Automations** tab: *"Nasio Contacts — 14-Day Nurture to Booking"* (Draft)
+2. Open it → review/edit each email + WhatsApp + SMS message inline
+3. Click **"Enroll 653 leads from Nasio Contacts"** → confirms count, queues them
+4. Toggle status to **Active**
+5. Watch run count, open/click rates, and bookings tick up in the **Logs** tab
 
-### 4. `supabase/functions/check-campaign-triggers/index.ts`
-Add detection for the new triggers (`form_submitted`, `pipeline_stage_changed`, `lead_replied`, `booking_cancelled`, `inactivity_detected`).
+## Prerequisites we'll verify before activating
+- **Email channel:** Resend or Lovable Email already configured (you have it)
+- **WhatsApp channel:** Needs your WhatsApp Cloud API setup in Settings → Channels — if missing, those steps will skip with a warning instead of breaking the flow
+- **SMS channel:** Needs Twilio setup in Settings → Channels — same fallback behavior
+- **Booking page:** Confirm `{{booking_link}}` resolves to your active booking page
+
+If WhatsApp or SMS isn't configured yet, the automation still runs — those steps simply log "channel not configured" and continue, so email-only leads still get nurtured.
 
 ## Files touched
-- `src/hooks/useAutomations.ts`
-- `src/components/automations/AutomationStepEditor.tsx`
-- `supabase/functions/execute-automation/index.ts`
-- `supabase/functions/check-campaign-triggers/index.ts`
+- `supabase/migrations/` — insert the automation + 13 steps for your workspace as Draft
+- `src/components/automations/AutomationDetailsDrawer.tsx` — add "Enroll existing folder leads" button
+- `src/hooks/useAutomations.ts` — add `useEnrollFolderLeads` mutation
+- `supabase/functions/execute-automation/index.ts` — accept manual enrollment payloads + respect `trigger_config.folder_id`
+- `supabase/functions/check-campaign-triggers/index.ts` — folder-scoped trigger filter
+- New helper edge function: `enroll-folder-leads` — queues every lead in a folder into one automation run
 
 ## Out of scope
-- A/B test branching (separate Pro-tier feature)
-- Visual flowchart canvas (current editor stays linear with the existing reply-status fork)
-- Custom JS/expression conditions
+- AI-generated copy variants (can add later via `generate-campaign-copy`)
+- A/B testing subject lines (Pro-tier feature)
+- Lead scoring threshold branching (already supported, not needed for this flow)
 
