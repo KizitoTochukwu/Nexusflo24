@@ -257,7 +257,7 @@ function PaletteSection({ title, items, onAdd }: { title: string; items: Palette
 }
 
 function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d: any) => void; onDelete: () => void }) {
-  const data = node.data as NodeData;
+  const data = node.data as unknown as NodeData;
   const palette = findPaletteItem(data.subType || "");
   const updateConfig = (key: string, value: any) => {
     onChange({ ...data, config: { ...(data.config || {}), [key]: value } });
