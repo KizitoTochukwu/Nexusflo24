@@ -442,11 +442,61 @@ Deno.serve(async (req) => {
             let passed = false;
 
             if (conditionType === "score_gt") {
-              passed = Number(lead.score || 0) > Number(value);
+              passed = Number(lead.score || 0) > Number(value ?? config.threshold);
+            } else if (conditionType === "score_lt") {
+              passed = Number(lead.score || 0) < Number(value ?? config.threshold);
+            } else if (conditionType === "score_between") {
+              const min = Number(config.min ?? 0);
+              const max = Number(config.max ?? 0);
+              const s = Number(lead.score || 0);
+              passed = s >= min && s <= max;
             } else if (conditionType === "has_tag") {
               passed = (lead.tags || []).includes(String(value));
             } else if (conditionType === "source_equals") {
-              passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
+              passed = String(lead.source || "").toLowerCase() === String(value || config.source || "").toLowerCase();
+            } else if (conditionType === "status_equals") {
+              passed = String(lead.status || "").toLowerCase() === String(config.status || value || "").toLowerCase();
+            } else if (conditionType === "pipeline_stage_equals") {
+              passed = String(lead.pipeline_stage || "") === String(config.stage || value || "");
+            } else if (conditionType === "has_email") {
+              passed = !!lead.email;
+            } else if (conditionType === "has_phone") {
+              passed = !!lead.phone;
+            } else if (conditionType === "has_unsubscribed") {
+              passed = (lead.tags || []).includes("unsubscribed");
+            } else if (conditionType === "in_folder") {
+              const fid = String(config.folder_id || value || "");
+              if (!fid) { passed = false; }
+              else {
+                const { data: fm } = await supabase
+                  .from("lead_folder_leads")
+                  .select("id").eq("folder_id", fid).eq("lead_id", lead_id).limit(1);
+                passed = !!(fm && fm.length > 0);
+              }
+            } else if (conditionType === "has_booked_appointment") {
+              const { data: bks } = await supabase
+                .from("bookings").select("id").eq("lead_id", lead_id).limit(1);
+              passed = !!(bks && bks.length > 0);
+            } else if (conditionType === "email_opened" || conditionType === "email_not_opened" || conditionType === "link_clicked") {
+              const days = Math.max(1, parseInt(String(config.days ?? value ?? 7), 10));
+              const since = new Date(Date.now() - days * 86400_000).toISOString();
+              const evtType = conditionType === "link_clicked" ? "link_click" : "email_open";
+              const { data: ev } = await supabase
+                .from("lead_activities").select("id")
+                .eq("lead_id", lead_id).eq("type", evtType).gte("created_at", since).limit(1);
+              const has = !!(ev && ev.length > 0);
+              passed = conditionType === "email_not_opened" ? !has : has;
+            } else if (conditionType === "lead_age_gt") {
+              const days = parseInt(String(config.days ?? value ?? 0), 10);
+              const created = new Date(lead.created_at).getTime();
+              passed = (Date.now() - created) > days * 86400_000;
+            } else if (conditionType === "inactive_days_gt") {
+              const days = parseInt(String(config.days ?? value ?? 0), 10);
+              const last = lead.last_activity_at ? new Date(lead.last_activity_at).getTime() : new Date(lead.created_at).getTime();
+              passed = (Date.now() - last) > days * 86400_000;
+            } else if (conditionType === "day_of_week_is") {
+              const allowed = String(config.days_of_week || "").split(",").filter(Boolean);
+              passed = allowed.includes(String(new Date().getDay()));
             } else if (conditionType === "reply_status" || conditionType === "has_replied" || conditionType === "no_reply") {
               const { data: replies } = await supabase
                 .from("sales_conversations")
@@ -466,9 +516,8 @@ Deno.serve(async (req) => {
                 } else {
                   details = { hasReply, movedTo: null, action: "continue_sequence" };
                 }
-                passed = true; // Always pass — both outcomes handled, sequence continues
+                passed = true;
               } else {
-                // Legacy: has_replied / no_reply as gate conditions
                 passed = conditionType === "has_replied" ? hasReply : !hasReply;
               }
             }
