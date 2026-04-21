@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Download, AlertTriangle, FolderOpen } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Upload, Download, AlertTriangle, FolderOpen, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { LeadFolder } from "@/hooks/useLeadFolders";
+import { useCreateFolder, type LeadFolder } from "@/hooks/useLeadFolders";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: string; folders?: LeadFolder[] };
 
@@ -63,6 +64,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
   const { user } = useAuth();
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const createFolder = useCreateFolder();
 
   const [loading, setLoading] = useState(false);
   const [analysing, setAnalysing] = useState(false);
@@ -70,6 +72,8 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
   const [allRows, setAllRows] = useState<ParsedRow[]>([]);
   const [mode, setMode] = useState<ImportMode>("skip");
   const [selectedFolderId, setSelectedFolderId] = useState<string>("__none__");
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   // Analysis results
   const [dupsInFile, setDupsInFile] = useState<Set<string>>(new Set());
@@ -84,12 +88,27 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
     setAllRows([]);
     setMode("skip");
     setSelectedFolderId("__none__");
+    setShowNewFolder(false);
+    setNewFolderName("");
     setDupsInFile(new Set());
     setExistingPhones(new Set());
     setAnalysed(false);
     setResult(null);
     setLoading(false);
     setAnalysing(false);
+  };
+
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    try {
+      const folder = await createFolder.mutateAsync({ name, workspace_id: workspaceId });
+      setSelectedFolderId((folder as any).id);
+      setShowNewFolder(false);
+      setNewFolderName("");
+    } catch {
+      // toast handled in hook
+    }
   };
 
   // ── Step 1: parse file & analyse duplicates ──────────────────
@@ -361,28 +380,65 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
               </div>
             )}
 
-            {/* Assign to folder */}
-            {folders.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5">
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  Assign imported leads to folder
-                </Label>
+            {/* Assign to folder — always visible, with inline create */}
+            <div className="space-y-2 rounded-lg border bg-card p-3">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Add imported leads to a folder (optional)
+              </Label>
+              <div className="flex items-center gap-2">
                 <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No folder" />
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="No folder — keep in All Leads" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">No folder</SelectItem>
+                    <SelectItem value="__none__">No folder — keep in All Leads</SelectItem>
                     {folders.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
-                        {f.color ? `${f.color} ` : ""}{f.name}
+                        {f.name}{typeof f.lead_count === "number" ? ` (${f.lead_count})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewFolder((s) => !s)}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" /> New
+                </Button>
               </div>
-            )}
+              {showNewFolder && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    autoFocus
+                    placeholder="Folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCreateFolder();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateFolder}
+                    disabled={!newFolderName.trim() || createFolder.isPending}
+                  >
+                    {createFolder.isPending ? "Creating…" : "Create"}
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {selectedFolderId !== "__none__"
+                  ? "All newly imported leads will be added to this folder."
+                  : "Leads will stay in All Leads. You can move them to a folder later."}
+              </p>
+            </div>
 
             {/* Preview first 5 rows */}
             {allRows.length > 0 && (
