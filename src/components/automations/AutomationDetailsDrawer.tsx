@@ -87,6 +87,16 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
     simulate.mutate({ automationId: automation.id, workspaceId });
   };
 
+  const scopedFolderId = (automation.trigger_config as Record<string, unknown> | null)?.folder_id as string | undefined;
+  const scopedFolder = (folders ?? []).find((f) => f.id === scopedFolderId);
+  const scopedLeadCount = scopedFolder?.lead_count ?? 0;
+
+  const handleEnrollFolder = () => {
+    if (!scopedFolderId) return;
+    if (!confirm(`Enroll ${scopedLeadCount} leads from "${scopedFolder?.name}" into this automation? They will start receiving the sequence in the background.`)) return;
+    enrollFolder.mutate({ workspaceId, automationId: automation.id, folderId: scopedFolderId });
+  };
+
   const statusColor = automation.status === "active" ? "bg-emerald-100 text-emerald-700" : automation.status === "paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground";
 
   return (
