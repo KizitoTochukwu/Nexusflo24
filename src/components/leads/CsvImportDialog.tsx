@@ -190,9 +190,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
               email,
               source: r.source || undefined,
               status: r.status || undefined,
-              score: parseInt(r.score) || undefined,
               tags: r.tags ? r.tags.split(";").map((t: string) => t.trim()).filter(Boolean) : undefined,
-              notes: r.notes || undefined,
             })
             .eq("workspace_id", workspaceId)
             .eq("phone", phone);
@@ -213,9 +211,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
           phone: phone || null,
           source: r.source || "Organic",
           status: r.status || "New",
-          score: parseInt(r.score) || 0,
           tags: r.tags ? r.tags.split(";").map((t: string) => t.trim()).filter(Boolean) : [],
-          notes: r.notes || null,
         } as any).select("id").single();
 
         if (error) {
@@ -280,7 +276,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         </DialogHeader>
 
         <p className="text-sm text-muted-foreground">
-          CSV should have headers: <code className="text-xs">full_name, email, phone, source, status, score, tags, notes</code>.<br />
+          CSV should have headers: <code className="text-xs">full_name, email, phone, source, status, tags</code>.<br />
           Tags separated by semicolons. Phones are normalised automatically.
         </p>
 
@@ -290,13 +286,20 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              const url = "https://docs.google.com/spreadsheets/d/1uXh5Tzm-4WkW3YK5t5Hy7XIQlfgVHB53nD7X-CdRrZ4/export?format=csv";
+              const csv = [
+                "full_name,email,phone,source,status,tags",
+                "Jane Doe,jane@example.com,+447700900123,Organic,New,vip;newsletter",
+                "John Smith,john@example.com,+447700900456,Referral,New,trial",
+              ].join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
               const link = document.createElement("a");
               link.href = url;
               link.download = "nexusflo24_leads_import_template.csv";
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
+              URL.revokeObjectURL(url);
             }}
             className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
