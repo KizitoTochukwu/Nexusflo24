@@ -116,6 +116,19 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
           <Button variant="secondary" size="sm" onClick={handleSimulate} disabled={simulate.isPending} className="gap-1.5">
             <Zap className="h-3.5 w-3.5" /> {simulate.isPending ? "Running…" : "Simulate"}
           </Button>
+          {scopedFolderId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEnrollFolder}
+              disabled={enrollFolder.isPending || scopedLeadCount === 0}
+              className="gap-1.5"
+              title={scopedLeadCount === 0 ? "Folder is empty" : `Queue ${scopedLeadCount} leads`}
+            >
+              <Users className="h-3.5 w-3.5" />
+              {enrollFolder.isPending ? "Queuing…" : `Enroll ${scopedLeadCount} ${scopedFolder?.name ? `from ${scopedFolder.name}` : "leads"}`}
+            </Button>
+          )}
           <Button size="sm" onClick={handleSave} disabled={updateAutomation.isPending}>
             {updateAutomation.isPending ? "Saving…" : "Save Changes"}
           </Button>
