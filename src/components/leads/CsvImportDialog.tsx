@@ -161,24 +161,37 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
 
       // Detect in-file phone duplicates
       const phoneCount = new Map<string, number>();
+      const emailCount = new Map<string, number>();
       rows.forEach((r) => {
         const p = normalizePhone(r.phone || "");
         if (p) phoneCount.set(p, (phoneCount.get(p) || 0) + 1);
+        const e = (r.email || "").trim().toLowerCase();
+        if (e) emailCount.set(e, (emailCount.get(e) || 0) + 1);
       });
       const fileDups = new Set<string>();
       phoneCount.forEach((count, phone) => { if (count > 1) fileDups.add(phone); });
+      emailCount.forEach((count, em) => { if (count > 1) fileDups.add("email:" + em); });
       setDupsInFile(fileDups);
 
-      // Detect phones already in DB for this workspace
+      // Detect phones AND emails already in DB for this workspace
       const phonesInFile = [...new Set(rows.map((r) => normalizePhone(r.phone || "")).filter(Boolean))];
+      const emailsInFile = [...new Set(rows.map((r) => (r.email || "").trim().toLowerCase()).filter(Boolean))];
+      const existing = new Set<string>();
       if (phonesInFile.length > 0) {
         const { data } = await supabase
-          .from("leads")
-          .select("phone")
-          .eq("workspace_id", workspaceId)
-          .in("phone", phonesInFile);
-        setExistingPhones(new Set((data || []).map((d: any) => d.phone).filter(Boolean)));
+          .from("leads").select("phone").eq("workspace_id", workspaceId).in("phone", phonesInFile);
+        (data || []).forEach((d: any) => { if (d.phone) existing.add("phone:" + d.phone); });
       }
+      if (emailsInFile.length > 0) {
+        // Chunk into batches of 200 to avoid URL length limits
+        for (let i = 0; i < emailsInFile.length; i += 200) {
+          const chunk = emailsInFile.slice(i, i + 200);
+          const { data } = await supabase
+            .from("leads").select("email").eq("workspace_id", workspaceId).in("email", chunk);
+          (data || []).forEach((d: any) => { if (d.email) existing.add("email:" + d.email.toLowerCase()); });
+        }
+      }
+      setExistingPhones(existing);
 
       setAnalysed(true);
     } catch {
