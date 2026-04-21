@@ -37,6 +37,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
   { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
+  { icon: Zap, label: "Workflows", to: `/dashboard/${workspaceId}/workflows` },
   { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
   { icon: MessageCircle, label: "Messages", to: `/dashboard/${workspaceId}/messages` },
   { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
