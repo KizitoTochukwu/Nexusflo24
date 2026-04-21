@@ -33,8 +33,10 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs } = useAutomationLogs(automation?.id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
+  const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
+  const enrollFolder = useEnrollFolderLeads();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
