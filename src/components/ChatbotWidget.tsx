@@ -127,8 +127,88 @@ const ChatbotWidget = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [handoffTriggered, setHandoffTriggered] = useState(false);
+  const [hasNotification, setHasNotification] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const workspaceId = getCurrentWorkspaceId();
+
+  const isDashboard = useMemo(
+    () => typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard"),
+    []
+  );
+  const prefersReducedMotion = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
+  const isMobile = useMemo(
+    () => typeof window !== "undefined" && window.innerWidth < 768,
+    []
+  );
+
+  const triggerAutoOpen = useCallback(() => {
+    if (shouldSkipAutoOpen()) return;
+    sessionStorage.setItem(AUTO_OPEN_KEY, "1");
+    setHasNotification(true);
+    setShowPreview(false);
+    setOpen(true);
+  }, []);
+
+  // Auto-open triggers: time, scroll, exit-intent
+  useEffect(() => {
+    if (shouldSkipAutoOpen()) return;
+
+    const timeDelay = isDashboard ? 15000 : 8000;
+    const timeTimer = window.setTimeout(triggerAutoOpen, timeDelay);
+
+    const previewTimer = !isMobile && !prefersReducedMotion
+      ? window.setTimeout(() => {
+          if (!shouldSkipAutoOpen()) {
+            setHasNotification(true);
+            setShowPreview(true);
+          }
+        }, 4000)
+      : null;
+
+    const onScroll = () => {
+      const scrolled = window.scrollY + window.innerHeight;
+      const total = document.documentElement.scrollHeight;
+      if (total > 0 && scrolled / total >= 0.4) triggerAutoOpen();
+    };
+
+    const onMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0) triggerAutoOpen();
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    if (!isMobile) document.addEventListener("mouseleave", onMouseLeave);
+
+    return () => {
+      window.clearTimeout(timeTimer);
+      if (previewTimer) window.clearTimeout(previewTimer);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("mouseleave", onMouseLeave);
+    };
+  }, [triggerAutoOpen, isDashboard, isMobile, prefersReducedMotion]);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setHasNotification(false);
+    if (sessionStorage.getItem(AUTO_OPEN_KEY) === "1") {
+      sessionStorage.setItem(DISMISSED_KEY, "1");
+    }
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    setOpen(true);
+    setHasNotification(false);
+    setShowPreview(false);
+  }, []);
+
+  const dismissPreview = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowPreview(false);
+    sessionStorage.setItem(DISMISSED_KEY, "1");
+  }, []);
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
