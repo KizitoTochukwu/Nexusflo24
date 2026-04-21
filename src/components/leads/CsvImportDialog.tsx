@@ -380,28 +380,65 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
               </div>
             )}
 
-            {/* Assign to folder */}
-            {folders.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5">
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  Assign imported leads to folder
-                </Label>
+            {/* Assign to folder — always visible, with inline create */}
+            <div className="space-y-2 rounded-lg border bg-card p-3">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Add imported leads to a folder (optional)
+              </Label>
+              <div className="flex items-center gap-2">
                 <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No folder" />
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="No folder — keep in All Leads" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">No folder</SelectItem>
+                    <SelectItem value="__none__">No folder — keep in All Leads</SelectItem>
                     {folders.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
-                        {f.color ? `${f.color} ` : ""}{f.name}
+                        {f.name}{typeof f.lead_count === "number" ? ` (${f.lead_count})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewFolder((s) => !s)}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" /> New
+                </Button>
               </div>
-            )}
+              {showNewFolder && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    autoFocus
+                    placeholder="Folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCreateFolder();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateFolder}
+                    disabled={!newFolderName.trim() || createFolder.isPending}
+                  >
+                    {createFolder.isPending ? "Creating…" : "Create"}
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {selectedFolderId !== "__none__"
+                  ? "All newly imported leads will be added to this folder."
+                  : "Leads will stay in All Leads. You can move them to a folder later."}
+              </p>
+            </div>
 
             {/* Preview first 5 rows */}
             {allRows.length > 0 && (
