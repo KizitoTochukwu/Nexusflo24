@@ -178,7 +178,6 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
         <div className="p-6 lg:p-8">
           <BillingWarningBanner />
-          <FreePlanBanner />
           {children}
         </div>
       </main>
