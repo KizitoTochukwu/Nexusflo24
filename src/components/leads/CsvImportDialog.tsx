@@ -64,6 +64,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
   const { user } = useAuth();
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const createFolder = useCreateFolder();
 
   const [loading, setLoading] = useState(false);
   const [analysing, setAnalysing] = useState(false);
@@ -71,6 +72,8 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
   const [allRows, setAllRows] = useState<ParsedRow[]>([]);
   const [mode, setMode] = useState<ImportMode>("skip");
   const [selectedFolderId, setSelectedFolderId] = useState<string>("__none__");
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   // Analysis results
   const [dupsInFile, setDupsInFile] = useState<Set<string>>(new Set());
