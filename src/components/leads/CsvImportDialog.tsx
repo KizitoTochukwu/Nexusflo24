@@ -312,7 +312,12 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         const r = allRows[i];
         const phone = normalizePhone(r.phone || "");
         const email = (r.email || "").trim().toLowerCase() || null;
-        const fullName = r.full_name || r.name || null;
+        let fullName = (r.full_name || (r as any).name || "").trim() || null;
+        // Fallback: derive a friendly name from the email local-part if no name provided
+        if (!fullName && email) {
+          const local = email.split("@")[0].replace(/[._\-+]+/g, " ").trim();
+          if (local) fullName = local.replace(/\b\w/g, (c) => c.toUpperCase());
+        }
 
         // Need at least one identifier
         if (!phone && !email) {
