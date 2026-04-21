@@ -58,3 +58,13 @@ The pricing page includes a Monthly/Yearly toggle. Yearly billing applies a 20% 
 3. On success → redirected to `/dashboard?checkout=success`
 4. Webhook updates `subscriptions` table
 5. "Manage Billing" button opens Stripe Customer Portal
+
+## 8. Credit Packs (one-time)
+
+These are one-time purchase prices used by the credit-pack "Buy Now" buttons on `/pricing` and the Usage tab in Settings. The edge function `create-credit-purchase` references these IDs directly.
+
+| Pack | Price ID | Amount |
+|---|---|---|
+| Email — 1,000 emails | `price_1TOfYVE524oup9rkOupWd3vN` | $5 |
+| SMS — 100 messages | `price_1TOfc8E524oup9rkWQWIhwrf` | $5 |
+| WhatsApp — 100 messages | `price_1TOfeBE524oup9rkcPlroL47` | $5 |
