@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, Users } from "lucide-react";
 import {
   type Automation,
   TRIGGER_OPTIONS,
@@ -14,10 +14,12 @@ import {
   useAutomationLogs,
   useUpdateAutomation,
   useSimulateAutomation,
+  useEnrollFolderLeads,
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
+import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { format } from "date-fns";
 
 interface Props {
