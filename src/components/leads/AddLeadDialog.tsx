@@ -83,7 +83,12 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
     const tags = values.tags
       ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
-    const folderId = values.folder_id && values.folder_id !== "__none__" ? values.folder_id : undefined;
+    // Folder fallback: user-picked → Uncategorized → first folder
+    let folderId = values.folder_id && values.folder_id !== "__none__" ? values.folder_id : undefined;
+    if (!folderId && folders.length > 0) {
+      const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
+      folderId = (uncategorized || folders[0]).id;
+    }
     onSubmit({
       ...(defaultValues?.id ? { id: defaultValues.id } : {}),
       full_name: values.full_name || null,
@@ -181,10 +186,10 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
                 <FormItem>
                   <FormLabel>Assign to Folder</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || "__none__"}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="No folder" /></SelectTrigger></FormControl>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Uncategorized (default)" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      <SelectItem value="__none__">No folder</SelectItem>
-                      {folders.map((f) => (
+                      <SelectItem value="__none__">Uncategorized (default)</SelectItem>
+                      {folders.filter((f) => f.name.trim().toLowerCase() !== "uncategorized").map((f) => (
                         <SelectItem key={f.id} value={f.id}>
                           {f.color ? `${f.color} ` : ""}{f.name}
                         </SelectItem>

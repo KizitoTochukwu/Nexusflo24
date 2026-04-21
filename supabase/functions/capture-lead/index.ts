@@ -198,6 +198,7 @@ Deno.serve(async (req) => {
     });
 
     // --- Auto-route to folders based on routing rules ---
+    let routedToAnyFolder = false;
     try {
       const { data: rules } = await supabase
         .from("lead_routing_rules")
@@ -237,6 +238,9 @@ Deno.serve(async (req) => {
               folder_id: folderId,
               lead_id: leadId,
             });
+            routedToAnyFolder = true;
+          } else {
+            routedToAnyFolder = true;
           }
         }
       }
@@ -265,6 +269,50 @@ Deno.serve(async (req) => {
               lead_id: leadId,
             });
           }
+          routedToAnyFolder = true;
+        }
+      }
+
+      // Also count any pre-existing folder assignment (e.g. from CSV import) as routed
+      if (!routedToAnyFolder) {
+        const { data: anyFolder } = await supabase
+          .from("lead_folder_leads")
+          .select("id")
+          .eq("lead_id", leadId)
+          .limit(1)
+          .maybeSingle();
+        if (anyFolder) routedToAnyFolder = true;
+      }
+
+      // Fallback: assign to "Uncategorized" so no lead is left orphaned
+      if (!routedToAnyFolder) {
+        let { data: uncatFolder } = await supabase
+          .from("lead_folders")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .ilike("name", "uncategorized")
+          .maybeSingle();
+
+        if (!uncatFolder) {
+          const { data: created } = await supabase
+            .from("lead_folders")
+            .insert({
+              workspace_id: workspaceId,
+              user_id: ownerId,
+              name: "Uncategorized",
+              color: "#94A3B8",
+            })
+            .select("id")
+            .single();
+          uncatFolder = created;
+        }
+
+        if (uncatFolder) {
+          await supabase.from("lead_folder_leads").insert({
+            workspace_id: workspaceId,
+            folder_id: uncatFolder.id,
+            lead_id: leadId,
+          });
         }
       }
     } catch (routeErr) {
