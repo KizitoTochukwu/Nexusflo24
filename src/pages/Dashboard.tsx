@@ -71,7 +71,16 @@ const Dashboard = () => {
     }
   };
 
-  const planLabel = subscription?.plan === "agency" ? "Agency" : subscription?.plan === "pro" ? "Pro" : "Free";
+  const planLabelMap: Record<string, string> = {
+    starter: "Starter",
+    plus: "Plus",
+    pro: "Pro",
+    enterprise: "Enterprise",
+    agency: "Agency",
+    free: "Free",
+  };
+  const planLabel = subscription?.plan ? (planLabelMap[subscription.plan] ?? "Free") : "Free";
+  const isLowTier = !subscription || subscription.plan === "free" || subscription.plan === "starter" || subscription.status === "canceled";
   const statusLabel = subscription?.status === "trialing" ? "Trial" : subscription?.status === "active" ? "Active" : subscription?.status || "—";
 
   const hasNoData = metrics && !metrics.isDemo && metrics.totalLeads === 0 && !metrics.hasCampaignData;
