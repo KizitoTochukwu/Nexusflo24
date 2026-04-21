@@ -22,16 +22,51 @@ type ParsedRow = Record<string, string>;
 
 type ErrorRow = { data: ParsedRow; _error: string; _row: number };
 
+// ─── Header aliasing — map common variants to canonical names ──
+const HEADER_ALIASES: Record<string, string> = {
+  name: "full_name",
+  fullname: "full_name",
+  full_name: "full_name",
+  contact_name: "full_name",
+  first_name: "full_name",
+  email: "email",
+  email_address: "email",
+  e_mail: "email",
+  phone: "phone",
+  phone_number: "phone",
+  mobile: "phone",
+  mobile_number: "phone",
+  whatsapp: "phone",
+  whatsapp_number: "phone",
+  source: "source",
+  lead_source: "source",
+  status: "status",
+  lead_status: "status",
+  tags: "tags",
+  tag: "tags",
+};
+
+function canonicalHeader(h: string): string {
+  const key = h.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return HEADER_ALIASES[key] || key;
+}
+
 // ─── Phone normalisation ───────────────────────────────────────
 function normalizePhone(raw: string): string {
-  let p = raw.trim().replace(/[\s\-().]/g, "");
+  if (!raw) return "";
+  let p = raw.trim();
+  // Reject Excel scientific notation (e.g. 2.35E+12) — data is unrecoverable
+  if (/e\+?\d+/i.test(p) || /\.\d+E/i.test(p)) {
+    return "";
+  }
+  p = p.replace(/[\s\-().]/g, "");
   // UK local → E.164
   if (/^0[1-9]\d{8,9}$/.test(p)) {
     p = "+44" + p.slice(1);
   }
-  // ensure leading +
+  // Add + for plain international digits
   if (/^\d{10,15}$/.test(p) && !p.startsWith("+")) {
-    // leave as-is if ambiguous
+    p = "+" + p;
   }
   return p;
 }
@@ -40,7 +75,7 @@ function normalizePhone(raw: string): string {
 function parseCsv(text: string): ParsedRow[] {
   const lines = text.split(/\r?\n/).filter(Boolean);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
+  const headers = lines[0].split(",").map(canonicalHeader);
   return lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim());
     const obj: ParsedRow = {};
