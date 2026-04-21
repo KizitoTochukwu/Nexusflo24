@@ -438,7 +438,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import Leads from CSV</DialogTitle>
         </DialogHeader>
