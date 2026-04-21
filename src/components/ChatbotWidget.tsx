@@ -1,5 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { MessageCircle, X, Send, Zap, Loader2, UserPlus, PhoneCall } from "lucide-react";
+
+const AUTO_OPEN_KEY = "nexus_ai_auto_opened";
+const DISMISSED_KEY = "nexus_ai_dismissed";
+const SKIP_ROUTES = [/^\/login/, /^\/register/, /^\/auth\/callback/, /^\/embed\//, /^\/f\//, /^\/book\//, /^\/unsubscribe/];
+
+function shouldSkipAutoOpen() {
+  if (typeof window === "undefined") return true;
+  const path = window.location.pathname;
+  if (SKIP_ROUTES.some((re) => re.test(path))) return true;
+  if (sessionStorage.getItem(AUTO_OPEN_KEY) === "1") return true;
+  if (sessionStorage.getItem(DISMISSED_KEY) === "1") return true;
+  return false;
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from "react-markdown";
