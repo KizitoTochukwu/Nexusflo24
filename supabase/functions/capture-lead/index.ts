@@ -279,6 +279,7 @@ Deno.serve(async (req) => {
               lead_id: leadId,
             });
             routedToAnyFolder = true;
+            await fireFolderAutomations(supabase, workspaceId, leadId, folderId);
           } else {
             routedToAnyFolder = true;
           }
@@ -308,6 +309,7 @@ Deno.serve(async (req) => {
               folder_id: folder.id,
               lead_id: leadId,
             });
+            await fireFolderAutomations(supabase, workspaceId, leadId, folder.id);
           }
           routedToAnyFolder = true;
         }
@@ -353,6 +355,7 @@ Deno.serve(async (req) => {
             folder_id: uncatFolder.id,
             lead_id: leadId,
           });
+          await fireFolderAutomations(supabase, workspaceId, leadId, uncatFolder.id);
         }
       }
     } catch (routeErr) {
