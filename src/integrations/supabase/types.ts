@@ -1176,6 +1176,63 @@ export type Database = {
           },
         ]
       }
+      lead_score_history: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          lead_id: string
+          new_score: number
+          previous_score: number
+          reason: string | null
+          ref_id: string | null
+          ref_type: string | null
+          source: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          lead_id: string
+          new_score?: number
+          previous_score?: number
+          reason?: string | null
+          ref_id?: string | null
+          ref_type?: string | null
+          source?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          lead_id?: string
+          new_score?: number
+          previous_score?: number
+          reason?: string | null
+          ref_id?: string | null
+          ref_type?: string | null
+          source?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_score_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_score_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_tasks: {
         Row: {
           created_at: string
@@ -2097,6 +2154,371 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "whatsapp_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_enrollments: {
+        Row: {
+          branch_path: Json
+          completed_at: string | null
+          current_node_id: string | null
+          exit_reason: string | null
+          id: string
+          is_test: boolean
+          last_step_at: string | null
+          lead_id: string
+          meta: Json
+          started_at: string
+          status: string
+          steps_executed: number
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          branch_path?: Json
+          completed_at?: string | null
+          current_node_id?: string | null
+          exit_reason?: string | null
+          id?: string
+          is_test?: boolean
+          last_step_at?: string | null
+          lead_id: string
+          meta?: Json
+          started_at?: string
+          status?: string
+          steps_executed?: number
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          branch_path?: Json
+          completed_at?: string | null
+          current_node_id?: string | null
+          exit_reason?: string | null
+          id?: string
+          is_test?: boolean
+          last_step_at?: string | null
+          lead_id?: string
+          meta?: Json
+          started_at?: string
+          status?: string
+          steps_executed?: number
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_enrollments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_enrollments_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_enrollments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_logs: {
+        Row: {
+          created_at: string
+          details: Json
+          enrollment_id: string | null
+          event_type: string
+          id: string
+          lead_id: string | null
+          level: string
+          message: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          enrollment_id?: string | null
+          event_type: string
+          id?: string
+          lead_id?: string | null
+          level?: string
+          message?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          enrollment_id?: string | null
+          event_type?: string
+          id?: string
+          lead_id?: string | null
+          level?: string
+          message?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_logs_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_logs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_nodes: {
+        Row: {
+          branch: string
+          config: Json
+          id: string
+          node_type: string
+          parent_node_id: string | null
+          step_order: number
+          sub_type: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          branch?: string
+          config?: Json
+          id: string
+          node_type: string
+          parent_node_id?: string | null
+          step_order?: number
+          sub_type?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          branch?: string
+          config?: Json
+          id?: string
+          node_type?: string
+          parent_node_id?: string | null
+          step_order?: number
+          sub_type?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_nodes_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_nodes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_runs: {
+        Row: {
+          branch_taken: string | null
+          details: Json
+          enrollment_id: string
+          error: string | null
+          id: string
+          is_test: boolean
+          lead_id: string
+          node_id: string
+          node_type: string
+          ran_at: string
+          status: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          branch_taken?: string | null
+          details?: Json
+          enrollment_id: string
+          error?: string | null
+          id?: string
+          is_test?: boolean
+          lead_id: string
+          node_id: string
+          node_type: string
+          ran_at?: string
+          status?: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          branch_taken?: string | null
+          details?: Json
+          enrollment_id?: string
+          error?: string | null
+          id?: string
+          is_test?: boolean
+          lead_id?: string
+          node_id?: string
+          node_type?: string
+          ran_at?: string
+          status?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_runs_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_runs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          canvas_json: Json
+          category: string
+          created_at: string
+          description: string | null
+          enrollment_config: Json
+          id: string
+          is_featured: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          canvas_json?: Json
+          category?: string
+          created_at?: string
+          description?: string | null
+          enrollment_config?: Json
+          id?: string
+          is_featured?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          canvas_json?: Json
+          category?: string
+          created_at?: string
+          description?: string | null
+          enrollment_config?: Json
+          id?: string
+          is_featured?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      workflows: {
+        Row: {
+          canvas_json: Json
+          created_at: string
+          daily_send_cap: number
+          description: string | null
+          enrollment_config: Json
+          goal_node_id: string | null
+          id: string
+          name: string
+          quiet_hours: Json
+          status: string
+          suppression_config: Json
+          template_slug: string | null
+          unenrollment_triggers: Json
+          updated_at: string
+          user_id: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          canvas_json?: Json
+          created_at?: string
+          daily_send_cap?: number
+          description?: string | null
+          enrollment_config?: Json
+          goal_node_id?: string | null
+          id?: string
+          name: string
+          quiet_hours?: Json
+          status?: string
+          suppression_config?: Json
+          template_slug?: string | null
+          unenrollment_triggers?: Json
+          updated_at?: string
+          user_id: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          canvas_json?: Json
+          created_at?: string
+          daily_send_cap?: number
+          description?: string | null
+          enrollment_config?: Json
+          goal_node_id?: string | null
+          id?: string
+          name?: string
+          quiet_hours?: Json
+          status?: string
+          suppression_config?: Json
+          template_slug?: string | null
+          unenrollment_triggers?: Json
+          updated_at?: string
+          user_id?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
