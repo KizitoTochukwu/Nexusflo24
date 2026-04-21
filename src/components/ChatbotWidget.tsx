@@ -307,13 +307,39 @@ const ChatbotWidget = () => {
   return (
     <>
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-gold transition-transform hover:scale-105 active:scale-95"
-          aria-label="Open Nexus AI chat"
-        >
-          <img src={nexusAiLogo} alt="Nexus AI" className="h-8 w-8 rounded-lg object-cover" />
-        </button>
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+          {showPreview && !isMobile && (
+            <button
+              onClick={handleOpen}
+              className="group relative flex items-center gap-2 rounded-2xl rounded-br-sm border bg-card px-4 py-2.5 pr-8 text-sm text-foreground shadow-card-hover animate-fade-in hover:bg-muted/50"
+            >
+              <span>👋 Need help getting started?</span>
+              <span
+                role="button"
+                aria-label="Dismiss"
+                onClick={dismissPreview}
+                className="absolute right-2 top-1.5 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </span>
+            </button>
+          )}
+          <button
+            onClick={handleOpen}
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent shadow-gold transition-transform hover:scale-105 active:scale-95"
+            aria-label="Open Nexus AI chat"
+          >
+            {hasNotification && !prefersReducedMotion && (
+              <span className="absolute inset-0 rounded-full bg-accent animate-ping opacity-60" />
+            )}
+            <img src={nexusAiLogo} alt="Nexus AI" className="relative h-8 w-8 rounded-lg object-cover" />
+            {hasNotification && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
+                1
+              </span>
+            )}
+          </button>
+        </div>
       )}
 
       {open && (
