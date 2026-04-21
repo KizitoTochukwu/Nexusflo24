@@ -14,7 +14,6 @@ import NotificationBell from "@/components/dashboard/NotificationBell";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
-import FreePlanBanner from "@/components/billing/FreePlanBanner";
 import { useIsAdmin } from "@/hooks/useAdminRole";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -179,7 +178,6 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
         <div className="p-6 lg:p-8">
           <BillingWarningBanner />
-          <FreePlanBanner />
           {children}
         </div>
       </main>

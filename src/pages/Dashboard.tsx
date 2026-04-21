@@ -71,7 +71,16 @@ const Dashboard = () => {
     }
   };
 
-  const planLabel = subscription?.plan === "agency" ? "Agency" : subscription?.plan === "pro" ? "Pro" : "Free";
+  const planLabelMap: Record<string, string> = {
+    starter: "Starter",
+    plus: "Plus",
+    pro: "Pro",
+    enterprise: "Enterprise",
+    agency: "Agency",
+    free: "Free",
+  };
+  const planLabel = subscription?.plan ? (planLabelMap[subscription.plan] ?? "Free") : "Free";
+  const isLowTier = !subscription || subscription.plan === "free" || subscription.plan === "starter" || subscription.status === "canceled";
   const statusLabel = subscription?.status === "trialing" ? "Trial" : subscription?.status === "active" ? "Active" : subscription?.status || "—";
 
   const hasNoData = metrics && !metrics.isDemo && metrics.totalLeads === 0 && !metrics.hasCampaignData;
@@ -148,25 +157,33 @@ const Dashboard = () => {
 
       {/* Billing Card */}
       {user && (
-        <div className="mt-6 rounded-xl border bg-card p-5 shadow-card">
+        <div className={`mt-6 rounded-xl border p-5 shadow-card ${isLowTier ? "border-accent/40 bg-gradient-to-br from-accent/5 to-card" : "bg-card"}`}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <CreditCard className="h-5 w-5 text-accent" />
+              {isLowTier ? (
+                <Sparkles className="h-5 w-5 text-accent" />
+              ) : (
+                <CreditCard className="h-5 w-5 text-accent" />
+              )}
               <div>
                 <p className="text-sm font-semibold">
                   Plan: <span className="text-accent">{planLabel}</span>
                   {subscription?.status && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">{statusLabel}</span>}
                 </p>
-                {subscription?.current_period_end && (
+                {isLowTier ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Upgrade to unlock unlimited leads, automations, and more.
+                  </p>
+                ) : subscription?.current_period_end ? (
                   <p className="text-xs text-muted-foreground">
                     Renews {new Date(subscription.current_period_end).toLocaleDateString()}
                     {subscription.cancel_at_period_end && " (cancels at end)"}
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
             <div className="flex gap-2">
-              {(!subscription || subscription.plan === "free" || subscription.status === "canceled") && (
+              {isLowTier && (
                 <Link to="/pricing">
                   <Button size="sm" className="bg-accent text-accent-foreground hover:bg-gold-dark">Upgrade</Button>
                 </Link>
