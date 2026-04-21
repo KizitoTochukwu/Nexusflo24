@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, Users } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft } from "lucide-react";
 import {
   type Automation,
   TRIGGER_OPTIONS,
@@ -14,12 +14,10 @@ import {
   useAutomationLogs,
   useUpdateAutomation,
   useSimulateAutomation,
-  useEnrollFolderLeads,
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
-import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { format } from "date-fns";
 
 interface Props {
@@ -33,10 +31,8 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs } = useAutomationLogs(automation?.id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
-  const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
-  const enrollFolder = useEnrollFolderLeads();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -87,16 +83,6 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
     simulate.mutate({ automationId: automation.id, workspaceId });
   };
 
-  const scopedFolderId = (automation.trigger_config as Record<string, unknown> | null)?.folder_id as string | undefined;
-  const scopedFolder = (folders ?? []).find((f) => f.id === scopedFolderId);
-  const scopedLeadCount = scopedFolder?.lead_count ?? 0;
-
-  const handleEnrollFolder = () => {
-    if (!scopedFolderId) return;
-    if (!confirm(`Enroll ${scopedLeadCount} leads from "${scopedFolder?.name}" into this automation? They will start receiving the sequence in the background.`)) return;
-    enrollFolder.mutate({ workspaceId, automationId: automation.id, folderId: scopedFolderId });
-  };
-
   const statusColor = automation.status === "active" ? "bg-emerald-100 text-emerald-700" : automation.status === "paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground";
 
   return (
@@ -116,19 +102,6 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
           <Button variant="secondary" size="sm" onClick={handleSimulate} disabled={simulate.isPending} className="gap-1.5">
             <Zap className="h-3.5 w-3.5" /> {simulate.isPending ? "Running…" : "Simulate"}
           </Button>
-          {scopedFolderId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEnrollFolder}
-              disabled={enrollFolder.isPending || scopedLeadCount === 0}
-              className="gap-1.5"
-              title={scopedLeadCount === 0 ? "Folder is empty" : `Queue ${scopedLeadCount} leads`}
-            >
-              <Users className="h-3.5 w-3.5" />
-              {enrollFolder.isPending ? "Queuing…" : `Enroll ${scopedLeadCount} ${scopedFolder?.name ? `from ${scopedFolder.name}` : "leads"}`}
-            </Button>
-          )}
           <Button size="sm" onClick={handleSave} disabled={updateAutomation.isPending}>
             {updateAutomation.isPending ? "Saving…" : "Save Changes"}
           </Button>

@@ -254,23 +254,3 @@ export function useSimulateAutomation() {
     onError: (e: any) => toast.error(e.message || "Simulation failed"),
   });
 }
-
-export function useEnrollFolderLeads() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ workspaceId, automationId, folderId }: { workspaceId: string; automationId: string; folderId: string }) => {
-      const { data, error } = await supabase.functions.invoke("enroll-folder-leads", {
-        body: { workspace_id: workspaceId, automation_id: automationId, folder_id: folderId },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      return data as { ok: boolean; queued: number; message: string };
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["automations"] });
-      qc.invalidateQueries({ queryKey: ["automation-logs"] });
-      toast.success(data?.message || `Queued ${data?.queued ?? 0} leads`);
-    },
-    onError: (e: any) => toast.error(e.message || "Failed to enroll folder leads"),
-  });
-}
