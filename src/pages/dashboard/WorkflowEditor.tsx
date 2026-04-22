@@ -15,7 +15,8 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
-import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
+import { findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
+import StepPickerPanel from "@/components/workflows/StepPickerPanel";
 import { validateWorkflow } from "@/lib/workflows/validation";
 import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflows/types";
 import { toast } from "@/hooks/use-toast";
@@ -267,16 +268,12 @@ function WorkflowEditorInner() {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Palette */}
-          <aside className="w-60 border-r bg-card">
-            <ScrollArea className="h-full">
-              <div className="space-y-4 p-3">
-                <PaletteSection title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
-              </div>
-            </ScrollArea>
+          {/* Step picker (HubSpot-style categorized dropdowns) */}
+          <aside className="w-72 border-r bg-card">
+            <StepPickerPanel
+              mode={nodes.some((n) => (n.data as any)?.kind === "trigger") ? "step" : "trigger"}
+              onAdd={addNodeFromPalette}
+            />
           </aside>
 
           {/* Canvas */}
@@ -347,27 +344,6 @@ function nodeStyle(kind: string): React.CSSProperties {
   return { ...base, background: "hsl(var(--card))", color: "hsl(var(--foreground))" };
 }
 
-function PaletteSection({ title, items, onAdd }: { title: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
-  return (
-    <div>
-      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
-      <div className="space-y-1">
-        {items.map((it) => (
-          <button
-            key={it.subType}
-            onClick={() => onAdd(it)}
-            className="flex w-full items-start gap-2 rounded-md border bg-background p-2 text-left text-xs transition-colors hover:border-accent hover:bg-accent/5"
-          >
-            <it.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-foreground">{it.label}</div>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d: any) => void; onDelete: () => void }) {
   const data = node.data as unknown as NodeData;
