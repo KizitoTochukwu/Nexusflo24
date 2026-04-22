@@ -485,9 +485,10 @@ function PaletteSection({ title, items, onAdd }: { title: string; items: Palette
   );
 }
 
-function NodeInspector({ node, onChange, onDelete, onClose }: { node: Node; onChange: (d: any) => void; onDelete: () => void; onClose: () => void }) {
+function NodeInspector({ node, workspaceId, onChange, onDelete, onClose }: { node: Node; workspaceId: string; onChange: (d: any) => void; onDelete: () => void; onClose: () => void }) {
   const data = node.data as unknown as NodeData;
   const palette = findPaletteItem(data.subType || "");
+  const { data: folders = [] } = useLeadFolders(workspaceId);
   const updateConfig = (key: string, value: any) => {
     onChange({ ...data, config: { ...(data.config || {}), [key]: value } });
   };
