@@ -430,6 +430,19 @@ function WorkflowEditorInner() {
               </Button>
             </div>
           )}
+
+          {/* Diagnostics slide-over */}
+          {diagnosticsOpen && workflow && (
+            <aside className="w-[420px] border-l shrink-0">
+              <DiagnosticsPanel
+                workflowId={workflow.id}
+                workspaceId={workspaceId}
+                workflowStatus={workflow.status}
+                canvas={buildCanvas()}
+                onClose={() => setDiagnosticsOpen(false)}
+              />
+            </aside>
+          )}
         </div>
       </div>
 
