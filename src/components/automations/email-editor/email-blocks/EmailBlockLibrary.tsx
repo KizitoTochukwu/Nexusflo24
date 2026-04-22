@@ -17,18 +17,18 @@ export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps
           const entries = (Object.entries(BLOCK_META) as [EmailBlockType, typeof BLOCK_META[EmailBlockType]][])
             .filter(([, m]) => m.group === group);
           return (
-            <div key={group} className="mb-4">
-              <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5 px-1">
+            <div key={group} className="mb-5">
+              <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-2 px-1">
                 {group}
               </p>
-              <div className="grid grid-cols-1 gap-1.5">
+              <div className="grid grid-cols-1 gap-2">
                 {entries.map(([type, meta]) => {
                   const Icon = meta.icon;
                   return (
                     <button
                       key={type}
                       type="button"
-                      className="flex flex-col items-center gap-1 rounded-lg border border-border bg-background p-2.5 text-[10px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground transition-all cursor-grab active:cursor-grabbing"
+                      className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border bg-background py-3 px-2 min-h-[60px] text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground transition-all cursor-grab active:cursor-grabbing"
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData("application/email-block-type", type);
@@ -36,8 +36,8 @@ export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps
                       }}
                       onClick={() => onAddBlock(createEmailBlock(type))}
                     >
-                      <Icon className="h-4 w-4" />
-                      {meta.label}
+                      <Icon className="h-5 w-5" />
+                      <span className="leading-tight text-center">{meta.label}</span>
                     </button>
                   );
                 })}
