@@ -67,6 +67,11 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
   const { data: leads = [] } = useLeadSearch(workspaceId, search);
   const testEnroll = useTestEnrollWorkflow();
 
+  const nodeLabel = (nodeId: string): string => {
+    const n = (canvas.nodes || []).find((x) => x.id === nodeId);
+    return (n?.data as any)?.label || (n?.data as any)?.subType || nodeId.slice(0, 8);
+  };
+
   // ---- Filters (apply to logs / runs / scheduled) ----
   const [filterText, setFilterText] = useState(""); // free text (matches lead_id, message, error)
   const [filterEventType, setFilterEventType] = useState<string>("all");
@@ -161,11 +166,6 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
     setFilterNodeId("all");
     setFilterLeadId("");
     setFilterRange("24h");
-  };
-
-  const nodeLabel = (nodeId: string): string => {
-    const n = (canvas.nodes || []).find((x) => x.id === nodeId);
-    return (n?.data as any)?.label || (n?.data as any)?.subType || nodeId.slice(0, 8);
   };
 
   const triggerNode = (canvas.nodes || []).find((n) => (n.data as any)?.kind === "trigger");
