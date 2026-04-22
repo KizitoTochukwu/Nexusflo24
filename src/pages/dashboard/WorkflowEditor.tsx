@@ -268,16 +268,12 @@ function WorkflowEditorInner() {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Palette */}
-          <aside className="w-60 border-r bg-card">
-            <ScrollArea className="h-full">
-              <div className="space-y-4 p-3">
-                <PaletteSection title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
-              </div>
-            </ScrollArea>
+          {/* Step picker (HubSpot-style categorized dropdowns) */}
+          <aside className="w-72 border-r bg-card">
+            <StepPickerPanel
+              mode={nodes.some((n) => (n.data as any)?.kind === "trigger") ? "step" : "trigger"}
+              onAdd={addNodeFromPalette}
+            />
           </aside>
 
           {/* Canvas */}
