@@ -21,7 +21,7 @@ export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps
               <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5 px-1">
                 {group}
               </p>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-1 gap-1.5">
                 {entries.map(([type, meta]) => {
                   const Icon = meta.icon;
                   return (
