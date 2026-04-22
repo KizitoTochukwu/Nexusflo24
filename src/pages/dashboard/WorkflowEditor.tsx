@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
@@ -267,14 +268,17 @@ function WorkflowEditorInner() {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Palette */}
-          <aside className="w-60 border-r bg-card">
+          {/* Palette — compact dropdowns per category */}
+          <aside className="w-64 border-r bg-card">
             <ScrollArea className="h-full">
-              <div className="space-y-4 p-3">
-                <PaletteSection title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+              <div className="space-y-3 p-3">
+                <PaletteDropdown title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+                <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  Pick a step type to add it to the canvas. Drag to reposition; connect handles to wire flow.
+                </p>
               </div>
             </ScrollArea>
           </aside>
@@ -347,24 +351,53 @@ function nodeStyle(kind: string): React.CSSProperties {
   return { ...base, background: "hsl(var(--card))", color: "hsl(var(--foreground))" };
 }
 
-function PaletteSection({ title, items, onAdd }: { title: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
+function PaletteDropdown({ title, items, onAdd }: { title: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
+  const [resetKey, setResetKey] = useState(0);
+  // Group items by their existing "group" field for nicer organization in the dropdown
+  const grouped = items.reduce<Record<string, PaletteItem[]>>((acc, it) => {
+    (acc[it.group] = acc[it.group] || []).push(it);
+    return acc;
+  }, {});
+  const groupOrder = Object.keys(grouped);
+  const placeholder = `Add ${title.toLowerCase().replace(/s$/, "")}…`;
+
   return (
     <div>
-      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
-      <div className="space-y-1">
-        {items.map((it) => (
-          <button
-            key={it.subType}
-            onClick={() => onAdd(it)}
-            className="flex w-full items-start gap-2 rounded-md border bg-background p-2 text-left text-xs transition-colors hover:border-accent hover:bg-accent/5"
-          >
-            <it.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-foreground">{it.label}</div>
-            </div>
-          </button>
-        ))}
-      </div>
+      <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
+      <Select
+        key={resetKey}
+        value=""
+        onValueChange={(subType) => {
+          const item = items.find((i) => i.subType === subType);
+          if (item) {
+            onAdd(item);
+            // Reset so the placeholder shows again and the same step can be added repeatedly
+            setResetKey((k) => k + 1);
+          }
+        }}
+      >
+        <SelectTrigger className="h-9 w-full text-xs">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent className="max-h-[60vh]">
+          {groupOrder.map((group) => (
+            <SelectGroup key={group}>
+              <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">{group}</SelectLabel>
+              {grouped[group].map((it) => {
+                const Icon = it.icon;
+                return (
+                  <SelectItem key={it.subType} value={it.subType} className="text-xs">
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-accent" />
+                      <span className="font-medium">{it.label}</span>
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
