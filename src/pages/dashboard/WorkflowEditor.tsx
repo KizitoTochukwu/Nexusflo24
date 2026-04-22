@@ -400,6 +400,47 @@ function WorkflowEditorInner() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={pendingLeave} onOpenChange={setPendingLeave}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <AlertDialogTitle>Leave without saving?</AlertDialogTitle>
+              </div>
+            </div>
+            <AlertDialogDescription className="pt-2">
+              You have unsaved changes to this workflow. If you leave now, your edits will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay on page</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setPendingLeave(false);
+                await handleSaveDraft();
+                navigate(`/dashboard/${workspaceId}/workflows`);
+              }}
+              disabled={saving}
+            >
+              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</> : <><Save className="mr-2 h-4 w-4" /> Save & leave</>}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setPendingLeave(false);
+                navigate(`/dashboard/${workspaceId}/workflows`);
+              }}
+            >
+              Discard changes
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
