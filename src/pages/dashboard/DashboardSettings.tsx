@@ -20,8 +20,6 @@ import {
   Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor,
   CheckCircle2, XCircle, ShieldAlert, Palette
 } from "lucide-react";
-import { useDemoMode, useUpdateDemoMode } from "@/hooks/useDemoMode";
-import type { DemoVariant } from "@/lib/demo/demoData";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useAdminRole";
@@ -684,95 +682,9 @@ function NotificationsTab() {
   );
 }
 
-/* ── Demo Mode Tab ───────────────────────────────────────── */
-
-function DemoModeTab() {
-  const workspaceId = useWorkspaceId();
-  const { currentMembership } = useWorkspace();
-  const { data: demoSettings, isLoading } = useDemoMode(workspaceId);
-  const updateDemo = useUpdateDemoMode();
-
-  const isOwnerOrAdmin = currentMembership?.role === "owner" || currentMembership?.role === "admin";
-
-  if (!isOwnerOrAdmin) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Only workspace owners and admins can manage Demo Mode.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-
-  const handleToggle = (enabled: boolean) => {
-    updateDemo.mutate(
-      { workspaceId, demo_mode_enabled: enabled, demo_seed_variant: demoSettings?.demo_seed_variant || "default" },
-      { onSuccess: () => toast.success(enabled ? "Demo Mode enabled" : "Demo Mode disabled") }
-    );
-  };
-
-  const handleVariant = (variant: string) => {
-    updateDemo.mutate(
-      { workspaceId, demo_mode_enabled: demoSettings?.demo_mode_enabled ?? false, demo_seed_variant: variant },
-      { onSuccess: () => toast.success("Demo dataset updated") }
-    );
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2"><Monitor className="h-5 w-5 text-accent" /><CardTitle className="text-lg">Demo Mode</CardTitle></div>
-          <CardDescription>Display realistic sample data on the Dashboard for demos and presentations.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
-            <p className="text-xs text-amber-800 font-medium">⚠️ Demo Mode shows sample analytics. Disable for real reporting.</p>
-            <p className="text-xs text-amber-700 mt-1">This only affects dashboard metrics and charts. Leads, Funnels, Campaigns, billing, and automations are never affected.</p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-sm font-medium">Enable Demo Mode</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Show simulated metrics on the Overview page</p>
-            </div>
-            <Switch
-              checked={demoSettings?.demo_mode_enabled ?? false}
-              onCheckedChange={handleToggle}
-              disabled={updateDemo.isPending}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="space-y-1">
-            <Label>Demo Dataset Variant</Label>
-            <Select
-              value={demoSettings?.demo_seed_variant || "default"}
-              onValueChange={handleVariant}
-              disabled={!demoSettings?.demo_mode_enabled}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Default</SelectItem>
-                <SelectItem value="saas">SaaS</SelectItem>
-                <SelectItem value="ecommerce">E-commerce</SelectItem>
-                <SelectItem value="agency">Agency</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Each variant generates different realistic numbers tailored to the industry.</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "demo"] as const;
+const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
@@ -821,7 +733,6 @@ const DashboardSettings = () => {
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
             <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
             <TabsTrigger value="ai-sales" className="gap-1.5"><Bot className="h-3.5 w-3.5" />AI Sales</TabsTrigger>
-            <TabsTrigger value="demo" className="gap-1.5"><Monitor className="h-3.5 w-3.5" />Demo Mode</TabsTrigger>
           </TabsList>
 
           <div className="mt-6 max-w-3xl">
@@ -839,7 +750,6 @@ const DashboardSettings = () => {
             <TabsContent value="notifications"><NotificationsTab /></TabsContent>
             <TabsContent value="security"><SecurityTab /></TabsContent>
             <TabsContent value="ai-sales"><SalesCloserSettingsTab workspaceId={workspaceId} /></TabsContent>
-            <TabsContent value="demo"><DemoModeTab /></TabsContent>
           </div>
         </Tabs>
       )}
