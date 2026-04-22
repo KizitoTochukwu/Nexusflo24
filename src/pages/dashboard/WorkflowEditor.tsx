@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Activity } from "lucide-react";
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   useNodesState, useEdgesState, addEdge, type Connection, type Edge, type Node, MarkerType,
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
+import { useWorkflow, useUpdateWorkflow, useWorkflowDiagnostics } from "@/hooks/useWorkflows";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
 import { validateWorkflow } from "@/lib/workflows/validation";
@@ -22,6 +22,7 @@ import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflo
 import { toast } from "@/hooks/use-toast";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
+import DiagnosticsPanel from "@/components/workflows/DiagnosticsPanel";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -45,6 +46,7 @@ function WorkflowEditorInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -52,14 +54,19 @@ function WorkflowEditorInner() {
   const [pendingLeave, setPendingLeave] = useState(false);
   const hydratedRef = useRef(false);
 
+  // Live diagnostics for per-node badges (refreshes every 15s while a workflow is open)
+  const { data: diagnostics } = useWorkflowDiagnostics(workflowId);
+
   useEffect(() => {
     if (!workflow) return;
     setName(workflow.name);
     const c = workflow.canvas_json as WorkflowCanvasJSON;
     setNodes(
       (c.nodes || []).map((n) => ({
-        id: n.id, type: "default", position: n.position,
-        data: { ...n.data } as any,
+        id: n.id,
+        type: "default",
+        position: n.position,
+        data: { ...n.data, _baseLabel: (n.data as any)?.label, label: (n.data as any)?.label } as any,
         style: nodeStyle(n.data.kind),
       }))
     );
@@ -77,6 +84,29 @@ function WorkflowEditorInner() {
     hydratedRef.current = false;
     queueMicrotask(() => { hydratedRef.current = true; });
   }, [workflow, setNodes, setEdges]);
+
+  // Decorate node labels with run badges based on live diagnostics
+  useEffect(() => {
+    if (!diagnostics?.perNode) return;
+    setNodes((nds) =>
+      nds.map((n) => {
+        const stats = diagnostics.perNode[n.id];
+        const baseLabel = (n.data as any)?._baseLabel ?? (n.data as any)?.label ?? "";
+        let label = baseLabel;
+        if (stats && stats.total > 0) {
+          const failedSuffix = stats.failed > 0 ? ` · ${stats.failed} failed` : "";
+          label = `${baseLabel}  •  ${stats.total} run${stats.total === 1 ? "" : "s"}${failedSuffix}`;
+        }
+        return {
+          ...n,
+          data: { ...(n.data as any), label },
+          style: { ...(n.style || {}), ...nodeStyle((n.data as any)?.kind, stats) },
+        };
+      })
+    );
+    queueMicrotask(() => { hydratedRef.current = true; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diagnostics?.perNode]);
 
   // Track unsaved changes after hydration
   useEffect(() => {
@@ -240,8 +270,8 @@ function WorkflowEditorInner() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => toast({ title: "Test mode", description: "Coming soon — pick a lead and run dry." })}>
-              <FlaskConical className="mr-1 h-4 w-4" /> Test
+            <Button size="sm" variant={diagnosticsOpen ? "default" : "outline"} onClick={() => setDiagnosticsOpen((v) => !v)}>
+              <Activity className="mr-1 h-4 w-4" /> Diagnostics
             </Button>
             <Button size="sm" variant="outline" onClick={handleSaveDraft} disabled={saving || publishing}>
               {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
@@ -400,6 +430,19 @@ function WorkflowEditorInner() {
               </Button>
             </div>
           )}
+
+          {/* Diagnostics slide-over */}
+          {diagnosticsOpen && workflow && (
+            <aside className="w-[420px] border-l shrink-0">
+              <DiagnosticsPanel
+                workflowId={workflow.id}
+                workspaceId={workspaceId}
+                workflowStatus={workflow.status}
+                canvas={buildCanvas()}
+                onClose={() => setDiagnosticsOpen(false)}
+              />
+            </aside>
+          )}
         </div>
       </div>
 
@@ -447,8 +490,8 @@ function WorkflowEditorInner() {
   );
 }
 
-function nodeStyle(kind: string): React.CSSProperties {
-  const base = {
+function nodeStyle(kind: string, stats?: { failed: number; total: number }): React.CSSProperties {
+  const base: React.CSSProperties = {
     border: "1px solid hsl(var(--border))",
     borderRadius: "8px",
     padding: "10px 14px",
@@ -456,10 +499,15 @@ function nodeStyle(kind: string): React.CSSProperties {
     fontWeight: 500,
     minWidth: "180px",
   };
-  if (kind === "trigger") return { ...base, background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))", borderColor: "hsl(var(--accent))" };
-  if (kind === "condition") return { ...base, background: "hsl(var(--card))", borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" };
+  // Failure halo overrides border color
+  if (stats && stats.failed > 0) {
+    base.border = "2px solid hsl(var(--destructive))";
+    base.boxShadow = "0 0 0 3px hsl(var(--destructive) / 0.15)";
+  }
+  if (kind === "trigger") return { ...base, background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))", borderColor: stats?.failed ? "hsl(var(--destructive))" : "hsl(var(--accent))" };
+  if (kind === "condition") return { ...base, background: "hsl(var(--card))", borderColor: stats?.failed ? "hsl(var(--destructive))" : "hsl(var(--primary))", color: "hsl(var(--primary))" };
   if (kind === "delay") return { ...base, background: "hsl(var(--muted))", color: "hsl(var(--foreground))" };
-  if (kind === "goal") return { ...base, background: "hsl(142 76% 36%)", color: "white", borderColor: "hsl(142 76% 36%)" };
+  if (kind === "goal") return { ...base, background: "hsl(142 76% 36%)", color: "white", borderColor: stats?.failed ? "hsl(var(--destructive))" : "hsl(142 76% 36%)" };
   return { ...base, background: "hsl(var(--card))", color: "hsl(var(--foreground))" };
 }
 
