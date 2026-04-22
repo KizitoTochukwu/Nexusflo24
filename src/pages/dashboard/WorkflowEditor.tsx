@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive } from "lucide-react";
+import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X } from "lucide-react";
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   useNodesState, useEdgesState, addEdge, type Connection, type Edge, type Node, MarkerType,
@@ -304,6 +304,7 @@ function WorkflowEditorInner() {
                 {selectedNode ? (
                   <NodeInspector
                     node={selectedNode}
+                    onClose={() => setSelectedId(null)}
                     onChange={(data) => {
                       setNodes((nds) => nds.map((n) => (n.id === selectedNode.id ? { ...n, data } : n)));
                     }}
@@ -369,7 +370,7 @@ function PaletteSection({ title, items, onAdd }: { title: string; items: Palette
   );
 }
 
-function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d: any) => void; onDelete: () => void }) {
+function NodeInspector({ node, onChange, onDelete, onClose }: { node: Node; onChange: (d: any) => void; onDelete: () => void; onClose: () => void }) {
   const data = node.data as unknown as NodeData;
   const palette = findPaletteItem(data.subType || "");
   const updateConfig = (key: string, value: any) => {
@@ -379,10 +380,21 @@ function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d:
 
   return (
     <div className="space-y-4">
-      <div>
-        <Badge variant="outline" className="mb-2 capitalize">{data.kind}</Badge>
-        <h3 className="text-base font-semibold">{palette?.label || data.label}</h3>
-        <p className="text-xs text-muted-foreground">{palette?.description}</p>
+      <div className="flex items-start gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          aria-label="Close inspector"
+          className="h-8 w-8 shrink-0 -ml-1"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        <div className="flex-1 min-w-0">
+          <Badge variant="outline" className="mb-2 capitalize">{data.kind}</Badge>
+          <h3 className="text-base font-semibold">{palette?.label || data.label}</h3>
+          <p className="text-xs text-muted-foreground">{palette?.description}</p>
+        </div>
       </div>
 
       <div>
