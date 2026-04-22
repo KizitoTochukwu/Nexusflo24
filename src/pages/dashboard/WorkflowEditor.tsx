@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   useNodesState, useEdgesState, addEdge, type Connection, type Edge, type Node, MarkerType,
@@ -34,6 +34,7 @@ function WorkflowEditorInner() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -329,34 +330,64 @@ function WorkflowEditorInner() {
           </div>
 
           {/* Inspector */}
-          <aside className="w-[480px] border-l bg-card">
-            <ScrollArea className="h-full">
-              <div className="p-4">
-                {selectedNode ? (
-                  <NodeInspector
-                    node={selectedNode}
-                    onClose={() => setSelectedId(null)}
-                    onChange={(data) => {
-                      setNodes((nds) => nds.map((n) => (n.id === selectedNode.id ? { ...n, data } : n)));
-                    }}
-                    onDelete={() => {
-                      setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id));
-                      setEdges((eds) => eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id));
-                      setSelectedId(null);
-                    }}
-                  />
-                ) : (
-                  <WorkflowSettings
-                    workflow={workflow}
-                    onUpdate={async (patch) => {
-                      if (!workflow) return;
-                      await update.mutateAsync({ id: workflow.id, patch });
-                    }}
-                  />
-                )}
+          {inspectorOpen ? (
+            <aside className="w-[480px] border-l bg-card flex flex-col">
+              <div className="flex items-center justify-between border-b px-3 py-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {selectedNode ? "Node settings" : "Workflow settings"}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setInspectorOpen(false)}
+                  aria-label="Collapse settings panel"
+                  title="Collapse settings panel"
+                >
+                  <PanelRightClose className="h-4 w-4" />
+                </Button>
               </div>
-            </ScrollArea>
-          </aside>
+              <ScrollArea className="flex-1">
+                <div className="p-4">
+                  {selectedNode ? (
+                    <NodeInspector
+                      node={selectedNode}
+                      onClose={() => setSelectedId(null)}
+                      onChange={(data) => {
+                        setNodes((nds) => nds.map((n) => (n.id === selectedNode.id ? { ...n, data } : n)));
+                      }}
+                      onDelete={() => {
+                        setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id));
+                        setEdges((eds) => eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id));
+                        setSelectedId(null);
+                      }}
+                    />
+                  ) : (
+                    <WorkflowSettings
+                      workflow={workflow}
+                      onUpdate={async (patch) => {
+                        if (!workflow) return;
+                        await update.mutateAsync({ id: workflow.id, patch });
+                      }}
+                    />
+                  )}
+                </div>
+              </ScrollArea>
+            </aside>
+          ) : (
+            <div className="flex w-9 flex-col items-center border-l bg-card py-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setInspectorOpen(true)}
+                aria-label="Expand settings panel"
+                title="Expand settings panel"
+              >
+                <PanelRightOpen className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
