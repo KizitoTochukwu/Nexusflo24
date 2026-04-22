@@ -518,6 +518,25 @@ function NodeInspector({ node, workspaceId, onChange, onDelete, onClose }: { nod
         <Input value={(data.label as string) || ""} onChange={(e) => updateLabel(e.target.value)} className="mt-1" />
       </div>
 
+      {(data.subType === "lead_added_to_folder" || data.subType === "move_to_folder") && (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Folder</label>
+          <select
+            value={(data.config?.folder_id as string) || ""}
+            onChange={(e) => updateConfig("folder_id", e.target.value)}
+            className="mt-1 h-10 w-full rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="">Select a folder…</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+          {!data.config?.folder_id && (
+            <p className="mt-1 text-[11px] text-destructive">Pick a folder for this {data.kind === "trigger" ? "trigger" : "action"} to work.</p>
+          )}
+        </div>
+      )}
+
       {/* Email config — full block editor (HubSpot-style) */}
       {data.subType === "send_email" && (
         <div className="rounded-md border bg-background p-2">
