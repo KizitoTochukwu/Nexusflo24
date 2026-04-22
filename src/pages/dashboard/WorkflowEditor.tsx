@@ -13,6 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
@@ -268,13 +271,19 @@ function WorkflowEditorInner() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* Palette */}
-          <aside className="w-60 border-r bg-card">
+          <aside className="w-64 border-r bg-card">
             <ScrollArea className="h-full">
-              <div className="space-y-4 p-3">
-                <PaletteSection title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+              <div className="space-y-3 p-3">
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add step</h3>
+                  <p className="mb-3 text-[11px] text-muted-foreground">
+                    Pick a step type to add it to the canvas. Drag to reposition; connect handles to wire flow.
+                  </p>
+                </div>
+                <PaletteDropdown title="Triggers" placeholder="Add trigger…" items={TRIGGERS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Actions" placeholder="Add action…" items={ACTIONS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Logic" placeholder="Add logic…" items={CONDITIONS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Flow" placeholder="Add flow step…" items={FLOW_NODES} onAdd={addNodeFromPalette} />
               </div>
             </ScrollArea>
           </aside>
@@ -347,24 +356,49 @@ function nodeStyle(kind: string): React.CSSProperties {
   return { ...base, background: "hsl(var(--card))", color: "hsl(var(--foreground))" };
 }
 
-function PaletteSection({ title, items, onAdd }: { title: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
+function PaletteDropdown({
+  title, placeholder, items, onAdd,
+}: { title: string; placeholder: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
+  // Group items by their `group` field, preserving insertion order.
+  const grouped = items.reduce<Record<string, PaletteItem[]>>((acc, it) => {
+    (acc[it.group] ||= []).push(it);
+    return acc;
+  }, {});
+  const groupNames = Object.keys(grouped);
+
   return (
     <div>
-      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
-      <div className="space-y-1">
-        {items.map((it) => (
-          <button
-            key={it.subType}
-            onClick={() => onAdd(it)}
-            className="flex w-full items-start gap-2 rounded-md border bg-background p-2 text-left text-xs transition-colors hover:border-accent hover:bg-accent/5"
-          >
-            <it.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-foreground">{it.label}</div>
-            </div>
-          </button>
-        ))}
-      </div>
+      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {title}
+      </label>
+      <Select
+        value=""
+        onValueChange={(subType) => {
+          const item = items.find((i) => i.subType === subType);
+          if (item) onAdd(item);
+        }}
+      >
+        <SelectTrigger className="h-9 text-xs">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent className="max-h-80">
+          {groupNames.map((g) => (
+            <SelectGroup key={g}>
+              <SelectLabel className="pl-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+                {g}
+              </SelectLabel>
+              {grouped[g].map((it) => (
+                <SelectItem key={it.subType} value={it.subType} className="text-xs">
+                  <span className="flex items-center gap-2">
+                    <it.icon className="h-3.5 w-3.5 text-accent" />
+                    {it.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
