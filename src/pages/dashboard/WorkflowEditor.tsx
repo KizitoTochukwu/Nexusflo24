@@ -32,6 +32,10 @@ function WorkflowEditorInner() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
     if (!workflow) return;
@@ -53,7 +57,37 @@ function WorkflowEditorInner() {
         style: { stroke: e.sourceHandle === "no" ? "hsl(var(--destructive))" : e.sourceHandle === "yes" ? "hsl(var(--accent))" : "hsl(var(--primary))" },
       }))
     );
+    setLastSavedAt(workflow.updated_at ? new Date(workflow.updated_at) : null);
+    setDirty(false);
+    hydratedRef.current = false;
+    queueMicrotask(() => { hydratedRef.current = true; });
   }, [workflow, setNodes, setEdges]);
+
+  // Track unsaved changes after hydration
+  useEffect(() => {
+    if (hydratedRef.current) setDirty(true);
+  }, [nodes, edges, name]);
+
+  // Warn before unloading with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirty) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
+
+  const buildCanvas = useCallback((): WorkflowCanvasJSON => ({
+    nodes: nodes.map((n) => ({ id: n.id, type: (n.data as any).kind, position: n.position, data: n.data as any })),
+    edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle as any })),
+  }), [nodes, edges]);
+
+  const liveIssues = useMemo(() => {
+    if (!workflow) return [];
+    return validateWorkflow(buildCanvas());
+  }, [workflow, buildCanvas]);
+  const errorCount = liveIssues.filter((i) => i.level === "error").length;
+  const warningCount = liveIssues.filter((i) => i.level === "warning").length;
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -85,31 +119,64 @@ function WorkflowEditorInner() {
     setSelectedId(id);
   };
 
-  const handleSave = async () => {
+  const persist = useCallback(async (extraPatch: Record<string, unknown> = {}) => {
+    if (!workflow) return false;
+    const canvas = buildCanvas();
+    await update.mutateAsync({ id: workflow.id, patch: { name: name.trim() || "Untitled workflow", canvas_json: canvas, ...extraPatch } as any });
+    setDirty(false);
+    setLastSavedAt(new Date());
+    return true;
+  }, [workflow, buildCanvas, name, update]);
+
+  const handleSaveDraft = async () => {
     if (!workflow) return;
     setSaving(true);
-    const canvas: WorkflowCanvasJSON = {
-      nodes: nodes.map((n) => ({ id: n.id, type: (n.data as any).kind, position: n.position, data: n.data as any })),
-      edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle as any })),
-    };
-    await update.mutateAsync({ id: workflow.id, patch: { name, canvas_json: canvas } });
-    setSaving(false);
-    toast({ title: "Saved" });
+    try {
+      // Saving from a non-active state keeps it as draft; from active, we keep it active (just persist canvas).
+      await persist(workflow.status === "active" ? {} : { status: "draft" });
+      toast({ title: "Draft saved" });
+    } catch (err: any) {
+      toast({ title: "Could not save", description: err?.message || "Try again.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleStatus = async (status: WorkflowStatus) => {
+  const handlePublish = async () => {
     if (!workflow) return;
-    const issues = validateWorkflow({
-      nodes: nodes.map((n) => ({ id: n.id, type: (n.data as any).kind, position: n.position, data: n.data as any })),
-      edges: edges.map((e) => ({ id: e.id, source: e.source, target: e.target, sourceHandle: e.sourceHandle as any })),
-    });
-    const errors = issues.filter((i) => i.level === "error");
-    if (status === "active" && errors.length) {
-      toast({ title: "Cannot publish", description: errors[0].message, variant: "destructive" });
+    if (errorCount > 0) {
+      toast({
+        title: `Cannot publish — ${errorCount} issue${errorCount === 1 ? "" : "s"} to fix`,
+        description: liveIssues.find((i) => i.level === "error")?.message,
+        variant: "destructive",
+      });
       return;
     }
-    await update.mutateAsync({ id: workflow.id, patch: { status } });
-    toast({ title: status === "active" ? "Workflow published" : "Workflow paused" });
+    setPublishing(true);
+    try {
+      await persist({ status: "active" });
+      toast({ title: "Workflow published", description: "It's now live and will enroll matching leads." });
+    } catch (err: any) {
+      toast({ title: "Publish failed", description: err?.message || "Try again.", variant: "destructive" });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleStatusChange = async (status: WorkflowStatus) => {
+    if (!workflow) return;
+    try {
+      await update.mutateAsync({ id: workflow.id, patch: { status } });
+      const labels: Record<WorkflowStatus, string> = {
+        draft: "Workflow reverted to draft",
+        active: "Workflow activated",
+        paused: "Workflow paused — pending sends will hold",
+        archived: "Workflow archived",
+      };
+      toast({ title: labels[status] });
+    } catch (err: any) {
+      toast({ title: "Status change failed", description: err?.message || "Try again.", variant: "destructive" });
+    }
   };
 
   const selectedNode = nodes.find((n) => n.id === selectedId) ?? null;
@@ -122,32 +189,76 @@ function WorkflowEditorInner() {
     );
   }
 
+  const status = workflow?.status as WorkflowStatus | undefined;
+  const statusBadgeVariant: "default" | "secondary" | "outline" =
+    status === "active" ? "default" : status === "paused" ? "secondary" : "outline";
+  const lastSavedLabel = lastSavedAt
+    ? `Saved ${lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+    : "Not saved yet";
+
   return (
     <DashboardLayout>
       <div className="flex h-[calc(100vh-3.5rem)] flex-col">
         {/* Top bar */}
         <div className="flex items-center justify-between border-b bg-card px-4 py-2">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/dashboard/${workspaceId}/workflows`)}>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => {
+              if (dirty && !confirm("You have unsaved changes. Leave anyway?")) return;
+              navigate(`/dashboard/${workspaceId}/workflows`);
+            }}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
             <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 w-72" />
-            <Badge variant={workflow?.status === "active" ? "default" : "outline"}>{workflow?.status}</Badge>
+            <Badge variant={statusBadgeVariant} className="capitalize">{status}</Badge>
+            <span className="hidden text-xs text-muted-foreground md:inline">
+              {dirty ? <span className="text-amber-600">● Unsaved changes</span> : lastSavedLabel}
+            </span>
+            {errorCount > 0 && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" /> {errorCount} error{errorCount === 1 ? "" : "s"}
+              </Badge>
+            )}
+            {errorCount === 0 && warningCount > 0 && (
+              <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700">
+                <AlertTriangle className="h-3 w-3" /> {warningCount} warning{warningCount === 1 ? "" : "s"}
+              </Badge>
+            )}
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => toast({ title: "Test mode", description: "Coming soon — pick a lead and run dry." })}>
+            <Button size="sm" variant="ghost" onClick={() => toast({ title: "Test mode", description: "Coming soon — pick a lead and run dry." })}>
               <FlaskConical className="mr-1 h-4 w-4" /> Test
             </Button>
-            <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-              <Save className="mr-1 h-4 w-4" /> Save
+            <Button size="sm" variant="outline" onClick={handleSaveDraft} disabled={saving || publishing}>
+              {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+              Save draft
             </Button>
-            {workflow?.status === "active" ? (
-              <Button size="sm" variant="outline" onClick={() => handleStatus("paused")}>
-                <Pause className="mr-1 h-4 w-4" /> Pause
-              </Button>
+            {status === "active" ? (
+              <>
+                <Button size="sm" variant="outline" onClick={() => handleStatusChange("paused")}>
+                  <Pause className="mr-1 h-4 w-4" /> Pause
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleStatusChange("draft")}>
+                  <FileEdit className="mr-1 h-4 w-4" /> Unpublish
+                </Button>
+              </>
+            ) : status === "paused" ? (
+              <>
+                <Button size="sm" onClick={() => handleStatusChange("active")} disabled={errorCount > 0}>
+                  <Play className="mr-1 h-4 w-4" /> Resume
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleStatusChange("archived")}>
+                  <Archive className="mr-1 h-4 w-4" /> Archive
+                </Button>
+              </>
             ) : (
-              <Button size="sm" onClick={() => handleStatus("active")}>
-                <Play className="mr-1 h-4 w-4" /> Publish
+              <Button
+                size="sm"
+                onClick={handlePublish}
+                disabled={publishing || errorCount > 0}
+                title={errorCount > 0 ? "Fix validation errors before publishing" : "Save & activate this workflow"}
+              >
+                {publishing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Play className="mr-1 h-4 w-4" />}
+                Publish
               </Button>
             )}
           </div>
