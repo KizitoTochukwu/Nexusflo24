@@ -8,7 +8,7 @@ const GROUPS = ["Content", "Layout", "Engagement"] as const;
 
 export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps) {
   return (
-    <div className="w-[140px] shrink-0 border-r border-border bg-muted/30 overflow-y-auto">
+    <div className="w-[104px] shrink-0 border-r border-border bg-muted/30 overflow-y-auto">
       <div className="p-3">
         <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           Content Blocks
@@ -21,7 +21,7 @@ export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps
               <p className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1.5 px-1">
                 {group}
               </p>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-1 gap-1.5">
                 {entries.map(([type, meta]) => {
                   const Icon = meta.icon;
                   return (
