@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
+import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
 import { validateWorkflow } from "@/lib/workflows/validation";
 import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflows/types";
@@ -362,6 +363,7 @@ function WorkflowEditorInner() {
                   {selectedNode ? (
                     <NodeInspector
                       node={selectedNode}
+                      workspaceId={workspaceId}
                       onClose={() => setSelectedId(null)}
                       onChange={(data) => {
                         setNodes((nds) => nds.map((n) => (n.id === selectedNode.id ? { ...n, data } : n)));
@@ -483,9 +485,10 @@ function PaletteSection({ title, items, onAdd }: { title: string; items: Palette
   );
 }
 
-function NodeInspector({ node, onChange, onDelete, onClose }: { node: Node; onChange: (d: any) => void; onDelete: () => void; onClose: () => void }) {
+function NodeInspector({ node, workspaceId, onChange, onDelete, onClose }: { node: Node; workspaceId: string; onChange: (d: any) => void; onDelete: () => void; onClose: () => void }) {
   const data = node.data as unknown as NodeData;
   const palette = findPaletteItem(data.subType || "");
+  const { data: folders = [] } = useLeadFolders(workspaceId);
   const updateConfig = (key: string, value: any) => {
     onChange({ ...data, config: { ...(data.config || {}), [key]: value } });
   };
@@ -514,6 +517,25 @@ function NodeInspector({ node, onChange, onDelete, onClose }: { node: Node; onCh
         <label className="text-xs font-medium text-muted-foreground">Label</label>
         <Input value={(data.label as string) || ""} onChange={(e) => updateLabel(e.target.value)} className="mt-1" />
       </div>
+
+      {(data.subType === "lead_added_to_folder" || data.subType === "move_to_folder") && (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Folder</label>
+          <select
+            value={(data.config?.folder_id as string) || ""}
+            onChange={(e) => updateConfig("folder_id", e.target.value)}
+            className="mt-1 h-10 w-full rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="">Select a folder…</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+          {!data.config?.folder_id && (
+            <p className="mt-1 text-[11px] text-destructive">Pick a folder for this {data.kind === "trigger" ? "trigger" : "action"} to work.</p>
+          )}
+        </div>
+      )}
 
       {/* Email config — full block editor (HubSpot-style) */}
       {data.subType === "send_email" && (
