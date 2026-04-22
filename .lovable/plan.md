@@ -1,114 +1,117 @@
 
 
-## Webinar Follow-up Workflow — "AI Sales Blueprint → May 3 Webinar"
+## Goal
+Give you a repeatable, no-guessing way to confirm the **Webinar Launch — 10-day sequence** workflow is wired correctly and actually firing end-to-end.
 
-A 10-day, multi-channel nurture sequence that re-engages your 500+ ebook leads, drives them to register and show up to the webinar on **3 May 2026**, then splits attendees from no-shows for the right post-event follow-up.
-
-### How leads enter the workflow
-
-Since the leads are already in the CRM (imported from your Facebook/Instagram ad), we'll create a **"Webinar – AI Sales Blueprint"** folder, then move all 500+ leads into it. The workflow trigger is **"Lead added to folder"**, so every lead in that folder gets enrolled the moment we publish the workflow. (You don't need to re-import or run a campaign — moving them into the folder fires the trigger.)
-
-### The sequence at a glance (T-10 → T+3 days)
+## What "working end-to-end" means here
+A workflow is healthy when all 5 layers light up in order:
 
 ```text
-DAY 0 (T-10) ── Email #1: "Your AI Sales Blueprint + an invite"
-              │  → registration link to webinar
-              ▼
-              Wait 1 day
-              ▼
-DAY 1 (T-9)  ── IF email opened?
-              ├── YES → Tag: webinar-interested → Score +10
-              │         → Email #2: "Here's exactly what you'll learn"
-              │
-              └── NO  → Email #2b: resend with new subject
-                        ("Did you miss this? Free webinar 3 May")
-              ▼ (merge)
-              Wait 3 days
-              ▼
-DAY 4 (T-6)  ── WhatsApp #1: short personal nudge w/ register link
-              ▼
-              Wait 2 days
-              ▼
-DAY 6 (T-4)  ── Email #3: "What 500+ marketers asked me to cover"
-                          (social proof + agenda + register CTA)
-              ▼
-              Wait 2 days
-              ▼
-DAY 8 (T-2)  ── IF tag "webinar-registered"?
-              ├── YES → Email: "You're in — save the Zoom link"
-              │         → Wait 1 day → SMS reminder T-1
-              │         → Wait 1 day → WhatsApp reminder 1h before
-              │         → Email post-webinar split (below)
-              │
-              └── NO  → Email #4: "Last chance — doors close in 48h"
-                        → Wait 1 day → WhatsApp final nudge (T-1)
-                        → Wait 1 day → SMS day-of: "Starts in 1h, join here"
-              ▼ (merge after webinar — DAY 10 / 3 May)
-              Wait 1 day
-              ▼
-DAY 11 (T+1) ── IF tag "webinar-attended"?
-              ├── YES → Email: "Thanks for joining — your replay + bonus offer"
-              │         → Tag: hot-lead → Score +30
-              │         → Goal: Booked sales call / purchase
-              │
-              └── NO  → Email: "Sorry we missed you — here's the replay"
-                        → Wait 2 days → Email: limited-time offer
-                        → Tag: webinar-no-show
+1. Workflow saved & ACTIVE        → workflows.status = 'active'
+2. Trigger fires on real event    → workflow_logs row: event_type='enrolled'
+3. Enrollment created             → workflow_enrollments row, status='active'
+4. Steps execute / schedule       → workflow_runs rows + scheduled_jobs rows for delays
+5. Side effects land              → email_logs / lead_activities / leads.tags updated
 ```
 
-### Building it on the canvas — node-by-node
+If any layer is missing, that's exactly where the break is.
 
-I'll drag each step from the palette and configure it in the right inspector. All copy is pre-written and ready to edit.
+---
 
-**Trigger**
-- `Lead added to folder` → folder = **Webinar – AI Sales Blueprint**
+## Verification plan (3 phases)
 
-**Pre-webinar nurture (Days 0–8)**
-1. `Send Email` — "Your AI Sales Blueprint + an exclusive invite" (with register link)
-2. `Wait` — 1 day
-3. `If email opened` (condition)
-   - **YES** → `Add tag: webinar-interested` → `Increase score +10` → `Send Email` (deeper value + register CTA)
-   - **NO** → `Send Email` resend with new subject line
-4. `Merge` both branches
-5. `Wait` — 3 days
-6. `Send WhatsApp` — short, personal nudge with register link
-7. `Wait` — 2 days
-8. `Send Email` — agenda preview + social proof
-9. `Wait` — 2 days
+### Phase 1 — Static checks (in the editor, no firing yet)
+On `/workflows/<id>`:
 
-**Registration split (T-2 → T-0)**
-10. `If lead has tag` → `webinar-registered`
-    - **YES branch**: confirmation email → wait 1 day → `Send SMS` (T-1 reminder) → wait 1 day → `Send WhatsApp` (1h before)
-    - **NO branch**: "last chance" email → wait 1 day → `Send WhatsApp` final nudge → wait 1 day → `Send SMS` "starts in 1 hour"
+1. **Status badge = Active** (top-right). If it says Draft/Paused, leads will never enroll.
+2. **Trigger node is configured** — open it in the right panel and confirm:
+   - Trigger type matches your real event (e.g. `lead_added_to_folder` with the correct `folder_id`, or `lead_tagged` with the correct tag).
+3. **Every condition node has BOTH YES and NO wired** (gold + red edges). Unwired branches silently end the flow.
+4. **No orphan nodes** — every action/delay traces back to the trigger via edges.
+5. **Save** — unsaved edits don't run.
 
-**Post-webinar (Day 11+)**
-11. `Wait` — 1 day after webinar
-12. `If lead has tag` → `webinar-attended`
-    - **YES** → replay + bonus offer email → `Add tag: hot-lead` → `Increase score +30` → `Goal: Booked / Purchased`
-    - **NO** → "missed it — here's the replay" → wait 2 days → limited-time offer → `Add tag: webinar-no-show`
+### Phase 2 — Live fire test (controlled, with a real lead)
+1. Create a throwaway test lead with your real email.
+2. Trigger the exact event the workflow listens for:
+   - `lead_added_to_folder` → move the test lead into "Webinar – AI Sales Blueprint".
+   - `lead_tagged` → apply the matching tag.
+3. Within a few seconds the lead should enroll. Open the workflow's **Runs / Logs** view (right side of the editor or workflow detail) and confirm a new row appears.
 
-### What you need to do once before publishing
+### Phase 3 — Backend confirmation (the source of truth)
+I'll add a **"Run Diagnostics" button** on the workflow editor that queries:
 
-1. Create the folder **Webinar – AI Sales Blueprint** (Leads → Folders → New).
-2. Bulk-select your 500+ ebook leads → "Move to folder".
-3. Open the workflow, fill in your real **Zoom/registration link** in each email/WhatsApp/SMS body (placeholders are pre-filled).
-4. Click **Publish** — leads get enrolled and the sequence starts.
+- `workflow_enrollments` count for this workflow (last 24h, by status)
+- Latest 10 `workflow_logs` for this workflow
+- Latest 10 `workflow_runs` (per-step success/failed/skipped)
+- Pending `scheduled_jobs` (for the delay nodes — the 10-day webinar flow has several)
+- For the test lead: every `email_logs`, `lead_activities`, and current `tags` / `score`
 
-The two tags **webinar-registered** and **webinar-attended** are how the branches know who registered and who showed up. You'll add **webinar-registered** automatically via the registration form (or manually for now), and **webinar-attended** after the event from your Zoom export — bulk-tag in 30 seconds.
+This panel tells you exactly which step ran, which is queued, and which failed — with the error.
 
-### Files touched
+---
 
-- `src/lib/workflows/templateSeeds.ts` — add a new `webinarLaunchFlow` template seed: **"Webinar Launch – 10 day sequence"** (category: Events, featured), so it shows up under **Templates** in the Workflow Builder. Uses `lead_added_to_folder` trigger with the full node/edge graph above (~25 nodes).
-- That's the only file change. The trigger types, action types, conditions, delay node, merge, and goal node already exist in the palette (`nodeLibrary.ts`) — no new node kinds needed.
+## What I'll build (when you approve)
 
-### After this turn
+### A. Diagnostics Panel on Workflow Editor
+New button **"Diagnostics"** in the editor toolbar opens a side panel showing:
 
-You'll see the new template in **Workflow Builder → Templates → "Webinar Launch – 10 day sequence"** (Featured). Click **"Use this template"** to instantiate it as a real workflow you can edit, fill in your registration link, and publish.
+| Section | Source | Shows |
+|---|---|---|
+| Health | `workflows` row | status, last edited, trigger summary |
+| Enrollments (24h) | `workflow_enrollments` | active / completed / exited / failed counts |
+| Recent activity | `workflow_logs` (latest 20) | timestamp, event_type, lead, message |
+| Step runs | `workflow_runs` (latest 20) | node label, status, error |
+| Scheduled (delays) | `scheduled_jobs` where payload.workflow_id = this | run_at, lead, next node |
+| Test a lead | input email → finds lead → shows their full timeline through this workflow |
 
-### Out of scope
+### B. "Send Test Enrollment" action
+Button that calls `enroll-workflow-leads` with `is_test=true` for a lead you pick. It runs the full graph in test mode (no real emails / SMS — they get marked `skipped: test_mode` per the engine's existing guard) so you can verify branching logic without burning credits or spamming your inbox.
 
-- Sending the actual Zoom invite / calendar `.ics` (that comes from your webinar platform).
-- Auto-detecting webinar attendance via Zoom API (you tag attendees manually or via CSV import for now).
-- Building a registration landing page (use your existing funnel or Zoom's registration page).
-- Any change to the workflow execution engine — this is purely a new template definition.
+### C. Per-node run badge on the canvas
+Each node gets a small badge: `▶ 12 runs · 1 failed` pulled from `workflow_runs`. Failed nodes glow red. Click → see the error.
+
+---
+
+## Technical details
+
+**Engine flow (already in place, confirmed by reading the code):**
+- `fireAutomationsForLeads` → calls `enroll-workflow-leads` for every relevant event.
+- `enroll-workflow-leads`:
+  - filters `workflows` where `status='active'` and trigger node's `subType === event_type`
+  - for `lead_added_to_folder` it also matches `cfg.folder_id === event_config.folder_id`
+  - skips suppressed leads, skips if an `active` enrollment already exists (unless `enrollment_config.reEnrollment = true`)
+  - inserts `workflow_enrollments` + `workflow_logs(event_type='enrolled')` then fire-and-forget invokes `execute-workflow`.
+- `execute-workflow`:
+  - walks `canvas_json` from current node, executes actions, evaluates conditions (`yes`/`no` handle routing), schedules delays into `scheduled_jobs`.
+  - writes a `workflow_runs` row per step with `status` (`success` / `failed` / `skipped`) and `details/error`.
+- `process-scheduled-jobs` (cron) picks up due `scheduled_jobs` and re-invokes `execute-workflow` with `start_from_node`.
+
+**Diagnostics queries** (read-only, RLS-scoped):
+```sql
+select status, count(*) from workflow_enrollments
+where workflow_id = $1 and started_at > now() - interval '24 hours'
+group by status;
+
+select * from workflow_logs where workflow_id = $1 order by created_at desc limit 20;
+select * from workflow_runs  where workflow_id = $1 order by created_at desc limit 20;
+select * from scheduled_jobs where payload->>'workflow_id' = $1::text and status='pending' order by run_at;
+```
+
+**Files to touch:**
+- `src/pages/dashboard/WorkflowEditor.tsx` — add Diagnostics button + panel + node-level badges
+- `src/components/workflows/DiagnosticsPanel.tsx` (new)
+- `src/hooks/useWorkflows.ts` — add `useWorkflowDiagnostics(workflowId)` query
+- `src/lib/workflows/testEnroll.ts` (new) — wraps `enroll-workflow-leads` invoke with `is_test=true`
+
+No DB migrations or new edge functions required — all tables and the `is_test` flag already exist.
+
+---
+
+## What you can do *right now* without waiting for the build
+1. Confirm the workflow card shows the **green "active"** badge on `/workflows`.
+2. Open the workflow → click each condition node → verify YES/NO edges exist (gold/red).
+3. Move a real test lead into the **Webinar – AI Sales Blueprint** folder.
+4. Within ~30s, that lead should appear under the workflow's enrollments. If not, the trigger config doesn't match the folder_id — fix it in the trigger node and Save.
+
+Approve and I'll switch to default mode and build the Diagnostics panel + Test Enrollment button + canvas run badges.
 
