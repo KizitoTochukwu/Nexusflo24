@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Activity } from "lucide-react";
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   useNodesState, useEdgesState, addEdge, type Connection, type Edge, type Node, MarkerType,
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
+import { useWorkflow, useUpdateWorkflow, useWorkflowDiagnostics } from "@/hooks/useWorkflows";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
 import { validateWorkflow } from "@/lib/workflows/validation";
@@ -22,6 +22,7 @@ import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflo
 import { toast } from "@/hooks/use-toast";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
+import DiagnosticsPanel from "@/components/workflows/DiagnosticsPanel";
 import {
   AlertDialog,
   AlertDialogContent,
