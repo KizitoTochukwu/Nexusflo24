@@ -308,6 +308,7 @@ function WorkflowEditorInner() {
               <div className="p-4">
                 {selectedNode ? (
                   <NodeInspector
+                    workspaceId={workspaceId}
                     node={selectedNode}
                     onChange={(data) => {
                       setNodes((nds) => nds.map((n) => (n.id === selectedNode.id ? { ...n, data } : n)));
