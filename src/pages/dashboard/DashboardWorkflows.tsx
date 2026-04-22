@@ -196,6 +196,43 @@ export default function DashboardWorkflows() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && !remove.isPending && setPendingDelete(null)}>
+        <AlertDialogContent className="border-border/60 shadow-2xl sm:max-w-md">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 ring-8 ring-destructive/5">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center text-xl">Delete workflow?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              This will permanently delete{" "}
+              <span className="font-semibold text-foreground">"{pendingDelete?.name}"</span>{" "}
+              and all of its steps and enrollments. This action can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 sm:justify-center sm:gap-2">
+            <AlertDialogCancel disabled={remove.isPending} className="mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={remove.isPending}
+              className="min-w-[140px]"
+            >
+              {remove.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete workflow
+                </>
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
