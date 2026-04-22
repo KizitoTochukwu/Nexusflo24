@@ -63,8 +63,10 @@ function WorkflowEditorInner() {
     const c = workflow.canvas_json as WorkflowCanvasJSON;
     setNodes(
       (c.nodes || []).map((n) => ({
-        id: n.id, type: "default", position: n.position,
-        data: { ...n.data } as any,
+        id: n.id,
+        type: "default",
+        position: n.position,
+        data: { ...n.data, label: decorateLabel(n.id, (n.data as any)?.label, undefined) } as any,
         style: nodeStyle(n.data.kind),
       }))
     );
