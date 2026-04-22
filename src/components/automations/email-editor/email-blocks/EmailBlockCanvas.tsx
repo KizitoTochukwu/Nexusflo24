@@ -206,7 +206,7 @@ export default function EmailBlockCanvas({
         if (e.target === e.currentTarget) onSelect(null);
       }}
     >
-      <div className="max-w-[600px] mx-auto min-h-[400px]">
+      <div className="max-w-[600px] mx-auto min-h-[400px] text-xs">
         {blocks.length === 0 && (
           <div
             className="border-2 border-dashed border-border rounded-xl h-[300px] flex flex-col items-center justify-center text-muted-foreground"
