@@ -46,12 +46,16 @@ function WorkflowEditorInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [pendingLeave, setPendingLeave] = useState(false);
   const hydratedRef = useRef(false);
+
+  // Live diagnostics for per-node badges (refreshes every 15s while a workflow is open)
+  const { data: diagnostics } = useWorkflowDiagnostics(workflowId);
 
   useEffect(() => {
     if (!workflow) return;
