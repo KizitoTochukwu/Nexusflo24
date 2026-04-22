@@ -271,13 +271,19 @@ function WorkflowEditorInner() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* Palette */}
-          <aside className="w-60 border-r bg-card">
+          <aside className="w-64 border-r bg-card">
             <ScrollArea className="h-full">
-              <div className="space-y-4 p-3">
-                <PaletteSection title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+              <div className="space-y-3 p-3">
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add step</h3>
+                  <p className="mb-3 text-[11px] text-muted-foreground">
+                    Pick a step type to add it to the canvas. Drag to reposition; connect handles to wire flow.
+                  </p>
+                </div>
+                <PaletteDropdown title="Triggers" placeholder="Add trigger…" items={TRIGGERS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Actions" placeholder="Add action…" items={ACTIONS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Logic" placeholder="Add logic…" items={CONDITIONS} onAdd={addNodeFromPalette} />
+                <PaletteDropdown title="Flow" placeholder="Add flow step…" items={FLOW_NODES} onAdd={addNodeFromPalette} />
               </div>
             </ScrollArea>
           </aside>
