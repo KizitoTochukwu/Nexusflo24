@@ -41,7 +41,6 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
   { icon: MessageCircle, label: "Messages", to: `/dashboard/${workspaceId}/messages` },
   { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
-  { icon: ShoppingBag, label: "Templates", to: `/dashboard/${workspaceId}/templates` },
   { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
   ...(isAdmin ? [
     { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
