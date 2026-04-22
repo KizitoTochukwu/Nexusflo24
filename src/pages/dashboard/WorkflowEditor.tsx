@@ -203,7 +203,7 @@ function WorkflowEditorInner() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+      <div className="-m-6 flex h-[calc(100vh-3.5rem)] min-h-0 flex-col overflow-hidden lg:-m-8">
         {/* Top bar */}
         <div className="flex items-center justify-between border-b bg-card px-4 py-2">
           <div className="flex flex-wrap items-center gap-3">
@@ -272,20 +272,18 @@ function WorkflowEditorInner() {
         <div className="flex flex-1 overflow-hidden">
           {/* Palette */}
           <aside className="w-64 border-r bg-card">
-            <ScrollArea className="h-full">
-              <div className="space-y-3 p-3">
-                <div>
-                  <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add step</h4>
-                  <p className="text-[11px] leading-snug text-muted-foreground">
-                    Pick a step type to add it to the canvas. Drag nodes to reposition; connect handles to wire flow.
-                  </p>
-                </div>
-                <PaletteDropdown title="Triggers" placeholder="Add trigger…" items={TRIGGERS} onAdd={addNodeFromPalette} />
-                <PaletteDropdown title="Actions" placeholder="Add action…" items={ACTIONS} onAdd={addNodeFromPalette} />
-                <PaletteDropdown title="Logic" placeholder="Add logic…" items={CONDITIONS} onAdd={addNodeFromPalette} />
-                <PaletteDropdown title="Flow" placeholder="Add flow step…" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+            <div className="space-y-3 p-3">
+              <div>
+                <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add step</h4>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  Pick a step type to add it to the canvas. Drag nodes to reposition; connect handles to wire flow.
+                </p>
               </div>
-            </ScrollArea>
+              <PaletteDropdown title="Triggers" placeholder="Add trigger…" items={TRIGGERS} onAdd={addNodeFromPalette} />
+              <PaletteDropdown title="Actions" placeholder="Add action…" items={ACTIONS} onAdd={addNodeFromPalette} />
+              <PaletteDropdown title="Logic" placeholder="Add logic…" items={CONDITIONS} onAdd={addNodeFromPalette} />
+              <PaletteDropdown title="Flow" placeholder="Add flow step…" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+            </div>
           </aside>
 
           {/* Canvas */}
