@@ -33,6 +33,7 @@ export default function DashboardWorkflows() {
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
   const [tab, setTab] = useState("my");
+  const [pendingDelete, setPendingDelete] = useState<Workflow | null>(null);
 
   const { data: workflows = [], isLoading } = useWorkflows(workspaceId);
   const { data: dbTemplates = [] } = useWorkflowTemplates();
