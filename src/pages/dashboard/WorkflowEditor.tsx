@@ -344,27 +344,6 @@ function nodeStyle(kind: string): React.CSSProperties {
   return { ...base, background: "hsl(var(--card))", color: "hsl(var(--foreground))" };
 }
 
-function PaletteSection({ title, items, onAdd }: { title: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
-  return (
-    <div>
-      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
-      <div className="space-y-1">
-        {items.map((it) => (
-          <button
-            key={it.subType}
-            onClick={() => onAdd(it)}
-            className="flex w-full items-start gap-2 rounded-md border bg-background p-2 text-left text-xs transition-colors hover:border-accent hover:bg-accent/5"
-          >
-            <it.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-foreground">{it.label}</div>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d: any) => void; onDelete: () => void }) {
   const data = node.data as unknown as NodeData;
