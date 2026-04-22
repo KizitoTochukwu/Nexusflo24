@@ -477,8 +477,8 @@ function WorkflowEditorInner() {
   );
 }
 
-function nodeStyle(kind: string): React.CSSProperties {
-  const base = {
+function nodeStyle(kind: string, stats?: { failed: number; total: number }): React.CSSProperties {
+  const base: React.CSSProperties = {
     border: "1px solid hsl(var(--border))",
     borderRadius: "8px",
     padding: "10px 14px",
@@ -486,10 +486,15 @@ function nodeStyle(kind: string): React.CSSProperties {
     fontWeight: 500,
     minWidth: "180px",
   };
-  if (kind === "trigger") return { ...base, background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))", borderColor: "hsl(var(--accent))" };
-  if (kind === "condition") return { ...base, background: "hsl(var(--card))", borderColor: "hsl(var(--primary))", color: "hsl(var(--primary))" };
+  // Failure halo overrides border color
+  if (stats && stats.failed > 0) {
+    base.border = "2px solid hsl(var(--destructive))";
+    base.boxShadow = "0 0 0 3px hsl(var(--destructive) / 0.15)";
+  }
+  if (kind === "trigger") return { ...base, background: "hsl(var(--accent))", color: "hsl(var(--accent-foreground))", borderColor: stats?.failed ? "hsl(var(--destructive))" : "hsl(var(--accent))" };
+  if (kind === "condition") return { ...base, background: "hsl(var(--card))", borderColor: stats?.failed ? "hsl(var(--destructive))" : "hsl(var(--primary))", color: "hsl(var(--primary))" };
   if (kind === "delay") return { ...base, background: "hsl(var(--muted))", color: "hsl(var(--foreground))" };
-  if (kind === "goal") return { ...base, background: "hsl(142 76% 36%)", color: "white", borderColor: "hsl(142 76% 36%)" };
+  if (kind === "goal") return { ...base, background: "hsl(142 76% 36%)", color: "white", borderColor: stats?.failed ? "hsl(var(--destructive))" : "hsl(142 76% 36%)" };
   return { ...base, background: "hsl(var(--card))", color: "hsl(var(--foreground))" };
 }
 
