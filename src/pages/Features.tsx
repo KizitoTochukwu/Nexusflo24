@@ -380,7 +380,7 @@ const Features = () => (
           </div>
           <div className="order-1 lg:order-2">
             <Badge className="mb-4 border-accent/30 bg-accent/10 text-accent hover:bg-accent/15">
-              <Workflow className="mr-1.5 h-3.5 w-3.5" /> Nurture Flow Builder
+              <Workflow className="mr-1.5 h-3.5 w-3.5" /> Workflow Builder
             </Badge>
             <h2 className="text-3xl font-extrabold md:text-4xl">
               Build Sequences That{" "}

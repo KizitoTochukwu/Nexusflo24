@@ -109,7 +109,7 @@ const HowNurture = () => (
               <div className="h-3 w-3 rounded-full bg-destructive/60" />
               <div className="h-3 w-3 rounded-full bg-accent/60" />
               <div className="h-3 w-3 rounded-full bg-green-500/60" />
-              <span className="ml-2 text-xs text-muted-foreground">Automation Flow Builder</span>
+              <span className="ml-2 text-xs text-muted-foreground">Workflow Builder</span>
             </div>
             <div className="space-y-3 rounded-lg border bg-surface p-4">
               {/* Trigger */}

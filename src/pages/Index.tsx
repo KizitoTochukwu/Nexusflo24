@@ -28,7 +28,7 @@ const features = [
   { icon: Users, title: "Smart CRM", desc: "Manage contacts, track interactions, and close deals with intelligent insights.", slug: "smart-crm" },
   { icon: Mail, title: "AI Email & WhatsApp", desc: "Send personalized campaigns across email and WhatsApp with AI-written copy.", slug: "email-whatsapp" },
   { icon: MessageSquare, title: "Bulk SMS", desc: "Reach thousands instantly with targeted SMS campaigns and auto-replies.", slug: "bulk-sms" },
-  { icon: Workflow, title: "Nurture Flow Builder", desc: "Drag-and-drop automation workflows that convert leads on autopilot.", slug: "nurture-flow" },
+  { icon: Workflow, title: "Workflow Builder", desc: "Drag-and-drop automation workflows that convert leads on autopilot.", slug: "nurture-flow" },
   { icon: LayoutTemplate, title: "Funnel & Page Builder", desc: "Build high-converting funnels and landing pages in minutes — no code needed.", slug: "funnel-builder" },
   { icon: PenTool, title: "AI Copywriter", desc: "Generate compelling subject lines, ad copy, and follow-ups with AI.", slug: "ai-copywriter" },
   { icon: BarChart3, title: "Analytics Dashboard", desc: "See what's converting with real-time analytics and AI-powered insights.", slug: "analytics" },
