@@ -342,7 +342,7 @@ function WorkflowEditorInner() {
 
           {/* Inspector */}
           {inspectorOpen ? (
-            <aside className="w-[640px] border-l bg-card flex flex-col">
+            <aside className="w-[880px] max-w-[60vw] border-l bg-card flex flex-col">
               <div className="flex items-center justify-between border-b px-3 py-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {selectedNode ? "Node settings" : "Workflow settings"}
