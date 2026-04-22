@@ -1,22 +1,24 @@
 
 
-## Add collapse button to the left Steps panel
+## Give the text editing field more horizontal room
 
-The left palette (Triggers / Actions / Logic / Flow) shown in your screenshot will get a small **collapse button** at its top-right edge. Clicking it slides the whole panel out to the left, leaving only a thin 36px rail with an **expand button** so you can bring it back. This gives the canvas more room — same pattern as HubSpot's workflow editor.
+Right now the email block editor squeezes the middle canvas (where you type your text) between a 180px palette on the left and a 220px properties panel on the right, plus a `max-w-[600px]` cap on the canvas itself. With the inspector pane at 640px, the typing area ends up very narrow.
 
 ### What changes
 
-- A new header strip at the top of the left panel labeled **STEPS** with a `PanelLeftClose` icon button on the right.
-- Clicking it sets `paletteOpen = false` → the 240px `aside` is replaced by a 36px rail containing a `PanelLeftOpen` icon button.
-- Clicking the rail's button restores the full panel.
-- State is local (`useState`) so it resets per page visit; the canvas (React Flow) and right inspector are untouched.
+- **Left palette (Content Blocks)**: shrink from `180px` → `140px`. Block tiles (Text/Image/Button/etc.) stay readable, just tighter.
+- **Middle canvas (where you type)**: remove the `max-w-[600px]` cap so it fills all remaining space in the column. This is the field that grows.
+- **Right properties panel**: unchanged at `220px`.
 
-### File touched
+Net result: the typing field gains roughly 80–100px of width, matching HubSpot's proportions where the canvas is the dominant column.
 
-- `src/pages/dashboard/WorkflowEditor.tsx` — adds `paletteOpen` state, the header with close button inside the existing `<aside className="w-60 …">`, and a collapsed-rail fallback rendered when `paletteOpen` is false.
+### Files touched
+
+- `src/components/automations/email-editor/email-blocks/EmailBlockLibrary.tsx` — width `w-[180px]` → `w-[140px]`
+- `src/components/automations/email-editor/email-blocks/EmailBlockCanvas.tsx` — drop `max-w-[600px] mx-auto` from the inner wrapper, keep `min-h-[400px] text-xs`
 
 ### Out of scope
 
-- Persisting collapsed state across reloads (can be added with `localStorage` later if you want it sticky).
-- Animating the collapse — it will snap open/closed for now.
+- Changing the inspector pane width (already 640px).
+- Restyling the palette tiles or properties controls.
 
