@@ -55,7 +55,7 @@ import RescheduleBooking from "./pages/RescheduleBooking";
 import HowCapture from "./pages/HowCapture";
 import HowNurture from "./pages/HowNurture";
 import HowConvert from "./pages/HowConvert";
-import DashboardTemplates from "./pages/dashboard/DashboardTemplates";
+
 import DashboardWorkflows from "./pages/dashboard/DashboardWorkflows";
 import WorkflowEditor from "./pages/dashboard/WorkflowEditor";
 import Unsubscribe from "./pages/Unsubscribe";
@@ -111,7 +111,7 @@ const App = () => (
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="bookings" element={<DashboardBookings />} />
-                <Route path="templates" element={<DashboardTemplates />} />
+                
                 <Route path="messages" element={<DashboardMessages />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
