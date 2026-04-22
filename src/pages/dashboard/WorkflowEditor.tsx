@@ -13,8 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
+import { useLeadFolders } from "@/hooks/useLeadFolders";
+import { PIPELINE_STAGES } from "@/hooks/useLeads";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
 import { validateWorkflow } from "@/lib/workflows/validation";
 import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflows/types";
@@ -303,6 +308,7 @@ function WorkflowEditorInner() {
               <div className="p-4">
                 {selectedNode ? (
                   <NodeInspector
+                    workspaceId={workspaceId}
                     node={selectedNode}
                     onChange={(data) => {
                       setNodes((nds) => nds.map((n) => (n.id === selectedNode.id ? { ...n, data } : n)));
@@ -369,13 +375,97 @@ function PaletteSection({ title, items, onAdd }: { title: string; items: Palette
   );
 }
 
-function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d: any) => void; onDelete: () => void }) {
+const LEAD_STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
+const LIFECYCLE_STAGES = ["Subscriber", "Lead", "MQL", "SQL", "Opportunity", "Customer", "Evangelist"];
+const LEAD_SOURCES = ["Landing Page", "WhatsApp", "Facebook Ad", "Referral", "Organic", "Other"];
+const SCORE_THRESHOLD_OPS = [
+  { value: "gte", label: "Greater than or equal to (≥)" },
+  { value: "gt", label: "Greater than (>)" },
+  { value: "lte", label: "Less than or equal to (≤)" },
+  { value: "lt", label: "Less than (<)" },
+  { value: "eq", label: "Equal to (=)" },
+];
+const WAIT_UNITS = [
+  { value: "minutes", label: "Minutes" },
+  { value: "hours", label: "Hours" },
+  { value: "days", label: "Days" },
+  { value: "weeks", label: "Weeks" },
+];
+const WEBHOOK_METHODS = ["POST", "GET", "PUT", "PATCH", "DELETE"];
+
+function useWorkspaceTags(workspaceId: string) {
+  return useQuery({
+    queryKey: ["workspace-lead-tags", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [] as string[];
+      const { data, error } = await supabase
+        .from("leads")
+        .select("tags")
+        .eq("workspace_id", workspaceId)
+        .limit(1000);
+      if (error) throw error;
+      const set = new Set<string>();
+      (data || []).forEach((r: any) => (r.tags || []).forEach((t: string) => t && set.add(t)));
+      return Array.from(set).sort();
+    },
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+}
+
+function SelectField({
+  label, value, onChange, placeholder, options, allowCustom,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  options: { value: string; label: string }[];
+  allowCustom?: boolean;
+}) {
+  const knownValues = options.map((o) => o.value);
+  const isCustom = !!value && !knownValues.includes(value);
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <Select value={isCustom ? "__custom__" : value || ""} onValueChange={(v) => onChange(v === "__custom__" ? value || "" : v)}>
+        <SelectTrigger className="mt-1"><SelectValue placeholder={placeholder || "Select…"} /></SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+          ))}
+          {allowCustom && <SelectItem value="__custom__">Custom value…</SelectItem>}
+        </SelectContent>
+      </Select>
+      {allowCustom && isCustom && (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter custom value"
+          className="mt-2"
+        />
+      )}
+    </div>
+  );
+}
+
+function NodeInspector({ workspaceId, node, onChange, onDelete }: { workspaceId: string; node: Node; onChange: (d: any) => void; onDelete: () => void }) {
   const data = node.data as unknown as NodeData;
   const palette = findPaletteItem(data.subType || "");
   const updateConfig = (key: string, value: any) => {
     onChange({ ...data, config: { ...(data.config || {}), [key]: value } });
   };
   const updateLabel = (label: string) => onChange({ ...data, label });
+
+  const { data: folders = [] } = useLeadFolders(workspaceId);
+  const { data: tags = [] } = useWorkspaceTags(workspaceId);
+
+  const tagOptions = tags.map((t) => ({ value: t, label: t }));
+  const folderOptions = folders.map((f) => ({ value: f.id, label: f.name }));
+  const statusOptions = LEAD_STATUSES.map((s) => ({ value: s, label: s }));
+  const lifecycleOptions = LIFECYCLE_STAGES.map((s) => ({ value: s, label: s }));
+  const sourceOptions = LEAD_SOURCES.map((s) => ({ value: s, label: s }));
+  const pipelineOptions = PIPELINE_STAGES.map((s) => ({ value: s.value, label: s.label }));
 
   return (
     <div className="space-y-4">
@@ -417,49 +507,151 @@ function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d:
         </div>
       )}
 
+      {/* TRIGGER: lead added to folder */}
+      {data.subType === "lead_added_to_folder" && (
+        <SelectField
+          label="Folder"
+          value={(data.config?.folderId as string) || ""}
+          placeholder={folders.length ? "Select a folder" : "No folders yet"}
+          options={folderOptions}
+          onChange={(v) => updateConfig("folderId", v)}
+        />
+      )}
+
+      {/* TRIGGER: lead tagged (specific tag) */}
+      {data.subType === "lead_tagged" && (
+        <SelectField
+          label="Tag"
+          value={(data.config?.tag as string) || ""}
+          placeholder={tags.length ? "Select a tag" : "No tags yet"}
+          options={tagOptions}
+          allowCustom
+          onChange={(v) => updateConfig("tag", v)}
+        />
+      )}
+
+      {/* TRIGGER: score threshold */}
+      {data.subType === "score_threshold" && (
+        <div className="grid grid-cols-2 gap-2">
+          <SelectField
+            label="Operator"
+            value={(data.config?.operator as string) || "gte"}
+            options={SCORE_THRESHOLD_OPS}
+            onChange={(v) => updateConfig("operator", v)}
+          />
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Score</label>
+            <Input type="number" value={(data.config?.value as number) || 50} onChange={(e) => updateConfig("value", Number(e.target.value))} className="mt-1" />
+          </div>
+        </div>
+      )}
+
+      {/* ACTION: Wait/Delay */}
       {data.subType === "wait_delay" && (
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Duration</label>
-            <Input type="number" value={(data.config?.duration as number) || 1} onChange={(e) => updateConfig("duration", Number(e.target.value))} className="mt-1" />
+            <Input type="number" min={1} value={(data.config?.duration as number) || 1} onChange={(e) => updateConfig("duration", Number(e.target.value))} className="mt-1" />
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Unit</label>
-            <select
-              value={(data.config?.unit as string) || "days"}
-              onChange={(e) => updateConfig("unit", e.target.value)}
-              className="mt-1 h-10 w-full rounded-md border bg-background px-2 text-sm"
-            >
-              <option value="minutes">Minutes</option>
-              <option value="hours">Hours</option>
-              <option value="days">Days</option>
-              <option value="weeks">Weeks</option>
-            </select>
-          </div>
+          <SelectField
+            label="Unit"
+            value={(data.config?.unit as string) || "days"}
+            options={WAIT_UNITS}
+            onChange={(v) => updateConfig("unit", v)}
+          />
         </div>
       )}
 
+      {/* ACTION: Add / Remove tag */}
       {(data.subType === "add_tag" || data.subType === "remove_tag") && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Tag</label>
-          <Input value={(data.config?.tag as string) || ""} onChange={(e) => updateConfig("tag", e.target.value)} className="mt-1" />
-        </div>
+        <SelectField
+          label="Tag"
+          value={(data.config?.tag as string) || ""}
+          placeholder={tags.length ? "Select a tag" : "Type a new tag below"}
+          options={tagOptions}
+          allowCustom
+          onChange={(v) => updateConfig("tag", v)}
+        />
       )}
 
+      {/* ACTION: Update status */}
+      {data.subType === "update_status" && (
+        <SelectField
+          label="New status"
+          value={(data.config?.status as string) || ""}
+          options={statusOptions}
+          onChange={(v) => updateConfig("status", v)}
+        />
+      )}
+
+      {/* ACTION: Update lifecycle */}
+      {data.subType === "update_lifecycle_stage" && (
+        <SelectField
+          label="Lifecycle stage"
+          value={(data.config?.stage as string) || ""}
+          options={lifecycleOptions}
+          onChange={(v) => updateConfig("stage", v)}
+        />
+      )}
+
+      {/* ACTION: Update pipeline stage */}
+      {data.subType === "update_pipeline_stage" && (
+        <SelectField
+          label="Pipeline stage"
+          value={(data.config?.stage as string) || ""}
+          options={pipelineOptions}
+          onChange={(v) => updateConfig("stage", v)}
+        />
+      )}
+
+      {/* ACTION: Move to folder */}
+      {data.subType === "move_to_folder" && (
+        <SelectField
+          label="Folder"
+          value={(data.config?.folderId as string) || ""}
+          placeholder={folders.length ? "Select a folder" : "No folders yet"}
+          options={folderOptions}
+          onChange={(v) => updateConfig("folderId", v)}
+        />
+      )}
+
+      {/* ACTION: Score change */}
       {(data.subType === "increase_score" || data.subType === "decrease_score") && (
         <div>
           <label className="text-xs font-medium text-muted-foreground">Score change</label>
-          <Input type="number" value={(data.config?.delta as number) || 10} onChange={(e) => updateConfig("delta", Number(e.target.value))} className="mt-1" />
+          <Input type="number" min={1} value={(data.config?.delta as number) || 10} onChange={(e) => updateConfig("delta", Number(e.target.value))} className="mt-1" />
         </div>
       )}
 
-      {data.subType === "if_has_tag" || data.subType === "if_not_has_tag" ? (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Tag to check</label>
-          <Input value={(data.config?.tag as string) || ""} onChange={(e) => updateConfig("tag", e.target.value)} className="mt-1" />
+      {/* ACTION: Webhook */}
+      {data.subType === "webhook" && (
+        <div className="space-y-2">
+          <SelectField
+            label="HTTP Method"
+            value={(data.config?.method as string) || "POST"}
+            options={WEBHOOK_METHODS.map((m) => ({ value: m, label: m }))}
+            onChange={(v) => updateConfig("method", v)}
+          />
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Webhook URL</label>
+            <Input value={(data.config?.url as string) || ""} onChange={(e) => updateConfig("url", e.target.value)} className="mt-1" placeholder="https://..." />
+          </div>
         </div>
-      ) : null}
+      )}
 
+      {/* CONDITION: tag-based */}
+      {(data.subType === "if_has_tag" || data.subType === "if_not_has_tag") && (
+        <SelectField
+          label="Tag to check"
+          value={(data.config?.tag as string) || ""}
+          placeholder={tags.length ? "Select a tag" : "Type a tag below"}
+          options={tagOptions}
+          allowCustom
+          onChange={(v) => updateConfig("tag", v)}
+        />
+      )}
+
+      {/* CONDITION: score */}
       {(data.subType === "if_score_gt" || data.subType === "if_score_lt") && (
         <div>
           <label className="text-xs font-medium text-muted-foreground">Score value</label>
@@ -467,24 +659,55 @@ function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d:
         </div>
       )}
 
-      {(data.subType === "if_source_equals" || data.subType === "if_status_equals") && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Equals</label>
-          <Input value={(data.config?.value as string) || ""} onChange={(e) => updateConfig("value", e.target.value)} className="mt-1" />
-        </div>
+      {/* CONDITION: source equals */}
+      {data.subType === "if_source_equals" && (
+        <SelectField
+          label="Source equals"
+          value={(data.config?.value as string) || ""}
+          options={sourceOptions}
+          allowCustom
+          onChange={(v) => updateConfig("value", v)}
+        />
       )}
 
+      {/* CONDITION: status equals */}
+      {data.subType === "if_status_equals" && (
+        <SelectField
+          label="Status equals"
+          value={(data.config?.value as string) || ""}
+          options={statusOptions}
+          onChange={(v) => updateConfig("value", v)}
+        />
+      )}
+
+      {/* CONDITION: lifecycle equals */}
+      {data.subType === "if_lifecycle_equals" && (
+        <SelectField
+          label="Lifecycle equals"
+          value={(data.config?.value as string) || ""}
+          options={lifecycleOptions}
+          onChange={(v) => updateConfig("value", v)}
+        />
+      )}
+
+      {/* CONDITION: no activity */}
       {data.subType === "if_no_activity" && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Days inactive</label>
-          <Input type="number" value={(data.config?.days as number) || 7} onChange={(e) => updateConfig("days", Number(e.target.value))} className="mt-1" />
-        </div>
-      )}
-
-      {data.subType === "webhook" && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Webhook URL</label>
-          <Input value={(data.config?.url as string) || ""} onChange={(e) => updateConfig("url", e.target.value)} className="mt-1" placeholder="https://..." />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Days inactive</label>
+            <Input type="number" min={1} value={(data.config?.days as number) || 7} onChange={(e) => updateConfig("days", Number(e.target.value))} className="mt-1" />
+          </div>
+          <SelectField
+            label="Channel scope"
+            value={(data.config?.channel as string) || "any"}
+            options={[
+              { value: "any", label: "Any channel" },
+              { value: "email", label: "Email" },
+              { value: "sms", label: "SMS" },
+              { value: "whatsapp", label: "WhatsApp" },
+            ]}
+            onChange={(v) => updateConfig("channel", v)}
+          />
         </div>
       )}
 
