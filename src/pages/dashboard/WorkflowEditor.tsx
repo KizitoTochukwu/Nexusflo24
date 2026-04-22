@@ -62,16 +62,13 @@ function WorkflowEditorInner() {
     setName(workflow.name);
     const c = workflow.canvas_json as WorkflowCanvasJSON;
     setNodes(
-      (c.nodes || []).map((n) => {
-        const stats = undefined; // populated by separate effect after diagnostics load
-        return {
-          id: n.id,
-          type: "default",
-          position: n.position,
-          data: { ...n.data, _baseLabel: (n.data as any)?.label, label: (n.data as any)?.label } as any,
-          style: nodeStyle(n.data.kind, stats),
-        };
-      })
+      (c.nodes || []).map((n) => ({
+        id: n.id,
+        type: "default",
+        position: n.position,
+        data: { ...n.data, _baseLabel: (n.data as any)?.label, label: (n.data as any)?.label } as any,
+        style: nodeStyle(n.data.kind),
+      }))
     );
     setEdges(
       (c.edges || []).map((e) => ({
