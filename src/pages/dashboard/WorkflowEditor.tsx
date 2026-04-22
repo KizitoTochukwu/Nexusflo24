@@ -21,6 +21,15 @@ import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflo
 import { toast } from "@/hooks/use-toast";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 function WorkflowEditorInner() {
   const { workflowId } = useParams<{ workflowId: string }>();
@@ -39,6 +48,7 @@ function WorkflowEditorInner() {
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [pendingLeave, setPendingLeave] = useState(false);
   const hydratedRef = useRef(false);
 
   useEffect(() => {
@@ -207,7 +217,7 @@ function WorkflowEditorInner() {
         <div className="flex items-center justify-between border-b bg-card px-4 py-2">
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => {
-              if (dirty && !confirm("You have unsaved changes. Leave anyway?")) return;
+              if (dirty) { setPendingLeave(true); return; }
               navigate(`/dashboard/${workspaceId}/workflows`);
             }}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
