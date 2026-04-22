@@ -6,8 +6,17 @@ import type { BookingPage } from "@/hooks/useBookings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ExternalLink, Pencil, Trash2, CalendarDays } from "lucide-react";
+import { Plus, ExternalLink, Pencil, Trash2, CalendarDays, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import BookingPageForm from "@/components/bookings/BookingPageForm";
 import BookingsList from "@/components/bookings/BookingsList";
@@ -23,6 +32,7 @@ export default function DashboardBookings() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BookingPage | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<BookingPage | null>(null);
 
   const handleCreate = (data: Partial<BookingPage>) => {
     createPage.mutate({ ...data, workspace_id: workspaceId, name: data.name! }, {
@@ -37,8 +47,11 @@ export default function DashboardBookings() {
     });
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Delete this booking page?")) deletePage.mutate(id);
+  const handleConfirmDelete = () => {
+    if (!pendingDelete) return;
+    deletePage.mutate(pendingDelete.id, {
+      onSettled: () => setPendingDelete(null),
+    });
   };
 
   const openEdit = (page: BookingPage) => {
@@ -107,7 +120,7 @@ export default function DashboardBookings() {
                           </Button>
                         )}
                         <Button variant="outline" size="sm" onClick={() => openEdit(page)}><Pencil className="mr-1 h-3 w-3" /> Edit</Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(page.id)} className="text-destructive hover:text-destructive">
+                        <Button variant="ghost" size="sm" onClick={() => setPendingDelete(page)} className="text-destructive hover:text-destructive">
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
@@ -150,6 +163,43 @@ export default function DashboardBookings() {
           />
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <AlertDialogTitle>Delete booking page?</AlertDialogTitle>
+              </div>
+            </div>
+            <AlertDialogDescription className="pt-2">
+              {pendingDelete ? (
+                <>
+                  This will permanently delete <span className="font-medium text-foreground">"{pendingDelete.name}"</span> and its public booking link.
+                  Existing appointments will remain, but no new bookings can be made. This action cannot be undone.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePage.isPending}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deletePage.isPending}
+            >
+              {deletePage.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…</>
+              ) : (
+                <><Trash2 className="mr-2 h-4 w-4" /> Delete booking page</>
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

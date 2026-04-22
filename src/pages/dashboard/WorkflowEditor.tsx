@@ -21,6 +21,15 @@ import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflo
 import { toast } from "@/hooks/use-toast";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 function WorkflowEditorInner() {
   const { workflowId } = useParams<{ workflowId: string }>();
@@ -39,6 +48,7 @@ function WorkflowEditorInner() {
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [pendingLeave, setPendingLeave] = useState(false);
   const hydratedRef = useRef(false);
 
   useEffect(() => {
@@ -207,7 +217,7 @@ function WorkflowEditorInner() {
         <div className="flex items-center justify-between border-b bg-card px-4 py-2">
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => {
-              if (dirty && !confirm("You have unsaved changes. Leave anyway?")) return;
+              if (dirty) { setPendingLeave(true); return; }
               navigate(`/dashboard/${workspaceId}/workflows`);
             }}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
@@ -390,6 +400,47 @@ function WorkflowEditorInner() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={pendingLeave} onOpenChange={setPendingLeave}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <AlertDialogTitle>Leave without saving?</AlertDialogTitle>
+              </div>
+            </div>
+            <AlertDialogDescription className="pt-2">
+              You have unsaved changes to this workflow. If you leave now, your edits will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay on page</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setPendingLeave(false);
+                await handleSaveDraft();
+                navigate(`/dashboard/${workspaceId}/workflows`);
+              }}
+              disabled={saving}
+            >
+              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</> : <><Save className="mr-2 h-4 w-4" /> Save & leave</>}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setPendingLeave(false);
+                navigate(`/dashboard/${workspaceId}/workflows`);
+              }}
+            >
+              Discard changes
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
