@@ -234,10 +234,68 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="runs" className="text-xs">Step runs</TabsTrigger>
           <TabsTrigger value="scheduled" className="text-xs">
-            Queue {data?.scheduled.length ? <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{data.scheduled.length}</Badge> : null}
+            Queue {filteredScheduled.length ? <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filteredScheduled.length}</Badge> : null}
           </TabsTrigger>
           <TabsTrigger value="test" className="text-xs">Test</TabsTrigger>
         </TabsList>
+
+        {/* Filter bar — applies to Activity log, Step runs, Queue */}
+        <div className="mx-4 mt-3 space-y-2 rounded-md border bg-muted/20 p-2">
+          <div className="relative">
+            <SearchIcon className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search messages, errors, IDs…"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="h-8 pl-7 text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={filterRange} onValueChange={(v) => setFilterRange(v as any)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Time" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1h" className="text-xs">Last 1 hour</SelectItem>
+                <SelectItem value="24h" className="text-xs">Last 24 hours</SelectItem>
+                <SelectItem value="7d" className="text-xs">Last 7 days</SelectItem>
+                <SelectItem value="all" className="text-xs">All time</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterEventType} onValueChange={setFilterEventType}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Event type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All events</SelectItem>
+                {eventTypeOptions.map((t) => (
+                  <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterNodeId} onValueChange={setFilterNodeId}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Node" /></SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value="all" className="text-xs">All nodes</SelectItem>
+                {nodeOptions.map((n) => (
+                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Lead ID contains…"
+              value={filterLeadId}
+              onChange={(e) => setFilterLeadId(e.target.value)}
+              className="h-8 text-xs font-mono"
+            />
+          </div>
+          {filtersActive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-7 w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              <FilterX className="mr-1 h-3 w-3" /> Clear filters
+            </Button>
+          )}
+        </div>
 
         <ScrollArea className="flex-1">
           {/* OVERVIEW */}
