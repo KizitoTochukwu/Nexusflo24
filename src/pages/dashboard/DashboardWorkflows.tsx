@@ -72,6 +72,13 @@ export default function DashboardWorkflows() {
     toast({ title: `Workflow ${status}` });
   };
 
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    await remove.mutateAsync(pendingDelete.id);
+    toast({ title: "Workflow deleted", description: `"${pendingDelete.name}" was permanently removed.` });
+    setPendingDelete(null);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6">
