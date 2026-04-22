@@ -8,7 +8,7 @@ const GROUPS = ["Content", "Layout", "Engagement"] as const;
 
 export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps) {
   return (
-    <div className="w-[140px] shrink-0 border-r border-border bg-muted/30 overflow-y-auto">
+    <div className="w-[104px] shrink-0 border-r border-border bg-muted/30 overflow-y-auto">
       <div className="p-3">
         <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           Content Blocks
