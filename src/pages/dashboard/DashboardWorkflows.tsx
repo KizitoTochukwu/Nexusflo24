@@ -7,6 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflows, useWorkflowTemplates, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow } from "@/hooks/useWorkflows";
 import { TEMPLATE_SEEDS } from "@/lib/workflows/templateSeeds";
@@ -24,6 +33,7 @@ export default function DashboardWorkflows() {
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
   const [tab, setTab] = useState("my");
+  const [pendingDelete, setPendingDelete] = useState<Workflow | null>(null);
 
   const { data: workflows = [], isLoading } = useWorkflows(workspaceId);
   const { data: dbTemplates = [] } = useWorkflowTemplates();
@@ -60,6 +70,13 @@ export default function DashboardWorkflows() {
   const handleStatusChange = async (wf: Workflow, status: WorkflowStatus) => {
     await update.mutateAsync({ id: wf.id, patch: { status } });
     toast({ title: `Workflow ${status}` });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    await remove.mutateAsync(pendingDelete.id);
+    toast({ title: "Workflow deleted", description: `"${pendingDelete.name}" was permanently removed.` });
+    setPendingDelete(null);
   };
 
   return (
@@ -137,11 +154,7 @@ export default function DashboardWorkflows() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
-                            onClick={async () => {
-                              if (!confirm(`Delete "${wf.name}"?`)) return;
-                              await remove.mutateAsync(wf.id);
-                              toast({ title: "Workflow deleted" });
-                            }}
+                            onClick={() => setPendingDelete(wf)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                           </DropdownMenuItem>
@@ -183,6 +196,43 @@ export default function DashboardWorkflows() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && !remove.isPending && setPendingDelete(null)}>
+        <AlertDialogContent className="border-border/60 shadow-2xl sm:max-w-md">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 ring-8 ring-destructive/5">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center text-xl">Delete workflow?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              This will permanently delete{" "}
+              <span className="font-semibold text-foreground">"{pendingDelete?.name}"</span>{" "}
+              and all of its steps and enrollments. This action can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2 sm:justify-center sm:gap-2">
+            <AlertDialogCancel disabled={remove.isPending} className="mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={remove.isPending}
+              className="min-w-[140px]"
+            >
+              {remove.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete workflow
+                </>
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
