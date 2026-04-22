@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useWorkflowDiagnostics, useTestEnrollWorkflow, useLeadSearch } from "@/hooks/useWorkflows";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +6,18 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   Activity,
   AlertTriangle,
   CheckCircle2,
   Clock,
+  FilterX,
   FlaskConical,
   Loader2,
   RefreshCw,
+  Search as SearchIcon,
   X,
   XCircle,
 } from "lucide-react";
@@ -67,6 +70,102 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
   const nodeLabel = (nodeId: string): string => {
     const n = (canvas.nodes || []).find((x) => x.id === nodeId);
     return (n?.data as any)?.label || (n?.data as any)?.subType || nodeId.slice(0, 8);
+  };
+
+  // ---- Filters (apply to logs / runs / scheduled) ----
+  const [filterText, setFilterText] = useState(""); // free text (matches lead_id, message, error)
+  const [filterEventType, setFilterEventType] = useState<string>("all");
+  const [filterNodeId, setFilterNodeId] = useState<string>("all");
+  const [filterLeadId, setFilterLeadId] = useState<string>("");
+  const [filterRange, setFilterRange] = useState<"1h" | "24h" | "7d" | "all">("24h");
+
+  const rangeMs: Record<string, number | null> = {
+    "1h": 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    all: null,
+  };
+  const rangeCutoff = rangeMs[filterRange] ? Date.now() - (rangeMs[filterRange] as number) : 0;
+
+  const eventTypeOptions = useMemo(() => {
+    const set = new Set<string>();
+    (data?.logs || []).forEach((l: any) => l.event_type && set.add(l.event_type));
+    return Array.from(set).sort();
+  }, [data?.logs]);
+
+  const nodeOptions = useMemo(() => {
+    return (canvas.nodes || []).map((n) => ({
+      id: n.id,
+      label: (n.data as any)?.label || (n.data as any)?.subType || n.id.slice(0, 8),
+    }));
+  }, [canvas.nodes]);
+
+  const text = filterText.trim().toLowerCase();
+  const lead = filterLeadId.trim().toLowerCase();
+
+  const matchesTime = (iso?: string) =>
+    !iso || !rangeCutoff || new Date(iso).getTime() >= rangeCutoff;
+  const matchesLead = (id?: string) => !lead || (id || "").toLowerCase().includes(lead);
+  const matchesNode = (nid?: string) => filterNodeId === "all" || nid === filterNodeId;
+
+  const filteredLogs = useMemo(
+    () =>
+      (data?.logs || []).filter((l: any) => {
+        if (!matchesTime(l.created_at)) return false;
+        if (filterEventType !== "all" && l.event_type !== filterEventType) return false;
+        if (!matchesLead(l.lead_id)) return false;
+        if (text) {
+          const hay = `${l.event_type || ""} ${l.message || ""} ${l.lead_id || ""}`.toLowerCase();
+          if (!hay.includes(text)) return false;
+        }
+        return true;
+      }),
+    [data?.logs, filterEventType, filterRange, filterLeadId, filterText],
+  );
+
+  const filteredRuns = useMemo(
+    () =>
+      (data?.runs || []).filter((r: any) => {
+        if (!matchesTime(r.ran_at)) return false;
+        if (!matchesNode(r.node_id)) return false;
+        if (!matchesLead(r.lead_id)) return false;
+        if (text) {
+          const hay = `${r.node_type || ""} ${r.error || ""} ${nodeLabel(r.node_id)} ${r.lead_id || ""}`.toLowerCase();
+          if (!hay.includes(text)) return false;
+        }
+        return true;
+      }),
+    [data?.runs, filterNodeId, filterRange, filterLeadId, filterText, canvas.nodes],
+  );
+
+  const filteredScheduled = useMemo(
+    () =>
+      (data?.scheduled || []).filter((j: any) => {
+        const targetNode = j.payload?.start_from_node;
+        if (!matchesNode(targetNode)) return false;
+        if (!matchesLead(j.lead_id)) return false;
+        if (text) {
+          const hay = `${j.lead_id || ""} ${nodeLabel(targetNode || "")}`.toLowerCase();
+          if (!hay.includes(text)) return false;
+        }
+        return true;
+      }),
+    [data?.scheduled, filterNodeId, filterLeadId, filterText, canvas.nodes],
+  );
+
+  const filtersActive =
+    !!text ||
+    filterEventType !== "all" ||
+    filterNodeId !== "all" ||
+    !!lead ||
+    filterRange !== "24h";
+
+  const clearFilters = () => {
+    setFilterText("");
+    setFilterEventType("all");
+    setFilterNodeId("all");
+    setFilterLeadId("");
+    setFilterRange("24h");
   };
 
   const triggerNode = (canvas.nodes || []).find((n) => (n.data as any)?.kind === "trigger");
@@ -135,10 +234,68 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
           <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
           <TabsTrigger value="runs" className="text-xs">Step runs</TabsTrigger>
           <TabsTrigger value="scheduled" className="text-xs">
-            Queue {data?.scheduled.length ? <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{data.scheduled.length}</Badge> : null}
+            Queue {filteredScheduled.length ? <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filteredScheduled.length}</Badge> : null}
           </TabsTrigger>
           <TabsTrigger value="test" className="text-xs">Test</TabsTrigger>
         </TabsList>
+
+        {/* Filter bar — applies to Activity log, Step runs, Queue */}
+        <div className="mx-4 mt-3 space-y-2 rounded-md border bg-muted/20 p-2">
+          <div className="relative">
+            <SearchIcon className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search messages, errors, IDs…"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="h-8 pl-7 text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={filterRange} onValueChange={(v) => setFilterRange(v as any)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Time" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1h" className="text-xs">Last 1 hour</SelectItem>
+                <SelectItem value="24h" className="text-xs">Last 24 hours</SelectItem>
+                <SelectItem value="7d" className="text-xs">Last 7 days</SelectItem>
+                <SelectItem value="all" className="text-xs">All time</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterEventType} onValueChange={setFilterEventType}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Event type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">All events</SelectItem>
+                {eventTypeOptions.map((t) => (
+                  <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterNodeId} onValueChange={setFilterNodeId}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Node" /></SelectTrigger>
+              <SelectContent className="max-h-64">
+                <SelectItem value="all" className="text-xs">All nodes</SelectItem>
+                {nodeOptions.map((n) => (
+                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Lead ID contains…"
+              value={filterLeadId}
+              onChange={(e) => setFilterLeadId(e.target.value)}
+              className="h-8 text-xs font-mono"
+            />
+          </div>
+          {filtersActive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-7 w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              <FilterX className="mr-1 h-3 w-3" /> Clear filters
+            </Button>
+          )}
+        </div>
 
         <ScrollArea className="flex-1">
           {/* OVERVIEW */}
@@ -195,19 +352,25 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-muted-foreground mb-2">Activity log</div>
-                  {data?.logs.length === 0 ? (
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold text-muted-foreground">Activity log</div>
+                    <span className="text-[10px] text-muted-foreground">{filteredLogs.length} of {data?.logs.length || 0}</span>
+                  </div>
+                  {filteredLogs.length === 0 ? (
                     <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
-                      No log events yet.
+                      {filtersActive ? "No log events match your filters." : "No log events yet."}
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {data?.logs.slice(0, 10).map((l: any) => (
+                      {filteredLogs.slice(0, 20).map((l: any) => (
                         <div key={l.id} className="rounded-md border px-2 py-1.5 text-xs">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{l.event_type}</span>
                             <span className="text-muted-foreground">{timeAgo(l.created_at)}</span>
                           </div>
+                          {l.lead_id && (
+                            <div className="font-mono text-[10px] text-muted-foreground">lead {l.lead_id.slice(0, 8)}</div>
+                          )}
                           {l.message && <div className="mt-0.5 text-muted-foreground">{l.message}</div>}
                         </div>
                       ))}
@@ -220,13 +383,14 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
 
           {/* STEP RUNS */}
           <TabsContent value="runs" className="px-4 py-3 mt-0">
-            {data?.runs.length === 0 ? (
+            {filteredRuns.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
-                No step runs yet. Steps will appear here as leads move through the workflow.
+                {filtersActive ? "No step runs match your filters." : "No step runs yet. Steps will appear here as leads move through the workflow."}
               </div>
             ) : (
               <div className="space-y-1.5">
-                {data?.runs.map((r: any) => (
+                <div className="text-[10px] text-muted-foreground">{filteredRuns.length} of {data?.runs.length || 0} runs</div>
+                {filteredRuns.map((r: any) => (
                   <div key={r.id} className="rounded-md border px-2.5 py-2 text-xs">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -256,13 +420,14 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
 
           {/* SCHEDULED */}
           <TabsContent value="scheduled" className="px-4 py-3 mt-0">
-            {data?.scheduled.length === 0 ? (
+            {filteredScheduled.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
-                No pending delays. When a lead hits a delay node, the next step will appear here with its run time.
+                {filtersActive ? "No pending delays match your filters." : "No pending delays. When a lead hits a delay node, the next step will appear here with its run time."}
               </div>
             ) : (
               <div className="space-y-1.5">
-                {data?.scheduled.map((j: any) => (
+                <div className="text-[10px] text-muted-foreground">{filteredScheduled.length} of {data?.scheduled.length || 0} pending</div>
+                {filteredScheduled.map((j: any) => (
                   <div key={j.id} className="rounded-md border px-2.5 py-2 text-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
