@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useWorkflowDiagnostics, useTestEnrollWorkflow, useLeadSearch } from "@/hooks/useWorkflows";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,15 +6,18 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   Activity,
   AlertTriangle,
   CheckCircle2,
   Clock,
+  FilterX,
   FlaskConical,
   Loader2,
   RefreshCw,
+  Search as SearchIcon,
   X,
   XCircle,
 } from "lucide-react";
