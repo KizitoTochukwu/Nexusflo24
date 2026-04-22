@@ -69,7 +69,7 @@ export default function DashboardWorkflows() {
           <div>
             <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-foreground">
               <WorkflowIcon className="h-7 w-7 text-accent" />
-              Workflows
+              Workflow Builder
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Visual, behaviour-driven automation engine. Build sales nurtures, onboarding flows, and re-engagement sequences.
@@ -87,7 +87,7 @@ export default function DashboardWorkflows() {
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="my">My workflows ({workflows.length})</TabsTrigger>
+            <TabsTrigger value="my">My workflow builders ({workflows.length})</TabsTrigger>
             <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
           </TabsList>
 
@@ -98,7 +98,7 @@ export default function DashboardWorkflows() {
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                   <WorkflowIcon className="h-12 w-12 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">No workflows yet</h3>
+                  <h3 className="text-lg font-semibold">No workflow builders yet</h3>
                   <p className="max-w-sm text-sm text-muted-foreground">
                     Start from a prebuilt template or build one from scratch on the visual canvas.
                   </p>
