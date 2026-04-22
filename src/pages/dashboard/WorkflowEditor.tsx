@@ -356,24 +356,61 @@ function nodeStyle(kind: string): React.CSSProperties {
   return { ...base, background: "hsl(var(--card))", color: "hsl(var(--foreground))" };
 }
 
-function PaletteSection({ title, items, onAdd }: { title: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
+function PaletteDropdown({
+  title, placeholder, items, onAdd,
+}: { title: string; placeholder: string; items: PaletteItem[]; onAdd: (i: PaletteItem) => void }) {
+  // Group items by their `group` field, preserving the order they appear in the source array.
+  const groups = useMemo(() => {
+    const map = new Map<string, PaletteItem[]>();
+    for (const it of items) {
+      if (!map.has(it.group)) map.set(it.group, []);
+      map.get(it.group)!.push(it);
+    }
+    return Array.from(map.entries());
+  }, [items]);
+
+  // Reset key forces the Select to clear its internal value after each pick,
+  // so the user can add another item from the same dropdown without reopening logic.
+  const [resetKey, setResetKey] = useState(0);
+
   return (
     <div>
       <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
-      <div className="space-y-1">
-        {items.map((it) => (
-          <button
-            key={it.subType}
-            onClick={() => onAdd(it)}
-            className="flex w-full items-start gap-2 rounded-md border bg-background p-2 text-left text-xs transition-colors hover:border-accent hover:bg-accent/5"
-          >
-            <it.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-foreground">{it.label}</div>
-            </div>
-          </button>
-        ))}
-      </div>
+      <Select
+        key={resetKey}
+        value=""
+        onValueChange={(val) => {
+          const item = items.find((i) => i.subType === val);
+          if (item) {
+            onAdd(item);
+            setResetKey((k) => k + 1);
+          }
+        }}
+      >
+        <SelectTrigger className="h-9 text-xs">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent className="max-h-80">
+          {groups.map(([group, groupItems]) => (
+            <SelectGroup key={group}>
+              <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {group}
+              </SelectLabel>
+              {groupItems.map((it) => {
+                const Icon = it.icon;
+                return (
+                  <SelectItem key={it.subType} value={it.subType} className="text-xs">
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-accent" />
+                      <span>{it.label}</span>
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
