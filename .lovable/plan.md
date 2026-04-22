@@ -1,24 +1,34 @@
 
 
-## Give the text editing field more horizontal room
+## Replace native browser delete confirm with a premium-styled dialog
 
-Right now the email block editor squeezes the middle canvas (where you type your text) between a 180px palette on the left and a 220px properties panel on the right, plus a `max-w-[600px]` cap on the canvas itself. With the inspector pane at 640px, the typing area ends up very narrow.
+The "Delete Untitled workflow?" prompt in the screenshot is the browser's built-in `window.confirm()` dialog (triggered by `confirm(...)` in `DashboardWorkflows.tsx`). It's plain, system-styled, and breaks the NexusFlo24 visual language. We'll replace it with the project's existing AlertDialog primitive, styled to match the premium navy/gold dashboard aesthetic.
 
-### What changes
+### What it will look like
 
-- **Left palette (Content Blocks)**: shrink from `180px` → `140px`. Block tiles (Text/Image/Button/etc.) stay readable, just tighter.
-- **Middle canvas (where you type)**: remove the `max-w-[600px]` cap so it fills all remaining space in the column. This is the field that grows.
-- **Right properties panel**: unchanged at `220px`.
+- Centered modal with the standard rounded card, border, and shadow (matches the rest of the dashboard).
+- Title: "Delete workflow?" with a small destructive icon (Trash2 in a soft red circle) to draw the eye.
+- Description: "This will permanently delete **\"{workflow name}\"** and all its steps. This action can't be undone."
+- Footer: a quiet "Cancel" button and a destructive "Delete workflow" button (red, with a spinner while the mutation runs).
+- Closes on Cancel, Esc, or backdrop click. The Delete button is the focused/primary action and disables while deleting.
 
-Net result: the typing field gains roughly 80–100px of width, matching HubSpot's proportions where the canvas is the dominant column.
+### How it works
+
+- One reusable confirm dialog living next to the workflows grid, controlled by a `pendingDelete: Workflow | null` state.
+- Clicking the dropdown's Delete item sets `pendingDelete = wf` instead of calling `confirm()`.
+- The dialog reads `pendingDelete.name` for the description, calls `remove.mutateAsync(pendingDelete.id)` on confirm, shows the success toast, then clears state.
+- Uses the existing shadcn `AlertDialog` components already in the project — no new dependencies.
 
 ### Files touched
 
-- `src/components/automations/email-editor/email-blocks/EmailBlockLibrary.tsx` — width `w-[180px]` → `w-[140px]`
-- `src/components/automations/email-editor/email-blocks/EmailBlockCanvas.tsx` — drop `max-w-[600px] mx-auto` from the inner wrapper, keep `min-h-[400px] text-xs`
+- `src/pages/dashboard/DashboardWorkflows.tsx`
+  - Add `pendingDelete` state and a `handleConfirmDelete` async handler with loading state.
+  - Replace the inline `if (!confirm(...))` block (line 140–144) with `onClick={() => setPendingDelete(wf)}`.
+  - Render an `<AlertDialog>` at the bottom of the page with the styled title, description, Cancel and destructive Delete buttons (using existing `Button` variant="destructive" and a `Loader2` spinner during deletion).
+  - Add imports for `AlertDialog`, `AlertDialogContent`, `AlertDialogHeader`, `AlertDialogTitle`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogCancel` from `@/components/ui/alert-dialog`.
 
 ### Out of scope
 
-- Changing the inspector pane width (already 640px).
-- Restyling the palette tiles or properties controls.
+- Other places in the app that may still use `window.confirm` (only the workflows delete is requested).
+- Changing the dropdown menu styling or the workflow card layout.
 
