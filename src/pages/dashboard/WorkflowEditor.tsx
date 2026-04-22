@@ -363,6 +363,7 @@ function WorkflowEditorInner() {
                   {selectedNode ? (
                     <NodeInspector
                       node={selectedNode}
+                      workspaceId={workspaceId}
                       onClose={() => setSelectedId(null)}
                       onChange={(data) => {
                         setNodes((nds) => nds.map((n) => (n.id === selectedNode.id ? { ...n, data } : n)));
