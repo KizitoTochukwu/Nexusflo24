@@ -352,19 +352,25 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-muted-foreground mb-2">Activity log</div>
-                  {data?.logs.length === 0 ? (
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold text-muted-foreground">Activity log</div>
+                    <span className="text-[10px] text-muted-foreground">{filteredLogs.length} of {data?.logs.length || 0}</span>
+                  </div>
+                  {filteredLogs.length === 0 ? (
                     <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
-                      No log events yet.
+                      {filtersActive ? "No log events match your filters." : "No log events yet."}
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {data?.logs.slice(0, 10).map((l: any) => (
+                      {filteredLogs.slice(0, 20).map((l: any) => (
                         <div key={l.id} className="rounded-md border px-2 py-1.5 text-xs">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{l.event_type}</span>
                             <span className="text-muted-foreground">{timeAgo(l.created_at)}</span>
                           </div>
+                          {l.lead_id && (
+                            <div className="font-mono text-[10px] text-muted-foreground">lead {l.lead_id.slice(0, 8)}</div>
+                          )}
                           {l.message && <div className="mt-0.5 text-muted-foreground">{l.message}</div>}
                         </div>
                       ))}
@@ -377,13 +383,14 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
 
           {/* STEP RUNS */}
           <TabsContent value="runs" className="px-4 py-3 mt-0">
-            {data?.runs.length === 0 ? (
+            {filteredRuns.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
-                No step runs yet. Steps will appear here as leads move through the workflow.
+                {filtersActive ? "No step runs match your filters." : "No step runs yet. Steps will appear here as leads move through the workflow."}
               </div>
             ) : (
               <div className="space-y-1.5">
-                {data?.runs.map((r: any) => (
+                <div className="text-[10px] text-muted-foreground">{filteredRuns.length} of {data?.runs.length || 0} runs</div>
+                {filteredRuns.map((r: any) => (
                   <div key={r.id} className="rounded-md border px-2.5 py-2 text-xs">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -413,13 +420,14 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
 
           {/* SCHEDULED */}
           <TabsContent value="scheduled" className="px-4 py-3 mt-0">
-            {data?.scheduled.length === 0 ? (
+            {filteredScheduled.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-center text-xs text-muted-foreground">
-                No pending delays. When a lead hits a delay node, the next step will appear here with its run time.
+                {filtersActive ? "No pending delays match your filters." : "No pending delays. When a lead hits a delay node, the next step will appear here with its run time."}
               </div>
             ) : (
               <div className="space-y-1.5">
-                {data?.scheduled.map((j: any) => (
+                <div className="text-[10px] text-muted-foreground">{filteredScheduled.length} of {data?.scheduled.length || 0} pending</div>
+                {filteredScheduled.map((j: any) => (
                   <div key={j.id} className="rounded-md border px-2.5 py-2 text-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
