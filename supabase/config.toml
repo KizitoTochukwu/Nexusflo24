@@ -73,3 +73,7 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = true
   [functions.notify-hot-lead]
     verify_jwt = false
+  [functions.enroll-workflow-leads]
+    verify_jwt = false
+  [functions.execute-workflow]
+    verify_jwt = false
