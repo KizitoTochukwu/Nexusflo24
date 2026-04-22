@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
+import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
 import { validateWorkflow } from "@/lib/workflows/validation";
 import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflows/types";
