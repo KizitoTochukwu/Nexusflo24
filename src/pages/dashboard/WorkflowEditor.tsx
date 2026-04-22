@@ -270,8 +270,8 @@ function WorkflowEditorInner() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => toast({ title: "Test mode", description: "Coming soon — pick a lead and run dry." })}>
-              <FlaskConical className="mr-1 h-4 w-4" /> Test
+            <Button size="sm" variant={diagnosticsOpen ? "default" : "outline"} onClick={() => setDiagnosticsOpen((v) => !v)}>
+              <Activity className="mr-1 h-4 w-4" /> Diagnostics
             </Button>
             <Button size="sm" variant="outline" onClick={handleSaveDraft} disabled={saving || publishing}>
               {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
