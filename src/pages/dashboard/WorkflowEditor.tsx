@@ -19,6 +19,8 @@ import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type Palett
 import { validateWorkflow } from "@/lib/workflows/validation";
 import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflows/types";
 import { toast } from "@/hooks/use-toast";
+import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
+import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
 
 function WorkflowEditorInner() {
   const { workflowId } = useParams<{ workflowId: string }>();
