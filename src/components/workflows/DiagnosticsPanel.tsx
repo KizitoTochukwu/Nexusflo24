@@ -67,6 +67,102 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
   const { data: leads = [] } = useLeadSearch(workspaceId, search);
   const testEnroll = useTestEnrollWorkflow();
 
+  // ---- Filters (apply to logs / runs / scheduled) ----
+  const [filterText, setFilterText] = useState(""); // free text (matches lead_id, message, error)
+  const [filterEventType, setFilterEventType] = useState<string>("all");
+  const [filterNodeId, setFilterNodeId] = useState<string>("all");
+  const [filterLeadId, setFilterLeadId] = useState<string>("");
+  const [filterRange, setFilterRange] = useState<"1h" | "24h" | "7d" | "all">("24h");
+
+  const rangeMs: Record<string, number | null> = {
+    "1h": 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    all: null,
+  };
+  const rangeCutoff = rangeMs[filterRange] ? Date.now() - (rangeMs[filterRange] as number) : 0;
+
+  const eventTypeOptions = useMemo(() => {
+    const set = new Set<string>();
+    (data?.logs || []).forEach((l: any) => l.event_type && set.add(l.event_type));
+    return Array.from(set).sort();
+  }, [data?.logs]);
+
+  const nodeOptions = useMemo(() => {
+    return (canvas.nodes || []).map((n) => ({
+      id: n.id,
+      label: (n.data as any)?.label || (n.data as any)?.subType || n.id.slice(0, 8),
+    }));
+  }, [canvas.nodes]);
+
+  const text = filterText.trim().toLowerCase();
+  const lead = filterLeadId.trim().toLowerCase();
+
+  const matchesTime = (iso?: string) =>
+    !iso || !rangeCutoff || new Date(iso).getTime() >= rangeCutoff;
+  const matchesLead = (id?: string) => !lead || (id || "").toLowerCase().includes(lead);
+  const matchesNode = (nid?: string) => filterNodeId === "all" || nid === filterNodeId;
+
+  const filteredLogs = useMemo(
+    () =>
+      (data?.logs || []).filter((l: any) => {
+        if (!matchesTime(l.created_at)) return false;
+        if (filterEventType !== "all" && l.event_type !== filterEventType) return false;
+        if (!matchesLead(l.lead_id)) return false;
+        if (text) {
+          const hay = `${l.event_type || ""} ${l.message || ""} ${l.lead_id || ""}`.toLowerCase();
+          if (!hay.includes(text)) return false;
+        }
+        return true;
+      }),
+    [data?.logs, filterEventType, filterRange, filterLeadId, filterText],
+  );
+
+  const filteredRuns = useMemo(
+    () =>
+      (data?.runs || []).filter((r: any) => {
+        if (!matchesTime(r.ran_at)) return false;
+        if (!matchesNode(r.node_id)) return false;
+        if (!matchesLead(r.lead_id)) return false;
+        if (text) {
+          const hay = `${r.node_type || ""} ${r.error || ""} ${nodeLabel(r.node_id)} ${r.lead_id || ""}`.toLowerCase();
+          if (!hay.includes(text)) return false;
+        }
+        return true;
+      }),
+    [data?.runs, filterNodeId, filterRange, filterLeadId, filterText, canvas.nodes],
+  );
+
+  const filteredScheduled = useMemo(
+    () =>
+      (data?.scheduled || []).filter((j: any) => {
+        const targetNode = j.payload?.start_from_node;
+        if (!matchesNode(targetNode)) return false;
+        if (!matchesLead(j.lead_id)) return false;
+        if (text) {
+          const hay = `${j.lead_id || ""} ${nodeLabel(targetNode || "")}`.toLowerCase();
+          if (!hay.includes(text)) return false;
+        }
+        return true;
+      }),
+    [data?.scheduled, filterNodeId, filterLeadId, filterText, canvas.nodes],
+  );
+
+  const filtersActive =
+    !!text ||
+    filterEventType !== "all" ||
+    filterNodeId !== "all" ||
+    !!lead ||
+    filterRange !== "24h";
+
+  const clearFilters = () => {
+    setFilterText("");
+    setFilterEventType("all");
+    setFilterNodeId("all");
+    setFilterLeadId("");
+    setFilterRange("24h");
+  };
+
   const nodeLabel = (nodeId: string): string => {
     const n = (canvas.nodes || []).find((x) => x.id === nodeId);
     return (n?.data as any)?.label || (n?.data as any)?.subType || nodeId.slice(0, 8);
