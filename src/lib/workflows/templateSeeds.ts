@@ -240,6 +240,150 @@ const reEngagementFlow: WorkflowCanvasJSON = {
   ],
 };
 
+// Webinar Launch — 10-day pre-event nurture + post-event split.
+// Trigger: lead added to the "Webinar – AI Sales Blueprint" folder.
+// Sequence: Email → branch on open → WhatsApp → Email → branch on registration
+//           → reminders (Email/SMS/WhatsApp) → post-event split on attendance.
+const webinarLaunchFlow: WorkflowCanvasJSON = {
+  nodes: [
+    // Day 0 — entry
+    trigNode("t1", "lead_added_to_folder", "Lead added to webinar folder", 500, 0),
+    actionNode("a1", "send_email", "Email #1 — Invite + ebook recap", 500, 110, {
+      subject: "Your AI Sales Blueprint + an exclusive invite, {{first_name|there}}",
+      body: "Hi {{first_name|there}},\n\nThanks again for downloading the AI Sales Blueprint. To help you actually implement it, I'm running a free live webinar on May 3, 2026.\n\nReserve your seat here: [REGISTRATION LINK]\n\nSee you there,\nThe Team",
+    }),
+    delayNode("d1", "Wait 1 day", 500, 220, 1, "days"),
+
+    // Day 1 — split on engagement with email #1
+    condNode("c1", "if_email_opened", "Opened Email #1?", 500, 330),
+    // YES branch
+    actionNode("a2", "add_tag", "Tag: webinar-interested", 260, 440, { tag: "webinar-interested" }),
+    actionNode("a3", "increase_score", "Score +10", 260, 550, { delta: 10 }),
+    actionNode("a4", "send_email", "Email #2 — What you'll learn", 260, 660, {
+      subject: "Here's exactly what you'll learn on May 3",
+      body: "Hi {{first_name|there}},\n\nQuick preview of what we'll cover live:\n• Build an AI lead-gen engine in 30 min\n• 3 automations that close warm leads on autopilot\n• Live Q&A\n\nGrab your seat: [REGISTRATION LINK]",
+    }),
+    // NO branch — resend with new subject
+    actionNode("a5", "send_email", "Email #2b — Resend new subject", 740, 440, {
+      subject: "Did you miss this? Free webinar on May 3",
+      body: "Hi {{first_name|there}},\n\nIn case the first email got buried — I'm hosting a free live training on the AI Sales Blueprint on May 3.\n\nReserve a seat: [REGISTRATION LINK]",
+    }),
+
+    // Merge → Day 4
+    delayNode("d2", "Wait 3 days", 500, 770, 3, "days"),
+    actionNode("a6", "send_whatsapp", "WhatsApp #1 — Personal nudge", 500, 880, {
+      message: "Hey {{first_name|there}} 👋 quick one — running a free live training on the AI Sales Blueprint on May 3. Want me to save you a seat? [REGISTRATION LINK]",
+    }),
+    delayNode("d3", "Wait 2 days", 500, 990, 2, "days"),
+
+    // Day 6 — agenda + social proof
+    actionNode("a7", "send_email", "Email #3 — Agenda + social proof", 500, 1100, {
+      subject: "What 500+ marketers asked me to cover live",
+      body: "Hi {{first_name|there}},\n\nAfter sending the AI Sales Blueprint to 500+ founders, here are the top 3 questions I'll answer LIVE on May 3:\n1. How do I qualify leads with AI?\n2. What's the simplest automation that converts?\n3. How do I scale without burning my list?\n\nJoin us: [REGISTRATION LINK]",
+    }),
+    delayNode("d4", "Wait 2 days", 500, 1210, 2, "days"),
+
+    // Day 8 — registration split
+    condNode("c2", "if_has_tag", "Has tag: webinar-registered?", 500, 1320),
+
+    // YES — registered: confirmation + reminders
+    actionNode("a8", "send_email", "Confirmation + Zoom link", 260, 1430, {
+      subject: "You're in — here's your Zoom link for May 3",
+      body: "Hi {{first_name|there}},\n\nYou're confirmed for the AI Sales Blueprint Live training on May 3.\n\n📅 Add to calendar: [CALENDAR LINK]\n🔗 Join here: [ZOOM LINK]\n\nSee you live!",
+    }),
+    delayNode("d5", "Wait 1 day", 260, 1540, 1, "days"),
+    actionNode("a9", "send_sms", "SMS — T-1 reminder", 260, 1650, {
+      message: "Hi {{first_name|there}}, your AI Sales Blueprint webinar is tomorrow. Join link: [ZOOM LINK]",
+    }),
+    delayNode("d6", "Wait 1 day", 260, 1760, 1, "days"),
+    actionNode("a10", "send_whatsapp", "WhatsApp — 1h before", 260, 1870, {
+      message: "{{first_name|there}}, we go live in 1 hour 🔴 → [ZOOM LINK]",
+    }),
+
+    // NO — not registered: last-chance push
+    actionNode("a11", "send_email", "Email #4 — Last chance", 740, 1430, {
+      subject: "Last chance — doors close in 48h, {{first_name|there}}",
+      body: "Hi {{first_name|there}},\n\nThe live AI Sales Blueprint training is in 48 hours and seats are filling up fast. This is the last reminder I'll send.\n\nGrab your spot: [REGISTRATION LINK]",
+    }),
+    delayNode("d7", "Wait 1 day", 740, 1540, 1, "days"),
+    actionNode("a12", "send_whatsapp", "WhatsApp — Final nudge T-1", 740, 1650, {
+      message: "{{first_name|there}}, last call — webinar is tomorrow. Free to attend: [REGISTRATION LINK]",
+    }),
+    delayNode("d8", "Wait 1 day", 740, 1760, 1, "days"),
+    actionNode("a13", "send_sms", "SMS — Day-of last call", 740, 1870, {
+      message: "Hi {{first_name|there}}, AI Sales Blueprint webinar starts in 1h. Join here: [REGISTRATION LINK]",
+    }),
+
+    // Post-event (Day 11) — attendance split
+    delayNode("d9", "Wait 1 day (post-event)", 500, 1990, 1, "days"),
+    condNode("c3", "if_has_tag", "Has tag: webinar-attended?", 500, 2100),
+
+    // YES — attended: replay + offer
+    actionNode("a14", "send_email", "Thanks + replay + bonus offer", 260, 2210, {
+      subject: "Thanks for joining — here's your replay + bonus",
+      body: "Hi {{first_name|there}},\n\nThanks for showing up live! As promised:\n\n🎬 Replay: [REPLAY LINK]\n🎁 48h bonus offer: [OFFER LINK]\n\nReady to implement? Book a strategy call: [CALENDAR LINK]",
+    }),
+    actionNode("a15", "add_tag", "Tag: hot-lead", 260, 2320, { tag: "hot-lead" }),
+    actionNode("a16", "increase_score", "Score +30", 260, 2430, { delta: 30 }),
+    goalNode("g1", "Goal: Booked / Purchased", 260, 2540),
+
+    // NO — no-show: replay + delayed offer
+    actionNode("a17", "send_email", "Sorry we missed you — replay", 740, 2210, {
+      subject: "Sorry we missed you — here's the replay",
+      body: "Hi {{first_name|there}},\n\nYou registered but couldn't make it live — no worries. Here's the full replay while it's still up:\n\n🎬 Replay: [REPLAY LINK]\n\nLet me know what you think!",
+    }),
+    delayNode("d10", "Wait 2 days", 740, 2320, 2, "days"),
+    actionNode("a18", "send_email", "Limited-time offer", 740, 2430, {
+      subject: "Last 24h to claim your AI Sales Blueprint bonus",
+      body: "Hi {{first_name|there}},\n\nJust a heads up — the bonus offer from the webinar closes in 24 hours. Grab it here: [OFFER LINK]",
+    }),
+    actionNode("a19", "add_tag", "Tag: webinar-no-show", 740, 2540, { tag: "webinar-no-show" }),
+  ],
+  edges: [
+    // Day 0–1
+    edge("e1", "t1", "a1"),
+    edge("e2", "a1", "d1"),
+    edge("e3", "d1", "c1"),
+    // Engagement split
+    edge("e4", "c1", "a2", "yes"),
+    edge("e5", "a2", "a3"),
+    edge("e6", "a3", "a4"),
+    edge("e7", "c1", "a5", "no"),
+    // Merge → Day 4
+    edge("e8", "a4", "d2"),
+    edge("e9", "a5", "d2"),
+    edge("e10", "d2", "a6"),
+    edge("e11", "a6", "d3"),
+    edge("e12", "d3", "a7"),
+    edge("e13", "a7", "d4"),
+    edge("e14", "d4", "c2"),
+    // Registered branch
+    edge("e15", "c2", "a8", "yes"),
+    edge("e16", "a8", "d5"),
+    edge("e17", "d5", "a9"),
+    edge("e18", "a9", "d6"),
+    edge("e19", "d6", "a10"),
+    edge("e20", "a10", "d9"),
+    // Not-registered branch
+    edge("e21", "c2", "a11", "no"),
+    edge("e22", "a11", "d7"),
+    edge("e23", "d7", "a12"),
+    edge("e24", "a12", "d8"),
+    edge("e25", "d8", "a13"),
+    edge("e26", "a13", "d9"),
+    // Post-event split
+    edge("e27", "d9", "c3"),
+    edge("e28", "c3", "a14", "yes"),
+    edge("e29", "a14", "a15"),
+    edge("e30", "a15", "a16"),
+    edge("e31", "a16", "g1"),
+    edge("e32", "c3", "a17", "no"),
+    edge("e33", "a17", "d10"),
+    edge("e34", "d10", "a18"),
+    edge("e35", "a18", "a19"),
+  ],
+};
+
 const winBackFlow: WorkflowCanvasJSON = {
   nodes: [
     trigNode("t1", "subscription_cancelled", "Subscription cancelled", 400, 0),
