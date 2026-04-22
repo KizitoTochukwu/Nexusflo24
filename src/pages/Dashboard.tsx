@@ -326,9 +326,9 @@ const Dashboard = () => {
       </div>
 
       {/* Workflow preview */}
-      <LockedFeature locked={isStarter} featureName="Automation Workflows">
+      <LockedFeature locked={isStarter} featureName="Workflow Builder">
         <div className="mt-8 rounded-xl border bg-card p-6 shadow-card">
-          <h3 className="mb-4 font-semibold">Automation Workflow Preview</h3>
+          <h3 className="mb-4 font-semibold">Workflow Builder Preview</h3>
           <div className="flex flex-wrap items-center gap-2">
             {workflowNodes.map((node, i) => (
               <div key={node.label} className="flex items-center gap-2">
