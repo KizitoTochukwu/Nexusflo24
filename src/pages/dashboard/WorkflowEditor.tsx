@@ -298,7 +298,7 @@ function WorkflowEditorInner() {
           </div>
 
           {/* Inspector */}
-          <aside className="w-80 border-l bg-card">
+          <aside className="w-[480px] border-l bg-card">
             <ScrollArea className="h-full">
               <div className="p-4">
                 {selectedNode ? (
@@ -390,32 +390,29 @@ function NodeInspector({ node, onChange, onDelete }: { node: Node; onChange: (d:
         <Input value={(data.label as string) || ""} onChange={(e) => updateLabel(e.target.value)} className="mt-1" />
       </div>
 
-      {/* Email config */}
+      {/* Email config — full block editor (HubSpot-style) */}
       {data.subType === "send_email" && (
-        <>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Subject</label>
-            <Input value={(data.config?.subject as string) || ""} onChange={(e) => updateConfig("subject", e.target.value)} className="mt-1" placeholder="Hi {{first_name|there}}" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Body (HTML allowed)</label>
-            <textarea
-              value={(data.config?.body as string) || ""}
-              onChange={(e) => updateConfig("body", e.target.value)}
-              className="mt-1 min-h-[120px] w-full rounded-md border bg-background p-2 text-sm"
-              placeholder="Use {{first_name|there}}, {{full_name}}, {{score}}…"
-            />
-          </div>
-        </>
+        <div className="rounded-md border bg-background p-2">
+          <AutomationEmailEditor
+            isEmail
+            subject={(data.config?.subject as string) || ""}
+            message={(data.config?.body as string) || ""}
+            onSubjectChange={(v) => updateConfig("subject", v)}
+            onMessageChange={(v) => updateConfig("body", v)}
+            templateSettings={(data.config?.templateSettings as TemplateSettings) || DEFAULT_TEMPLATE_SETTINGS}
+            onTemplateSettingsChange={(s) => updateConfig("templateSettings", s)}
+          />
+        </div>
       )}
 
       {(data.subType === "send_sms" || data.subType === "send_whatsapp") && (
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Message</label>
-          <textarea
-            value={(data.config?.message as string) || ""}
-            onChange={(e) => updateConfig("message", e.target.value)}
-            className="mt-1 min-h-[100px] w-full rounded-md border bg-background p-2 text-sm"
+        <div className="rounded-md border bg-background p-2">
+          <AutomationEmailEditor
+            isEmail={false}
+            subject=""
+            message={(data.config?.message as string) || ""}
+            onSubjectChange={() => {}}
+            onMessageChange={(v) => updateConfig("message", v)}
           />
         </div>
       )}
