@@ -13,9 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import { ChevronsUpDown } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkflow, useUpdateWorkflow } from "@/hooks/useWorkflows";
 import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type PaletteItem } from "@/lib/workflows/nodeLibrary";
@@ -369,48 +371,53 @@ function PaletteDropdown({
     return Array.from(map.entries());
   }, [items]);
 
-  // Reset key forces the Select to clear its internal value after each pick,
-  // so the user can add another item from the same dropdown without reopening logic.
-  const [resetKey, setResetKey] = useState(0);
+  const [open, setOpen] = useState(false);
 
   return (
     <div>
       <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
-      <Select
-        key={resetKey}
-        value=""
-        onValueChange={(val) => {
-          const item = items.find((i) => i.subType === val);
-          if (item) {
-            onAdd(item);
-            setResetKey((k) => k + 1);
-          }
-        }}
-      >
-        <SelectTrigger className="h-9 text-xs">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent className="max-h-80">
-          {groups.map(([group, groupItems]) => (
-            <SelectGroup key={group}>
-              <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {group}
-              </SelectLabel>
-              {groupItems.map((it) => {
-                const Icon = it.icon;
-                return (
-                  <SelectItem key={it.subType} value={it.subType} className="text-xs">
-                    <span className="flex items-center gap-2">
-                      <Icon className="h-3.5 w-3.5 text-accent" />
-                      <span>{it.label}</span>
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="h-9 w-full justify-between text-xs font-normal text-muted-foreground"
+          >
+            {placeholder}
+            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder={`Search ${title.toLowerCase()}…`} className="h-9" />
+            <CommandList className="max-h-72">
+              <CommandEmpty>No results.</CommandEmpty>
+              {groups.map(([group, groupItems]) => (
+                <CommandGroup key={group} heading={group}>
+                  {groupItems.map((it) => {
+                    const Icon = it.icon;
+                    return (
+                      <CommandItem
+                        key={it.subType}
+                        value={`${it.label} ${it.group} ${it.subType}`}
+                        onSelect={() => {
+                          onAdd(it);
+                          setOpen(false);
+                        }}
+                        className="text-xs"
+                      >
+                        <Icon className="mr-2 h-3.5 w-3.5 text-accent" />
+                        <span>{it.label}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              ))}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
