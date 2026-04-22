@@ -85,6 +85,29 @@ function WorkflowEditorInner() {
     queueMicrotask(() => { hydratedRef.current = true; });
   }, [workflow, setNodes, setEdges]);
 
+  // Decorate node labels with run badges based on live diagnostics
+  useEffect(() => {
+    if (!diagnostics?.perNode) return;
+    setNodes((nds) =>
+      nds.map((n) => {
+        const stats = diagnostics.perNode[n.id];
+        const baseLabel = (n.data as any)?._baseLabel ?? (n.data as any)?.label ?? "";
+        let label = baseLabel;
+        if (stats && stats.total > 0) {
+          const failedSuffix = stats.failed > 0 ? ` · ${stats.failed} failed` : "";
+          label = `${baseLabel}  •  ${stats.total} run${stats.total === 1 ? "" : "s"}${failedSuffix}`;
+        }
+        return {
+          ...n,
+          data: { ...(n.data as any), label },
+          style: { ...(n.style || {}), ...nodeStyle((n.data as any)?.kind, stats) },
+        };
+      })
+    );
+    queueMicrotask(() => { hydratedRef.current = true; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diagnostics?.perNode]);
+
   // Track unsaved changes after hydration
   useEffect(() => {
     if (hydratedRef.current) setDirty(true);
