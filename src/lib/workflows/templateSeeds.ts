@@ -402,13 +402,14 @@ const winBackFlow: WorkflowCanvasJSON = {
 
 export const TEMPLATE_SEEDS: TemplateSeed[] = [
   { slug: "ai-sales-master", name: "AI Sales System — Master Workflow", category: "Featured", description: "The complete sales nurture flow with branching, scoring, and re-engagement.", is_featured: true, sort_order: 1, canvas_json: masterFlow },
-  { slug: "welcome-new-lead", name: "Welcome New Lead", category: "Onboarding", description: "Greet new leads and introduce your brand over 5 days.", is_featured: false, sort_order: 2, canvas_json: welcomeFlow },
-  { slug: "lead-magnet-nurture", name: "Lead Magnet Nurture", category: "Nurture", description: "Deliver a free resource and nurture into a soft pitch.", is_featured: false, sort_order: 3, canvas_json: leadMagnetFlow },
-  { slug: "webinar-followup", name: "Webinar Registration Follow-up", category: "Events", description: "Confirm, remind, and replay-deliver for webinar attendees.", is_featured: false, sort_order: 4, canvas_json: webinarFlow },
-  { slug: "high-intent-sales", name: "High-Intent Sales Follow-up", category: "Sales", description: "Trigger when score ≥ 80 — alert sales, assign, and outreach.", is_featured: false, sort_order: 5, canvas_json: highIntentFlow },
-  { slug: "trial-activation", name: "Free Trial Activation", category: "Trial", description: "Day-by-day onboarding to activate trial users.", is_featured: false, sort_order: 6, canvas_json: trialActivationFlow },
-  { slug: "trial-expiry-conversion", name: "Trial Expiry Conversion", category: "Trial", description: "Push to upgrade in the final 3 days of trial.", is_featured: false, sort_order: 7, canvas_json: trialExpiryFlow },
-  { slug: "customer-onboarding", name: "Customer Onboarding", category: "Customer", description: "Welcome new customers and help them get set up.", is_featured: false, sort_order: 8, canvas_json: onboardingFlow },
-  { slug: "re-engagement", name: "Re-engagement", category: "Retention", description: "Wake up cold leads with a 3-day pulse.", is_featured: false, sort_order: 9, canvas_json: reEngagementFlow },
-  { slug: "win-back", name: "Win-back", category: "Retention", description: "Bring back cancelled subscribers over 3 weeks.", is_featured: false, sort_order: 10, canvas_json: winBackFlow },
+  { slug: "webinar-launch-10day", name: "Webinar Launch — 10-day sequence", category: "Events", description: "Drive ebook/lead-magnet leads to register and attend a live webinar over 10 days, then split attendees from no-shows for replay + offer follow-up.", is_featured: true, sort_order: 2, canvas_json: webinarLaunchFlow },
+  { slug: "welcome-new-lead", name: "Welcome New Lead", category: "Onboarding", description: "Greet new leads and introduce your brand over 5 days.", is_featured: false, sort_order: 3, canvas_json: welcomeFlow },
+  { slug: "lead-magnet-nurture", name: "Lead Magnet Nurture", category: "Nurture", description: "Deliver a free resource and nurture into a soft pitch.", is_featured: false, sort_order: 4, canvas_json: leadMagnetFlow },
+  { slug: "webinar-followup", name: "Webinar Registration Follow-up", category: "Events", description: "Confirm, remind, and replay-deliver for webinar attendees.", is_featured: false, sort_order: 5, canvas_json: webinarFlow },
+  { slug: "high-intent-sales", name: "High-Intent Sales Follow-up", category: "Sales", description: "Trigger when score ≥ 80 — alert sales, assign, and outreach.", is_featured: false, sort_order: 6, canvas_json: highIntentFlow },
+  { slug: "trial-activation", name: "Free Trial Activation", category: "Trial", description: "Day-by-day onboarding to activate trial users.", is_featured: false, sort_order: 7, canvas_json: trialActivationFlow },
+  { slug: "trial-expiry-conversion", name: "Trial Expiry Conversion", category: "Trial", description: "Push to upgrade in the final 3 days of trial.", is_featured: false, sort_order: 8, canvas_json: trialExpiryFlow },
+  { slug: "customer-onboarding", name: "Customer Onboarding", category: "Customer", description: "Welcome new customers and help them get set up.", is_featured: false, sort_order: 9, canvas_json: onboardingFlow },
+  { slug: "re-engagement", name: "Re-engagement", category: "Retention", description: "Wake up cold leads with a 3-day pulse.", is_featured: false, sort_order: 10, canvas_json: reEngagementFlow },
+  { slug: "win-back", name: "Win-back", category: "Retention", description: "Bring back cancelled subscribers over 3 weeks.", is_featured: false, sort_order: 11, canvas_json: winBackFlow },
 ];
