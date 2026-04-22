@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X } from "lucide-react";
+import { ArrowLeft, Save, Play, Pause, FlaskConical, Loader2, AlertTriangle, CheckCircle2, FileEdit, Archive, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   useNodesState, useEdgesState, addEdge, type Connection, type Edge, type Node, MarkerType,
@@ -33,6 +33,7 @@ function WorkflowEditorInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -268,16 +269,46 @@ function WorkflowEditorInner() {
 
         <div className="flex flex-1 overflow-hidden">
           {/* Palette */}
-          <aside className="w-60 border-r bg-card">
-            <ScrollArea className="h-full">
-              <div className="space-y-4 p-3">
-                <PaletteSection title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
-                <PaletteSection title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+          {paletteOpen ? (
+            <aside className="w-60 border-r bg-card flex flex-col">
+              <div className="flex items-center justify-between border-b px-3 py-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Steps
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setPaletteOpen(false)}
+                  aria-label="Collapse steps panel"
+                  title="Collapse steps panel"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </Button>
               </div>
-            </ScrollArea>
-          </aside>
+              <ScrollArea className="flex-1">
+                <div className="space-y-4 p-3">
+                  <PaletteSection title="Triggers" items={TRIGGERS} onAdd={addNodeFromPalette} />
+                  <PaletteSection title="Actions" items={ACTIONS} onAdd={addNodeFromPalette} />
+                  <PaletteSection title="Logic" items={CONDITIONS} onAdd={addNodeFromPalette} />
+                  <PaletteSection title="Flow" items={FLOW_NODES} onAdd={addNodeFromPalette} />
+                </div>
+              </ScrollArea>
+            </aside>
+          ) : (
+            <div className="flex w-9 flex-col items-center border-r bg-card py-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setPaletteOpen(true)}
+                aria-label="Expand steps panel"
+                title="Expand steps panel"
+              >
+                <PanelLeftOpen className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
 
           {/* Canvas */}
           <div className="flex-1 bg-muted/20">
