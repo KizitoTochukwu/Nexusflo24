@@ -10,6 +10,8 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
+import ExitCriteriaEditor from "./ExitCriteriaEditor";
+import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
 
 export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
@@ -25,6 +27,7 @@ export default function CreateAutomationDialog() {
   const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
   const [tagValue, setTagValue] = useState<string>("");
   const [steps, setSteps] = useState<StepData[]>([]);
+  const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>(() => getDefaultExitCriteria("new_lead"));
 
   const reset = () => {
     setName("");
@@ -34,6 +37,20 @@ export default function CreateAutomationDialog() {
     setSelectedFolderId("any");
     setTagValue("");
     setSteps([]);
+    setExitCriteria(getDefaultExitCriteria("new_lead"));
+  };
+
+  // When the user picks a different trigger type, refresh suggested defaults
+  // — but only if they haven't customised the list yet.
+  const handleTriggerChange = (next: string) => {
+    setTriggerType(next);
+    setExitCriteria((prev) => {
+      const prevDefaults = getDefaultExitCriteria(triggerType);
+      const isStillDefault =
+        prev.length === prevDefaults.length &&
+        prev.every((c, i) => JSON.stringify(c) === JSON.stringify(prevDefaults[i]));
+      return isStillDefault ? getDefaultExitCriteria(next) : prev;
+    });
   };
 
   const handleCreate = () => {
