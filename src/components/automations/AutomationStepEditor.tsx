@@ -7,6 +7,8 @@ import {
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles
 } from "lucide-react";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
+import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 
@@ -41,6 +43,9 @@ interface Props {
 }
 
 export default function AutomationStepEditor({ steps, onChange, triggerType }: Props) {
+  const workspaceId = useWorkspaceId();
+  const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
+
   const addStep = (type: StepData["step_type"]) => {
     const newStep: StepData = { step_type: type, config: {} };
     if (type === "delay") newStep.config = { duration: 60, unit: "minutes" };
