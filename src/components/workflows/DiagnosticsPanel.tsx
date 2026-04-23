@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useWorkflowDiagnostics, useTestEnrollWorkflow, useLeadSearch } from "@/hooks/useWorkflows";
+import { useWorkflowDiagnostics, useTestEnrollWorkflow, useLeadSearch, useResumeEnrollment } from "@/hooks/useWorkflows";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,12 @@ import {
   FilterX,
   FlaskConical,
   Loader2,
+  Play,
   RefreshCw,
   Search as SearchIcon,
   X,
   XCircle,
+  Zap,
 } from "lucide-react";
 import type { WorkflowCanvasJSON } from "@/lib/workflows/types";
 
@@ -187,6 +189,60 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
   };
 
   const counts = data?.counts24h || { active: 0, completed: 0, exited: 0, failed: 0 };
+
+  const resume = useResumeEnrollment();
+
+  // Compute longest delay in canvas (minutes) so we can flag truly stranded enrollments
+  const longestDelayMinutes = useMemo(() => {
+    let max = 0;
+    (canvas.nodes || []).forEach((n: any) => {
+      if (n.data?.kind === "delay") {
+        const cfg = n.data?.config || {};
+        const dur = Number(cfg.duration ?? 0);
+        const unit = String(cfg.unit ?? "minutes").toLowerCase();
+        let mins = dur;
+        if (unit.startsWith("hour")) mins = dur * 60;
+        else if (unit.startsWith("day")) mins = dur * 1440;
+        else if (unit.startsWith("week")) mins = dur * 10080;
+        if (mins > max) max = mins;
+      }
+    });
+    return max;
+  }, [canvas.nodes]);
+
+  // Stranded = active enrollment whose last_step_at is older than longestDelay + 10min buffer
+  // AND no pending scheduled_jobs row exists for it.
+  const strandedEnrollments = useMemo(() => {
+    const pendingByEnrollment = new Set(
+      (data?.scheduled || []).map((j: any) => j.payload?.enrollment_id).filter(Boolean),
+    );
+    const bufferMs = (longestDelayMinutes + 10) * 60 * 1000;
+    return (data?.recentEnrollments || []).filter((e: any) => {
+      if (e.status !== "active") return false;
+      if (pendingByEnrollment.has(e.id)) return false;
+      const ref = e.last_step_at || e.started_at;
+      if (!ref) return false;
+      return Date.now() - new Date(ref).getTime() > bufferMs;
+    });
+  }, [data?.recentEnrollments, data?.scheduled, longestDelayMinutes]);
+
+  const handleResume = async (enrollment: any) => {
+    try {
+      await resume.mutateAsync({
+        enrollment_id: enrollment.id,
+        start_from_node: enrollment.current_node_id,
+        workflow_id: workflowId,
+      });
+      toast({
+        title: "Resumed",
+        description: `Re-running enrollment from ${nodeLabel(enrollment.current_node_id)}.`,
+      });
+      setTimeout(() => refetch(), 1500);
+    } catch (e: any) {
+      toast({ title: "Resume failed", description: e?.message || "Could not resume enrollment", variant: "destructive" });
+    }
+  };
+
 
   return (
     <div className="flex h-full flex-col bg-card">
@@ -377,6 +433,38 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
                     </div>
                   )}
                 </div>
+                {strandedEnrollments.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                      <div className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                        Stranded enrollments ({strandedEnrollments.length})
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {strandedEnrollments.map((e: any) => (
+                        <div key={e.id} className="flex items-center justify-between rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-xs">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[10px] text-muted-foreground">{e.lead_id.slice(0, 8)}</span>
+                              <span className="text-[10px] text-muted-foreground">at {nodeLabel(e.current_node_id)}</span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">stuck {timeAgo(e.last_step_at || e.started_at)}</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => handleResume(e)}
+                            disabled={resume.isPending}
+                          >
+                            <Play className="mr-1 h-3 w-3" /> Resume now
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </TabsContent>

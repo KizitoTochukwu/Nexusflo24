@@ -62,17 +62,26 @@ Deno.serve(async (req) => {
       .eq("workspace_id", workspace_id).eq("status", "active");
 
     if (!workflows || workflows.length === 0) {
+      // Diagnostic breadcrumb so users can see "trigger fired but no workflow active"
+      await supabase.from("workflow_logs").insert({
+        workflow_id: null, workspace_id, enrollment_id: null, lead_id: lead_ids[0] || null,
+        event_type: "no_match", level: "warn",
+        message: `Trigger '${event_type}' fired but no active workflow exists`,
+        details: { event_type, event_config, lead_count: lead_ids.length },
+      }).then(() => {}, () => {});
       return new Response(JSON.stringify({ ok: true, enrolled: 0, reason: "no_active_workflows" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const enrolledIds: string[] = [];
+    let matchedWorkflows = 0;
 
     for (const wf of workflows) {
       const canvas = wf.canvas_json || { nodes: [] };
       const trig = (canvas.nodes || []).find((n: any) => n.data?.kind === "trigger");
       if (!triggerMatches(trig, event_type, event_config)) continue;
+      matchedWorkflows++;
 
       for (const leadId of lead_ids) {
         const { data: lead } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
@@ -119,7 +128,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, enrolled: enrolledIds.length, enrollment_ids: enrolledIds }), {
+    if (matchedWorkflows === 0) {
+      await supabase.from("workflow_logs").insert({
+        workflow_id: null, workspace_id, enrollment_id: null, lead_id: lead_ids[0] || null,
+        event_type: "no_match", level: "warn",
+        message: `Trigger '${event_type}' fired but no active workflow trigger node matched`,
+        details: { event_type, event_config, active_workflows: workflows.length },
+      }).then(() => {}, () => {});
+    }
+
+    return new Response(JSON.stringify({ ok: true, enrolled: enrolledIds.length, enrollment_ids: enrolledIds, matched_workflows: matchedWorkflows }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

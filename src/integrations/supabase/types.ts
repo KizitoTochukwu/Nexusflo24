@@ -1678,7 +1678,7 @@ export type Database = {
       }
       scheduled_jobs: {
         Row: {
-          automation_id: string
+          automation_id: string | null
           created_at: string
           error: string | null
           id: string
@@ -1691,7 +1691,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
-          automation_id: string
+          automation_id?: string | null
           created_at?: string
           error?: string | null
           id?: string
@@ -1704,7 +1704,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
-          automation_id?: string
+          automation_id?: string | null
           created_at?: string
           error?: string | null
           id?: string
@@ -1717,13 +1717,6 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "scheduled_jobs_automation_id_fkey"
-            columns: ["automation_id"]
-            isOneToOne: false
-            referencedRelation: "automations"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "scheduled_jobs_lead_id_fkey"
             columns: ["lead_id"]
