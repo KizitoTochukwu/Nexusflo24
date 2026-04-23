@@ -79,17 +79,22 @@ function ResendDomainPanel({ workspaceId }: { workspaceId: string }) {
   const verifyDomain = async (domainId: string) => {
     setLoading(true);
     try {
-      await callDomainApi({ action: "verify", domainId });
-      toast.success("Verification check initiated. Refreshing status...");
-      // Wait a moment then fetch status
-      setTimeout(async () => {
-        const res = await callDomainApi({ action: "status", domainId });
+      const res = await callDomainApi({ action: "verify", domainId });
+      // Edge function returns the latest domain payload (incl. records + status)
+      if (res?.domain) {
         setSelectedDomain(res.domain);
-        await fetchDomains();
-        setLoading(false);
-      }, 2000);
+        if (res.domain.status === "verified") {
+          toast.success("Domain verified! ✅");
+        } else {
+          toast.success("Verification check complete. Review DNS records below.");
+        }
+      } else {
+        toast.success("Verification check initiated.");
+      }
+      await fetchDomains();
     } catch (err: any) {
       toast.error(err.message || "Verification failed");
+    } finally {
       setLoading(false);
     }
   };
