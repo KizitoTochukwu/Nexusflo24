@@ -161,11 +161,32 @@ window.addEventListener("message",function(e){
           </div>
 
           {/* Code snippets */}
-          <Tabs defaultValue="iframe">
+          <Tabs defaultValue="link">
             <TabsList>
+              <TabsTrigger value="link">Direct Link</TabsTrigger>
               <TabsTrigger value="iframe">iFrame Embed</TabsTrigger>
               <TabsTrigger value="js">JavaScript Snippet</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="link" className="mt-3">
+              <div className="relative">
+                <pre className="overflow-x-auto rounded-lg border bg-muted p-4 pr-20 text-xs leading-relaxed whitespace-pre-wrap break-all">
+                  {embedUrl}
+                </pre>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute right-2 top-2"
+                  onClick={() => copyCode(embedUrl, "Link")}
+                >
+                  {copied === "Link" ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}
+                  {copied === "Link" ? "Copied" : "Copy"}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Share this URL anywhere — social bios, emails, QR codes — to open the form directly in any browser.
+                </p>
+              </div>
+            </TabsContent>
 
             <TabsContent value="iframe" className="mt-3">
               <div className="relative">
