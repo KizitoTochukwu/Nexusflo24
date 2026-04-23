@@ -399,6 +399,93 @@ export function useDeleteAutomation() {
   });
 }
 
+/**
+ * Returns the count of `exit_criteria:*` events logged for an automation —
+ * i.e. how many lead enrolments have been short-circuited by exit rules.
+ */
+export function useExitedCount(automationId: string | null) {
+  return useQuery({
+    queryKey: ["automation-exited-count", automationId],
+    queryFn: async () => {
+      if (!automationId) return 0;
+      const { count, error } = await supabase
+        .from("automation_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("automation_id", automationId)
+        .like("event_type", "exit_criteria:%");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!automationId,
+  });
+}
+
+/**
+ * Workspace-level: returns a map of automation_id -> exited count for ALL
+ * automations in the workspace. Used to render the "Exited" column on the
+ * Automations list without N+1 queries.
+ */
+export function useWorkspaceExitedCounts(workspaceId: string) {
+  return useQuery({
+    queryKey: ["workspace-exited-counts", workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("automation_logs")
+        .select("automation_id")
+        .eq("workspace_id", workspaceId)
+        .like("event_type", "exit_criteria:%");
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      for (const row of (data ?? []) as { automation_id: string }[]) {
+        map[row.automation_id] = (map[row.automation_id] || 0) + 1;
+      }
+      return map;
+    },
+    enabled: !!workspaceId,
+  });
+}
+
+/**
+ * Bulk-applies the suggested default exit criteria to every active
+ * nurture-style automation that currently has none. Idempotent.
+ */
+export function useBackfillExitDefaults() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (workspaceId: string) => {
+      const { getDefaultExitCriteria } = await import("@/lib/automations/exitCriteria");
+      const { data: autos, error } = await supabase
+        .from("automations")
+        .select("id, trigger_type, exit_criteria")
+        .eq("workspace_id", workspaceId);
+      if (error) throw error;
+
+      let updated = 0;
+      for (const a of (autos ?? []) as Array<{ id: string; trigger_type: string; exit_criteria: unknown[] | null }>) {
+        const current = (a.exit_criteria ?? []) as unknown[];
+        if (current.length > 0) continue;
+        const defaults = getDefaultExitCriteria(a.trigger_type);
+        if (defaults.length === 0) continue;
+        const { error: upErr } = await supabase
+          .from("automations")
+          .update({ exit_criteria: defaults as any })
+          .eq("id", a.id);
+        if (!upErr) updated++;
+      }
+      return updated;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["automations"] });
+      if (count > 0) {
+        toast.success(`Applied default exit criteria to ${count} automation${count === 1 ? "" : "s"}`);
+      } else {
+        toast.info("No automations needed updating");
+      }
+    },
+    onError: (e: any) => toast.error(e.message || "Backfill failed"),
+  });
+}
+
 export function useSimulateAutomation() {
   const qc = useQueryClient();
   const { user } = useAuth();

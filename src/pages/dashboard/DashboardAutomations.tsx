@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,12 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock } from "lucide-react";
+import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock, DoorOpen, Sparkles, X } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   useAutomations, useDeleteAutomation, useUpdateAutomation, useCreateAutomation, useSimulateAutomation,
+  useWorkspaceExitedCounts, useBackfillExitDefaults,
   type Automation, TRIGGER_OPTIONS,
 } from "@/hooks/useAutomations";
+import { getDefaultExitCriteria } from "@/lib/automations/exitCriteria";
 import CreateAutomationDialog from "@/components/automations/CreateAutomationDialog";
 import AutomationDetailsDrawer from "@/components/automations/AutomationDetailsDrawer";
 import { format } from "date-fns";
@@ -23,9 +25,22 @@ const DashboardAutomations = () => {
   const updateAutomation = useUpdateAutomation();
   const createAutomation = useCreateAutomation();
   const simulate = useSimulateAutomation();
+  const { data: exitedCounts } = useWorkspaceExitedCounts(workspaceId);
+  const backfill = useBackfillExitDefaults();
 
   const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Count nurture automations missing exit criteria — for the backfill banner.
+  const missingExitCount = useMemo(() => {
+    if (!automations) return 0;
+    return automations.filter((a) => {
+      const current = (a.exit_criteria ?? []) as unknown[];
+      if (current.length > 0) return false;
+      return getDefaultExitCriteria(a.trigger_type).length > 0;
+    }).length;
+  }, [automations]);
 
   const openDetails = (a: Automation) => {
     setSelectedAutomation(a);
@@ -69,6 +84,39 @@ const DashboardAutomations = () => {
         <CreateAutomationDialog />
       </div>
 
+      {/* Backfill banner — surfaces legacy nurture automations missing exit criteria */}
+      {!bannerDismissed && missingExitCount > 0 && (
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3">
+          <DoorOpen className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <div className="font-medium text-rose-900">
+              {missingExitCount} nurture automation{missingExitCount === 1 ? "" : "s"} {missingExitCount === 1 ? "has" : "have"} no exit criteria
+            </div>
+            <p className="text-xs text-rose-800/80 mt-0.5">
+              Leads in these flows will keep receiving messages even after they purchase or unsubscribe. Apply suggested defaults (Lead purchases + Lead unsubscribes) — you can fine-tune per automation afterwards.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-background gap-1.5 shrink-0"
+            disabled={backfill.isPending}
+            onClick={() => backfill.mutate(workspaceId)}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {backfill.isPending ? "Applying…" : "Apply defaults to all"}
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setBannerDismissed(true)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <div className="mt-6 rounded-xl border bg-card shadow-card">
         {isLoading ? (
           <div className="p-10 text-center text-muted-foreground">Loading automations…</div>
@@ -87,13 +135,27 @@ const DashboardAutomations = () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Last Run</TableHead>
                 <TableHead className="text-right">Runs</TableHead>
+                <TableHead className="text-right">Exited</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {automations.map((a) => (
+              {automations.map((a) => {
+                const exitCount = exitedCounts?.[a.id] || 0;
+                const hasExitRules = ((a.exit_criteria ?? []) as unknown[]).length > 0;
+                return (
                 <TableRow key={a.id} className="cursor-pointer hover:bg-muted/40" onClick={() => openDetails(a)}>
-                  <TableCell className="font-medium">{a.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {a.name}
+                      {hasExitRules && (
+                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 gap-1 text-[10px]">
+                          <DoorOpen className="h-2.5 w-2.5" />
+                          {((a.exit_criteria ?? []) as unknown[]).length} exit rule{((a.exit_criteria ?? []) as unknown[]).length === 1 ? "" : "s"}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{triggerLabel(a.trigger_type)}</TableCell>
                   <TableCell>{statusBadge(a.status)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -102,6 +164,15 @@ const DashboardAutomations = () => {
                     ) : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{a.run_count}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {exitCount > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-rose-700">
+                        <DoorOpen className="h-3 w-3" /> {exitCount}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -129,7 +200,8 @@ const DashboardAutomations = () => {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         )}
