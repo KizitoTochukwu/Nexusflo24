@@ -25,9 +25,22 @@ const DashboardAutomations = () => {
   const updateAutomation = useUpdateAutomation();
   const createAutomation = useCreateAutomation();
   const simulate = useSimulateAutomation();
+  const { data: exitedCounts } = useWorkspaceExitedCounts(workspaceId);
+  const backfill = useBackfillExitDefaults();
 
   const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Count nurture automations missing exit criteria — for the backfill banner.
+  const missingExitCount = useMemo(() => {
+    if (!automations) return 0;
+    return automations.filter((a) => {
+      const current = (a.exit_criteria ?? []) as unknown[];
+      if (current.length > 0) return false;
+      return getDefaultExitCriteria(a.trigger_type).length > 0;
+    }).length;
+  }, [automations]);
 
   const openDetails = (a: Automation) => {
     setSelectedAutomation(a);
