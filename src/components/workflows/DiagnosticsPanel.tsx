@@ -177,16 +177,38 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
     ? `${(triggerNode.data as any)?.label || (triggerNode.data as any)?.subType || "Unknown"}`
     : "No trigger configured";
 
-  const handleTestRun = async (leadId: string, leadName: string) => {
-    try {
-      await testEnroll.mutateAsync({ workflow_id: workflowId, workspace_id: workspaceId, lead_id: leadId });
+  const [runMode, setRunMode] = useState<"test" | "live">("test");
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickSearch, setQuickSearch] = useState("");
+  const { data: quickLeads = [] } = useLeadSearch(workspaceId, quickSearch);
+
+  const handleTestRun = async (leadId: string, leadName: string, mode: "test" | "live" = runMode) => {
+    if (mode === "live" && workflowStatus !== "active") {
       toast({
-        title: "Test enrollment started",
-        description: `${leadName} is running through the workflow in test mode (no real sends).`,
+        title: "Workflow not active",
+        description: "Activate the workflow before running a live end-to-end test.",
+        variant: "destructive",
       });
+      return;
+    }
+    try {
+      await testEnroll.mutateAsync({
+        workflow_id: workflowId,
+        workspace_id: workspaceId,
+        lead_id: leadId,
+        mode,
+      });
+      toast({
+        title: mode === "live" ? "Live run started" : "Test enrollment started",
+        description:
+          mode === "live"
+            ? `${leadName} is running through the workflow with REAL sends. Watch Step runs for delivery confirmation.`
+            : `${leadName} is running through the workflow in test mode (no real sends, no credits).`,
+      });
+      setQuickOpen(false);
       setTimeout(() => refetch(), 1500);
     } catch (e: any) {
-      toast({ title: "Test failed", description: e?.message || "Could not enroll lead", variant: "destructive" });
+      toast({ title: "Run failed", description: e?.message || "Could not enroll lead", variant: "destructive" });
     }
   };
 
