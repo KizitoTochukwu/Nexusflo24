@@ -1,100 +1,41 @@
 
 
-## Upgrade "Add Condition" with grouped categories
+## Expand Suggested Actions into a Rich Mapping
 
 ### What changes
-The "Add Condition" picker becomes a **grouped dropdown** organized by behaviour category, exposing 12 condition types. Selecting a condition reveals only the input field(s) it needs (text input, number, tag chip, or none for boolean checks). Each condition is wired to the automation engine so it actually evaluates against real lead data at runtime.
+Each condition's "Suggested action" becomes a **menu of curated next-steps** instead of a single button. When you pick a condition, you see 2–4 ready-made "smart actions" tailored to that behaviour. Click one and it's inserted as the next step, fully pre-filled (subject lines, tag names, status, even a starter message body).
 
-### Grouped condition catalog (in order)
+Examples of the new mappings:
 
-```text
-Identity / Data
-  • Email is known            → no input  (lead.email present)
-  • Phone is known            → no input  (lead.phone present)
-  • Source equals             → text       (matches lead.source)
-  • Tag contains              → text       (substring match in lead.tags)
+| Condition | Suggested actions (one click each) |
+|---|---|
+| **Email is known** | Send Email · Add tag "email-verified" |
+| **Phone is known** | Send WhatsApp · Send SMS |
+| **Source equals** | Add tag (= source) · Update status → Engaged |
+| **Tag contains** | Send Email · Notify Sales |
+| **Lead score >** | Mark Hot · Notify Sales · Send VIP email |
+| **Email opened** | Follow up on WhatsApp · Add tag "engaged" · Send SMS nudge |
+| **Link clicked** | Notify Sales · Send follow-up email · Mark Warm |
+| **Form submitted** | **Add to nurture flow** (tag `nurture`) · Send welcome email · Notify Sales |
+| **Checkout visited** | **Send discount email** (subject "Your 10% off inside") · Send WhatsApp reminder · Add tag `cart-abandoner` |
+| **Pricing visited** | Notify Sales · Send pricing follow-up email · Mark Hot |
+| **WhatsApp replied** | Mark Engaged · Notify Sales · Send follow-up WhatsApp |
+| **Appointment booked** | Send confirmation email · Send WhatsApp reminder · Mark Qualified |
+| **Purchase happened** | Add tag `customer` · Send thank-you email · Mark Won · Remove tag `cart-abandoner` |
 
-Email behaviour
-  • Email opened              → no input  (any open in email_logs)
-  • Link clicked              → no input  (any click in lead_activities)
+### UI behaviour
+- Replace the single "Suggested: …" button with a small **"Smart actions"** row showing up to 4 chip-buttons (Sparkles icon + label).
+- Each chip inserts a new action step right after the condition with all fields pre-populated (action type, tag, status, subject, starter message).
+- Layout stays compact; chips wrap on narrow widths.
+- No backend changes needed — the executor already reads `action` + config; we're just seeding richer defaults at insert time.
 
-Funnel behaviour
-  • Form submitted            → text (optional funnel slug, blank = any)
-  • Checkout visited          → no input  (lead_activities type=checkout_visit)
+### Files to edit
+- `src/hooks/useAutomations.ts` — change `suggestedAction` (single) → `suggestedActions` (array) on every option in `CONDITION_GROUPS`. Each entry: `{ action, label, defaults? }`.
+- `src/components/automations/AutomationStepEditor.tsx` — replace the single "Suggested" button with a `.map()` over `selectedOpt.suggestedActions` rendering chip buttons; keep the existing insert logic (spread `defaults` into the new step's config).
 
-Messaging behaviour
-  • WhatsApp replied          → no input  (inbound WA in sales_conversations)
-
-Lead scoring
-  • Lead score greater than   → number     (lead.score > value)
-
-Purchase / Conversion
-  • Appointment booked        → no input  (any row in bookings)
-  • Purchase happened         → no input  (lead_activities type=purchase)
-```
-
-### Files touched
-
-1. **`src/hooks/useAutomations.ts`** — replace `CONDITION_OPTIONS` with a grouped structure:
-   ```ts
-   export const CONDITION_GROUPS = [
-     { label: "Identity / Data", options: [
-       { value: "email_known",  label: "Email is known",      input: "none" },
-       { value: "phone_known",  label: "Phone is known",      input: "none" },
-       { value: "source_equals",label: "Source equals",       input: "text" },
-       { value: "tag_contains", label: "Tag contains",        input: "text" },
-     ]},
-     { label: "Email behaviour", options: [
-       { value: "email_opened", label: "Email opened",        input: "none" },
-       { value: "link_clicked", label: "Link clicked",        input: "none" },
-     ]},
-     { label: "Funnel behaviour", options: [
-       { value: "form_submitted",   label: "Form submitted",   input: "text" },
-       { value: "checkout_visited", label: "Checkout visited", input: "none" },
-     ]},
-     { label: "Messaging behaviour", options: [
-       { value: "whatsapp_replied", label: "WhatsApp replied", input: "none" },
-     ]},
-     { label: "Lead scoring", options: [
-       { value: "score_gt", label: "Lead score greater than", input: "number" },
-     ]},
-     { label: "Purchase / Conversion", options: [
-       { value: "appointment_booked", label: "Appointment booked", input: "none" },
-       { value: "purchase_happened",  label: "Purchase happened",  input: "none" },
-     ]},
-   ];
-   ```
-   Keep legacy `reply_status` handling untouched (used by the existing reply-stage router).
-
-2. **`src/components/automations/AutomationStepEditor.tsx`** — condition block:
-   - Replace the flat `<SelectItem>` list with `<SelectGroup>` + `<SelectLabel>` per category (shadcn already supports this).
-   - Drive the secondary input from the selected option's `input` field: `text` → `<Input>`, `number` → `<Input type="number">`, `none` → render nothing.
-   - Keep the existing "reply_status" branch (the two-row replied / no-reply selector) as-is.
-
-3. **`supabase/functions/execute-automation/index.ts`** — extend the `case "condition":` switch (lines 296–347) with handlers for the new types:
-   - `email_known` / `phone_known` → check `lead.email` / `lead.phone` truthiness.
-   - `source_equals` → already exists, keep.
-   - `tag_contains` → `lead.tags.some(t => t.toLowerCase().includes(value.toLowerCase()))`.
-   - `email_opened` → `select count from email_logs where lead_id=… and status='opened'`.
-   - `link_clicked` → `select count from lead_activities where lead_id=… and type='link_click'`.
-   - `form_submitted` → `select count from lead_activities where type='form_submit'` (filter by `meta->>funnel_slug` if value provided).
-   - `checkout_visited` → `select count from lead_activities where type='checkout_visit'`.
-   - `whatsapp_replied` → `select count from sales_conversations where direction='inbound' and channel='whatsapp'`.
-   - `score_gt` → already exists, keep.
-   - `appointment_booked` → `select count from bookings where lead_id=…`.
-   - `purchase_happened` → `select count from lead_activities where type='purchase'`.
-   - When `passed` is false, the existing `skipRemaining = true` logic stops downstream steps (unchanged).
-
-### Backward compatibility
-Old saved automations using `has_tag`, `score_gt`, `source_equals`, `reply_status` continue to work — those condition values are preserved in the executor switch. Only the picker UI is reorganised; existing rows show their stored value as long as it matches one of the new options (the three legacy values listed all map 1:1 to the new catalog).
-
-### Out of scope
-- No DB migration (conditions read from existing tables: `leads`, `email_logs`, `lead_activities`, `sales_conversations`, `bookings`).
-- No changes to triggers, actions, or delays.
-- No changes to the workflow-builder (admin-only) — its `evaluateCondition` already covers similar logic separately.
-
-### Verification after deploy
-1. Open an automation → Add Condition → confirm the dropdown shows the six grouped categories with all 12 conditions.
-2. Pick "Email is known" → no input field appears. Pick "Tag contains" → text field appears. Pick "Lead score greater than" → number field appears.
-3. Save and trigger the automation on a test lead that satisfies the condition → automation continues. On a lead that fails → run is logged as `condition_failed` and downstream steps are skipped.
+### QA
+1. Open Add Condition → pick "Checkout visited" → see three chips (Send discount email, Send WhatsApp reminder, Add tag cart-abandoner).
+2. Click "Send discount email" → a Send Email action step is inserted below with subject "Your 10% off inside" prefilled.
+3. Pick "Form submitted" → click "Add to nurture flow" → an Add Tag step appears with `tag: nurture`.
+4. Pick "Purchase happened" → all four chips render and each inserts the correct pre-filled step.
 
