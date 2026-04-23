@@ -128,7 +128,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, enrolled: enrolledIds.length, enrollment_ids: enrolledIds }), {
+    if (matchedWorkflows === 0) {
+      await supabase.from("workflow_logs").insert({
+        workflow_id: null, workspace_id, enrollment_id: null, lead_id: lead_ids[0] || null,
+        event_type: "no_match", level: "warn",
+        message: `Trigger '${event_type}' fired but no active workflow trigger node matched`,
+        details: { event_type, event_config, active_workflows: workflows.length },
+      }).then(() => {}, () => {});
+    }
+
+    return new Response(JSON.stringify({ ok: true, enrolled: enrolledIds.length, enrollment_ids: enrolledIds, matched_workflows: matchedWorkflows }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
