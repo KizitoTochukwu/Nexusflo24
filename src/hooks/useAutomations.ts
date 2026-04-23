@@ -69,8 +69,8 @@ export type ConditionOption = {
   operators: ConditionOperator[];
   /** If true, the UI exposes the "in the last X days" time window selector. */
   timeWindow?: boolean;
-  /** Suggested follow-up action (action.value) shown as a one-click "Add suggested action" shortcut. */
-  suggestedAction?: { action: string; label: string; defaults?: Record<string, unknown> };
+  /** Suggested follow-up actions (curated mappings) shown as one-click chips. */
+  suggestedActions?: { action: string; label: string; defaults?: Record<string, unknown> }[];
 };
 
 const OPERATOR_LABELS: Record<ConditionOperator, string> = {
