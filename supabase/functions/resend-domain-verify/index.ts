@@ -138,11 +138,34 @@ Deno.serve(async (req) => {
       });
 
       if (!verifyRes.ok) {
-        const errBody = await verifyRes.text();
-        return jsonResponse({ error: "Verification failed", details: errBody }, 502);
+        let errMsg = "Verification failed";
+        try {
+          const errJson = await verifyRes.json();
+          errMsg = errJson?.message || errJson?.error || errMsg;
+        } catch {
+          try { errMsg = (await verifyRes.text()) || errMsg; } catch { /* ignore */ }
+        }
+        if (errMsg.toLowerCase().includes("dns")) {
+          errMsg += " — DNS records may still be propagating. This can take up to 72 hours.";
+        }
+        return jsonResponse({ error: errMsg }, 400);
       }
 
-      return jsonResponse({ success: true, message: "Verification initiated" });
+      // Re-fetch the domain so the UI gets the latest record statuses immediately
+      const statusRes = await fetch(`https://api.resend.com/domains/${body.domainId}`, {
+        headers: resendHeaders,
+      });
+      let domainData: any = null;
+      if (statusRes.ok) {
+        domainData = await statusRes.json();
+        await adminClient
+          .from("workspace_domains")
+          .update({ status: domainData.status || "unknown" })
+          .eq("workspace_id", workspaceId)
+          .eq("resend_domain_id", String(body.domainId));
+      }
+
+      return jsonResponse({ success: true, message: "Verification check complete", domain: domainData });
     }
 
     // ── DOMAIN STATUS ──
