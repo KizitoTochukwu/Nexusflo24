@@ -67,6 +67,7 @@ export default function AdminSmartActions() {
   const { data: overrides, isLoading } = useSmartActionOverrides(workspaceId);
   const save = useSaveSmartActions();
   const reset = useResetSmartActions();
+  const resetAll = useResetAllSmartActions();
 
   const allConditions = useMemo(() => CONDITION_GROUPS.flatMap((g) => g.options.map((o) => ({ ...o, group: g.label }))), []);
   const [selectedCondition, setSelectedCondition] = useState<string>(allConditions[0]?.value ?? "");
@@ -74,6 +75,14 @@ export default function AdminSmartActions() {
 
   const selectedOpt = allConditions.find((o) => o.value === selectedCondition);
   const isOverridden = !!(overrides && overrides[selectedCondition]);
+  const codeDefaults: SmartAction[] = (selectedOpt?.suggestedActions as SmartAction[] | undefined) ?? [];
+  const overriddenCount = overrides ? Object.keys(overrides).length : 0;
+
+  // Drift = saved override differs from the current code defaults (i.e. defaults have evolved).
+  const driftFromDefaults = useMemo(() => {
+    if (!isOverridden) return false;
+    return JSON.stringify(overrides![selectedCondition]) !== JSON.stringify(codeDefaults);
+  }, [isOverridden, overrides, selectedCondition, codeDefaults]);
 
   // Load current effective list into draft when condition or overrides change
   useEffect(() => {
@@ -99,7 +108,15 @@ export default function AdminSmartActions() {
     save.mutate({ workspace_id: workspaceId, condition_value: selectedCondition, actions: draft });
   };
   const handleReset = () => {
+    // Removes the override row so the builder uses the latest code defaults.
     reset.mutate({ workspace_id: workspaceId, condition_value: selectedCondition });
+  };
+  const handleLoadLatestDefaults = () => {
+    // Local preview: load current code defaults into the editor (still need Save to persist).
+    setDraft(codeDefaults.map((a) => ({ ...a, defaults: { ...(a.defaults || {}) } })));
+  };
+  const handleResetAll = () => {
+    resetAll.mutate({ workspace_id: workspaceId });
   };
 
   return (
@@ -113,6 +130,32 @@ export default function AdminSmartActions() {
             Customize the one-click follow-up chips shown in the Automation builder for each condition.
           </p>
         </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" disabled={overriddenCount === 0 || resetAll.isPending}>
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              Reset all to latest defaults
+              {overriddenCount > 0 && <Badge variant="secondary" className="ml-2">{overriddenCount}</Badge>}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Reset all custom smart actions?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes <strong>{overriddenCount}</strong> custom override{overriddenCount === 1 ? "" : "s"} for this workspace.
+                Every condition will fall back to the latest built-in defaults — including any improvements shipped in future releases.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleResetAll}>Reset all</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[320px_1fr]">
