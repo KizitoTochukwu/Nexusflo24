@@ -69,8 +69,8 @@ export type ConditionOption = {
   operators: ConditionOperator[];
   /** If true, the UI exposes the "in the last X days" time window selector. */
   timeWindow?: boolean;
-  /** Suggested follow-up action (action.value) shown as a one-click "Add suggested action" shortcut. */
-  suggestedAction?: { action: string; label: string; defaults?: Record<string, unknown> };
+  /** Suggested follow-up actions (curated mappings) shown as one-click chips. */
+  suggestedActions?: { action: string; label: string; defaults?: Record<string, unknown> }[];
 };
 
 const OPERATOR_LABELS: Record<ConditionOperator, string> = {
@@ -98,22 +98,36 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       {
         value: "email_known", label: "Email", input: "none",
         operators: ["is_known", "is_unknown"],
-        suggestedAction: { action: "send_email", label: "Send Email" },
+        suggestedActions: [
+          { action: "send_email", label: "Send Welcome Email", defaults: { subject: "Welcome aboard 👋" } },
+          { action: "add_tag", label: "Tag: email-verified", defaults: { tag: "email-verified" } },
+        ],
       },
       {
         value: "phone_known", label: "Phone", input: "none",
         operators: ["is_known", "is_unknown"],
-        suggestedAction: { action: "send_sms", label: "Send SMS" },
+        suggestedActions: [
+          { action: "send_whatsapp", label: "Send WhatsApp", defaults: { message: "Hi {{first_name}}, thanks for connecting!" } },
+          { action: "send_sms", label: "Send SMS", defaults: { message: "Hi {{first_name}}, quick note from our team." } },
+        ],
       },
       {
         value: "source_equals", label: "Source", input: "text", placeholder: "e.g. facebook",
         operators: ["equals", "not_equals", "contains"],
-        suggestedAction: { action: "add_tag", label: "Add Tag" },
+        suggestedActions: [
+          { action: "add_tag", label: "Tag by source", defaults: { tag: "source-match" } },
+          { action: "update_status", label: "Move to Engaged", defaults: { new_status: "Engaged" } },
+          { action: "notify_sales", label: "Notify Sales" },
+        ],
       },
       {
         value: "tag_contains", label: "Tag", input: "text", placeholder: "e.g. webinar",
         operators: ["contains", "not_contains", "equals"],
-        suggestedAction: { action: "add_tag", label: "Add Tag" },
+        suggestedActions: [
+          { action: "send_email", label: "Send targeted email", defaults: { subject: "Something for you" } },
+          { action: "notify_sales", label: "Notify Sales" },
+          { action: "update_status", label: "Move to Warm", defaults: { new_status: "Warm" } },
+        ],
       },
     ],
   },
@@ -123,12 +137,20 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       {
         value: "email_opened", label: "Email opened", input: "none",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "send_whatsapp", label: "Follow up on WhatsApp" },
+        suggestedActions: [
+          { action: "send_whatsapp", label: "Follow up on WhatsApp", defaults: { message: "Hey {{first_name}}, saw you opened our email — any questions?" } },
+          { action: "add_tag", label: "Tag: engaged", defaults: { tag: "engaged" } },
+          { action: "send_sms", label: "Send SMS nudge", defaults: { message: "Quick reminder from our team 👋" } },
+        ],
       },
       {
         value: "link_clicked", label: "Link clicked", input: "none",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "notify_sales", label: "Notify Sales" },
+        suggestedActions: [
+          { action: "notify_sales", label: "Notify Sales", defaults: { message: "Lead clicked a link — high intent" } },
+          { action: "send_email", label: "Send follow-up email", defaults: { subject: "Thanks for checking that out" } },
+          { action: "update_status", label: "Move to Warm", defaults: { new_status: "Warm" } },
+        ],
       },
     ],
   },
@@ -138,17 +160,29 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       {
         value: "form_submitted", label: "Form submitted", input: "text", placeholder: "Funnel slug (blank = any)",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "send_email", label: "Send welcome email" },
+        suggestedActions: [
+          { action: "add_tag", label: "Add to nurture flow", defaults: { tag: "nurture" } },
+          { action: "send_email", label: "Send welcome email", defaults: { subject: "Thanks for signing up 🎉" } },
+          { action: "notify_sales", label: "Notify Sales" },
+        ],
       },
       {
         value: "checkout_visited", label: "Checkout visited", input: "none",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "send_email", label: "Send abandoned cart email" },
+        suggestedActions: [
+          { action: "send_email", label: "Send discount email", defaults: { subject: "Your 10% off is inside 🎁", message: "Hi {{first_name}},\n\nWe noticed you were checking us out — here's 10% off to help you decide.\n\nUse code: SAVE10" } },
+          { action: "send_whatsapp", label: "Send WhatsApp reminder", defaults: { message: "Hi {{first_name}}, your cart is still waiting — need help completing your order?" } },
+          { action: "add_tag", label: "Tag: cart-abandoner", defaults: { tag: "cart-abandoner" } },
+        ],
       },
       {
         value: "pricing_visited", label: "Pricing page visited / clicked", input: "none",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "notify_sales", label: "Notify Sales" },
+        suggestedActions: [
+          { action: "notify_sales", label: "Notify Sales", defaults: { message: "Lead viewed pricing — high intent" } },
+          { action: "send_email", label: "Send pricing follow-up", defaults: { subject: "Questions about pricing?" } },
+          { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
+        ],
       },
     ],
   },
@@ -158,7 +192,11 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       {
         value: "whatsapp_replied", label: "WhatsApp replied", input: "none",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "update_status", label: "Update Lead Status", defaults: { new_status: "Engaged" } },
+        suggestedActions: [
+          { action: "update_status", label: "Move to Engaged", defaults: { new_status: "Engaged" } },
+          { action: "notify_sales", label: "Notify Sales" },
+          { action: "send_whatsapp", label: "Reply on WhatsApp", defaults: { message: "Thanks for getting back, {{first_name}}!" } },
+        ],
       },
     ],
   },
@@ -168,7 +206,11 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       {
         value: "score_gt", label: "Lead score", input: "number", placeholder: "e.g. 50",
         operators: ["greater_than", "less_than", "equals", "between"],
-        suggestedAction: { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
+        suggestedActions: [
+          { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
+          { action: "notify_sales", label: "Notify Sales", defaults: { message: "High-score lead — please reach out" } },
+          { action: "send_email", label: "Send VIP email", defaults: { subject: "A personal note from our team" } },
+        ],
       },
     ],
   },
@@ -178,12 +220,21 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       {
         value: "appointment_booked", label: "Appointment booked", input: "none",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "send_email", label: "Send confirmation email" },
+        suggestedActions: [
+          { action: "send_email", label: "Send confirmation email", defaults: { subject: "Your appointment is confirmed ✅" } },
+          { action: "send_whatsapp", label: "Send WhatsApp reminder", defaults: { message: "Hi {{first_name}}, looking forward to our meeting!" } },
+          { action: "update_status", label: "Move to Qualified", defaults: { new_status: "Qualified" } },
+        ],
       },
       {
         value: "purchase_happened", label: "Purchase happened", input: "none",
         operators: ["happened", "not_happened"], timeWindow: true,
-        suggestedAction: { action: "add_tag", label: "Add Customer tag", defaults: { tag: "customer" } },
+        suggestedActions: [
+          { action: "add_tag", label: "Tag: customer", defaults: { tag: "customer" } },
+          { action: "send_email", label: "Send thank-you email", defaults: { subject: "Thank you for your purchase 🙌" } },
+          { action: "update_status", label: "Mark Won", defaults: { new_status: "Won" } },
+          { action: "remove_tag", label: "Remove cart-abandoner tag", defaults: { tag: "cart-abandoner" } },
+        ],
       },
     ],
   },
