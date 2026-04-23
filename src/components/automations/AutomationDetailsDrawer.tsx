@@ -233,66 +233,191 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               onChange={setExitCriteria}
               triggerType={triggerType}
             />
-          </TabsContent>
 
-          <TabsContent value="logs" className="mt-5">
-            {!logs?.length ? (
-              <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
-                No execution logs yet. Simulate or activate this automation to see logs.
-              </div>
-            ) : (
-              <div className="rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead>Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {logs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-medium text-sm">{log.event_type}</TableCell>
-                        <TableCell>
-                          {log.status === "success" ? (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-                              <CheckCircle2 className="h-3 w-3" /> Success
-                            </Badge>
-                          ) : log.status === "scheduled" ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
-                              <Clock className="h-3 w-3" /> Scheduled
-                            </Badge>
-                          ) : log.status === "skipped" || log.status === "condition_failed" ? (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
-                              <Clock className="h-3 w-3" /> {log.status === "condition_failed" ? "Condition Failed" : "Skipped"}
-                            </Badge>
-                          ) : log.status === "completed" ? (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-                              <CheckCircle2 className="h-3 w-3" /> Completed
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1">
-                              <XCircle className="h-3 w-3" /> Failed
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
-                          {JSON.stringify(log.details)}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {format(new Date(log.created_at), "MMM d, HH:mm")}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            {/* Test exit criteria panel */}
+            {exitCriteria.length > 0 && (
+              <div className="rounded-lg border border-rose-200 bg-background p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4 text-rose-600" />
+                  <span className="text-sm font-semibold">Verify exit criteria</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pick a test lead and a configured exit rule. We'll write the matching event and run the same cancellation sweep your live triggers use, then report how many pending steps were cancelled.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value={testLeadId} onValueChange={setTestLeadId}>
+                    <SelectTrigger className="h-8 w-[220px] text-xs">
+                      <SelectValue placeholder="Select a test lead" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(leads ?? []).slice(0, 100).map((l: any) => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.full_name || l.email || l.phone || l.id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={testCriterionIdx} onValueChange={setTestCriterionIdx}>
+                    <SelectTrigger className="h-8 w-[220px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {exitCriteria.map((c, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          {describeCriterion(c)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!testLeadId || testRunning}
+                    className="h-8 gap-1.5"
+                    onClick={async () => {
+                      const idx = parseInt(testCriterionIdx, 10) || 0;
+                      const criterion = exitCriteria[idx];
+                      if (!criterion || !testLeadId) return;
+                      setTestRunning(true);
+                      try {
+                        const res = await simulateExitEvent({
+                          workspaceId,
+                          leadId: testLeadId,
+                          criterion,
+                        });
+                        if (res.cancelledCount > 0) {
+                          toast.success(
+                            `Exit fired — ${res.cancelledCount} pending step${res.cancelledCount === 1 ? "" : "s"} cancelled (event: ${res.eventType})`
+                          );
+                        } else {
+                          toast.info(
+                            `Event "${res.eventType}" fired — no pending steps for this lead, but the log was written. Check Logs tab.`
+                          );
+                        }
+                        qc.invalidateQueries({ queryKey: ["automation-logs", automation.id] });
+                        qc.invalidateQueries({ queryKey: ["workspace-exited-counts", workspaceId] });
+                      } catch (e: any) {
+                        toast.error(e?.message || "Test failed");
+                      } finally {
+                        setTestRunning(false);
+                      }
+                    }}
+                  >
+                    {testRunning ? "Testing…" : "Test exit now"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Note: this writes a real event (e.g. adds the "unsubscribed" tag, inserts a purchase activity). Use a test lead.
+                </p>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="logs" className="mt-5 space-y-3">
+            {/* Filter chips */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Filter:</span>
+              {([
+                { v: "all", label: "All events" },
+                { v: "exit", label: "Exit criteria" },
+                { v: "errors", label: "Errors only" },
+              ] as const).map((f) => (
+                <Button
+                  key={f.v}
+                  type="button"
+                  size="sm"
+                  variant={logsFilter === f.v ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  onClick={() => setLogsFilter(f.v)}
+                >
+                  {f.label}
+                </Button>
+              ))}
+            </div>
+
+            {(() => {
+              const filtered = (logs ?? []).filter((log) => {
+                if (logsFilter === "exit") return log.event_type.startsWith("exit_criteria:");
+                if (logsFilter === "errors") return log.status === "failed" || log.status === "cancelled";
+                return true;
+              });
+              if (!filtered.length) {
+                return (
+                  <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
+                    {logsFilter === "all"
+                      ? "No execution logs yet. Simulate or activate this automation to see logs."
+                      : "No logs match this filter."}
+                  </div>
+                );
+              }
+              return (
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Details</TableHead>
+                        <TableHead>Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((log) => {
+                        const isExit = log.event_type.startsWith("exit_criteria:");
+                        return (
+                          <TableRow key={log.id} className={isExit ? "bg-rose-50/40" : undefined}>
+                            <TableCell className="font-medium text-sm">
+                              <div className="flex items-center gap-1.5">
+                                {isExit && <DoorOpen className="h-3.5 w-3.5 text-rose-600" />}
+                                {log.event_type}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {log.status === "success" ? (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> Success
+                                </Badge>
+                              ) : log.status === "scheduled" ? (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
+                                  <Clock className="h-3 w-3" /> Scheduled
+                                </Badge>
+                              ) : log.status === "skipped" || log.status === "condition_failed" ? (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
+                                  <Clock className="h-3 w-3" /> {log.status === "condition_failed" ? "Condition Failed" : "Skipped"}
+                                </Badge>
+                              ) : log.status === "completed" ? (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> Completed
+                                </Badge>
+                              ) : log.status === "cancelled" ? (
+                                <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 gap-1">
+                                  <DoorOpen className="h-3 w-3" /> Exited
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1">
+                                  <XCircle className="h-3 w-3" /> Failed
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
+                              {JSON.stringify(log.details)}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(log.created_at), "MMM d, HH:mm")}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </div>
