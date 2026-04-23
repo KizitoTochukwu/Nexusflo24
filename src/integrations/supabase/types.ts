@@ -177,6 +177,8 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          exit_actions: Json
+          exit_criteria: Json
           id: string
           last_run_at: string | null
           name: string
@@ -191,6 +193,8 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          exit_actions?: Json
+          exit_criteria?: Json
           id?: string
           last_run_at?: string | null
           name: string
@@ -205,6 +209,8 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          exit_actions?: Json
+          exit_criteria?: Json
           id?: string
           last_run_at?: string | null
           name?: string
