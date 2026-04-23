@@ -115,10 +115,10 @@ export function useAssignLeadsToFolder() {
         lead_id,
         workspace_id: workspaceId,
       }));
-      // upsert to avoid duplicates
+      // Use ignoreDuplicates so already-present leads don't trigger an UPDATE path (RLS-safe).
       const { error } = await supabase
         .from("lead_folder_leads")
-        .upsert(rows as any, { onConflict: "folder_id,lead_id" });
+        .upsert(rows as any, { onConflict: "folder_id,lead_id", ignoreDuplicates: true });
       if (error) throw error;
 
       // Fire matching automations (best-effort, non-blocking)
@@ -131,10 +131,87 @@ export function useAssignLeadsToFolder() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lead-folders"] });
+      qc.invalidateQueries({ queryKey: ["folder-lead-ids"] });
       qc.invalidateQueries({ queryKey: ["leads"] });
       toast.success("Leads added to folder");
     },
     onError: (e: any) => toast.error(e.message || "Failed to assign leads"),
+  });
+}
+
+export function useRemoveLeadsFromFolder() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ leadIds, folderId, workspaceId }: { leadIds: string[]; folderId: string; workspaceId: string }) => {
+      // Delete in batches of 100 to stay within URL length limits
+      for (let i = 0; i < leadIds.length; i += 100) {
+        const batch = leadIds.slice(i, i + 100);
+        const { error } = await supabase
+          .from("lead_folder_leads")
+          .delete()
+          .eq("folder_id", folderId)
+          .eq("workspace_id", workspaceId)
+          .in("lead_id", batch);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-folders"] });
+      qc.invalidateQueries({ queryKey: ["folder-lead-ids"] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Leads removed from folder");
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to remove leads"),
+  });
+}
+
+export function useMoveLeadsBetweenFolders() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      leadIds, fromFolderId, toFolderId, workspaceId,
+    }: { leadIds: string[]; fromFolderId: string | null; toFolderId: string; workspaceId: string }) => {
+      // Remove from origin folder (if any)
+      if (fromFolderId && fromFolderId !== toFolderId) {
+        for (let i = 0; i < leadIds.length; i += 100) {
+          const batch = leadIds.slice(i, i + 100);
+          const { error: dErr } = await supabase
+            .from("lead_folder_leads")
+            .delete()
+            .eq("folder_id", fromFolderId)
+            .eq("workspace_id", workspaceId)
+            .in("lead_id", batch);
+          if (dErr) throw dErr;
+        }
+      }
+      // Add to destination folder
+      const rows = leadIds.map((lead_id) => ({
+        folder_id: toFolderId,
+        lead_id,
+        workspace_id: workspaceId,
+      }));
+      const { error } = await supabase
+        .from("lead_folder_leads")
+        .upsert(rows as any, { onConflict: "folder_id,lead_id", ignoreDuplicates: true });
+      if (error) throw error;
+
+      // Fire automation triggers for the destination
+      fireAutomationsForLeads({
+        workspaceId,
+        leadIds,
+        triggerType: "lead_added_to_folder",
+        triggerConfigMatch: { folder_id: toFolderId },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lead-folders"] });
+      qc.invalidateQueries({ queryKey: ["folder-lead-ids"] });
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Leads moved");
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to move leads"),
   });
 }
 

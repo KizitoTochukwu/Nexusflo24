@@ -19,7 +19,7 @@ import {
 import { Plus, Upload, Search, Pencil, Trash2, Eye, MoreVertical, Sparkles, LayoutGrid, List } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, PIPELINE_STAGES, type Lead, type LeadFilters, type PipelineStage } from "@/hooks/useLeads";
 import { useQualifyLead } from "@/hooks/useQualifyLead";
-import { useLeadFolders, useFolderLeadIds, useAssignLeadsToFolder, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
+import { useLeadFolders, useFolderLeadIds, useAssignLeadsToFolder, useRemoveLeadsFromFolder, useMoveLeadsBetweenFolders, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
 import AddLeadDialog from "@/components/leads/AddLeadDialog";
 import LeadDetailsDrawer from "@/components/leads/LeadDetailsDrawer";
 import CsvImportDialog from "@/components/leads/CsvImportDialog";
@@ -101,6 +101,8 @@ const DashboardLeads = () => {
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
   const assignToFolder = useAssignLeadsToFolder();
+  const removeFromFolder = useRemoveLeadsFromFolder();
+  const moveBetweenFolders = useMoveLeadsBetweenFolders();
   const bulkDelete = useBulkDeleteLeads();
   const deleteAll = useDeleteAllLeads();
 
@@ -167,6 +169,22 @@ const DashboardLeads = () => {
     assignToFolder.mutate({ leadIds: [...selectedIds], folderId, workspaceId }, {
       onSuccess: clearSelection,
     });
+  };
+
+  const handleMoveBetweenFolders = (toFolderId: string) => {
+    if (!activeFolderId) return;
+    moveBetweenFolders.mutate(
+      { leadIds: [...selectedIds], fromFolderId: activeFolderId, toFolderId, workspaceId },
+      { onSuccess: clearSelection }
+    );
+  };
+
+  const handleRemoveFromFolder = () => {
+    if (!activeFolderId) return;
+    removeFromFolder.mutate(
+      { leadIds: [...selectedIds], folderId: activeFolderId, workspaceId },
+      { onSuccess: clearSelection }
+    );
   };
 
   const handleDeleteAll = () => {
@@ -293,12 +311,16 @@ const DashboardLeads = () => {
               <BulkActionBar
                 selectedCount={selectedIds.size}
                 folders={folders}
+                activeFolderId={activeFolderId}
                 onMoveToFolder={handleMoveToFolder}
+                onMoveBetweenFolders={handleMoveBetweenFolders}
+                onRemoveFromFolder={handleRemoveFromFolder}
                 onDeleteSelected={() => setBulkDeleteConfirmOpen(true)}
                 onClearSelection={clearSelection}
                 onBulkQualify={handleBulkQualify}
                 isDeleting={bulkDelete.isPending}
-                isMoving={assignToFolder.isPending}
+                isMoving={assignToFolder.isPending || moveBetweenFolders.isPending}
+                isRemoving={removeFromFolder.isPending}
                 isQualifying={bulkQualifying}
                 qualifyProgress={qualifyProgress}
               />

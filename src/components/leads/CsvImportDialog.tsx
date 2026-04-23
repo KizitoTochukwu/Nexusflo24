@@ -420,7 +420,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         }));
         // Insert in batches of 50
         for (let i = 0; i < folderRows.length; i += 50) {
-          await supabase.from("lead_folder_leads").upsert(folderRows.slice(i, i + 50) as any, { onConflict: "folder_id,lead_id" });
+          await supabase.from("lead_folder_leads").upsert(folderRows.slice(i, i + 50) as any, { onConflict: "folder_id,lead_id", ignoreDuplicates: true });
         }
         qc.invalidateQueries({ queryKey: ["lead-folders"] });
 
