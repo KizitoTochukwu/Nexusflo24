@@ -1,46 +1,100 @@
 
 
-## Hide Workflow Builder from non-admins
+## Upgrade "Add Condition" with grouped categories
 
 ### What changes
-The "Workflow Builder" feature stays fully functional in the codebase — only its visibility and access are restricted to admin accounts (users in the `admin_allowlist`, detected via the existing `useIsAdmin()` hook). Regular users will not see the sidebar item and cannot reach the routes by typing the URL.
+The "Add Condition" picker becomes a **grouped dropdown** organized by behaviour category, exposing 12 condition types. Selecting a condition reveals only the input field(s) it needs (text input, number, tag chip, or none for boolean checks). Each condition is wired to the automation engine so it actually evaluates against real lead data at runtime.
 
-### Files to edit
+### Grouped condition catalog (in order)
 
-**1. `src/components/dashboard/DashboardLayout.tsx`**
-Move the Workflow Builder sidebar entry into the existing admin-only conditional block (same pattern already used for "Admin" and "Blog Manager"):
-```ts
-...(isAdmin ? [
-  { icon: Zap, label: "Workflow Builder", to: `/dashboard/${workspaceId}/workflows` },
-  { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
-  { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
-] : [])
+```text
+Identity / Data
+  • Email is known            → no input  (lead.email present)
+  • Phone is known            → no input  (lead.phone present)
+  • Source equals             → text       (matches lead.source)
+  • Tag contains              → text       (substring match in lead.tags)
+
+Email behaviour
+  • Email opened              → no input  (any open in email_logs)
+  • Link clicked              → no input  (any click in lead_activities)
+
+Funnel behaviour
+  • Form submitted            → text (optional funnel slug, blank = any)
+  • Checkout visited          → no input  (lead_activities type=checkout_visit)
+
+Messaging behaviour
+  • WhatsApp replied          → no input  (inbound WA in sales_conversations)
+
+Lead scoring
+  • Lead score greater than   → number     (lead.score > value)
+
+Purchase / Conversion
+  • Appointment booked        → no input  (any row in bookings)
+  • Purchase happened         → no input  (lead_activities type=purchase)
 ```
-Result: regular users no longer see the "Workflow Builder" link in the sidebar.
 
-**2. `src/App.tsx`**
-Wrap the three workflow routes inside the existing `<AdminGuard />` block so URL-typing won't bypass the restriction:
-```tsx
-<Route element={<AdminGuard />}>
-  <Route path="workflows" element={<DashboardWorkflows />} />
-  <Route path="workflows/new" element={<WorkflowEditor />} />
-  <Route path="workflows/:workflowId" element={<WorkflowEditor />} />
-  <Route path="admin" element={<AdminDashboard />} />
-  <Route path="admin/blog" element={<AdminBlogManager />} />
-</Route>
-```
-Non-admins who try `/dashboard/:id/workflows` will be redirected to the dashboard by `AdminGuard`.
+### Files touched
 
-### What this does NOT touch
-- No code is deleted — Workflow Builder remains fully built and runnable for admins.
-- The Automations module (your active flow) is unaffected.
-- Backend edge functions (`execute-workflow`, `enroll-workflow-leads`) stay deployed; they're just not reachable from any non-admin UI.
-- Database, RLS, automation engine — untouched.
+1. **`src/hooks/useAutomations.ts`** — replace `CONDITION_OPTIONS` with a grouped structure:
+   ```ts
+   export const CONDITION_GROUPS = [
+     { label: "Identity / Data", options: [
+       { value: "email_known",  label: "Email is known",      input: "none" },
+       { value: "phone_known",  label: "Phone is known",      input: "none" },
+       { value: "source_equals",label: "Source equals",       input: "text" },
+       { value: "tag_contains", label: "Tag contains",        input: "text" },
+     ]},
+     { label: "Email behaviour", options: [
+       { value: "email_opened", label: "Email opened",        input: "none" },
+       { value: "link_clicked", label: "Link clicked",        input: "none" },
+     ]},
+     { label: "Funnel behaviour", options: [
+       { value: "form_submitted",   label: "Form submitted",   input: "text" },
+       { value: "checkout_visited", label: "Checkout visited", input: "none" },
+     ]},
+     { label: "Messaging behaviour", options: [
+       { value: "whatsapp_replied", label: "WhatsApp replied", input: "none" },
+     ]},
+     { label: "Lead scoring", options: [
+       { value: "score_gt", label: "Lead score greater than", input: "number" },
+     ]},
+     { label: "Purchase / Conversion", options: [
+       { value: "appointment_booked", label: "Appointment booked", input: "none" },
+       { value: "purchase_happened",  label: "Purchase happened",  input: "none" },
+     ]},
+   ];
+   ```
+   Keep legacy `reply_status` handling untouched (used by the existing reply-stage router).
 
-### Verification after implementation
-- Log in as your admin account → "Workflow Builder" still appears in sidebar and `/workflows` loads.
-- Log in as a non-admin user → no "Workflow Builder" item; visiting `/dashboard/:id/workflows` redirects to `/dashboard`.
+2. **`src/components/automations/AutomationStepEditor.tsx`** — condition block:
+   - Replace the flat `<SelectItem>` list with `<SelectGroup>` + `<SelectLabel>` per category (shadcn already supports this).
+   - Drive the secondary input from the selected option's `input` field: `text` → `<Input>`, `number` → `<Input type="number">`, `none` → render nothing.
+   - Keep the existing "reply_status" branch (the two-row replied / no-reply selector) as-is.
 
-### Reverting later
-When you want to re-enable it for everyone, simply move the sidebar entry back out of the `isAdmin` block and remove the workflow routes from inside `<AdminGuard />`. One-minute change.
+3. **`supabase/functions/execute-automation/index.ts`** — extend the `case "condition":` switch (lines 296–347) with handlers for the new types:
+   - `email_known` / `phone_known` → check `lead.email` / `lead.phone` truthiness.
+   - `source_equals` → already exists, keep.
+   - `tag_contains` → `lead.tags.some(t => t.toLowerCase().includes(value.toLowerCase()))`.
+   - `email_opened` → `select count from email_logs where lead_id=… and status='opened'`.
+   - `link_clicked` → `select count from lead_activities where lead_id=… and type='link_click'`.
+   - `form_submitted` → `select count from lead_activities where type='form_submit'` (filter by `meta->>funnel_slug` if value provided).
+   - `checkout_visited` → `select count from lead_activities where type='checkout_visit'`.
+   - `whatsapp_replied` → `select count from sales_conversations where direction='inbound' and channel='whatsapp'`.
+   - `score_gt` → already exists, keep.
+   - `appointment_booked` → `select count from bookings where lead_id=…`.
+   - `purchase_happened` → `select count from lead_activities where type='purchase'`.
+   - When `passed` is false, the existing `skipRemaining = true` logic stops downstream steps (unchanged).
+
+### Backward compatibility
+Old saved automations using `has_tag`, `score_gt`, `source_equals`, `reply_status` continue to work — those condition values are preserved in the executor switch. Only the picker UI is reorganised; existing rows show their stored value as long as it matches one of the new options (the three legacy values listed all map 1:1 to the new catalog).
+
+### Out of scope
+- No DB migration (conditions read from existing tables: `leads`, `email_logs`, `lead_activities`, `sales_conversations`, `bookings`).
+- No changes to triggers, actions, or delays.
+- No changes to the workflow-builder (admin-only) — its `evaluateCondition` already covers similar logic separately.
+
+### Verification after deploy
+1. Open an automation → Add Condition → confirm the dropdown shows the six grouped categories with all 12 conditions.
+2. Pick "Email is known" → no input field appears. Pick "Tag contains" → text field appears. Pick "Lead score greater than" → number field appears.
+3. Save and trigger the automation on a test lead that satisfies the condition → automation continues. On a lead that fails → run is logged as `condition_failed` and downstream steps are skipped.
 
