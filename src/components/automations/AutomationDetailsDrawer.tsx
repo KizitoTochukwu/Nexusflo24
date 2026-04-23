@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter } from "lucide-react";
 import {
   type Automation,
   TRIGGER_OPTIONS,
@@ -17,10 +17,19 @@ import {
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
-import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
+import {
+  getDefaultExitCriteria,
+  describeCriterion,
+  simulateExitEvent,
+  type ExitCriterion,
+} from "@/lib/automations/exitCriteria";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
+import { useLeads } from "@/hooks/useLeads";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { format } from "date-fns";
 
 interface Props {
