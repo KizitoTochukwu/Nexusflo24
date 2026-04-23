@@ -306,6 +306,102 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
             <span>This workflow is not active. Leads won't enroll until you publish it.</span>
           </div>
         )}
+
+        {/* One-click "Run test automation" — always visible regardless of tab */}
+        <Popover open={quickOpen} onOpenChange={setQuickOpen}>
+          <PopoverTrigger asChild>
+            <Button size="sm" className="h-8 w-full gap-1.5 text-xs">
+              <Zap className="h-3.5 w-3.5" />
+              Run test automation
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 space-y-2.5 p-3">
+            <div>
+              <div className="text-xs font-semibold">Run automation for a lead</div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Bypasses the trigger and runs every node now so you can verify wiring end-to-end.
+              </p>
+            </div>
+
+            {/* Mode toggle */}
+            <div className="grid grid-cols-2 gap-1 rounded-md border p-0.5">
+              <button
+                type="button"
+                onClick={() => setRunMode("test")}
+                className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                  runMode === "test"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <FlaskConical className="mr-1 inline h-3 w-3" />
+                Test (no sends)
+              </button>
+              <button
+                type="button"
+                onClick={() => setRunMode("live")}
+                className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                  runMode === "live"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Send className="mr-1 inline h-3 w-3" />
+                Live (real sends)
+              </button>
+            </div>
+            {runMode === "live" && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-amber-700 dark:text-amber-400">
+                Live mode sends real emails / SMS / WhatsApp and consumes credits.
+              </div>
+            )}
+
+            <div className="relative">
+              <SearchIcon className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                autoFocus
+                placeholder="Search lead by name or email…"
+                value={quickSearch}
+                onChange={(e) => setQuickSearch(e.target.value)}
+                className="h-8 pl-7 text-xs"
+              />
+            </div>
+
+            <ScrollArea className="max-h-56">
+              <div className="space-y-1">
+                {quickLeads.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-3 text-center text-[11px] text-muted-foreground">
+                    No leads found.
+                  </div>
+                ) : (
+                  quickLeads.map((l: any) => (
+                    <div key={l.id} className="flex items-center justify-between rounded-md border px-2 py-1.5 text-xs">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{l.full_name || "(no name)"}</div>
+                        <div className="truncate text-[10px] text-muted-foreground">{l.email}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={runMode === "live" ? "default" : "outline"}
+                        className="h-7 shrink-0 px-2 text-[11px]"
+                        onClick={() => handleTestRun(l.id, l.full_name || l.email)}
+                        disabled={testEnroll.isPending}
+                      >
+                        {testEnroll.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : runMode === "live" ? (
+                          "Run live"
+                        ) : (
+                          "Run test"
+                        )}
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Tabs */}
