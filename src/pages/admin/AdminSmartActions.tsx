@@ -284,46 +284,67 @@ export default function AdminSmartActions() {
               </div>
             )}
 
+            {validation.formError && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <div>{validation.formError}</div>
+              </div>
+            )}
+
             {draft.length === 0 && (
               <div className="text-sm text-muted-foreground border border-dashed rounded-md p-6 text-center">
                 No smart actions yet for this condition.
               </div>
             )}
 
-            {draft.map((sa, idx) => (
-              <div key={idx} className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Select value={sa.action} onValueChange={(v) => updateAction(idx, { action: v, defaults: {} })}>
-                    <SelectTrigger className="w-[200px] bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACTION_OPTIONS.map((a) => (
-                        <SelectItem key={a.value} value={a.value}>
-                          <span className="flex items-center gap-2">
-                            {ACTION_ICON[a.value]} {a.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    className="flex-1 min-w-[180px] bg-background"
-                    placeholder="Chip label (e.g. Send discount email)"
-                    value={sa.label}
-                    onChange={(e) => updateAction(idx, { label: e.target.value })}
-                  />
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx - 1)} disabled={idx === 0}>↑</Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx + 1)} disabled={idx === draft.length - 1}>↓</Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAction(idx)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+            {draft.map((sa, idx) => {
+              const rowError = validation.rowErrors[idx];
+              return (
+                <div
+                  key={idx}
+                  className={`border rounded-lg p-3 space-y-2 ${rowError ? "border-destructive/40 bg-destructive/5" : "bg-muted/30"}`}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Select value={sa.action} onValueChange={(v) => updateAction(idx, { action: v, defaults: {} })}>
+                      <SelectTrigger className="w-[200px] bg-background" aria-invalid={!!rowError}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ACTION_OPTIONS.map((a) => (
+                          <SelectItem key={a.value} value={a.value}>
+                            <span className="flex items-center gap-2">
+                              {ACTION_ICON[a.value]} {a.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      className="flex-1 min-w-[180px] bg-background"
+                      placeholder="Chip label (e.g. Send discount email)"
+                      value={sa.label}
+                      maxLength={60}
+                      aria-invalid={!!rowError}
+                      onChange={(e) => updateAction(idx, { label: e.target.value })}
+                    />
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx - 1)} disabled={idx === 0}>↑</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx + 1)} disabled={idx === draft.length - 1}>↓</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAction(idx)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
+                  <div>{defaultsEditorFields(sa.action, sa.defaults || {}, (d) => updateAction(idx, { defaults: d }))}</div>
+                  {rowError && (
+                    <div className="flex items-center gap-1.5 text-xs text-destructive font-medium">
+                      <AlertCircle className="h-3 w-3" />
+                      {rowError}
+                    </div>
+                  )}
                 </div>
-                <div>{defaultsEditorFields(sa.action, sa.defaults || {}, (d) => updateAction(idx, { defaults: d }))}</div>
-              </div>
-            ))}
+              );
+            })}
 
             <Button variant="outline" size="sm" onClick={addAction} className="w-full border-dashed">
               <Plus className="h-3.5 w-3.5 mr-1" /> Add smart action
