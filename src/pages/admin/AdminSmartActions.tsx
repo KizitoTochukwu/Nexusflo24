@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Plus, Trash2, Save, RotateCcw, Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, Clock, Download, AlertTriangle } from "lucide-react";
+import { Sparkles, Plus, Trash2, Save, RotateCcw, Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, Clock, Download, AlertTriangle, AlertCircle } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { CONDITION_GROUPS, ACTION_OPTIONS } from "@/hooks/useAutomations";
 import { useSmartActionOverrides, useSaveSmartActions, useResetSmartActions, useResetAllSmartActions, resolveSmartActions, type SmartAction } from "@/hooks/useSmartActions";
 import { Textarea } from "@/components/ui/textarea";
+import { validateSmartActions } from "@/lib/automations/smartActionValidation";
+import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
