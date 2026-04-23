@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
+import { blocksToHtml, parseBlocksFromMessage } from "../_shared/email-blocks.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,11 +100,16 @@ Deno.serve(async (req) => {
     const leadId = body.leadId || body.lead_id || "";
     const campaignId = body.campaignId || body.campaign_id || "";
 
-    // Format and wrap in branded template with optional user settings
+    // Format and wrap in branded template with optional user settings.
+    // The body may be either: (a) a JSON array of visual-editor blocks, or
+    // (b) plain text / inline HTML. Detect and render accordingly so blocks
+    // never leak into the inbox as raw JSON.
     const ts = templateSettings as Record<string, any> | undefined;
     const appBaseUrl = "https://nexusflo24.lovable.app";
     const unsubUrl = leadId && workspaceId ? `${appBaseUrl}/unsubscribe?lid=${leadId}&wid=${workspaceId}` : undefined;
-    let trackedHtml = wrapEmailTemplate(formatEmailBody(html), {
+    const blocks = parseBlocksFromMessage(html);
+    const renderedBody = blocks ? blocksToHtml(blocks) : formatEmailBody(html);
+    let trackedHtml = wrapEmailTemplate(renderedBody, {
       logo: ts?.logo,
       unsubscribe: ts?.unsubscribe,
       footer: ts?.footer,
