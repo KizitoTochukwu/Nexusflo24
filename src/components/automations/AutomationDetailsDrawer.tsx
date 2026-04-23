@@ -90,6 +90,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       description,
       trigger_type: triggerType,
       trigger_config: triggerConfig,
+      exit_criteria: exitCriteria,
       steps,
     });
   };
@@ -211,6 +212,12 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
               <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
             </div>
+
+            <ExitCriteriaEditor
+              value={exitCriteria}
+              onChange={setExitCriteria}
+              triggerType={triggerType}
+            />
           </TabsContent>
 
           <TabsContent value="logs" className="mt-5">
