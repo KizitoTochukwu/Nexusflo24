@@ -3,14 +3,17 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Plus, Trash2, Save, RotateCcw, Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, Clock } from "lucide-react";
+import { Sparkles, Plus, Trash2, Save, RotateCcw, Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, Clock, Download, AlertTriangle } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { CONDITION_GROUPS, ACTION_OPTIONS } from "@/hooks/useAutomations";
-import { useSmartActionOverrides, useSaveSmartActions, useResetSmartActions, resolveSmartActions, type SmartAction } from "@/hooks/useSmartActions";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useSmartActionOverrides, useSaveSmartActions, useResetSmartActions, useResetAllSmartActions, resolveSmartActions, type SmartAction } from "@/hooks/useSmartActions";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const ACTION_ICON: Record<string, React.ReactNode> = {
   send_email: <Mail className="h-3.5 w-3.5" />,
