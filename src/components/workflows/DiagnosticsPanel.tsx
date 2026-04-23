@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
 import {
   Activity,
@@ -19,6 +20,7 @@ import {
   Play,
   RefreshCw,
   Search as SearchIcon,
+  Send,
   X,
   XCircle,
   Zap,
@@ -175,16 +177,38 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
     ? `${(triggerNode.data as any)?.label || (triggerNode.data as any)?.subType || "Unknown"}`
     : "No trigger configured";
 
-  const handleTestRun = async (leadId: string, leadName: string) => {
-    try {
-      await testEnroll.mutateAsync({ workflow_id: workflowId, workspace_id: workspaceId, lead_id: leadId });
+  const [runMode, setRunMode] = useState<"test" | "live">("test");
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickSearch, setQuickSearch] = useState("");
+  const { data: quickLeads = [] } = useLeadSearch(workspaceId, quickSearch);
+
+  const handleTestRun = async (leadId: string, leadName: string, mode: "test" | "live" = runMode) => {
+    if (mode === "live" && workflowStatus !== "active") {
       toast({
-        title: "Test enrollment started",
-        description: `${leadName} is running through the workflow in test mode (no real sends).`,
+        title: "Workflow not active",
+        description: "Activate the workflow before running a live end-to-end test.",
+        variant: "destructive",
       });
+      return;
+    }
+    try {
+      await testEnroll.mutateAsync({
+        workflow_id: workflowId,
+        workspace_id: workspaceId,
+        lead_id: leadId,
+        mode,
+      });
+      toast({
+        title: mode === "live" ? "Live run started" : "Test enrollment started",
+        description:
+          mode === "live"
+            ? `${leadName} is running through the workflow with REAL sends. Watch Step runs for delivery confirmation.`
+            : `${leadName} is running through the workflow in test mode (no real sends, no credits).`,
+      });
+      setQuickOpen(false);
       setTimeout(() => refetch(), 1500);
     } catch (e: any) {
-      toast({ title: "Test failed", description: e?.message || "Could not enroll lead", variant: "destructive" });
+      toast({ title: "Run failed", description: e?.message || "Could not enroll lead", variant: "destructive" });
     }
   };
 
@@ -282,6 +306,102 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
             <span>This workflow is not active. Leads won't enroll until you publish it.</span>
           </div>
         )}
+
+        {/* One-click "Run test automation" — always visible regardless of tab */}
+        <Popover open={quickOpen} onOpenChange={setQuickOpen}>
+          <PopoverTrigger asChild>
+            <Button size="sm" className="h-8 w-full gap-1.5 text-xs">
+              <Zap className="h-3.5 w-3.5" />
+              Run test automation
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 space-y-2.5 p-3">
+            <div>
+              <div className="text-xs font-semibold">Run automation for a lead</div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Bypasses the trigger and runs every node now so you can verify wiring end-to-end.
+              </p>
+            </div>
+
+            {/* Mode toggle */}
+            <div className="grid grid-cols-2 gap-1 rounded-md border p-0.5">
+              <button
+                type="button"
+                onClick={() => setRunMode("test")}
+                className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                  runMode === "test"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <FlaskConical className="mr-1 inline h-3 w-3" />
+                Test (no sends)
+              </button>
+              <button
+                type="button"
+                onClick={() => setRunMode("live")}
+                className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
+                  runMode === "live"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Send className="mr-1 inline h-3 w-3" />
+                Live (real sends)
+              </button>
+            </div>
+            {runMode === "live" && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-amber-700 dark:text-amber-400">
+                Live mode sends real emails / SMS / WhatsApp and consumes credits.
+              </div>
+            )}
+
+            <div className="relative">
+              <SearchIcon className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                autoFocus
+                placeholder="Search lead by name or email…"
+                value={quickSearch}
+                onChange={(e) => setQuickSearch(e.target.value)}
+                className="h-8 pl-7 text-xs"
+              />
+            </div>
+
+            <ScrollArea className="max-h-56">
+              <div className="space-y-1">
+                {quickLeads.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-3 text-center text-[11px] text-muted-foreground">
+                    No leads found.
+                  </div>
+                ) : (
+                  quickLeads.map((l: any) => (
+                    <div key={l.id} className="flex items-center justify-between rounded-md border px-2 py-1.5 text-xs">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{l.full_name || "(no name)"}</div>
+                        <div className="truncate text-[10px] text-muted-foreground">{l.email}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={runMode === "live" ? "default" : "outline"}
+                        className="h-7 shrink-0 px-2 text-[11px]"
+                        onClick={() => handleTestRun(l.id, l.full_name || l.email)}
+                        disabled={testEnroll.isPending}
+                      >
+                        {testEnroll.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : runMode === "live" ? (
+                          "Run live"
+                        ) : (
+                          "Run test"
+                        )}
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Tabs */}
@@ -542,13 +662,48 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
               <div className="flex items-start gap-2">
                 <FlaskConical className="mt-0.5 h-4 w-4 text-accent shrink-0" />
                 <div>
-                  <div className="font-semibold text-foreground">Test enrollment</div>
+                  <div className="font-semibold text-foreground">Run test automation</div>
                   <p className="mt-0.5 text-muted-foreground">
-                    Pick a lead — the engine runs every node in test mode. Real sends (email/SMS/WhatsApp) are skipped, no credits are charged, but tags / scores / notifications still update so you can verify wiring.
+                    Pick a lead and pick a mode. The engine bypasses the trigger and runs every node so you can verify
+                    branching, delays, and message sends end-to-end.
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Mode toggle (mirrors header popover) */}
+            <div className="grid grid-cols-2 gap-1 rounded-md border p-0.5">
+              <button
+                type="button"
+                onClick={() => setRunMode("test")}
+                className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                  runMode === "test"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <FlaskConical className="mr-1 inline h-3 w-3" />
+                Test mode (no sends)
+              </button>
+              <button
+                type="button"
+                onClick={() => setRunMode("live")}
+                className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                  runMode === "live"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Send className="mr-1 inline h-3 w-3" />
+                Live mode (real sends)
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {runMode === "live"
+                ? "⚠️ Real emails / SMS / WhatsApp will be sent and credits will be deducted."
+                : "Sends are skipped and no credits are charged. Tags, scores, and notifications still update."}
+            </p>
+
             <Input
               placeholder="Search leads by name or email…"
               value={search}
@@ -569,12 +724,18 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
                     </div>
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant={runMode === "live" ? "default" : "outline"}
                       className="h-7 shrink-0"
                       onClick={() => handleTestRun(l.id, l.full_name || l.email)}
                       disabled={testEnroll.isPending}
                     >
-                      {testEnroll.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Run test"}
+                      {testEnroll.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : runMode === "live" ? (
+                        "Run live"
+                      ) : (
+                        "Run test"
+                      )}
                     </Button>
                   </div>
                 ))
