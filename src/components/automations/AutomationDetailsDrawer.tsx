@@ -55,6 +55,12 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const [tagValue, setTagValue] = useState<string>("");
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>([]);
+  const [testLeadId, setTestLeadId] = useState<string>("");
+  const [testCriterionIdx, setTestCriterionIdx] = useState<string>("0");
+  const [testRunning, setTestRunning] = useState(false);
+  const [logsFilter, setLogsFilter] = useState<"all" | "exit" | "errors">("all");
+  const { data: leads } = useLeads(workspaceId);
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (automation) {
