@@ -200,7 +200,8 @@ const DashboardAutomations = () => {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         )}
