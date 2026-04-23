@@ -16,6 +16,8 @@ import {
   useSimulateAutomation,
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
+import ExitCriteriaEditor from "./ExitCriteriaEditor";
+import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
@@ -43,6 +45,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
   const [tagValue, setTagValue] = useState<string>("");
   const [steps, setSteps] = useState<StepData[]>([]);
+  const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>([]);
 
   useEffect(() => {
     if (automation) {
@@ -53,6 +56,13 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       setSelectedFunnelId((cfg.funnel_id as string) || "all");
       setSelectedFolderId((cfg.folder_id as string) || "any");
       setTagValue((cfg.tag as string) || "");
+      // Pre-fill sensible defaults for legacy automations that have never set exit_criteria.
+      const saved = (automation.exit_criteria ?? []) as ExitCriterion[];
+      if (saved.length === 0) {
+        setExitCriteria(getDefaultExitCriteria(automation.trigger_type));
+      } else {
+        setExitCriteria(saved);
+      }
     }
   }, [automation]);
 
@@ -80,6 +90,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       description,
       trigger_type: triggerType,
       trigger_config: triggerConfig,
+      exit_criteria: exitCriteria,
       steps,
     });
   };
@@ -201,6 +212,12 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
               <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
             </div>
+
+            <ExitCriteriaEditor
+              value={exitCriteria}
+              onChange={setExitCriteria}
+              triggerType={triggerType}
+            />
           </TabsContent>
 
           <TabsContent value="logs" className="mt-5">

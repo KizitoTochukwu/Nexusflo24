@@ -78,6 +78,51 @@ async function sendTwilio(sid: string, token: string, from: string, to: string, 
   return data;
 }
 
+/**
+ * Evaluate exit criteria against the lead's current state. Returns the matching
+ * criterion type as a string if any are met, or null otherwise.
+ */
+async function evaluateExitCriteria(
+  supabase: any,
+  criteria: Array<Record<string, any>>,
+  ctx: { workspaceId: string; leadId: string; lead: Record<string, any> }
+): Promise<string | null> {
+  for (const c of criteria) {
+    const type = c?.type;
+    if (!type) continue;
+
+    if (type === "purchase_happened") {
+      const { count } = await supabase
+        .from("lead_activities")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", ctx.workspaceId)
+        .eq("lead_id", ctx.leadId)
+        .eq("type", "purchase");
+      if ((count ?? 0) > 0) return type;
+    } else if (type === "unsubscribed") {
+      // Unsubscribed leads carry the "unsubscribed" tag (set by /unsubscribe handler)
+      const tags = (ctx.lead.tags ?? []) as string[];
+      if (tags.map((t) => String(t).toLowerCase()).includes("unsubscribed")) return type;
+    } else if (type === "appointment_booked") {
+      const { count } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", ctx.workspaceId)
+        .eq("lead_id", ctx.leadId);
+      if ((count ?? 0) > 0) return type;
+    } else if (type === "tag_added") {
+      const target = String(c.tag || "").toLowerCase();
+      if (!target) continue;
+      const tags = (ctx.lead.tags ?? []) as string[];
+      if (tags.map((t) => String(t).toLowerCase()).includes(target)) return type;
+    } else if (type === "status_equals") {
+      const target = String(c.status || "");
+      if (!target) continue;
+      if (String(ctx.lead.status || "") === target) return type;
+    }
+  }
+  return null;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -145,6 +190,36 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Lead not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ---------- EXIT CRITERIA RE-CHECK (defense in depth) ----------
+    // When resuming from a scheduled step, re-evaluate the automation's exit
+    // criteria against the lead's CURRENT state. This catches cases where the
+    // lead met the exit signal between the time the job was scheduled and now
+    // (e.g. fireTriggers cancellation race, manual data import, etc.).
+    if (typeof start_from_step === "number") {
+      const exitCriteria = (automation.exit_criteria ?? []) as Array<Record<string, any>>;
+      if (Array.isArray(exitCriteria) && exitCriteria.length > 0) {
+        const exitHit = await evaluateExitCriteria(supabase, exitCriteria, {
+          workspaceId: workspace_id,
+          leadId: lead_id,
+          lead,
+        });
+        if (exitHit) {
+          console.log(`[execute-automation] Exit criteria matched (${exitHit}) — aborting resume for automation=${automation_id} lead=${lead_id}`);
+          await supabase.from("automation_logs").insert({
+            automation_id,
+            workspace_id,
+            lead_id,
+            event_type: `exit_criteria:${exitHit}`,
+            status: "cancelled",
+            details: { reason: "Exit criteria met on resume", criterion: exitHit, step_index: start_from_step },
+          } as any);
+          return new Response(JSON.stringify({ ok: true, exited: true, reason: exitHit }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
     }
 
     // Resolve if workspace owner is admin → skip credit deduction

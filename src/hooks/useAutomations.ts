@@ -11,6 +11,7 @@ export type Automation = {
   description: string;
   trigger_type: string;
   trigger_config: Record<string, unknown>;
+  exit_criteria: unknown[];
   status: string;
   last_run_at: string | null;
   run_count: number;
@@ -318,7 +319,7 @@ export function useCreateAutomation() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: { workspace_id: string; name: string; description?: string; trigger_type: string; trigger_config?: Record<string, unknown>; steps: { step_type: string; config: Record<string, unknown> }[] }) => {
+    mutationFn: async (input: { workspace_id: string; name: string; description?: string; trigger_type: string; trigger_config?: Record<string, unknown>; exit_criteria?: unknown[]; steps: { step_type: string; config: Record<string, unknown> }[] }) => {
       const { steps, ...automationData } = input;
       const { data, error } = await supabase
         .from("automations")
@@ -350,7 +351,7 @@ export function useCreateAutomation() {
 export function useUpdateAutomation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, steps, workspace_id, ...updates }: Partial<Automation> & { id: string; steps?: { step_type: string; config: Record<string, unknown> }[]; workspace_id: string }) => {
+    mutationFn: async ({ id, steps, workspace_id, ...updates }: Partial<Automation> & { id: string; steps?: { step_type: string; config: Record<string, unknown> }[]; workspace_id: string; exit_criteria?: unknown[] }) => {
       const { data, error } = await supabase
         .from("automations")
         .update(updates as any)
