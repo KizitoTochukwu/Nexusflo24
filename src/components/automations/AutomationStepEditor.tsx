@@ -4,9 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
-  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles
 } from "lucide-react";
-import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 
@@ -100,34 +100,113 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                 const currentValue = (step.config.condition as string) || "";
                 const allOptions = CONDITION_GROUPS.flatMap((g) => g.options);
                 const selectedOpt = allOptions.find((o) => o.value === currentValue);
+                const currentOperator = (step.config.operator as ConditionOperator) ||
+                  (selectedOpt?.operators?.[0] ?? "equals");
+                const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
+                const isBetween = currentOperator === "between";
+
+                const addSuggested = () => {
+                  if (!selectedOpt?.suggestedAction) return;
+                  const sa = selectedOpt.suggestedAction;
+                  const newStep: StepData = {
+                    step_type: "action",
+                    config: { action: sa.action, ...(sa.defaults || {}) },
+                  };
+                  // Insert immediately after the current condition step
+                  const updated = [...steps];
+                  updated.splice(i + 1, 0, newStep);
+                  onChange(updated);
+                };
+
                 return (
-                  <div className="flex flex-wrap gap-2">
-                    <Select
-                      value={currentValue}
-                      onValueChange={(v) => {
-                        if (v === "reply_status") {
-                          updateStep(i, { condition: v, reply_check: "has_replied", value: "" });
-                        } else {
-                          updateStep(i, { condition: v, reply_check: undefined, value: "" });
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-[220px] bg-background">
-                        <SelectValue placeholder="Select condition" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[360px]">
-                        {CONDITION_GROUPS.map((group) => (
-                          <SelectGroup key={group.label}>
-                            <SelectLabel className="text-xs uppercase tracking-wide text-muted-foreground">
-                              {group.label}
-                            </SelectLabel>
-                            {group.options.map((c) => (
-                              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <Select
+                        value={currentValue}
+                        onValueChange={(v) => {
+                          const opt = allOptions.find((o) => o.value === v);
+                          const defaultOp = opt?.operators?.[0] ?? "equals";
+                          if (v === "reply_status") {
+                            updateStep(i, { condition: v, operator: undefined, reply_check: "has_replied", value: "", value_to: "", time_window_days: undefined });
+                          } else {
+                            updateStep(i, { condition: v, operator: defaultOp, reply_check: undefined, value: "", value_to: "", time_window_days: undefined });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-[200px] bg-background">
+                          <SelectValue placeholder="Select condition" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[360px]">
+                          {CONDITION_GROUPS.map((group) => (
+                            <SelectGroup key={group.label}>
+                              <SelectLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                                {group.label}
+                              </SelectLabel>
+                              {group.options.map((c) => (
+                                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                              ))}
+                            </SelectGroup>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {/* Operator */}
+                      {selectedOpt && selectedOpt.operators.length > 0 && (
+                        <Select
+                          value={currentOperator}
+                          onValueChange={(v) => updateStep(i, { operator: v, ...(v === "between" ? {} : { value_to: "" }) })}
+                        >
+                          <SelectTrigger className="w-[170px] bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedOpt.operators.map((op) => (
+                              <SelectItem key={op} value={op}>{operatorLabel(op)}</SelectItem>
                             ))}
-                          </SelectGroup>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {/* Value(s) */}
+                      {selectedOpt && operatorNeedsValue && selectedOpt.input !== "none" && (
+                        <Input
+                          type={selectedOpt.input === "number" ? "number" : "text"}
+                          placeholder={selectedOpt.placeholder || "Value"}
+                          className="w-[160px] bg-background"
+                          value={(step.config.value as string) || ""}
+                          onChange={(e) => updateStep(i, { value: e.target.value })}
+                        />
+                      )}
+                      {selectedOpt && isBetween && selectedOpt.input !== "none" && (
+                        <>
+                          <span className="text-xs text-muted-foreground">and</span>
+                          <Input
+                            type={selectedOpt.input === "number" ? "number" : "text"}
+                            placeholder="Upper value"
+                            className="w-[120px] bg-background"
+                            value={(step.config.value_to as string) || ""}
+                            onChange={(e) => updateStep(i, { value_to: e.target.value })}
+                          />
+                        </>
+                      )}
+
+                      {/* Time window */}
+                      {selectedOpt?.timeWindow && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">in last</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            placeholder="∞"
+                            className="w-[70px] bg-background"
+                            value={(step.config.time_window_days as number | string) ?? ""}
+                            onChange={(e) => updateStep(i, { time_window_days: e.target.value === "" ? undefined : parseInt(e.target.value) || undefined })}
+                          />
+                          <span className="text-xs text-muted-foreground">days</span>
+                        </div>
+                      )}
+                    </div>
+
                     {currentValue === "reply_status" && (
                       <div className="w-full space-y-2 mt-1">
                         <div className="flex items-center gap-2">
@@ -165,14 +244,21 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                         </div>
                       </div>
                     )}
-                    {selectedOpt && selectedOpt.input !== "none" && (
-                      <Input
-                        type={selectedOpt.input === "number" ? "number" : "text"}
-                        placeholder={selectedOpt.placeholder || "Value"}
-                        className="w-[180px] bg-background"
-                        value={(step.config.value as string) || ""}
-                        onChange={(e) => updateStep(i, { value: e.target.value })}
-                      />
+
+                    {/* Suggested action quick-add */}
+                    {selectedOpt?.suggestedAction && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 bg-background/60 border-dashed"
+                          onClick={addSuggested}
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                          Suggested: {selectedOpt.suggestedAction.label}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 );

@@ -296,65 +296,101 @@ Deno.serve(async (req) => {
           case "condition": {
             const conditionType = config.condition;
             const value = config.value;
+            const valueTo = config.value_to;
+            const operator = config.operator as string | undefined;
+            const timeWindowDays = config.time_window_days
+              ? Number(config.time_window_days)
+              : undefined;
+            const sinceIso = timeWindowDays && timeWindowDays > 0
+              ? new Date(Date.now() - timeWindowDays * 86_400_000).toISOString()
+              : undefined;
             let passed = false;
 
+            // Helper: count rows in lead_activities for given lead/workspace, optionally with time filter and extra filters
+            const countActivities = async (filters: (qb: any) => any) => {
+              let q = supabase.from("lead_activities")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id);
+              q = filters(q);
+              if (sinceIso) q = q.gte("created_at", sinceIso);
+              const { count } = await q;
+              return count ?? 0;
+            };
+
+            // Apply "happened" / "not_happened" semantics around a count check
+            const evalHappened = (count: number) => {
+              if (operator === "not_happened") return count === 0;
+              return count > 0; // default + "happened"
+            };
+
             if (conditionType === "score_gt") {
-              passed = Number(lead.score || 0) > Number(value);
+              const score = Number(lead.score || 0);
+              const v = Number(value);
+              if (operator === "less_than") passed = score < v;
+              else if (operator === "equals") passed = score === v;
+              else if (operator === "between") passed = score >= v && score <= Number(valueTo);
+              else passed = score > v; // default: greater_than
             } else if (conditionType === "has_tag") {
               passed = (lead.tags || []).includes(String(value));
             } else if (conditionType === "tag_contains") {
               const v = String(value || "").toLowerCase();
-              passed = !!v && (lead.tags || []).some((t: string) => String(t).toLowerCase().includes(v));
+              const has = !!v && (lead.tags || []).some((t: string) => String(t).toLowerCase().includes(v));
+              if (operator === "not_contains") passed = !has;
+              else if (operator === "equals") passed = (lead.tags || []).map((t: string) => String(t).toLowerCase()).includes(v);
+              else passed = has; // default: contains
             } else if (conditionType === "source_equals") {
-              passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
+              const src = String(lead.source || "").toLowerCase();
+              const v = String(value || "").toLowerCase();
+              if (operator === "not_equals") passed = src !== v;
+              else if (operator === "contains") passed = !!v && src.includes(v);
+              else passed = src === v; // default: equals
             } else if (conditionType === "email_known") {
-              passed = !!(lead.email && String(lead.email).trim() !== "");
+              const known = !!(lead.email && String(lead.email).trim() !== "");
+              passed = operator === "is_unknown" ? !known : known;
             } else if (conditionType === "phone_known") {
-              passed = !!(lead.phone && String(lead.phone).trim() !== "");
+              const known = !!(lead.phone && String(lead.phone).trim() !== "");
+              passed = operator === "is_unknown" ? !known : known;
             } else if (conditionType === "email_opened") {
-              const { count } = await supabase.from("email_logs")
+              let q = supabase.from("email_logs")
                 .select("id", { count: "exact", head: true })
                 .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("status", "opened");
-              passed = (count ?? 0) > 0;
-            } else if (conditionType === "link_clicked") {
-              const { count } = await supabase.from("lead_activities")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "link_click");
-              passed = (count ?? 0) > 0;
-            } else if (conditionType === "form_submitted") {
-              let q = supabase.from("lead_activities")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "form_submit");
-              const slug = String(value || "").trim();
-              if (slug) q = q.contains("meta", { funnel_slug: slug });
+              if (sinceIso) q = q.gte("created_at", sinceIso);
               const { count } = await q;
-              passed = (count ?? 0) > 0;
+              passed = evalHappened(count ?? 0);
+            } else if (conditionType === "link_clicked") {
+              const c = await countActivities((q) => q.eq("type", "link_click"));
+              passed = evalHappened(c);
+            } else if (conditionType === "form_submitted") {
+              const slug = String(value || "").trim();
+              const c = await countActivities((q) => {
+                let qq = q.eq("type", "form_submit");
+                if (slug) qq = qq.contains("meta", { funnel_slug: slug });
+                return qq;
+              });
+              passed = evalHappened(c);
             } else if (conditionType === "checkout_visited") {
-              const { count } = await supabase.from("lead_activities")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "checkout_visit");
-              passed = (count ?? 0) > 0;
+              const c = await countActivities((q) => q.eq("type", "checkout_visit"));
+              passed = evalHappened(c);
             } else if (conditionType === "pricing_visited") {
-              const { count } = await supabase.from("lead_activities")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id)
-                .in("type", ["pricing_page_visit", "pricing_click"]);
-              passed = (count ?? 0) > 0;
+              const c = await countActivities((q) => q.in("type", ["pricing_page_visit", "pricing_click"]));
+              passed = evalHappened(c);
             } else if (conditionType === "whatsapp_replied") {
-              const { count } = await supabase.from("sales_conversations")
+              let q = supabase.from("sales_conversations")
                 .select("id", { count: "exact", head: true })
                 .eq("lead_id", lead_id).eq("direction", "inbound").eq("channel", "whatsapp");
-              passed = (count ?? 0) > 0;
+              if (sinceIso) q = q.gte("created_at", sinceIso);
+              const { count } = await q;
+              passed = evalHappened(count ?? 0);
             } else if (conditionType === "appointment_booked") {
-              const { count } = await supabase.from("bookings")
+              let q = supabase.from("bookings")
                 .select("id", { count: "exact", head: true })
                 .eq("workspace_id", workspace_id).eq("lead_id", lead_id);
-              passed = (count ?? 0) > 0;
+              if (sinceIso) q = q.gte("created_at", sinceIso);
+              const { count } = await q;
+              passed = evalHappened(count ?? 0);
             } else if (conditionType === "purchase_happened") {
-              const { count } = await supabase.from("lead_activities")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "purchase");
-              passed = (count ?? 0) > 0;
+              const c = await countActivities((q) => q.eq("type", "purchase"));
+              passed = evalHappened(c);
             } else if (conditionType === "reply_status" || conditionType === "has_replied" || conditionType === "no_reply") {
               const { data: replies } = await supabase
                 .from("sales_conversations")
@@ -393,7 +429,7 @@ Deno.serve(async (req) => {
             }
 
             if (!passed) skipRemaining = true;
-            details = { conditionType: conditionType || config.field, value, passed };
+            details = { conditionType: conditionType || config.field, operator, value, value_to: valueTo, time_window_days: timeWindowDays, passed };
             status = passed ? "success" : "condition_failed";
             break;
           }

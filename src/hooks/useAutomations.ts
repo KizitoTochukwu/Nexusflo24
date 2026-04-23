@@ -55,55 +55,136 @@ export const TRIGGER_OPTIONS = [
 
 export type ConditionInputType = "none" | "text" | "number";
 
+export type ConditionOperator =
+  | "equals" | "not_equals" | "contains" | "not_contains"
+  | "greater_than" | "less_than" | "between"
+  | "happened" | "not_happened" | "is_known" | "is_unknown";
+
 export type ConditionOption = {
   value: string;
   label: string;
   input: ConditionInputType;
   placeholder?: string;
+  /** Operators offered for this condition. First one is the default. */
+  operators: ConditionOperator[];
+  /** If true, the UI exposes the "in the last X days" time window selector. */
+  timeWindow?: boolean;
+  /** Suggested follow-up action (action.value) shown as a one-click "Add suggested action" shortcut. */
+  suggestedAction?: { action: string; label: string; defaults?: Record<string, unknown> };
 };
+
+const OPERATOR_LABELS: Record<ConditionOperator, string> = {
+  equals: "equals",
+  not_equals: "does not equal",
+  contains: "contains",
+  not_contains: "does not contain",
+  greater_than: "greater than",
+  less_than: "less than",
+  between: "between",
+  happened: "has happened",
+  not_happened: "has not happened",
+  is_known: "is known",
+  is_unknown: "is unknown",
+};
+
+export function operatorLabel(op: ConditionOperator): string {
+  return OPERATOR_LABELS[op] ?? op;
+}
 
 export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] = [
   {
     label: "Identity / Data",
     options: [
-      { value: "email_known", label: "Email is known", input: "none" },
-      { value: "phone_known", label: "Phone is known", input: "none" },
-      { value: "source_equals", label: "Source equals", input: "text", placeholder: "e.g. facebook" },
-      { value: "tag_contains", label: "Tag contains", input: "text", placeholder: "e.g. webinar" },
+      {
+        value: "email_known", label: "Email", input: "none",
+        operators: ["is_known", "is_unknown"],
+        suggestedAction: { action: "send_email", label: "Send Email" },
+      },
+      {
+        value: "phone_known", label: "Phone", input: "none",
+        operators: ["is_known", "is_unknown"],
+        suggestedAction: { action: "send_sms", label: "Send SMS" },
+      },
+      {
+        value: "source_equals", label: "Source", input: "text", placeholder: "e.g. facebook",
+        operators: ["equals", "not_equals", "contains"],
+        suggestedAction: { action: "add_tag", label: "Add Tag" },
+      },
+      {
+        value: "tag_contains", label: "Tag", input: "text", placeholder: "e.g. webinar",
+        operators: ["contains", "not_contains", "equals"],
+        suggestedAction: { action: "add_tag", label: "Add Tag" },
+      },
     ],
   },
   {
     label: "Email behaviour",
     options: [
-      { value: "email_opened", label: "Email opened", input: "none" },
-      { value: "link_clicked", label: "Link clicked", input: "none" },
+      {
+        value: "email_opened", label: "Email opened", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "send_whatsapp", label: "Follow up on WhatsApp" },
+      },
+      {
+        value: "link_clicked", label: "Link clicked", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "notify_sales", label: "Notify Sales" },
+      },
     ],
   },
   {
     label: "Funnel behaviour",
     options: [
-      { value: "form_submitted", label: "Form submitted", input: "text", placeholder: "Funnel slug (blank = any)" },
-      { value: "checkout_visited", label: "Checkout visited", input: "none" },
-      { value: "pricing_visited", label: "Pricing page visited / clicked", input: "none" },
+      {
+        value: "form_submitted", label: "Form submitted", input: "text", placeholder: "Funnel slug (blank = any)",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "send_email", label: "Send welcome email" },
+      },
+      {
+        value: "checkout_visited", label: "Checkout visited", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "send_email", label: "Send abandoned cart email" },
+      },
+      {
+        value: "pricing_visited", label: "Pricing page visited / clicked", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "notify_sales", label: "Notify Sales" },
+      },
     ],
   },
   {
     label: "Messaging behaviour",
     options: [
-      { value: "whatsapp_replied", label: "WhatsApp replied", input: "none" },
+      {
+        value: "whatsapp_replied", label: "WhatsApp replied", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "update_status", label: "Update Lead Status", defaults: { new_status: "Engaged" } },
+      },
     ],
   },
   {
     label: "Lead scoring",
     options: [
-      { value: "score_gt", label: "Lead score greater than", input: "number", placeholder: "e.g. 50" },
+      {
+        value: "score_gt", label: "Lead score", input: "number", placeholder: "e.g. 50",
+        operators: ["greater_than", "less_than", "equals", "between"],
+        suggestedAction: { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
+      },
     ],
   },
   {
     label: "Purchase / Conversion",
     options: [
-      { value: "appointment_booked", label: "Appointment booked", input: "none" },
-      { value: "purchase_happened", label: "Purchase happened", input: "none" },
+      {
+        value: "appointment_booked", label: "Appointment booked", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "send_email", label: "Send confirmation email" },
+      },
+      {
+        value: "purchase_happened", label: "Purchase happened", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedAction: { action: "add_tag", label: "Add Customer tag", defaults: { tag: "customer" } },
+      },
     ],
   },
 ];
