@@ -93,6 +93,41 @@ export type Database = {
           },
         ]
       }
+      automation_smart_actions: {
+        Row: {
+          actions: Json
+          condition_value: string
+          created_at: string
+          id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          actions?: Json
+          condition_value: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          actions?: Json
+          condition_value?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_smart_actions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_steps: {
         Row: {
           automation_id: string

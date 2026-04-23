@@ -7,6 +7,8 @@ import {
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles
 } from "lucide-react";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
+import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 
@@ -41,6 +43,9 @@ interface Props {
 }
 
 export default function AutomationStepEditor({ steps, onChange, triggerType }: Props) {
+  const workspaceId = useWorkspaceId();
+  const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
+
   const addStep = (type: StepData["step_type"]) => {
     const newStep: StepData = { step_type: type, config: {} };
     if (type === "delay") newStep.config = { duration: 60, unit: "minutes" };
@@ -243,30 +248,34 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                       </div>
                     )}
 
-                    {/* Smart actions — curated one-click follow-ups */}
-                    {selectedOpt?.suggestedActions && selectedOpt.suggestedActions.length > 0 && (
-                      <div className="pt-1.5 space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                          <Sparkles className="h-3 w-3 text-amber-500" />
-                          Smart actions
+                    {/* Smart actions — curated one-click follow-ups (workspace overrides → defaults) */}
+                    {(() => {
+                      const effective = selectedOpt ? resolveSmartActions(selectedOpt.value, smartActionOverrides) : [];
+                      if (!effective.length) return null;
+                      return (
+                        <div className="pt-1.5 space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            <Sparkles className="h-3 w-3 text-amber-500" />
+                            Smart actions
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {effective.map((sa, idx) => (
+                              <Button
+                                key={idx}
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 gap-1.5 bg-background/60 border-dashed text-xs"
+                                onClick={() => addSuggested(sa)}
+                              >
+                                {ACTION_ICONS[sa.action] ?? <Sparkles className="h-3.5 w-3.5 text-amber-500" />}
+                                {sa.label}
+                              </Button>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedOpt.suggestedActions.map((sa, idx) => (
-                            <Button
-                              key={idx}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 gap-1.5 bg-background/60 border-dashed text-xs"
-                              onClick={() => addSuggested(sa)}
-                            >
-                              {ACTION_ICONS[sa.action] ?? <Sparkles className="h-3.5 w-3.5 text-amber-500" />}
-                              {sa.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 );
               })()}

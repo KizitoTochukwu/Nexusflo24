@@ -44,6 +44,7 @@ import AntiSpamPolicy from "./pages/legal/AntiSpamPolicy";
 import GdprRights from "./pages/legal/GdprRights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBlogManager from "./pages/admin/AdminBlogManager";
+import AdminSmartActions from "./pages/admin/AdminSmartActions";
 import AdminGuard from "./components/admin/AdminGuard";
 import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
@@ -119,6 +120,7 @@ const App = () => (
                   <Route path="workflows/:workflowId" element={<WorkflowEditor />} />
                   <Route path="admin" element={<AdminDashboard />} />
                   <Route path="admin/blog" element={<AdminBlogManager />} />
+                  <Route path="admin/smart-actions" element={<AdminSmartActions />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
