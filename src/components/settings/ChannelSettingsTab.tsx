@@ -30,24 +30,45 @@ function ResendDomainPanel({ workspaceId }: { workspaceId: string }) {
   const [selectedDomain, setSelectedDomain] = useState<any>(null);
   const [fetching, setFetching] = useState(false);
 
-  const callDomainApi = async (body: Record<string, any>) => {
-    const { data, error } = await supabase.functions.invoke("resend-domain-verify", { body: { workspaceId, ...body } });
-    if (error) {
-      // FunctionsHttpError hides the response body — extract it manually
-      const ctx = (error as any)?.context;
-      if (ctx && typeof ctx.json === "function") {
-        try {
-          const errBody = await ctx.json();
-          const msg = errBody?.error || errBody?.details || error.message;
-          throw new Error(msg);
-        } catch (parseErr: any) {
-          if (parseErr?.message && parseErr.message !== error.message) throw parseErr;
-        }
+  const readFunctionPayload = async (response: Response) => {
+    try {
+      return await response.clone().json();
+    } catch {
+      try {
+        const text = await response.text();
+        return text ? { error: text } : {};
+      } catch {
+        return {};
       }
-      throw new Error(error.message || "Domain request failed");
     }
-    if (data?.error) throw new Error(data.error);
-    return data;
+  };
+
+  const callDomainApi = async (body: Record<string, any>) => {
+    const { data: auth } = await supabase.auth.getSession();
+    const accessToken = auth.session?.access_token;
+
+    if (!accessToken) {
+      throw new Error("Your session has expired. Please sign in again and retry.");
+    }
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resend-domain-verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ workspaceId, ...body }),
+    });
+
+    const payload = await readFunctionPayload(response);
+    const message = payload?.error || payload?.details;
+
+    if (!response.ok) {
+      throw new Error(message || `Domain request failed (${response.status})`);
+    }
+
+    return payload;
   };
 
   const fetchDomains = async () => {
@@ -80,11 +101,12 @@ function ResendDomainPanel({ workspaceId }: { workspaceId: string }) {
     setLoading(true);
     try {
       const res = await callDomainApi({ action: "verify", domainId });
-      // Edge function returns the latest domain payload (incl. records + status)
       if (res?.domain) {
         setSelectedDomain(res.domain);
         if (res.domain.status === "verified") {
           toast.success("Domain verified! ✅");
+        } else if (res?.error) {
+          toast.error(res.error);
         } else {
           toast.success("Verification check complete. Review DNS records below.");
         }
@@ -136,8 +158,12 @@ function ResendDomainPanel({ workspaceId }: { workspaceId: string }) {
                   variant="ghost"
                   size="sm"
                   onClick={async () => {
-                    const res = await callDomainApi({ action: "status", domainId: d.id });
-                    setSelectedDomain(res.domain);
+                    try {
+                      const res = await callDomainApi({ action: "status", domainId: d.id });
+                      setSelectedDomain(res.domain);
+                    } catch (err: any) {
+                      toast.error(err.message || "Failed to load DNS records");
+                    }
                   }}
                 >
                   DNS Records
