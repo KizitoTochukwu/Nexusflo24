@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,12 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock } from "lucide-react";
+import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock, DoorOpen, Sparkles, X } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   useAutomations, useDeleteAutomation, useUpdateAutomation, useCreateAutomation, useSimulateAutomation,
+  useWorkspaceExitedCounts, useBackfillExitDefaults,
   type Automation, TRIGGER_OPTIONS,
 } from "@/hooks/useAutomations";
+import { getDefaultExitCriteria } from "@/lib/automations/exitCriteria";
 import CreateAutomationDialog from "@/components/automations/CreateAutomationDialog";
 import AutomationDetailsDrawer from "@/components/automations/AutomationDetailsDrawer";
 import { format } from "date-fns";
