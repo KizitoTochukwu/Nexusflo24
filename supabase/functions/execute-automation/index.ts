@@ -78,8 +78,51 @@ async function sendTwilio(sid: string, token: string, from: string, to: string, 
   return data;
 }
 
+/**
+ * Evaluate exit criteria against the lead's current state. Returns the matching
+ * criterion type as a string if any are met, or null otherwise.
+ */
+async function evaluateExitCriteria(
+  supabase: any,
+  criteria: Array<Record<string, any>>,
+  ctx: { workspaceId: string; leadId: string; lead: Record<string, any> }
+): Promise<string | null> {
+  for (const c of criteria) {
+    const type = c?.type;
+    if (!type) continue;
 
-Deno.serve(async (req) => {
+    if (type === "purchase_happened") {
+      const { count } = await supabase
+        .from("lead_activities")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", ctx.workspaceId)
+        .eq("lead_id", ctx.leadId)
+        .eq("type", "purchase");
+      if ((count ?? 0) > 0) return type;
+    } else if (type === "unsubscribed") {
+      // Unsubscribed leads carry the "unsubscribed" tag (set by /unsubscribe handler)
+      const tags = (ctx.lead.tags ?? []) as string[];
+      if (tags.map((t) => String(t).toLowerCase()).includes("unsubscribed")) return type;
+    } else if (type === "appointment_booked") {
+      const { count } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", ctx.workspaceId)
+        .eq("lead_id", ctx.leadId);
+      if ((count ?? 0) > 0) return type;
+    } else if (type === "tag_added") {
+      const target = String(c.tag || "").toLowerCase();
+      if (!target) continue;
+      const tags = (ctx.lead.tags ?? []) as string[];
+      if (tags.map((t) => String(t).toLowerCase()).includes(target)) return type;
+    } else if (type === "status_equals") {
+      const target = String(c.status || "");
+      if (!target) continue;
+      if (String(ctx.lead.status || "") === target) return type;
+    }
+  }
+  return null;
+}
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
