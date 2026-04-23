@@ -14,7 +14,6 @@ const THROTTLE_MS = 350;
 
 function interpolate(template: string, lead: Record<string, any>): string {
   if (!template) return "";
-  // Supports {{field}} and {{field|fallback}}
   return template.replace(/\{\{\s*([a-z_]+)\s*(?:\|\s*([^}]*))?\}\}/gi, (_m, key, fb) => {
     const k = String(key).toLowerCase();
     let v: any = "";
@@ -98,7 +97,7 @@ async function evaluateCondition(
       return false;
     }
     default:
-      return true; // unknown — default YES
+      return true;
   }
 }
 
@@ -127,6 +126,30 @@ function delayMinutesFromConfig(cfg: Record<string, any>): number {
   return dur;
 }
 
+/**
+ * Awaits an HTTP send and returns ok/error so the engine can record real status.
+ */
+async function postJson(url: string, body: any): Promise<{ ok: boolean; status: number; data: any; error?: string }> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify(body),
+    });
+    let data: any = {};
+    try { data = await res.json(); } catch { /* non-json */ }
+    if (!res.ok) {
+      return { ok: false, status: res.status, data, error: data?.error || `HTTP ${res.status}` };
+    }
+    return { ok: true, status: res.status, data };
+  } catch (e: any) {
+    return { ok: false, status: 0, data: null, error: e?.message || "fetch_failed" };
+  }
+}
+
 async function runAction(
   supabase: any,
   workflow: any,
@@ -147,13 +170,11 @@ async function runAction(
         if (!credit.allowed) return { status: "failed", details: {}, error: credit.error || "out_of_credits" };
         const subject = interpolate(String(cfg.subject || ""), lead);
         const body = interpolate(String(cfg.body || ""), lead);
-        // Reuse the email-send function
-        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-          body: JSON.stringify({ workspace_id: workflow.workspace_id, to: lead.email, subject, html: body, lead_id: lead.id }),
-        }).catch(() => {});
-        return { status: "success", details: { subject } };
+        const r = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+          workspace_id: workflow.workspace_id, to: lead.email, subject, html: body, lead_id: lead.id,
+        });
+        if (!r.ok) return { status: "failed", details: { subject, provider: r.data }, error: r.error };
+        return { status: "success", details: { subject, provider_status: r.status } };
       }
       case "send_sms": {
         if (isTest) return { status: "skipped", details: { reason: "test_mode" } };
@@ -161,11 +182,10 @@ async function runAction(
         const credit = await deductCredit(workflow.workspace_id, "sms", `wf:${enrollment.id}`, workflow.user_id);
         if (!credit.allowed) return { status: "failed", details: {}, error: credit.error || "out_of_credits" };
         const message = interpolate(String(cfg.message || ""), lead);
-        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-          body: JSON.stringify({ workspace_id: workflow.workspace_id, to: lead.phone, message, lead_id: lead.id }),
-        }).catch(() => {});
+        const r = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+          workspace_id: workflow.workspace_id, to: lead.phone, message, lead_id: lead.id,
+        });
+        if (!r.ok) return { status: "failed", details: { provider: r.data }, error: r.error };
         return { status: "success", details: { message } };
       }
       case "send_whatsapp": {
@@ -174,11 +194,10 @@ async function runAction(
         const credit = await deductCredit(workflow.workspace_id, "whatsapp", `wf:${enrollment.id}`, workflow.user_id);
         if (!credit.allowed) return { status: "failed", details: {}, error: credit.error || "out_of_credits" };
         const message = interpolate(String(cfg.message || ""), lead);
-        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-          body: JSON.stringify({ workspace_id: workflow.workspace_id, to: lead.phone, message, lead_id: lead.id }),
-        }).catch(() => {});
+        const r = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+          workspace_id: workflow.workspace_id, to: lead.phone, message, lead_id: lead.id,
+        });
+        if (!r.ok) return { status: "failed", details: { provider: r.data }, error: r.error };
         return { status: "success", details: { message } };
       }
       case "add_tag": {
@@ -263,11 +282,8 @@ async function runAction(
       }
       case "webhook": {
         if (isTest || !cfg.url) return { status: "skipped", details: { reason: !cfg.url ? "no_url" : "test_mode" } };
-        await fetch(String(cfg.url), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lead, workflow_id: workflow.id, workflow_name: workflow.name }),
-        }).catch(() => {});
+        const r = await postJson(String(cfg.url), { lead, workflow_id: workflow.id, workflow_name: workflow.name });
+        if (!r.ok) return { status: "failed", details: { url: cfg.url }, error: r.error };
         return { status: "success", details: { url: cfg.url } };
       }
       case "stop_workflow":
@@ -315,24 +331,41 @@ Deno.serve(async (req) => {
     const canvas = workflow.canvas_json || { nodes: [], edges: [] };
     let currentId: string | null = start_from_node || enrollment.current_node_id;
     if (!currentId) {
-      // Start at the trigger
       const trig = (canvas.nodes || []).find((n: any) => n.data?.kind === "trigger");
       currentId = trig?.id || null;
-      if (currentId) {
-        // Move to next node after trigger immediately
-        currentId = nextNodeFromCanvas(canvas, currentId);
-      }
+      if (currentId) currentId = nextNodeFromCanvas(canvas, currentId);
     }
 
     const stepsRun: any[] = [];
     let stepsExecuted = enrollment.steps_executed || 0;
 
+    const fail = async (nodeId: string, nodeKind: string, message: string, details: any) => {
+      await supabase.from("workflow_runs").insert({
+        enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
+        lead_id: enrollment.lead_id, node_id: nodeId, node_type: nodeKind,
+        status: "failed", error: message, details, is_test: enrollment.is_test,
+      });
+      await supabase.from("workflow_logs").insert({
+        workflow_id: workflow.id, workspace_id: workflow.workspace_id,
+        enrollment_id: enrollment.id, lead_id: enrollment.lead_id,
+        event_type: "step_failed", level: "error",
+        message: `Node ${nodeId} (${nodeKind}) failed: ${message}`,
+        details,
+      });
+      await supabase.from("workflow_enrollments").update({
+        status: "failed", exit_reason: message.slice(0, 200), completed_at: new Date().toISOString(),
+        steps_executed: stepsExecuted, current_node_id: nodeId, last_step_at: new Date().toISOString(),
+      }).eq("id", enrollment.id);
+    };
+
     while (currentId && stepsExecuted < HARD_STEP_CAP) {
       stepsExecuted++;
       const node = getNode(canvas, currentId);
-      if (!node) break;
+      if (!node) {
+        await fail(currentId, "unknown", `Node ${currentId} not found in canvas (broken edge)`, { currentId });
+        break;
+      }
 
-      // Refresh lead each iteration so updates from earlier steps are visible
       const { data: lead } = await supabase.from("leads").select("*").eq("id", enrollment.lead_id).maybeSingle();
       if (!lead) {
         await supabase.from("workflow_enrollments").update({
@@ -343,99 +376,138 @@ Deno.serve(async (req) => {
 
       const nodeKind = node.data?.kind;
 
-      // ---- DELAY: schedule and exit ----
-      if (nodeKind === "delay") {
-        const minutes = delayMinutesFromConfig(node.data?.config || {});
-        const nextId = nextNodeFromCanvas(canvas, currentId);
-        const runAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
-        if (!enrollment.is_test && nextId) {
-          await supabase.from("scheduled_jobs").insert({
-            workspace_id: workflow.workspace_id,
-            automation_id: workflow.id, // re-using column; payload has workflow_id
-            lead_id: enrollment.lead_id,
-            run_at: runAt,
-            step_index: 0,
-            status: "pending",
-            payload: { workflow_id: workflow.id, enrollment_id: enrollment.id, start_from_node: nextId },
+      try {
+        // ---- DELAY: schedule and exit ----
+        if (nodeKind === "delay") {
+          const minutes = delayMinutesFromConfig(node.data?.config || {});
+          const nextId = nextNodeFromCanvas(canvas, currentId);
+          const runAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+
+          if (!nextId) {
+            // Delay with no follow-up → treat as flow end
+            await supabase.from("workflow_runs").insert({
+              enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
+              lead_id: enrollment.lead_id, node_id: currentId, node_type: "delay",
+              status: "success", details: { wait_minutes: minutes, next: null, note: "no_next_node" }, is_test: enrollment.is_test,
+            });
+            await supabase.from("workflow_enrollments").update({
+              status: "completed", exit_reason: "flow_end_after_delay", completed_at: new Date().toISOString(),
+              steps_executed: stepsExecuted, current_node_id: currentId, last_step_at: new Date().toISOString(),
+            }).eq("id", enrollment.id);
+            break;
+          }
+
+          if (!enrollment.is_test) {
+            const { error: schedErr } = await supabase.from("scheduled_jobs").insert({
+              workspace_id: workflow.workspace_id,
+              automation_id: null, // workflow jobs identify themselves via payload
+              lead_id: enrollment.lead_id,
+              run_at: runAt,
+              step_index: 0,
+              status: "pending",
+              payload: { workflow_id: workflow.id, enrollment_id: enrollment.id, start_from_node: nextId },
+            });
+            if (schedErr) {
+              await fail(currentId, "delay", `Failed to schedule next step: ${schedErr.message}`, { schedErr, runAt, nextId });
+              break;
+            }
+          }
+
+          await supabase.from("workflow_enrollments").update({
+            current_node_id: nextId, steps_executed: stepsExecuted, last_step_at: new Date().toISOString(),
+          }).eq("id", enrollment.id);
+          await supabase.from("workflow_runs").insert({
+            enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
+            lead_id: enrollment.lead_id, node_id: currentId, node_type: "delay",
+            status: "success", details: { wait_minutes: minutes, next: nextId, run_at: runAt }, is_test: enrollment.is_test,
+          });
+          stepsRun.push({ node: currentId, type: "delay", minutes });
+          return new Response(JSON.stringify({ ok: true, paused_for_delay: true, run_at: runAt, steps: stepsRun }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        await supabase.from("workflow_enrollments").update({
-          current_node_id: nextId, steps_executed: stepsExecuted, last_step_at: new Date().toISOString(),
-        }).eq("id", enrollment.id);
+
+        // ---- CONDITION ----
+        if (nodeKind === "condition") {
+          const result = await evaluateCondition(supabase, workflow.workspace_id, enrollment.lead_id, node.data?.subType || "", node.data?.config || {});
+          const branch = result ? "yes" : "no";
+          const nextId = nextNodeFromCanvas(canvas, currentId, branch);
+          await supabase.from("workflow_runs").insert({
+            enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
+            lead_id: enrollment.lead_id, node_id: currentId, node_type: "condition",
+            branch_taken: branch, status: "success", details: { result, next: nextId }, is_test: enrollment.is_test,
+          });
+          stepsRun.push({ node: currentId, type: "condition", branch });
+          if (!nextId) {
+            await supabase.from("workflow_enrollments").update({
+              status: "completed", exit_reason: `condition_${branch}_unwired`, completed_at: new Date().toISOString(),
+              steps_executed: stepsExecuted, current_node_id: currentId, last_step_at: new Date().toISOString(),
+            }).eq("id", enrollment.id);
+            break;
+          }
+          currentId = nextId;
+          continue;
+        }
+
+        // ---- GOAL ----
+        if (nodeKind === "goal") {
+          await supabase.from("workflow_enrollments").update({
+            status: "completed", exit_reason: "goal_reached", completed_at: new Date().toISOString(),
+            steps_executed: stepsExecuted, current_node_id: currentId, last_step_at: new Date().toISOString(),
+          }).eq("id", enrollment.id);
+          await supabase.from("workflow_runs").insert({
+            enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
+            lead_id: enrollment.lead_id, node_id: currentId, node_type: "goal",
+            status: "success", details: { goal: true }, is_test: enrollment.is_test,
+          });
+          stepsRun.push({ node: currentId, type: "goal" });
+          break;
+        }
+
+        // ---- MERGE / END / TRIGGER (passthrough) ----
+        if (nodeKind === "merge" || nodeKind === "end" || nodeKind === "trigger") {
+          currentId = nextNodeFromCanvas(canvas, currentId);
+          continue;
+        }
+
+        // ---- ACTION ----
+        const result = await runAction(supabase, workflow, enrollment, node, lead);
         await supabase.from("workflow_runs").insert({
           enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
-          lead_id: enrollment.lead_id, node_id: currentId, node_type: "delay",
-          status: "success", details: { wait_minutes: minutes, next: nextId }, is_test: enrollment.is_test,
+          lead_id: enrollment.lead_id, node_id: currentId, node_type: "action",
+          status: result.status, details: result.details, error: result.error || null, is_test: enrollment.is_test,
         });
-        stepsRun.push({ node: currentId, type: "delay", minutes });
-        return new Response(JSON.stringify({ ok: true, paused_for_delay: true, run_at: runAt, steps: stepsRun }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+        stepsRun.push({ node: currentId, type: "action", status: result.status });
 
-      // ---- CONDITION ----
-      if (nodeKind === "condition") {
-        const result = await evaluateCondition(supabase, workflow.workspace_id, enrollment.lead_id, node.data?.subType || "", node.data?.config || {});
-        const branch = result ? "yes" : "no";
-        const nextId = nextNodeFromCanvas(canvas, currentId, branch);
-        await supabase.from("workflow_runs").insert({
-          enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
-          lead_id: enrollment.lead_id, node_id: currentId, node_type: "condition",
-          branch_taken: branch, status: "success", details: { result }, is_test: enrollment.is_test,
-        });
-        stepsRun.push({ node: currentId, type: "condition", branch });
-        currentId = nextId;
-        continue;
-      }
+        if (result.status === "failed") {
+          await supabase.from("workflow_logs").insert({
+            workflow_id: workflow.id, workspace_id: workflow.workspace_id,
+            enrollment_id: enrollment.id, lead_id: enrollment.lead_id,
+            event_type: "step_failed", level: "error",
+            message: `Action ${node.data?.subType} failed: ${result.error}`,
+            details: result.details,
+          });
+        }
 
-      // ---- GOAL ----
-      if (nodeKind === "goal") {
-        await supabase.from("workflow_enrollments").update({
-          status: "completed", exit_reason: "goal_reached", completed_at: new Date().toISOString(),
-          steps_executed: stepsExecuted, current_node_id: currentId, last_step_at: new Date().toISOString(),
-        }).eq("id", enrollment.id);
-        await supabase.from("workflow_runs").insert({
-          enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
-          lead_id: enrollment.lead_id, node_id: currentId, node_type: "goal",
-          status: "success", details: { goal: true }, is_test: enrollment.is_test,
-        });
-        stepsRun.push({ node: currentId, type: "goal" });
-        break;
-      }
+        if (node.data?.subType === "stop_workflow") {
+          await supabase.from("workflow_enrollments").update({
+            status: "exited", exit_reason: "stop_workflow_action", completed_at: new Date().toISOString(),
+            steps_executed: stepsExecuted, current_node_id: currentId,
+          }).eq("id", enrollment.id);
+          break;
+        }
 
-      // ---- MERGE / END / TRIGGER (passthrough) ----
-      if (nodeKind === "merge" || nodeKind === "end" || nodeKind === "trigger") {
         currentId = nextNodeFromCanvas(canvas, currentId);
-        continue;
-      }
-
-      // ---- ACTION ----
-      const result = await runAction(supabase, workflow, enrollment, node, lead);
-      await supabase.from("workflow_runs").insert({
-        enrollment_id: enrollment.id, workflow_id: workflow.id, workspace_id: workflow.workspace_id,
-        lead_id: enrollment.lead_id, node_id: currentId, node_type: "action",
-        status: result.status, details: result.details, error: result.error || null, is_test: enrollment.is_test,
-      });
-      stepsRun.push({ node: currentId, type: "action", status: result.status });
-
-      // Stop workflow action exits
-      if (node.data?.subType === "stop_workflow") {
-        await supabase.from("workflow_enrollments").update({
-          status: "exited", exit_reason: "stop_workflow_action", completed_at: new Date().toISOString(),
-          steps_executed: stepsExecuted, current_node_id: currentId,
-        }).eq("id", enrollment.id);
+        if (["send_email", "send_sms", "send_whatsapp"].includes(node.data?.subType || "")) {
+          await new Promise((r) => setTimeout(r, THROTTLE_MS));
+        }
+      } catch (nodeErr: any) {
+        await fail(currentId!, nodeKind || "unknown", nodeErr?.message || "node_crashed", { stack: nodeErr?.stack });
         break;
-      }
-
-      currentId = nextNodeFromCanvas(canvas, currentId);
-      // Throttle messaging actions
-      if (["send_email", "send_sms", "send_whatsapp"].includes(node.data?.subType || "")) {
-        await new Promise((r) => setTimeout(r, THROTTLE_MS));
       }
     }
 
     if (!currentId) {
-      // Reached end of canvas — mark complete (if not already)
       await supabase.from("workflow_enrollments").update({
         status: "completed", exit_reason: "flow_end", completed_at: new Date().toISOString(),
         steps_executed: stepsExecuted, last_step_at: new Date().toISOString(),
