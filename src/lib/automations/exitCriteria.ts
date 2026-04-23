@@ -5,6 +5,9 @@
  * Stored on automations.exit_criteria as a JSONB array.
  */
 
+import { supabase } from "@/integrations/supabase/client";
+import { fireAutomationsForLeads } from "@/lib/automations/fireTriggers";
+
 export type ExitCriterion =
   | { type: "purchase_happened" }
   | { type: "unsubscribed" }
@@ -119,4 +122,105 @@ export function describeCriterion(c: ExitCriterion): string {
     case "status_equals":
       return `Status becomes "${c.status}"`;
   }
+}
+
+/**
+ * Simulates an exit event for a specific lead, using the same cancellation
+ * code path the live triggers use. Returns the number of pending jobs that
+ * were cancelled across all matching automations.
+ *
+ * For the test we ALSO write a matching activity / tag / status update so
+ * the on-resume re-check in execute-automation will catch race conditions.
+ */
+export async function simulateExitEvent(params: {
+  workspaceId: string;
+  leadId: string;
+  criterion: ExitCriterion;
+}): Promise<{ cancelledCount: number; eventType: string }> {
+  const { workspaceId, leadId, criterion } = params;
+
+  // 1) Persist the underlying state change so the on-resume re-check works too.
+  if (criterion.type === "purchase_happened") {
+    await supabase.from("lead_activities").insert({
+      lead_id: leadId,
+      workspace_id: workspaceId,
+      user_id: "00000000-0000-0000-0000-000000000000",
+      type: "purchase",
+      meta: { source: "exit_criteria_test" },
+    } as any);
+  } else if (criterion.type === "unsubscribed") {
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("tags")
+      .eq("id", leadId)
+      .maybeSingle();
+    const tags = (lead?.tags ?? []) as string[];
+    if (!tags.includes("unsubscribed")) {
+      await supabase
+        .from("leads")
+        .update({ tags: [...tags, "unsubscribed"] })
+        .eq("id", leadId);
+    }
+  } else if (criterion.type === "tag_added" && criterion.tag) {
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("tags")
+      .eq("id", leadId)
+      .maybeSingle();
+    const tags = (lead?.tags ?? []) as string[];
+    if (!tags.includes(criterion.tag)) {
+      await supabase
+        .from("leads")
+        .update({ tags: [...tags, criterion.tag] })
+        .eq("id", leadId);
+    }
+  } else if (criterion.type === "status_equals" && criterion.status) {
+    await supabase
+      .from("leads")
+      .update({ status: criterion.status })
+      .eq("id", leadId);
+  }
+
+  // 2) Snapshot pending job count before the sweep.
+  const { count: beforeCount } = await supabase
+    .from("scheduled_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("lead_id", leadId)
+    .eq("status", "pending");
+
+  // 3) Fire the same trigger dispatcher live events use. This will run the
+  //    exit-criteria sweep for ALL active automations in the workspace.
+  const eventType =
+    criterion.type === "purchase_happened"
+      ? "purchase_event"
+      : criterion.type === "unsubscribed"
+      ? "unsubscribed"
+      : criterion.type === "appointment_booked"
+      ? "book_appointment"
+      : criterion.type === "tag_added"
+      ? "tag_added"
+      : "status_changed";
+
+  const triggerConfigMatch: Record<string, string> = {};
+  if (criterion.type === "tag_added") triggerConfigMatch.tag = criterion.tag;
+  if (criterion.type === "status_equals") triggerConfigMatch.status = criterion.status;
+
+  await fireAutomationsForLeads({
+    workspaceId,
+    leadIds: [leadId],
+    triggerType: eventType,
+    triggerConfigMatch: Object.keys(triggerConfigMatch).length ? triggerConfigMatch : undefined,
+  });
+
+  // 4) Re-snapshot to compute how many jobs were cancelled.
+  const { count: afterCount } = await supabase
+    .from("scheduled_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("lead_id", leadId)
+    .eq("status", "pending");
+
+  const cancelledCount = Math.max(0, (beforeCount ?? 0) - (afterCount ?? 0));
+  return { cancelledCount, eventType };
 }
