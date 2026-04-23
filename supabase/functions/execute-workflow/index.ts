@@ -171,7 +171,7 @@ async function runAction(
         const subject = interpolate(String(cfg.subject || ""), lead);
         const body = interpolate(String(cfg.body || ""), lead);
         const r = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
-          workspace_id: workflow.workspace_id, to: lead.email, subject, html: body, lead_id: lead.id,
+          workspaceId: workflow.workspace_id, to: lead.email, subject, html: body, leadId: lead.id, skipCredits: true,
         });
         if (!r.ok) return { status: "failed", details: { subject, provider: r.data }, error: r.error };
         return { status: "success", details: { subject, provider_status: r.status } };
@@ -183,7 +183,7 @@ async function runAction(
         if (!credit.allowed) return { status: "failed", details: {}, error: credit.error || "out_of_credits" };
         const message = interpolate(String(cfg.message || ""), lead);
         const r = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
-          workspace_id: workflow.workspace_id, to: lead.phone, message, lead_id: lead.id,
+          workspaceId: workflow.workspace_id, to: lead.phone, message, leadId: lead.id, skipCredits: true,
         });
         if (!r.ok) return { status: "failed", details: { provider: r.data }, error: r.error };
         return { status: "success", details: { message } };
@@ -195,7 +195,7 @@ async function runAction(
         if (!credit.allowed) return { status: "failed", details: {}, error: credit.error || "out_of_credits" };
         const message = interpolate(String(cfg.message || ""), lead);
         const r = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
-          workspace_id: workflow.workspace_id, to: lead.phone, message, lead_id: lead.id,
+          workspaceId: workflow.workspace_id, to: lead.phone, body: message, leadId: lead.id, skipCredits: true,
         });
         if (!r.ok) return { status: "failed", details: { provider: r.data }, error: r.error };
         return { status: "success", details: { message } };
