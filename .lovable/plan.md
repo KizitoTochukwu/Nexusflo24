@@ -1,53 +1,46 @@
 
-## Fix: Automation emails leaking raw block JSON
 
-### What's broken
-The Webinar automation email arrives looking messy because the **email body is stored as a JSON blocks array** (the visual email editor's format — `[{"id":"blk_…","type":"image","props":{…}},…]`), but the edge function that sends automation emails treats it as plain text. The result: subscribers see raw JSON, escaped quotes, and stray fragments instead of a rendered email with the image, "Save Your Seat" button, and formatted text.
+## Hide Workflow Builder from non-admins
 
-The bug exists in two send paths:
-1. `supabase/functions/execute-automation/index.ts` — used by your Webinar automation
-2. `supabase/functions/email-send/index.ts` — used by Workflows, manual sends, and Campaigns that pipe through it
+### What changes
+The "Workflow Builder" feature stays fully functional in the codebase — only its visibility and access are restricted to admin accounts (users in the `admin_allowlist`, detected via the existing `useIsAdmin()` hook). Regular users will not see the sidebar item and cannot reach the routes by typing the URL.
 
-The frontend already has a `blocksToHtml()` serializer (`src/components/automations/email-editor/email-blocks/emailBlockSerializer.ts`) that converts the blocks array into proper HTML. It just isn't reachable from edge functions because it imports `lucide-react` icons via a sibling types file. We need a Deno-safe copy in `supabase/functions/_shared/`.
+### Files to edit
 
-### Fix
-
-**1. Create `supabase/functions/_shared/email-blocks.ts`**
-- Port the type definitions (text/image/button/divider/spacer/social/columns) — pure types, no React/lucide imports.
-- Port the `blocksToHtml(blocks)` renderer (table-based, email-client-safe HTML).
-- Port `parseBlocksFromMessage(raw)` that detects whether a string is a JSON blocks array.
-
-**2. Update `supabase/functions/execute-automation/index.ts`**
-Around line 206, before `formatEmailBody`:
+**1. `src/components/dashboard/DashboardLayout.tsx`**
+Move the Workflow Builder sidebar entry into the existing admin-only conditional block (same pattern already used for "Admin" and "Blog Manager"):
 ```ts
-const rawBody = config.body || config.message || "";
-const blocks = parseBlocksFromMessage(rawBody);
-let html = blocks
-  ? blocksToHtml(blocks.map((b) => interpolateBlock(b, lead)))
-  : interpolate(rawBody, lead);
-html = wrapEmailTemplate(blocks ? html : formatEmailBody(html), { ... });
+...(isAdmin ? [
+  { icon: Zap, label: "Workflow Builder", to: `/dashboard/${workspaceId}/workflows` },
+  { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
+  { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
+] : [])
 ```
-Add a small `interpolateBlock()` helper that walks each block's text fields (`content`, `label`, `url`, `alt`, `linkUrl`, `columns[]`) and runs `interpolate()` on them so `{{first_name}}` etc. still work.
+Result: regular users no longer see the "Workflow Builder" link in the sidebar.
 
-**3. Update `supabase/functions/email-send/index.ts`**
-Same change near line 106 — detect blocks JSON, render via `blocksToHtml`, otherwise fall back to `formatEmailBody`. This automatically fixes Workflow emails (which delegate to `email-send`) and any manual sends.
-
-**4. Deploy** both edge functions.
-
-### How it'll look after
-- The header logo image renders centered.
-- The "Save Your Seat Here" gold/navy button renders as a real button.
-- Body paragraphs render with proper spacing — no more `","fontSize":15,...` leaking.
-- `{{FirstName}}` / `{{first_name}}` continue to interpolate inside block content.
-- Existing legacy automations whose body is plain text/HTML keep working unchanged (the parser returns `null` for non-JSON strings → falls back to `formatEmailBody`).
+**2. `src/App.tsx`**
+Wrap the three workflow routes inside the existing `<AdminGuard />` block so URL-typing won't bypass the restriction:
+```tsx
+<Route element={<AdminGuard />}>
+  <Route path="workflows" element={<DashboardWorkflows />} />
+  <Route path="workflows/new" element={<WorkflowEditor />} />
+  <Route path="workflows/:workflowId" element={<WorkflowEditor />} />
+  <Route path="admin" element={<AdminDashboard />} />
+  <Route path="admin/blog" element={<AdminBlogManager />} />
+</Route>
+```
+Non-admins who try `/dashboard/:id/workflows` will be redirected to the dashboard by `AdminGuard`.
 
 ### What this does NOT touch
-- The visual email editor UI (already correct).
-- The frontend preview (already uses the same renderer).
-- WhatsApp/SMS messages (the WhatsApp body in your screenshots was clean — that path already strips/sends plain text).
-- No DB migration, no schema change, no breaking change to existing automations.
+- No code is deleted — Workflow Builder remains fully built and runnable for admins.
+- The Automations module (your active flow) is unaffected.
+- Backend edge functions (`execute-workflow`, `enroll-workflow-leads`) stay deployed; they're just not reachable from any non-admin UI.
+- Database, RLS, automation engine — untouched.
 
-### Verification after deploy
-- Trigger the Webinar automation on a test lead (drop a contact into the Webinar folder).
-- Check the inbox — email should render the image header, formatted body, and CTA button cleanly.
-- Check `email_logs` for the new send — `status: sent`, no JSON in the `body` column.
+### Verification after implementation
+- Log in as your admin account → "Workflow Builder" still appears in sidebar and `/workflows` loads.
+- Log in as a non-admin user → no "Workflow Builder" item; visiting `/dashboard/:id/workflows` redirects to `/dashboard`.
+
+### Reverting later
+When you want to re-enable it for everyone, simply move the sidebar entry back out of the `isAdmin` block and remove the workflow routes from inside `<AdminGuard />`. One-minute change.
+
