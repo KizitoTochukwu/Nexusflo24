@@ -84,6 +84,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
     options: [
       { value: "form_submitted", label: "Form submitted", input: "text", placeholder: "Funnel slug (blank = any)" },
       { value: "checkout_visited", label: "Checkout visited", input: "none" },
+      { value: "pricing_visited", label: "Pricing page visited / clicked", input: "none" },
     ],
   },
   {
