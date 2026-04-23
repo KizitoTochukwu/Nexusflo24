@@ -105,9 +105,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                 const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
                 const isBetween = currentOperator === "between";
 
-                const addSuggested = () => {
-                  if (!selectedOpt?.suggestedAction) return;
-                  const sa = selectedOpt.suggestedAction;
+                const addSuggested = (sa: { action: string; defaults?: Record<string, unknown> }) => {
                   const newStep: StepData = {
                     step_type: "action",
                     config: { action: sa.action, ...(sa.defaults || {}) },
