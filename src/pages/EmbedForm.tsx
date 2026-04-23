@@ -101,27 +101,40 @@ export default function EmbedForm() {
     }
   };
 
+  const pageWrapperStyle: React.CSSProperties = {
+    minHeight: "100vh",
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    boxSizing: "border-box",
+    fontFamily: "system-ui, sans-serif",
+  };
+
   if (!workspaceId) {
     return (
-      <div style={{ fontFamily: "system-ui, sans-serif", padding: 20, color: "#dc2626" }}>
-        Missing <code>workspace</code> parameter.
+      <div style={{ ...pageWrapperStyle, color: "#dc2626" }}>
+        <div>Missing <code>workspace</code> parameter.</div>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div style={{ fontFamily: "system-ui, sans-serif", padding: 24, textAlign: "center" }}>
-        <div style={{ fontSize: 32, marginBottom: 8 }}>✓</div>
-        <p style={{ fontSize: 18, fontWeight: 600, color: "#16a34a" }}>Thank you!</p>
-        <p style={{ fontSize: 14, color: "#6b7280" }}>Your submission has been received.</p>
+      <div style={pageWrapperStyle}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>✓</div>
+          <p style={{ fontSize: 18, fontWeight: 600, color: "#16a34a" }}>Thank you!</p>
+          <p style={{ fontSize: 14, color: "#6b7280" }}>Your submission has been received.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: 16, maxWidth: 480 }}>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={pageWrapperStyle}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 480 }}>
         {fields.map((f) => {
           const isTextarea = f === "message";
           const inputType = f === "email" ? "email" : f === "phone" ? "tel" : "text";
