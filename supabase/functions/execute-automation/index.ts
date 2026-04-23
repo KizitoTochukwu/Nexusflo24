@@ -334,6 +334,12 @@ Deno.serve(async (req) => {
                 .select("id", { count: "exact", head: true })
                 .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "checkout_visit");
               passed = (count ?? 0) > 0;
+            } else if (conditionType === "pricing_visited") {
+              const { count } = await supabase.from("lead_activities")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id)
+                .in("type", ["pricing_page_visit", "pricing_click"]);
+              passed = (count ?? 0) > 0;
             } else if (conditionType === "whatsapp_replied") {
               const { count } = await supabase.from("sales_conversations")
                 .select("id", { count: "exact", head: true })
