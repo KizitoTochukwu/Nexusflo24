@@ -32,7 +32,20 @@ function ResendDomainPanel({ workspaceId }: { workspaceId: string }) {
 
   const callDomainApi = async (body: Record<string, any>) => {
     const { data, error } = await supabase.functions.invoke("resend-domain-verify", { body: { workspaceId, ...body } });
-    if (error) throw error;
+    if (error) {
+      // FunctionsHttpError hides the response body — extract it manually
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const errBody = await ctx.json();
+          const msg = errBody?.error || errBody?.details || error.message;
+          throw new Error(msg);
+        } catch (parseErr: any) {
+          if (parseErr?.message && parseErr.message !== error.message) throw parseErr;
+        }
+      }
+      throw new Error(error.message || "Domain request failed");
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   };
@@ -66,17 +79,22 @@ function ResendDomainPanel({ workspaceId }: { workspaceId: string }) {
   const verifyDomain = async (domainId: string) => {
     setLoading(true);
     try {
-      await callDomainApi({ action: "verify", domainId });
-      toast.success("Verification check initiated. Refreshing status...");
-      // Wait a moment then fetch status
-      setTimeout(async () => {
-        const res = await callDomainApi({ action: "status", domainId });
+      const res = await callDomainApi({ action: "verify", domainId });
+      // Edge function returns the latest domain payload (incl. records + status)
+      if (res?.domain) {
         setSelectedDomain(res.domain);
-        await fetchDomains();
-        setLoading(false);
-      }, 2000);
+        if (res.domain.status === "verified") {
+          toast.success("Domain verified! ✅");
+        } else {
+          toast.success("Verification check complete. Review DNS records below.");
+        }
+      } else {
+        toast.success("Verification check initiated.");
+      }
+      await fetchDomains();
     } catch (err: any) {
       toast.error(err.message || "Verification failed");
+    } finally {
       setLoading(false);
     }
   };
