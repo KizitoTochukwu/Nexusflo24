@@ -270,3 +270,24 @@ export function useLeadSearch(workspaceId: string, search: string) {
     enabled: !!workspaceId,
   });
 }
+
+/**
+ * Re-runs `execute-workflow` for an enrollment from a specific node.
+ * Used by Diagnostics → "Resume now" on stranded enrollments.
+ */
+export function useResumeEnrollment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { enrollment_id: string; start_from_node?: string | null; workflow_id: string }) => {
+      const { error } = await supabase.functions.invoke("execute-workflow", {
+        body: { enrollment_id: input.enrollment_id, start_from_node: input.start_from_node || undefined },
+      });
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["workflow-diagnostics", vars.workflow_id] });
+    },
+  });
+}
+

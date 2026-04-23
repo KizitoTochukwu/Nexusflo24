@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useWorkflowDiagnostics, useTestEnrollWorkflow, useLeadSearch } from "@/hooks/useWorkflows";
+import { useWorkflowDiagnostics, useTestEnrollWorkflow, useLeadSearch, useResumeEnrollment } from "@/hooks/useWorkflows";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,12 @@ import {
   FilterX,
   FlaskConical,
   Loader2,
+  Play,
   RefreshCw,
   Search as SearchIcon,
   X,
   XCircle,
+  Zap,
 } from "lucide-react";
 import type { WorkflowCanvasJSON } from "@/lib/workflows/types";
 
