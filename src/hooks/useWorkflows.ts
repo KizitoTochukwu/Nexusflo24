@@ -204,14 +204,24 @@ export function useWorkflowDiagnostics(workflowId: string | undefined) {
 }
 
 /**
- * Fires a test enrollment for a single lead. Engine respects `is_test=true`
- * and skips real sends (email/sms/whatsapp) so you can verify branching/wiring
- * without burning credits.
+ * Fires an enrollment for a single lead, bypassing the trigger config so you
+ * can verify the workflow end-to-end on demand.
+ *
+ * - mode="test"  → is_test=true, engine skips real email/SMS/WhatsApp sends, no credits burned.
+ * - mode="live"  → is_test=false, full real execution including provider sends.
  */
 export function useTestEnrollWorkflow() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { workflow_id: string; workspace_id: string; lead_id: string }) => {
-      // Insert a test enrollment directly so the lead doesn't need to match the trigger event
+    mutationFn: async (input: {
+      workflow_id: string;
+      workspace_id: string;
+      lead_id: string;
+      mode?: "test" | "live";
+    }) => {
+      const isTest = (input.mode ?? "test") === "test";
+
+      // Insert an enrollment directly so the lead doesn't need to match the trigger event
       const { data: wf, error: wfErr } = await supabase
         .from("workflows" as any)
         .select("canvas_json")
@@ -230,7 +240,7 @@ export function useTestEnrollWorkflow() {
           status: "active",
           current_node_id: trig?.id || null,
           branch_path: [],
-          is_test: true,
+          is_test: isTest,
         })
         .select()
         .maybeSingle();
@@ -241,7 +251,10 @@ export function useTestEnrollWorkflow() {
       });
       if (invokeErr) throw invokeErr;
 
-      return enrollment;
+      return { enrollment, mode: isTest ? "test" : "live" };
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["workflow-diagnostics", vars.workflow_id] });
     },
   });
 }
