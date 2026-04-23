@@ -54,6 +54,12 @@ export function useSaveSmartActions() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { workspace_id: string; condition_value: string; actions: SmartAction[] }) => {
+      // Defense-in-depth: re-validate before persisting (prevents bypass via direct hook calls).
+      const { validateSmartActions } = await import("@/lib/automations/smartActionValidation");
+      const result = validateSmartActions(input.actions);
+      if (!result.isValid) {
+        throw new Error(result.formError ?? result.rowErrors.find((e) => e) ?? "Invalid smart actions");
+      }
       const { error } = await supabase
         .from("automation_smart_actions" as any)
         .upsert(

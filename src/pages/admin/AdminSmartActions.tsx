@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Plus, Trash2, Save, RotateCcw, Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, Clock, Download, AlertTriangle } from "lucide-react";
+import { Sparkles, Plus, Trash2, Save, RotateCcw, Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, Clock, Download, AlertTriangle, AlertCircle } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { CONDITION_GROUPS, ACTION_OPTIONS } from "@/hooks/useAutomations";
 import { useSmartActionOverrides, useSaveSmartActions, useResetSmartActions, useResetAllSmartActions, resolveSmartActions, type SmartAction } from "@/hooks/useSmartActions";
 import { Textarea } from "@/components/ui/textarea";
+import { validateSmartActions } from "@/lib/automations/smartActionValidation";
+import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -104,8 +106,20 @@ export default function AdminSmartActions() {
     setDraft(next);
   };
 
+  const validation = useMemo(() => validateSmartActions(draft), [draft]);
+
   const handleSave = () => {
-    save.mutate({ workspace_id: workspaceId, condition_value: selectedCondition, actions: draft });
+    if (!validation.isValid) {
+      toast.error(validation.formError ?? "Fix the highlighted errors before saving");
+      return;
+    }
+    // Trim labels and string defaults before persisting.
+    const cleaned: SmartAction[] = draft.map((a) => ({
+      action: a.action,
+      label: a.label.trim(),
+      defaults: a.defaults,
+    }));
+    save.mutate({ workspace_id: workspaceId, condition_value: selectedCondition, actions: cleaned });
   };
   const handleReset = () => {
     // Removes the override row so the builder uses the latest code defaults.
@@ -249,7 +263,12 @@ export default function AdminSmartActions() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              <Button size="sm" onClick={handleSave} disabled={save.isPending || isLoading}>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={save.isPending || isLoading || !validation.isValid}
+                title={!validation.isValid ? (validation.formError ?? "Fix errors before saving") : "Save smart actions"}
+              >
                 <Save className="h-3.5 w-3.5 mr-1" /> Save
               </Button>
             </div>
@@ -265,46 +284,67 @@ export default function AdminSmartActions() {
               </div>
             )}
 
+            {validation.formError && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2.5 text-xs text-destructive">
+                <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <div>{validation.formError}</div>
+              </div>
+            )}
+
             {draft.length === 0 && (
               <div className="text-sm text-muted-foreground border border-dashed rounded-md p-6 text-center">
                 No smart actions yet for this condition.
               </div>
             )}
 
-            {draft.map((sa, idx) => (
-              <div key={idx} className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Select value={sa.action} onValueChange={(v) => updateAction(idx, { action: v, defaults: {} })}>
-                    <SelectTrigger className="w-[200px] bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ACTION_OPTIONS.map((a) => (
-                        <SelectItem key={a.value} value={a.value}>
-                          <span className="flex items-center gap-2">
-                            {ACTION_ICON[a.value]} {a.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    className="flex-1 min-w-[180px] bg-background"
-                    placeholder="Chip label (e.g. Send discount email)"
-                    value={sa.label}
-                    onChange={(e) => updateAction(idx, { label: e.target.value })}
-                  />
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx - 1)} disabled={idx === 0}>↑</Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx + 1)} disabled={idx === draft.length - 1}>↓</Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAction(idx)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+            {draft.map((sa, idx) => {
+              const rowError = validation.rowErrors[idx];
+              return (
+                <div
+                  key={idx}
+                  className={`border rounded-lg p-3 space-y-2 ${rowError ? "border-destructive/40 bg-destructive/5" : "bg-muted/30"}`}
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Select value={sa.action} onValueChange={(v) => updateAction(idx, { action: v, defaults: {} })}>
+                      <SelectTrigger className="w-[200px] bg-background" aria-invalid={!!rowError}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ACTION_OPTIONS.map((a) => (
+                          <SelectItem key={a.value} value={a.value}>
+                            <span className="flex items-center gap-2">
+                              {ACTION_ICON[a.value]} {a.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      className="flex-1 min-w-[180px] bg-background"
+                      placeholder="Chip label (e.g. Send discount email)"
+                      value={sa.label}
+                      maxLength={60}
+                      aria-invalid={!!rowError}
+                      onChange={(e) => updateAction(idx, { label: e.target.value })}
+                    />
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx - 1)} disabled={idx === 0}>↑</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveAction(idx, idx + 1)} disabled={idx === draft.length - 1}>↓</Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAction(idx)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
+                  <div>{defaultsEditorFields(sa.action, sa.defaults || {}, (d) => updateAction(idx, { defaults: d }))}</div>
+                  {rowError && (
+                    <div className="flex items-center gap-1.5 text-xs text-destructive font-medium">
+                      <AlertCircle className="h-3 w-3" />
+                      {rowError}
+                    </div>
+                  )}
                 </div>
-                <div>{defaultsEditorFields(sa.action, sa.defaults || {}, (d) => updateAction(idx, { defaults: d }))}</div>
-              </div>
-            ))}
+              );
+            })}
 
             <Button variant="outline" size="sm" onClick={addAction} className="w-full border-dashed">
               <Plus className="h-3.5 w-3.5 mr-1" /> Add smart action
