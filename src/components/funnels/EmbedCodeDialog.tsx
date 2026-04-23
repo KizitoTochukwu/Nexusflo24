@@ -98,7 +98,7 @@ window.addEventListener("message",function(e){
           <Code className="mr-1.5 h-4 w-4" /> Embed Form
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[95vw] sm:max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Embed Lead Capture Form</DialogTitle>
           <p className="text-sm text-muted-foreground">
