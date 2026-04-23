@@ -87,8 +87,28 @@ export function useResetSmartActions() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["smart-action-overrides"] });
-      toast.success("Reverted to defaults");
+      toast.success("Reset to latest defaults");
     },
     onError: (e: any) => toast.error(e.message || "Failed to reset"),
   });
 }
+
+/** Wipe ALL workspace overrides so every condition falls back to the latest code defaults. */
+export function useResetAllSmartActions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { workspace_id: string }) => {
+      const { error } = await supabase
+        .from("automation_smart_actions" as any)
+        .delete()
+        .eq("workspace_id", input.workspace_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["smart-action-overrides"] });
+      toast.success("All conditions reset to latest defaults");
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to reset all"),
+  });
+}
+
