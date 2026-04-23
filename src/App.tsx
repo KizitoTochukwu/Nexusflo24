@@ -105,9 +105,6 @@ const App = () => (
                 <Route path="leads" element={<DashboardLeads />} />
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
-                <Route path="workflows" element={<DashboardWorkflows />} />
-                <Route path="workflows/new" element={<WorkflowEditor />} />
-                <Route path="workflows/:workflowId" element={<WorkflowEditor />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="bookings" element={<DashboardBookings />} />
@@ -117,6 +114,9 @@ const App = () => (
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
                 <Route element={<AdminGuard />}>
+                  <Route path="workflows" element={<DashboardWorkflows />} />
+                  <Route path="workflows/new" element={<WorkflowEditor />} />
+                  <Route path="workflows/:workflowId" element={<WorkflowEditor />} />
                   <Route path="admin" element={<AdminDashboard />} />
                   <Route path="admin/blog" element={<AdminBlogManager />} />
                 </Route>
