@@ -662,13 +662,48 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
               <div className="flex items-start gap-2">
                 <FlaskConical className="mt-0.5 h-4 w-4 text-accent shrink-0" />
                 <div>
-                  <div className="font-semibold text-foreground">Test enrollment</div>
+                  <div className="font-semibold text-foreground">Run test automation</div>
                   <p className="mt-0.5 text-muted-foreground">
-                    Pick a lead — the engine runs every node in test mode. Real sends (email/SMS/WhatsApp) are skipped, no credits are charged, but tags / scores / notifications still update so you can verify wiring.
+                    Pick a lead and pick a mode. The engine bypasses the trigger and runs every node so you can verify
+                    branching, delays, and message sends end-to-end.
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Mode toggle (mirrors header popover) */}
+            <div className="grid grid-cols-2 gap-1 rounded-md border p-0.5">
+              <button
+                type="button"
+                onClick={() => setRunMode("test")}
+                className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                  runMode === "test"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <FlaskConical className="mr-1 inline h-3 w-3" />
+                Test mode (no sends)
+              </button>
+              <button
+                type="button"
+                onClick={() => setRunMode("live")}
+                className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                  runMode === "live"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Send className="mr-1 inline h-3 w-3" />
+                Live mode (real sends)
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {runMode === "live"
+                ? "⚠️ Real emails / SMS / WhatsApp will be sent and credits will be deducted."
+                : "Sends are skipped and no credits are charged. Tags, scores, and notifications still update."}
+            </p>
+
             <Input
               placeholder="Search leads by name or email…"
               value={search}
@@ -689,12 +724,18 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
                     </div>
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant={runMode === "live" ? "default" : "outline"}
                       className="h-7 shrink-0"
                       onClick={() => handleTestRun(l.id, l.full_name || l.email)}
                       disabled={testEnroll.isPending}
                     >
-                      {testEnroll.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Run test"}
+                      {testEnroll.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : runMode === "live" ? (
+                        "Run live"
+                      ) : (
+                        "Run test"
+                      )}
                     </Button>
                   </div>
                 ))
