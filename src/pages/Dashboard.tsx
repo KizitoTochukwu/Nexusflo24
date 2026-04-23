@@ -62,8 +62,24 @@ const Dashboard = () => {
     setPortalLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-portal-session");
-      if (error) throw error;
-      if (data?.url) window.location.href = data.url;
+      if (error) {
+        // Try to surface the JSON error body from the edge function
+        const ctx: any = (error as any)?.context;
+        let serverMsg: string | undefined;
+        try {
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            serverMsg = body?.error;
+          }
+        } catch {}
+        throw new Error(serverMsg || error.message || "Failed to open billing portal");
+      }
+      if (data?.error) throw new Error(data.error);
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No billing portal URL returned");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to open billing portal");
     } finally {
