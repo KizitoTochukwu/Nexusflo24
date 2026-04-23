@@ -263,7 +263,12 @@ export default function AdminSmartActions() {
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              <Button size="sm" onClick={handleSave} disabled={save.isPending || isLoading}>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={save.isPending || isLoading || !validation.isValid}
+                title={!validation.isValid ? (validation.formError ?? "Fix errors before saving") : "Save smart actions"}
+              >
                 <Save className="h-3.5 w-3.5 mr-1" /> Save
               </Button>
             </div>
