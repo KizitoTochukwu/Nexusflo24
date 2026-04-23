@@ -32,7 +32,20 @@ function ResendDomainPanel({ workspaceId }: { workspaceId: string }) {
 
   const callDomainApi = async (body: Record<string, any>) => {
     const { data, error } = await supabase.functions.invoke("resend-domain-verify", { body: { workspaceId, ...body } });
-    if (error) throw error;
+    if (error) {
+      // FunctionsHttpError hides the response body — extract it manually
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const errBody = await ctx.json();
+          const msg = errBody?.error || errBody?.details || error.message;
+          throw new Error(msg);
+        } catch (parseErr: any) {
+          if (parseErr?.message && parseErr.message !== error.message) throw parseErr;
+        }
+      }
+      throw new Error(error.message || "Domain request failed");
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   };
