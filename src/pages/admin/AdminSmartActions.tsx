@@ -106,8 +106,20 @@ export default function AdminSmartActions() {
     setDraft(next);
   };
 
+  const validation = useMemo(() => validateSmartActions(draft), [draft]);
+
   const handleSave = () => {
-    save.mutate({ workspace_id: workspaceId, condition_value: selectedCondition, actions: draft });
+    if (!validation.isValid) {
+      toast.error(validation.formError ?? "Fix the highlighted errors before saving");
+      return;
+    }
+    // Trim labels and string defaults before persisting.
+    const cleaned: SmartAction[] = draft.map((a) => ({
+      action: a.action,
+      label: a.label.trim(),
+      defaults: a.defaults,
+    }));
+    save.mutate({ workspace_id: workspaceId, condition_value: selectedCondition, actions: cleaned });
   };
   const handleReset = () => {
     // Removes the override row so the builder uses the latest code defaults.
