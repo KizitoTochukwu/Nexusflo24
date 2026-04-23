@@ -70,6 +70,7 @@ export default function CreateAutomationDialog() {
         description: description.trim(),
         trigger_type: triggerType,
         trigger_config: triggerConfig,
+        exit_criteria: exitCriteria,
         steps,
       },
       {
@@ -110,7 +111,7 @@ export default function CreateAutomationDialog() {
 
           <div>
             <label className="text-sm font-medium text-foreground">Trigger</label>
-            <Select value={triggerType} onValueChange={setTriggerType}>
+            <Select value={triggerType} onValueChange={handleTriggerChange}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TRIGGER_OPTIONS.map((t) => (
@@ -174,6 +175,12 @@ export default function CreateAutomationDialog() {
             <label className="text-sm font-medium text-foreground mb-2 block">Workflow Steps</label>
             <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
           </div>
+
+          <ExitCriteriaEditor
+            value={exitCriteria}
+            onChange={setExitCriteria}
+            triggerType={triggerType}
+          />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
