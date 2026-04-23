@@ -433,6 +433,38 @@ export default function DiagnosticsPanel({ workflowId, workspaceId, workflowStat
                     </div>
                   )}
                 </div>
+                {strandedEnrollments.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                      <div className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                        Stranded enrollments ({strandedEnrollments.length})
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {strandedEnrollments.map((e: any) => (
+                        <div key={e.id} className="flex items-center justify-between rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1.5 text-xs">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[10px] text-muted-foreground">{e.lead_id.slice(0, 8)}</span>
+                              <span className="text-[10px] text-muted-foreground">at {nodeLabel(e.current_node_id)}</span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">stuck {timeAgo(e.last_step_at || e.started_at)}</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[10px]"
+                            onClick={() => handleResume(e)}
+                            disabled={resume.isPending}
+                          >
+                            <Play className="mr-1 h-3 w-3" /> Resume now
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </TabsContent>
