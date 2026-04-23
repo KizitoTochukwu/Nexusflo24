@@ -208,16 +208,46 @@ export default function AdminSmartActions() {
                 ) : (
                   <Badge variant="outline" className="text-muted-foreground">Default</Badge>
                 )}
+                {driftFromDefaults && (
+                  <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
+                    New defaults available
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription className="text-xs">
                 These chips appear under the condition in the automation builder. Click one to insert the action with its pre-filled values.
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLoadLatestDefaults}
+                disabled={codeDefaults.length === 0}
+                title="Load the latest built-in defaults into the editor (does not save)"
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Load latest defaults
+              </Button>
               {isOverridden && (
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={reset.isPending}>
-                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={reset.isPending}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reset to latest defaults
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Reset “{selectedOpt?.label}” to latest defaults?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Your custom version will be removed and the condition will use the latest built-in defaults — including any future improvements shipped in releases.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleReset}>Reset</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
               <Button size="sm" onClick={handleSave} disabled={save.isPending || isLoading}>
                 <Save className="h-3.5 w-3.5 mr-1" /> Save
@@ -225,6 +255,16 @@ export default function AdminSmartActions() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {driftFromDefaults && (
+              <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-900">
+                <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <div>
+                  We've shipped updated defaults for this condition since you last customized it.
+                  Use <strong>Load latest defaults</strong> to preview them, or <strong>Reset to latest defaults</strong> to adopt them now.
+                </div>
+              </div>
+            )}
+
             {draft.length === 0 && (
               <div className="text-sm text-muted-foreground border border-dashed rounded-md p-6 text-center">
                 No smart actions yet for this condition.
