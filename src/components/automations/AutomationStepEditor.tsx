@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
 } from "lucide-react";
-import { CONDITION_OPTIONS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS } from "@/hooks/useAutomations";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 
