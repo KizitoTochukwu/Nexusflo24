@@ -302,8 +302,53 @@ Deno.serve(async (req) => {
               passed = Number(lead.score || 0) > Number(value);
             } else if (conditionType === "has_tag") {
               passed = (lead.tags || []).includes(String(value));
+            } else if (conditionType === "tag_contains") {
+              const v = String(value || "").toLowerCase();
+              passed = !!v && (lead.tags || []).some((t: string) => String(t).toLowerCase().includes(v));
             } else if (conditionType === "source_equals") {
               passed = String(lead.source || "").toLowerCase() === String(value || "").toLowerCase();
+            } else if (conditionType === "email_known") {
+              passed = !!(lead.email && String(lead.email).trim() !== "");
+            } else if (conditionType === "phone_known") {
+              passed = !!(lead.phone && String(lead.phone).trim() !== "");
+            } else if (conditionType === "email_opened") {
+              const { count } = await supabase.from("email_logs")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("status", "opened");
+              passed = (count ?? 0) > 0;
+            } else if (conditionType === "link_clicked") {
+              const { count } = await supabase.from("lead_activities")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "link_click");
+              passed = (count ?? 0) > 0;
+            } else if (conditionType === "form_submitted") {
+              let q = supabase.from("lead_activities")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "form_submit");
+              const slug = String(value || "").trim();
+              if (slug) q = q.contains("meta", { funnel_slug: slug });
+              const { count } = await q;
+              passed = (count ?? 0) > 0;
+            } else if (conditionType === "checkout_visited") {
+              const { count } = await supabase.from("lead_activities")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "checkout_visit");
+              passed = (count ?? 0) > 0;
+            } else if (conditionType === "whatsapp_replied") {
+              const { count } = await supabase.from("sales_conversations")
+                .select("id", { count: "exact", head: true })
+                .eq("lead_id", lead_id).eq("direction", "inbound").eq("channel", "whatsapp");
+              passed = (count ?? 0) > 0;
+            } else if (conditionType === "appointment_booked") {
+              const { count } = await supabase.from("bookings")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id);
+              passed = (count ?? 0) > 0;
+            } else if (conditionType === "purchase_happened") {
+              const { count } = await supabase.from("lead_activities")
+                .select("id", { count: "exact", head: true })
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("type", "purchase");
+              passed = (count ?? 0) > 0;
             } else if (conditionType === "reply_status" || conditionType === "has_replied" || conditionType === "no_reply") {
               const { data: replies } = await supabase
                 .from("sales_conversations")

@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
 } from "lucide-react";
-import { CONDITION_OPTIONS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS } from "@/hooks/useAutomations";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 
@@ -96,74 +96,87 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                 </Button>
               </div>
 
-              {step.step_type === "condition" && (
-                <div className="flex flex-wrap gap-2">
-                  <Select
-                    value={(step.config.condition as string) || ""}
-                    onValueChange={(v) => {
-                      if (v === "reply_status") {
-                        updateStep(i, { condition: v, reply_check: "has_replied", value: "" });
-                      } else {
-                        updateStep(i, { condition: v, reply_check: undefined });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-[200px] bg-background">
-                      <SelectValue placeholder="Select condition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONDITION_OPTIONS.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {(step.config.condition as string) === "reply_status" && (
-                    <div className="w-full space-y-2 mt-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium min-w-[100px]">If replied →</span>
-                        <Select
-                          value={(step.config.replied_action as string) || ""}
-                          onValueChange={(v) => updateStep(i, { replied_action: v })}
-                        >
-                          <SelectTrigger className="w-[160px] bg-background">
-                            <SelectValue placeholder="Move to..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PIPELINE_STAGES.map((s) => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
+              {step.step_type === "condition" && (() => {
+                const currentValue = (step.config.condition as string) || "";
+                const allOptions = CONDITION_GROUPS.flatMap((g) => g.options);
+                const selectedOpt = allOptions.find((o) => o.value === currentValue);
+                return (
+                  <div className="flex flex-wrap gap-2">
+                    <Select
+                      value={currentValue}
+                      onValueChange={(v) => {
+                        if (v === "reply_status") {
+                          updateStep(i, { condition: v, reply_check: "has_replied", value: "" });
+                        } else {
+                          updateStep(i, { condition: v, reply_check: undefined, value: "" });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[220px] bg-background">
+                        <SelectValue placeholder="Select condition" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[360px]">
+                        {CONDITION_GROUPS.map((group) => (
+                          <SelectGroup key={group.label}>
+                            <SelectLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                              {group.label}
+                            </SelectLabel>
+                            {group.options.map((c) => (
+                              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </SelectGroup>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {currentValue === "reply_status" && (
+                      <div className="w-full space-y-2 mt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium min-w-[100px]">If replied →</span>
+                          <Select
+                            value={(step.config.replied_action as string) || ""}
+                            onValueChange={(v) => updateStep(i, { replied_action: v })}
+                          >
+                            <SelectTrigger className="w-[160px] bg-background">
+                              <SelectValue placeholder="Move to..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PIPELINE_STAGES.map((s) => (
+                                <SelectItem key={s} value={s}>{s}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium min-w-[100px]">If no reply →</span>
+                          <Select
+                            value={(step.config.no_reply_action as string) || "continue"}
+                            onValueChange={(v) => updateStep(i, { no_reply_action: v })}
+                          >
+                            <SelectTrigger className="w-[180px] bg-background">
+                              <SelectValue placeholder="Choose action..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="continue">Continue sequence</SelectItem>
+                              {PIPELINE_STAGES.map((s) => (
+                                <SelectItem key={s} value={s}>Move to {s}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium min-w-[100px]">If no reply →</span>
-                        <Select
-                          value={(step.config.no_reply_action as string) || "continue"}
-                          onValueChange={(v) => updateStep(i, { no_reply_action: v })}
-                        >
-                          <SelectTrigger className="w-[180px] bg-background">
-                            <SelectValue placeholder="Choose action..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="continue">Continue sequence</SelectItem>
-                            {PIPELINE_STAGES.map((s) => (
-                              <SelectItem key={s} value={s}>Move to {s}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  )}
-                  {!["reply_status"].includes((step.config.condition as string) || "") && (
-                    <Input
-                      placeholder="Value"
-                      className="w-[140px] bg-background"
-                      value={(step.config.value as string) || ""}
-                      onChange={(e) => updateStep(i, { value: e.target.value })}
-                    />
-                  )}
-                </div>
-              )}
+                    )}
+                    {selectedOpt && selectedOpt.input !== "none" && (
+                      <Input
+                        type={selectedOpt.input === "number" ? "number" : "text"}
+                        placeholder={selectedOpt.placeholder || "Value"}
+                        className="w-[180px] bg-background"
+                        value={(step.config.value as string) || ""}
+                        onChange={(e) => updateStep(i, { value: e.target.value })}
+                      />
+                    )}
+                  </div>
+                );
+              })()}
 
               {step.step_type === "action" && (
                 <div className="space-y-2">

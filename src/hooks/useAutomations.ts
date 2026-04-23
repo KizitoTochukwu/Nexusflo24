@@ -53,11 +53,64 @@ export const TRIGGER_OPTIONS = [
   { value: "book_appointment", label: "Appointment booked" },
 ] as const;
 
+export type ConditionInputType = "none" | "text" | "number";
+
+export type ConditionOption = {
+  value: string;
+  label: string;
+  input: ConditionInputType;
+  placeholder?: string;
+};
+
+export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] = [
+  {
+    label: "Identity / Data",
+    options: [
+      { value: "email_known", label: "Email is known", input: "none" },
+      { value: "phone_known", label: "Phone is known", input: "none" },
+      { value: "source_equals", label: "Source equals", input: "text", placeholder: "e.g. facebook" },
+      { value: "tag_contains", label: "Tag contains", input: "text", placeholder: "e.g. webinar" },
+    ],
+  },
+  {
+    label: "Email behaviour",
+    options: [
+      { value: "email_opened", label: "Email opened", input: "none" },
+      { value: "link_clicked", label: "Link clicked", input: "none" },
+    ],
+  },
+  {
+    label: "Funnel behaviour",
+    options: [
+      { value: "form_submitted", label: "Form submitted", input: "text", placeholder: "Funnel slug (blank = any)" },
+      { value: "checkout_visited", label: "Checkout visited", input: "none" },
+    ],
+  },
+  {
+    label: "Messaging behaviour",
+    options: [
+      { value: "whatsapp_replied", label: "WhatsApp replied", input: "none" },
+    ],
+  },
+  {
+    label: "Lead scoring",
+    options: [
+      { value: "score_gt", label: "Lead score greater than", input: "number", placeholder: "e.g. 50" },
+    ],
+  },
+  {
+    label: "Purchase / Conversion",
+    options: [
+      { value: "appointment_booked", label: "Appointment booked", input: "none" },
+      { value: "purchase_happened", label: "Purchase happened", input: "none" },
+    ],
+  },
+];
+
+// Flat list for backward compatibility + reply_status (handled separately in UI)
 export const CONDITION_OPTIONS = [
-  { value: "score_gt", label: "Lead score greater than X", configKey: "threshold" },
-  { value: "has_tag", label: "Lead has tag", configKey: "tag" },
-  { value: "source_equals", label: "Lead source equals X", configKey: "source" },
-  { value: "reply_status", label: "Reply status", configKey: "" },
+  ...CONDITION_GROUPS.flatMap((g) => g.options),
+  { value: "reply_status", label: "Reply status", input: "none" as ConditionInputType },
 ] as const;
 
 export const REPLY_STATUS_OPTIONS = [
