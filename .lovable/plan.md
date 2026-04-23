@@ -1,76 +1,53 @@
 
+## Fix: Automation emails leaking raw block JSON
 
-## Why your workflow appears not to fire (it actually does — then dies silently)
+### What's broken
+The Webinar automation email arrives looking messy because the **email body is stored as a JSON blocks array** (the visual email editor's format — `[{"id":"blk_…","type":"image","props":{…}},…]`), but the edge function that sends automation emails treats it as plain text. The result: subscribers see raw JSON, escaped quotes, and stray fragments instead of a rendered email with the image, "Save Your Seat" button, and formatted text.
 
-I traced your real run end-to-end. The trigger DID fire. Here's exactly what happened to the lead "Kizito Tochukwu" you added to the **Webinar – AI Sales Blueprint** folder:
+The bug exists in two send paths:
+1. `supabase/functions/execute-automation/index.ts` — used by your Webinar automation
+2. `supabase/functions/email-send/index.ts` — used by Workflows, manual sends, and Campaigns that pipe through it
 
-```text
-23:51:32  Lead added to folder                             ✅
-23:51:34  enroll-workflow-leads → enrollment created        ✅  (workflow_logs: "enrolled")
-23:51:35  Step a1 (send_email)        recorded as success   ⚠️  but NO email_logs row exists
-23:51:36  Step d1 (1-day delay)       recorded as success   ⚠️  but NO scheduled_jobs row created
-          → Enrollment stuck at c1 forever, never resumes   ❌
+The frontend already has a `blocksToHtml()` serializer (`src/components/automations/email-editor/email-blocks/emailBlockSerializer.ts`) that converts the blocks array into proper HTML. It just isn't reachable from edge functions because it imports `lucide-react` icons via a sibling types file. We need a Deno-safe copy in `supabase/functions/_shared/`.
+
+### Fix
+
+**1. Create `supabase/functions/_shared/email-blocks.ts`**
+- Port the type definitions (text/image/button/divider/spacer/social/columns) — pure types, no React/lucide imports.
+- Port the `blocksToHtml(blocks)` renderer (table-based, email-client-safe HTML).
+- Port `parseBlocksFromMessage(raw)` that detects whether a string is a JSON blocks array.
+
+**2. Update `supabase/functions/execute-automation/index.ts`**
+Around line 206, before `formatEmailBody`:
+```ts
+const rawBody = config.body || config.message || "";
+const blocks = parseBlocksFromMessage(rawBody);
+let html = blocks
+  ? blocksToHtml(blocks.map((b) => interpolateBlock(b, lead)))
+  : interpolate(rawBody, lead);
+html = wrapEmailTemplate(blocks ? html : formatEmailBody(html), { ... });
 ```
+Add a small `interpolateBlock()` helper that walks each block's text fields (`content`, `label`, `url`, `alt`, `linkUrl`, `columns[]`) and runs `interpolate()` on them so `{{first_name}}` etc. still work.
 
-So you saw "no trigger" because nothing visible happened — no email landed, no follow-up scheduled. But the engine ran and **silently failed** at two layers.
+**3. Update `supabase/functions/email-send/index.ts`**
+Same change near line 106 — detect blocks JSON, render via `blocksToHtml`, otherwise fall back to `formatEmailBody`. This automatically fixes Workflow emails (which delegate to `email-send`) and any manual sends.
 
-## Two real bugs in the engine (not config issues)
+**4. Deploy** both edge functions.
 
-### Bug 1 — `scheduled_jobs.automation_id` has a FK to `automations` table, blocking ALL workflow delays
+### How it'll look after
+- The header logo image renders centered.
+- The "Save Your Seat Here" gold/navy button renders as a real button.
+- Body paragraphs render with proper spacing — no more `","fontSize":15,...` leaking.
+- `{{FirstName}}` / `{{first_name}}` continue to interpolate inside block content.
+- Existing legacy automations whose body is plain text/HTML keep working unchanged (the parser returns `null` for non-JSON strings → falls back to `formatEmailBody`).
 
-The workflow engine reuses the `scheduled_jobs.automation_id` column to store the workflow id. But the column has this constraint:
+### What this does NOT touch
+- The visual email editor UI (already correct).
+- The frontend preview (already uses the same renderer).
+- WhatsApp/SMS messages (the WhatsApp body in your screenshots was clean — that path already strips/sends plain text).
+- No DB migration, no schema change, no breaking change to existing automations.
 
-```text
-scheduled_jobs_automation_id_fkey  FOREIGN KEY (automation_id) REFERENCES automations(id)
-```
-
-Workflow ids live in `workflows`, not `automations`. So every delay-resume job insert fails with `violates foreign key constraint`. I reproduced this with a direct insert — confirmed.
-
-The engine code (`execute-workflow/index.ts` line 352) does NOT check the insert error, so the failure is swallowed and the lead is stranded. **Every workflow with a delay node is broken right now** — only the action(s) before the first delay run.
-
-### Bug 2 — `send_email` action is fire-and-forget with `.catch(() => {})`
-
-Line 155: `email-send` is invoked via raw `fetch` with `.catch(() => {})`. Any failure (provider down, throttled, bad payload) is silently dropped, and `workflow_runs` is still written as `success`. Your `email_logs` table has zero rows for the test lead — the email never sent, but the engine claims it did.
-
-## The fix
-
-### A. Schema migration — make `scheduled_jobs` workflow-safe
-- Drop the `scheduled_jobs_automation_id_fkey` FK (it's wrong for the dual-purpose column).
-- Make `automation_id` nullable so workflow jobs don't need a fake id.
-- Add an index on `(payload->>'workflow_id', status, run_at)` for fast workflow-job lookups (used by Diagnostics → Queue).
-- Backfill: re-insert the missing scheduled job for the stranded enrollment so your test lead resumes immediately.
-
-### B. `execute-workflow` engine hardening
-- Check the `scheduled_jobs` insert error. On failure: write a `workflow_runs` row with `status='failed'` and a `workflow_logs` row with the error, and mark the enrollment `status='failed'` so it shows in Diagnostics instead of disappearing.
-- For `send_email` / `send_sms` / `send_whatsapp`: `await` the response, parse the result, and if the provider returns non-2xx, mark the run `failed` (not `success`) and log the provider error.
-- Add a top-level `try/catch` per node so one bad node logs an error instead of killing the loop.
-
-### C. `enroll-workflow-leads` visibility
-- When a workflow has 0 matching active workflows for an event, write a `workflow_logs` row at workspace level (`event_type='no_match'`, with the event_type + folder_id) so the Diagnostics panel shows "trigger fired but no workflow matched" instead of looking dead.
-
-### D. Diagnostics panel — surface stranded enrollments
-- Add a **Stranded** badge in the Overview tab: enrollments with `status='active'` whose `last_step_at` is older than the longest delay in the canvas AND have no pending `scheduled_jobs` row. One click → "Resume now" button that re-invokes `execute-workflow` with `start_from_node=current_node_id`.
-- Add a **Resend last failed** button on each failed `workflow_runs` row.
-
-### E. Manual recovery for the existing stuck lead
-After the migration runs, immediately:
-1. Insert the missing scheduled_jobs row for enrollment `5f5c8831…` to resume at `c1` now.
-2. Add a `workflow_logs` entry explaining the recovery.
-
-## Files I'll touch
-
-| File | Change |
-|---|---|
-| `supabase/migrations/<new>.sql` | Drop bad FK, allow nullable `automation_id`, add index, backfill stuck enrollment |
-| `supabase/functions/execute-workflow/index.ts` | Error-check scheduled_jobs insert, await + verify message sends, per-node try/catch, write failure logs |
-| `supabase/functions/enroll-workflow-leads/index.ts` | Log "no_match" diagnostic event when trigger fires but no workflow matches |
-| `src/components/workflows/DiagnosticsPanel.tsx` | Add "Stranded enrollments" section + "Resume now" + "Retry failed step" buttons |
-| `src/hooks/useWorkflows.ts` | Add `useResumeEnrollment(enrollmentId, fromNodeId)` mutation |
-
-## What you should expect after this ships
-1. The stuck Webinar lead resumes within seconds (delay was 1 day → it's already overdue, so c1 fires immediately).
-2. You'll see **either** an email actually delivered to `kizzyadichie@gmail.com` **or** a clear failure row in Diagnostics → Step Runs explaining why (e.g. Resend quota, domain not verified, etc.).
-3. Future workflows with delays will properly schedule and resume via the existing `process-scheduled-jobs` cron.
-4. Diagnostics will surface any future stranded enrollments instead of you having to ask why nothing happened.
-
-Approve and I'll switch to default mode and ship the migration + engine fixes + Diagnostics upgrades in one pass.
+### Verification after deploy
+- Trigger the Webinar automation on a test lead (drop a contact into the Webinar folder).
+- Check the inbox — email should render the image header, formatted body, and CTA button cleanly.
+- Check `email_logs` for the new send — `status: sent`, no JSON in the `body` column.
