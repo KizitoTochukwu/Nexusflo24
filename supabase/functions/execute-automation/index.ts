@@ -147,6 +147,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---------- EXIT CRITERIA RE-CHECK (defense in depth) ----------
+    // When resuming from a scheduled step, re-evaluate the automation's exit
+    // criteria against the lead's CURRENT state. This catches cases where the
+    // lead met the exit signal between the time the job was scheduled and now
+    // (e.g. fireTriggers cancellation race, manual data import, etc.).
+    if (typeof start_from_step === "number") {
+      const exitCriteria = (automation.exit_criteria ?? []) as Array<Record<string, any>>;
+      if (Array.isArray(exitCriteria) && exitCriteria.length > 0) {
+        const exitHit = await evaluateExitCriteria(supabase, exitCriteria, {
+          workspaceId: workspace_id,
+          leadId: lead_id,
+          lead,
+        });
+        if (exitHit) {
+          console.log(`[execute-automation] Exit criteria matched (${exitHit}) — aborting resume for automation=${automation_id} lead=${lead_id}`);
+          await supabase.from("automation_logs").insert({
+            automation_id,
+            workspace_id,
+            lead_id,
+            event_type: `exit_criteria:${exitHit}`,
+            status: "cancelled",
+            details: { reason: "Exit criteria met on resume", criterion: exitHit, step_index: start_from_step },
+          } as any);
+          return new Response(JSON.stringify({ ok: true, exited: true, reason: exitHit }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
     // Resolve if workspace owner is admin → skip credit deduction
     const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspace_id).single();
     const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
