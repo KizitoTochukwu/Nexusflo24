@@ -140,14 +140,14 @@ async function cancelMatchingScheduledJobs(params: {
     );
     // Best-effort: log the exit in automation_logs for visibility
     const logs = cancelled.map((c) => ({
-      automation_id: c.automation_id,
+      automation_id: c.automation_id as string,
       workspace_id: workspaceId,
-      lead_id: c.lead_id,
+      lead_id: c.lead_id as string,
       event_type: `exit_criteria:${event.type}`,
       status: "cancelled",
-      details: { reason: "Exit criteria matched", event } as Record<string, unknown>,
+      details: { reason: "Exit criteria matched", event } as any,
     }));
-    supabase.from("automation_logs").insert(logs).then(({ error: logErr }) => {
+    supabase.from("automation_logs").insert(logs as any).then(({ error: logErr }) => {
       if (logErr) console.error("[cancelMatchingScheduledJobs] log error:", logErr);
     });
   }
