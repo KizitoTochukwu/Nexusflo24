@@ -4,9 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
-  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles
 } from "lucide-react";
-import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 
