@@ -8,7 +8,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
@@ -44,6 +44,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   ...(isAdmin ? [
     { icon: Zap, label: "Workflow Builder", to: `/dashboard/${workspaceId}/workflows` },
     { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
+    { icon: Sparkles, label: "Smart Actions", to: `/dashboard/${workspaceId}/admin/smart-actions` },
     { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
   ] : [])];
 
