@@ -227,7 +227,28 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
 
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
-              <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
+              {stepsLoading ? (
+                <div className="space-y-2" aria-busy="true" aria-label="Loading steps">
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                </div>
+              ) : stepsError ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Couldn't load saved steps</AlertTitle>
+                  <AlertDescription className="mt-1">
+                    {(stepsErr as Error)?.message || "We couldn't load this automation's steps. You can retry, or continue editing — note that retrying will replace any unsaved changes."}
+                  </AlertDescription>
+                  <div className="mt-3">
+                    <Button size="sm" variant="outline" onClick={() => refetchSteps()}>
+                      <RotateCcw className="mr-2 h-3.5 w-3.5" /> Retry
+                    </Button>
+                  </div>
+                </Alert>
+              ) : (
+                <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
+              )}
             </div>
 
             <ExitCriteriaEditor
