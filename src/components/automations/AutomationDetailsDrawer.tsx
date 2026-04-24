@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter, AlertTriangle, RotateCcw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   type Automation,
   TRIGGER_OPTIONS,
@@ -40,8 +42,8 @@ interface Props {
 
 export default function AutomationDetailsDrawer({ automation, open, onClose }: Props) {
   const workspaceId = useWorkspaceId();
-  const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
-  const { data: logs } = useAutomationLogs(automation?.id ?? null);
+  const { data: savedSteps, isLoading: stepsLoading, isError: stepsError, error: stepsErr, refetch: refetchSteps } = useAutomationSteps(automation?.id ?? null);
+  const { data: logs, isLoading: logsLoading, isError: logsError, error: logsErrObj, refetch: refetchLogs, isFetching: logsFetching } = useAutomationLogs(automation?.id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
   const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
@@ -225,7 +227,28 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
 
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
-              <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
+              {stepsLoading ? (
+                <div className="space-y-2" aria-busy="true" aria-label="Loading steps">
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                </div>
+              ) : stepsError ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Couldn't load saved steps</AlertTitle>
+                  <AlertDescription className="mt-1">
+                    {(stepsErr as Error)?.message || "We couldn't load this automation's steps. You can retry, or continue editing — note that retrying will replace any unsaved changes."}
+                  </AlertDescription>
+                  <div className="mt-3">
+                    <Button size="sm" variant="outline" onClick={() => refetchSteps()}>
+                      <RotateCcw className="mr-2 h-3.5 w-3.5" /> Retry
+                    </Button>
+                  </div>
+                </Alert>
+              ) : (
+                <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
+              )}
             </div>
 
             <ExitCriteriaEditor
@@ -337,7 +360,32 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               ))}
             </div>
 
-            {(() => {
+            {logsLoading ? (
+              <div className="rounded-lg border bg-card p-4 space-y-3" aria-busy="true" aria-label="Loading logs">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-4 flex-1" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : logsError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Couldn't load logs</AlertTitle>
+                <AlertDescription className="mt-1">
+                  {(logsErrObj as Error)?.message || "Failed to load execution logs."}
+                </AlertDescription>
+                <div className="mt-3">
+                  <Button size="sm" variant="outline" onClick={() => refetchLogs()} disabled={logsFetching}>
+                    <RotateCcw className={`mr-2 h-3.5 w-3.5 ${logsFetching ? "animate-spin" : ""}`} />
+                    {logsFetching ? "Retrying…" : "Retry"}
+                  </Button>
+                </div>
+              </Alert>
+            ) : (() => {
               const filtered = (logs ?? []).filter((log) => {
                 if (logsFilter === "exit") return log.event_type.startsWith("exit_criteria:");
                 if (logsFilter === "errors") return log.status === "failed" || log.status === "cancelled";
