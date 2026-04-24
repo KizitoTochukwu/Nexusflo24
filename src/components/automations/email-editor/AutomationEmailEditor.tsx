@@ -163,6 +163,8 @@ export default function AutomationEmailEditor({
     }
   }, [isEmail, subject, message, testEmail, workspaceId, templateSettings]);
 
+  const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
+
   // For email, determine the HTML to preview (blocks → HTML or legacy)
   const getEmailHtml = useCallback(() => {
     const blocks = parseBlocksFromMessage(message);
