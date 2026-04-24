@@ -262,7 +262,18 @@ Deno.serve(async (req) => {
                 const creditChannel = actionType === "send_email" ? "email" : actionType === "send_sms" ? "sms" : "whatsapp";
                 const creditResult = await deductCredit(workspace_id, creditChannel as any, `automation:${automation_id}`);
                 if (!creditResult.allowed) {
-                  throw new Error(creditResult.error || `Insufficient ${creditChannel} credits`);
+                  // Mark this step as insufficient_credits so the UI can surface a friendly
+                  // "Top up credits" CTA instead of a generic red error.
+                  status = "insufficient_credits";
+                  details = {
+                    channel: creditChannel,
+                    remaining: creditResult.remaining ?? 0,
+                    error: creditResult.error || `Insufficient ${creditChannel} credits`,
+                    message: `Out of ${creditChannel} credits — top up in Settings → Usage to resume.`,
+                  };
+                  // Skip the actual send for this step but DO NOT halt the whole sequence;
+                  // the next step (e.g. another channel or a delay) should still run.
+                  break;
                 }
               }
             }

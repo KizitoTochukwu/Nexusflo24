@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter, AlertTriangle, RotateCcw } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter, AlertTriangle, RotateCcw, Wallet } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -386,84 +387,137 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 </div>
               </Alert>
             ) : (() => {
+              const insufficientCreditChannels = Array.from(
+                new Set(
+                  (logs ?? [])
+                    .filter((l) => l.status === "insufficient_credits")
+                    .map((l) => (l.details as any)?.channel)
+                    .filter(Boolean)
+                )
+              ) as string[];
+
               const filtered = (logs ?? []).filter((log) => {
                 if (logsFilter === "exit") return log.event_type.startsWith("exit_criteria:");
-                if (logsFilter === "errors") return log.status === "failed" || log.status === "cancelled";
+                if (logsFilter === "errors")
+                  return log.status === "failed" || log.status === "cancelled" || log.status === "insufficient_credits";
                 return true;
               });
+              const creditBanner = insufficientCreditChannels.length > 0 ? (
+                <Alert className="border-amber-300 bg-amber-50">
+                  <Wallet className="h-4 w-4 text-amber-700" />
+                  <AlertTitle className="text-amber-900">
+                    Out of {insufficientCreditChannels.join(" & ")} credits
+                  </AlertTitle>
+                  <AlertDescription className="mt-1 text-amber-800">
+                    Some {insufficientCreditChannels.join(" / ")} steps were skipped because the workspace has no credits left for that channel. Top up to resume sending — the automation will pick those steps up automatically on the next run.
+                  </AlertDescription>
+                  <div className="mt-3">
+                    <Button asChild size="sm" variant="outline" className="border-amber-300 bg-white hover:bg-amber-100">
+                      <Link to={`/dashboard/${workspaceId}/settings?tab=usage`}>
+                        <Wallet className="mr-2 h-3.5 w-3.5" /> Top up credits
+                      </Link>
+                    </Button>
+                  </div>
+                </Alert>
+              ) : null;
+
               if (!filtered.length) {
                 return (
-                  <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
-                    {logsFilter === "all"
-                      ? "No execution logs yet. Simulate or activate this automation to see logs."
-                      : "No logs match this filter."}
-                  </div>
+                  <>
+                    {creditBanner}
+                    <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
+                      {logsFilter === "all"
+                        ? "No execution logs yet. Simulate or activate this automation to see logs."
+                        : "No logs match this filter."}
+                    </div>
+                  </>
                 );
               }
               return (
-                <div className="rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Event</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Details</TableHead>
-                        <TableHead>Time</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filtered.map((log) => {
-                        const isExit = log.event_type.startsWith("exit_criteria:");
-                        return (
-                          <TableRow key={log.id} className={isExit ? "bg-rose-50/40" : undefined}>
-                            <TableCell className="font-medium text-sm">
-                              <div className="flex items-center gap-1.5">
-                                {isExit && <DoorOpen className="h-3.5 w-3.5 text-rose-600" />}
-                                {log.event_type}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {log.status === "success" ? (
-                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-                                  <CheckCircle2 className="h-3 w-3" /> Success
-                                </Badge>
-                              ) : log.status === "scheduled" ? (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
-                                  <Clock className="h-3 w-3" /> Scheduled
-                                </Badge>
-                              ) : log.status === "skipped" || log.status === "condition_failed" ? (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
-                                  <Clock className="h-3 w-3" /> {log.status === "condition_failed" ? "Condition Failed" : "Skipped"}
-                                </Badge>
-                              ) : log.status === "completed" ? (
-                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-                                  <CheckCircle2 className="h-3 w-3" /> Completed
-                                </Badge>
-                              ) : log.status === "cancelled" ? (
-                                <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 gap-1">
-                                  <DoorOpen className="h-3 w-3" /> Exited
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1">
-                                  <XCircle className="h-3 w-3" /> Failed
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
-                              {JSON.stringify(log.details)}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {format(new Date(log.created_at), "MMM d, HH:mm")}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                <>
+                  {creditBanner}
+                  <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Event</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Details</TableHead>
+                          <TableHead>Time</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filtered.map((log) => {
+                          const isExit = log.event_type.startsWith("exit_criteria:");
+                          const isInsufficient = log.status === "insufficient_credits";
+                          const channel = (log.details as any)?.channel as string | undefined;
+                          return (
+                            <TableRow
+                              key={log.id}
+                              className={
+                                isExit
+                                  ? "bg-rose-50/40"
+                                  : isInsufficient
+                                    ? "bg-amber-50/50"
+                                    : undefined
+                              }
+                            >
+                              <TableCell className="font-medium text-sm">
+                                <div className="flex items-center gap-1.5">
+                                  {isExit && <DoorOpen className="h-3.5 w-3.5 text-rose-600" />}
+                                  {isInsufficient && <Wallet className="h-3.5 w-3.5 text-amber-700" />}
+                                  {log.event_type}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {log.status === "success" ? (
+                                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
+                                    <CheckCircle2 className="h-3 w-3" /> Success
+                                  </Badge>
+                                ) : log.status === "scheduled" ? (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
+                                    <Clock className="h-3 w-3" /> Scheduled
+                                  </Badge>
+                                ) : log.status === "skipped" || log.status === "condition_failed" ? (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
+                                    <Clock className="h-3 w-3" /> {log.status === "condition_failed" ? "Condition Failed" : "Skipped"}
+                                  </Badge>
+                                ) : log.status === "completed" ? (
+                                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
+                                    <CheckCircle2 className="h-3 w-3" /> Completed
+                                  </Badge>
+                                ) : log.status === "cancelled" ? (
+                                  <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 gap-1">
+                                    <DoorOpen className="h-3 w-3" /> Exited
+                                  </Badge>
+                                ) : isInsufficient ? (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 gap-1">
+                                    <Wallet className="h-3 w-3" /> Out of {channel || "credits"}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1">
+                                    <XCircle className="h-3 w-3" /> Failed
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
+                                {isInsufficient
+                                  ? ((log.details as any)?.message || `Out of ${channel || "channel"} credits — top up to resume.`)
+                                  : JSON.stringify(log.details)}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {format(new Date(log.created_at), "MMM d, HH:mm")}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               );
             })()}
           </TabsContent>
