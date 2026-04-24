@@ -46,6 +46,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const workspaceId = useWorkspaceId();
   const { data: savedSteps, isLoading: stepsLoading, isError: stepsError, error: stepsErr, refetch: refetchSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs, isLoading: logsLoading, isError: logsError, error: logsErrObj, refetch: refetchLogs, isFetching: logsFetching } = useAutomationLogs(automation?.id ?? null);
+  const { data: emailDeliveries } = useAutomationEmailDeliveries(automation?.id ?? null, automation?.workspace_id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
   const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
