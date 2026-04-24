@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
         workspace_id: workspaceId,
         to_email: to,
         from_email: fromEmail,
-        subject,
+        subject: isPreview ? `[TEST] ${subject}` : subject,
         direction: "outbound",
         status: "sent",
         provider_message_id: result.messageId,
