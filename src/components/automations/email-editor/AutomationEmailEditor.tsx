@@ -122,19 +122,25 @@ export default function AutomationEmailEditor({
     return message;
   }, [message]);
 
-  // One-time migration: if a legacy SMS/WhatsApp step was saved as HTML,
-  // convert it back to plain text on first render so the user can edit it
-  // cleanly and the next save persists the plain version.
+  // One-time migration: if a legacy SMS/WhatsApp step was saved as HTML
+  // (from the old contentEditable editor), convert it back to plain text the
+  // first time we see HTML content so the user can edit it cleanly and the
+  // next save persists the plain version. We watch `message` because the
+  // parent often hydrates it asynchronously after mount — gating only on
+  // mount would miss the real value.
   const didMigrateRef = useRef(false);
   useEffect(() => {
     if (isEmail || didMigrateRef.current) return;
-    if (!message) { didMigrateRef.current = true; return; }
-    if (!/[<&][a-zA-Z\/!#]/.test(message)) { didMigrateRef.current = true; return; }
+    if (!message) return; // wait for the parent to hydrate the value
+    if (!/<\/?[a-zA-Z][^>]*>/.test(message) && !/&[a-z#0-9]+;/i.test(message)) {
+      // No HTML markup or entities — already plain text. Mark done.
+      didMigrateRef.current = true;
+      return;
+    }
     const plain = legacyHtmlToPlain(message);
-    if (plain !== message) onMessageChange(plain);
     didMigrateRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEmail]);
+    if (plain && plain !== message) onMessageChange(plain);
+  }, [isEmail, message, onMessageChange]);
 
   // Insert text at the current cursor position in the textarea.
   const insertAtCursor = useCallback((text: string) => {
