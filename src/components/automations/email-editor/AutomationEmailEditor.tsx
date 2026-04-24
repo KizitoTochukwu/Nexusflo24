@@ -24,6 +24,8 @@ import { toast } from "sonner";
 
 interface AutomationEmailEditorProps {
   isEmail: boolean;
+  /** Optional explicit channel — defaults to "email" when isEmail, else "sms". */
+  channel?: "email" | "sms" | "whatsapp";
   subject: string;
   message: string;
   onSubjectChange: (v: string) => void;
