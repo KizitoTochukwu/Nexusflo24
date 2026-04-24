@@ -518,10 +518,57 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
-                                {isInsufficient
-                                  ? ((log.details as any)?.message || `Out of ${channel || "channel"} credits — top up to resume.`)
-                                  : JSON.stringify(log.details)}
+                              <TableCell className="text-xs text-muted-foreground max-w-[320px]">
+                                {isEmailAction ? (
+                                  <div className="space-y-1">
+                                    {delivery ? (
+                                      delivery.status === "sent" ? (
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px]">
+                                            <Mail className="h-3 w-3" /> Delivered to provider
+                                          </Badge>
+                                          <span className="text-foreground/80 truncate max-w-[200px]" title={delivery.to_email}>
+                                            {delivery.to_email}
+                                          </span>
+                                          {delivery.provider_message_id && (
+                                            <button
+                                              type="button"
+                                              className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigator.clipboard.writeText(delivery.provider_message_id!);
+                                                toast.success("Message ID copied");
+                                              }}
+                                              title={delivery.provider_message_id}
+                                            >
+                                              <Copy className="h-2.5 w-2.5" />
+                                              {delivery.provider_message_id.slice(0, 8)}…
+                                            </button>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1 text-[10px]">
+                                            <XCircle className="h-3 w-3" /> Delivery failed
+                                          </Badge>
+                                          <span className="text-red-700/90 truncate max-w-[220px]" title={delivery.error || ""}>
+                                            {delivery.error || "Provider rejected the email."}
+                                          </span>
+                                        </div>
+                                      )
+                                    ) : (
+                                      <Badge variant="outline" className="bg-muted text-muted-foreground border-border gap-1 text-[10px]">
+                                        <Clock className="h-3 w-3" /> Awaiting provider log
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : isInsufficient ? (
+                                  <span className="block truncate">
+                                    {(log.details as any)?.message || `Out of ${channel || "channel"} credits — top up to resume.`}
+                                  </span>
+                                ) : (
+                                  <span className="block truncate">{JSON.stringify(log.details)}</span>
+                                )}
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">
                                 <div className="flex items-center gap-1">
