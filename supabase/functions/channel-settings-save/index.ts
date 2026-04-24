@@ -7,7 +7,7 @@ const corsHeaders = {
 
 async function encrypt(plaintext: string, keyHex: string): Promise<string> {
   const keyBytes = hexToBytes(keyHex.slice(0, 64));
-  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["encrypt"]);
+  const key = await crypto.subtle.importKey("raw", keyBytes as BufferSource, "AES-GCM", false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(plaintext);
   const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);

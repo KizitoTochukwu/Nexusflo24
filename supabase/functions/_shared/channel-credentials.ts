@@ -17,7 +17,7 @@ function base64ToBytes(b64: string): Uint8Array {
 
 async function decrypt(cipherB64: string, keyHex: string): Promise<string> {
   const keyBytes = hexToBytes(keyHex.slice(0, 64));
-  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
+  const key = await crypto.subtle.importKey("raw", keyBytes as BufferSource, "AES-GCM", false, ["decrypt"]);
   const combined = base64ToBytes(cipherB64);
   const iv = combined.slice(0, 12);
   const ciphertext = combined.slice(12);

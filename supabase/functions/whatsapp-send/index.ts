@@ -102,7 +102,7 @@ async function sendWhatsAppMessage(
 
 /** Check if the 24-hour conversation window is open for a given phone number */
 async function isWindowOpen(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   workspaceId: string,
   phoneNumber: string,
 ): Promise<boolean> {
@@ -117,7 +117,7 @@ async function isWindowOpen(
     .gte("created_at", twentyFourHoursAgo)
     .limit(1);
 
-  return (data && data.length > 0);
+  return Boolean(data && data.length > 0);
 }
 
 Deno.serve(async (req) => {
