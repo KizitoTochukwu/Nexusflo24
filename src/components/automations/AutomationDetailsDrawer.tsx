@@ -467,6 +467,8 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                           const isExit = log.event_type.startsWith("exit_criteria:");
                           const isInsufficient = log.status === "insufficient_credits";
                           const channel = (log.details as any)?.channel as string | undefined;
+                          const isEmailAction = log.event_type === "action:send_email";
+                          const delivery = isEmailAction && log.lead_id ? emailDeliveries?.get(log.lead_id) : undefined;
                           return (
                             <TableRow
                               key={log.id}
