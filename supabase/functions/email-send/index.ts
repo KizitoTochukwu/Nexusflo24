@@ -61,10 +61,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits — only skip if service-role + skipCredits + workspace owner is admin
+    // Preview / test sends: skip credits + tracking + recipient-side rewriting.
+    // These are user-initiated tests from the editor (not service-role driven),
+    // and we still log them to email_logs for visibility.
+    const isPreview = templateSettings && (templateSettings as any).preview === true;
+
+    // Check and deduct credits — only skip if (a) preview, or
+    // (b) service-role + skipCredits + workspace owner is admin
     const skipCredits = body.skipCredits;
-    let shouldDeductCredits = true;
-    if (isServiceRole && skipCredits) {
+    let shouldDeductCredits = !isPreview;
+    if (shouldDeductCredits && isServiceRole && skipCredits) {
       const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
       if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
         shouldDeductCredits = false;
