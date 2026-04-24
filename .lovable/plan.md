@@ -1,68 +1,48 @@
-## Diagnosis
+## Goal
 
-WhatsApp delivery is **not broken**. The Meta integration is working — earlier today (14:31 UTC) the same automation successfully sent three WhatsApp messages from this workspace with `credentialSource: workspace` and real `wamid` IDs returned by Meta.
+Upgrade every pop-up notification across NexusFlo24 (toasts from `sonner` and the legacy Radix `useToast`) to a premium, on-brand visual style — without touching the ~50 files that call `toast(...)`. All upgrades happen in the two Toaster shells and the toast primitive, so existing `toast.success(...)`, `toast.error(...)`, and `toast({ title, description })` calls automatically inherit the new look.
 
-What changed: the workspace has **run out of WhatsApp credits** (and SMS credits).
+## Visual direction
 
-### Evidence from the database
+Premium SaaS feel aligned with the navy + gold brand:
 
-`message_credits` row for the active workspace `95bc7e99-798e-49ef-a5c3-ab68bbc08950`:
-- `email_balance: 500` ✅
-- `sms_balance: 0` ❌
-- `whatsapp_balance: 0` ❌
+- **Surface**: white/elevated card with a subtle gradient (`from-card to-surface`), 1px hairline border, soft layered shadow, 14px radius, generous padding.
+- **Accent rail**: a 3px colored bar on the left edge per toast type (success = emerald, error = destructive red, warning = gold/accent, info = navy, default = gold).
+- **Icon chip**: 36×36 rounded-lg tinted background (e.g. `bg-emerald-500/10 text-emerald-600`) with a Lucide icon (CheckCircle2, AlertTriangle, XCircle, Info, Sparkles) — replaces Sonner's default flat icon.
+- **Typography**: `text-sm font-semibold` title in primary navy, `text-xs text-muted-foreground` description with relaxed leading.
+- **Close button**: ghost X, `opacity-0 group-hover:opacity-100`, top-right, smooth fade.
+- **Action button**: navy primary with gold hover ring; cancel button is muted ghost.
+- **Motion**: slide-in from the right + fade + slight scale (200ms ease-out), slide-out + fade on dismiss. Uses existing tailwind keyframes.
+- **Position**: bottom-right on desktop (Sonner default), top on mobile, with `gap-3` between stacked toasts and `expand` enabled so multiple toasts feel like a stack of premium cards instead of a single collapsing pile.
+- **Dark mode**: respects existing tokens (no hardcoded colors except the per-type tints, which use Tailwind palette with `/10` and `/20` opacity for tints that work on both themes).
 
-Most recent `automation_logs` for this run:
-```
-action:send_email     → success
-action:send_whatsapp  → error  "Insufficient whatsapp credits. Buy more in Settings → Usage."
-action:send_sms       → error  "Insufficient sms credits. Buy more in Settings → Usage."
-```
+## Files to change (3 total)
 
-The credit check in `execute-automation/index.ts` (line 261-267) calls `deductCredit()` *before* the WhatsApp HTTP call. With balance at 0 it throws and the step is logged as `error`. The WhatsApp Cloud API is never contacted, which is why there's no entry in `whatsapp_messages` and no error in the `whatsapp-send` edge logs.
+1. **`src/components/ui/sonner.tsx`** — main upgrade. Configure `<Sonner />` with:
+   - `position="bottom-right"`, `expand`, `richColors={false}` (we draw our own), `closeButton`, `duration={4500}`, `gap={12}`, `offset={24}`.
+   - `toastOptions.classNames` rewritten with the premium card styling above (gradient bg, hairline border, layered shadow, accent rail via `before:` pseudo-element, padded layout).
+   - Per-variant classNames (`success`, `error`, `warning`, `info`) override the rail color and icon-chip tint.
+   - Custom `icons={{ success: <CheckCircle2/>, error: <XCircle/>, warning: <AlertTriangle/>, info: <Info/> }}` rendered inside a tinted chip wrapper.
 
-### Why earlier WhatsApp sends worked
+2. **`src/components/ui/toast.tsx`** (Radix) — restyle to match Sonner so the few legacy `useToast()` callers look identical:
+   - Update `toastVariants` base classes to the same gradient card + hairline + layered shadow + accent rail.
+   - Add `success` and `warning` variants alongside `default` and `destructive`.
+   - Tighten padding (`p-4 pr-10`), refine title/description sizes, and make `ToastClose` always-visible-on-hover with the fade pattern.
+   - Move `ToastViewport` to bottom-right on desktop (`sm:bottom-4 sm:right-4`) with a max-width and `gap-3` stacking.
 
-The Plus plan only includes 100 WhatsApp credits/month. Looking at `automation_logs` for today, the user has already burned through them on previous runs (3 successful WhatsApp sends in one run alone, plus likely many more across the test sessions).
+3. **`src/components/ui/toaster.tsx`** — small tweak: render the icon chip + content in a flex layout so legacy toasts get the same icon treatment when a `variant` is passed.
 
-## Fix
+## What is NOT changing
 
-Two parts: top up the workspace immediately (so the user can verify it works), and improve the engine so credit-exhaustion is reported clearly instead of looking like a "WhatsApp broken" failure.
+- No call-site edits. All existing `toast.success("...")`, `toast.error(...)`, `toast({ title, description, variant: "destructive" })` invocations keep working and automatically pick up the new look.
+- `NotificationBell` (in-app notification center) is a separate Popover, not a pop-up toast — out of scope unless you want it included.
+- `BillingWarningBanner` / `FreePlanBanner` are inline banners, not toasts — out of scope.
 
-### 1. Top up credits for the affected workspace
+## Acceptance check
 
-Add a one-off credit grant via migration:
-- `+200 whatsapp` credits
-- `+200 sms` credits
-- Logged in `credit_transactions` with reason `manual_topup`
+After implementation, trigger a toast on three known surfaces to verify:
+- Login error (Login.tsx → `toast.error`)
+- Save success in Settings → ChannelSettingsTab (Sonner success)
+- Legacy `useToast` path in CSV import dialog (Radix variant)
 
-This unblocks the user immediately so they can confirm the automation fires end-to-end.
-
-### 2. Distinguish "no credits" from "send failed" in the automation engine
-
-In `supabase/functions/execute-automation/index.ts`:
-
-- Wrap the `deductCredit()` call so when `allowed: false`, the step is logged with `event_type: action:send_whatsapp` and a dedicated `status: insufficient_credits` (instead of the generic `error`). Same for `send_sms` and `send_email`.
-- Include the channel and remaining balance in `details` so the UI can render a friendly "Top up credits" CTA instead of a red error chip.
-
-### 3. Surface low-credit warnings in the Automation Details drawer
-
-In `src/components/automations/AutomationDetailsDrawer.tsx` (Logs tab):
-- When a log row has `status: insufficient_credits`, render an amber alert with the channel name and a "Top up in Settings → Usage" link button (route: `/dashboard/:workspaceId/settings?tab=usage`) instead of the generic red error icon.
-- Add a one-line banner at the top of the Logs tab if any recent step failed with `insufficient_credits`, explaining the automation will resume sending on that channel as soon as credits are available.
-
-### 4. Pre-flight credit check on automation activation (optional polish)
-
-In `useAutomations` (or the `Activate` mutation), before flipping `status` to `active`, fetch the workspace's `message_credits` and warn (toast) if any channel used by the automation's steps has 0 balance. This prevents the user from launching a workflow that's guaranteed to fail mid-flight.
-
-## Files to change
-
-- `supabase/migrations/<new>_topup_workspace_credits.sql` — credit grant + transaction log
-- `supabase/functions/execute-automation/index.ts` — split credit-exhaustion from generic errors
-- `src/components/automations/AutomationDetailsDrawer.tsx` — friendly insufficient-credits UI in Logs tab
-- `src/hooks/useAutomations.ts` — optional pre-flight credit warning on activation
-
-## What the user will see after the fix
-
-1. The current workflow run resumes — next WhatsApp step in the schedule will fire successfully (credits restored).
-2. If credits ever run out again, the Logs tab shows a clear "Out of WhatsApp credits — top up to resume" message with a direct link, instead of looking like the WhatsApp integration is broken.
-3. Activating an automation with a channel at 0 credits shows a warning toast.
+All three should render with the new premium card, accent rail, tinted icon chip, and bottom-right slide-in animation.
