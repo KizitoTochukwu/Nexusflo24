@@ -473,7 +473,7 @@ Deno.serve(async (req) => {
                 .eq("lead_id", lead_id)
                 .eq("direction", "inbound")
                 .limit(1);
-              const hasReply = (replies && replies.length > 0);
+              const hasReply: boolean = !!(replies && replies.length > 0);
 
               if (conditionType === "reply_status") {
                 const targetStage = hasReply
@@ -503,9 +503,24 @@ Deno.serve(async (req) => {
               else if (config.operator === "not_has_tag") passed = !(lead.tags || []).includes(value);
             }
 
-            if (!passed) skipRemaining = true;
+            // Conditions are branching/wait points, NOT gates.
+            // A failed condition (e.g. "link_clicked has_happened" right after
+            // sending the email) must NOT halt the rest of the automation —
+            // subsequent steps (delays, follow-up emails, SMS, WhatsApp,
+            // tag updates, status changes) must still run. The condition's
+            // result is logged for analytics + smart-action branching, but
+            // the sequence always continues.
+            //
+            // Exception: legacy halting behavior is preserved ONLY when the
+            // step config explicitly opts in via `halt_on_fail: true` — this
+            // keeps backwards compatibility for users who deliberately built
+            // gate-style conditions.
+            if (!passed && config.halt_on_fail === true) {
+              skipRemaining = true;
+            }
             details = { conditionType: conditionType || config.field, operator, value, value_to: valueTo, time_window_days: timeWindowDays, passed };
-            status = passed ? "success" : "condition_failed";
+            // Use distinct statuses so logs remain meaningful, but neither halts the flow by default.
+            status = passed ? "success" : "condition_not_met";
             break;
           }
 
