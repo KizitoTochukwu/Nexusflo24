@@ -403,6 +403,13 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 if (logsFilter === "exit") return log.event_type.startsWith("exit_criteria:");
                 if (logsFilter === "errors")
                   return log.status === "failed" || log.status === "cancelled" || log.status === "insufficient_credits";
+                if (logsFilter === "email_issues") {
+                  if (log.event_type !== "action:send_email") return false;
+                  if (log.status !== "success") return true;
+                  if (!log.lead_id) return false;
+                  const d = emailDeliveries?.get(log.lead_id);
+                  return !d || d.status !== "sent" || !!d.error;
+                }
                 return true;
               });
               const creditBanner = insufficientCreditChannels.length > 0 ? (
