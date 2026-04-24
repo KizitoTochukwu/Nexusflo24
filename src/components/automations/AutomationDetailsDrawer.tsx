@@ -63,7 +63,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const [testLeadId, setTestLeadId] = useState<string>("");
   const [testCriterionIdx, setTestCriterionIdx] = useState<string>("0");
   const [testRunning, setTestRunning] = useState(false);
-  const [logsFilter, setLogsFilter] = useState<"all" | "exit" | "errors">("all");
+  const [logsFilter, setLogsFilter] = useState<"all" | "exit" | "errors" | "email_issues">("all");
   const { data: leads } = useLeads(workspaceId);
   const qc = useQueryClient();
 
