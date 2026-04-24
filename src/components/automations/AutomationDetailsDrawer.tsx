@@ -387,9 +387,19 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 </div>
               </Alert>
             ) : (() => {
+              const insufficientCreditChannels = Array.from(
+                new Set(
+                  (logs ?? [])
+                    .filter((l) => l.status === "insufficient_credits")
+                    .map((l) => (l.details as any)?.channel)
+                    .filter(Boolean)
+                )
+              ) as string[];
+
               const filtered = (logs ?? []).filter((log) => {
                 if (logsFilter === "exit") return log.event_type.startsWith("exit_criteria:");
-                if (logsFilter === "errors") return log.status === "failed" || log.status === "cancelled";
+                if (logsFilter === "errors")
+                  return log.status === "failed" || log.status === "cancelled" || log.status === "insufficient_credits";
                 return true;
               });
               if (!filtered.length) {
