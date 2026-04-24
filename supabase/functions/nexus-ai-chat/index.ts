@@ -37,9 +37,9 @@ When a visitor asks to speak with a human, connect with a real person, talk to s
 4. Encourage them to share their name and email if they haven't already, so the team can follow up.`;
 
 async function resolveWorkspace(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: any,
   workspaceId?: string | null,
-) {
+): Promise<{ id: string; owner_user_id: string } | null> {
   if (workspaceId) {
     const { data } = await adminClient
       .from("workspaces")
