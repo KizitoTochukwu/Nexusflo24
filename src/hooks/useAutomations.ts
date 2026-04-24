@@ -315,6 +315,69 @@ export function useAutomationLogs(automationId: string | null) {
   });
 }
 
+export type EmailDelivery = {
+  id: string;
+  lead_id: string | null;
+  to_email: string;
+  status: string;
+  error: string | null;
+  provider_message_id: string | null;
+  subject: string | null;
+  created_at: string;
+};
+
+/**
+ * Fetch recent outbound email_logs rows for the leads that have run through
+ * this automation. Returned as a Map<lead_id, latest EmailDelivery> so the
+ * Logs UI can correlate each `action:send_email` row with the actual provider
+ * delivery status (sent / failed / queued) without N+1 queries.
+ */
+export function useAutomationEmailDeliveries(
+  automationId: string | null,
+  workspaceId: string | null,
+) {
+  return useQuery({
+    queryKey: ["automation-email-deliveries", automationId, workspaceId],
+    queryFn: async () => {
+      const map = new Map<string, EmailDelivery>();
+      if (!automationId || !workspaceId) return map;
+      // Look at automation_logs first to figure out which leads are relevant.
+      const { data: leadRows, error: leadErr } = await supabase
+        .from("automation_logs")
+        .select("lead_id")
+        .eq("automation_id", automationId)
+        .not("lead_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (leadErr) throw leadErr;
+      const leadIds = Array.from(
+        new Set((leadRows ?? []).map((r: any) => r.lead_id).filter(Boolean)),
+      );
+      if (leadIds.length === 0) return map;
+
+      const { data, error } = await supabase
+        .from("email_logs")
+        .select("id, lead_id, to_email, status, error, provider_message_id, subject, created_at")
+        .eq("workspace_id", workspaceId)
+        .eq("direction", "outbound")
+        .in("lead_id", leadIds)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+
+      // Keep newest row per lead.
+      for (const row of (data ?? []) as any[]) {
+        if (!row.lead_id) continue;
+        if (!map.has(row.lead_id)) {
+          map.set(row.lead_id, row as EmailDelivery);
+        }
+      }
+      return map;
+    },
+    enabled: !!automationId && !!workspaceId,
+  });
+}
+
 export function useCreateAutomation() {
   const qc = useQueryClient();
   const { user } = useAuth();

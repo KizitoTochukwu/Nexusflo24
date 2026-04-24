@@ -61,10 +61,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits — only skip if service-role + skipCredits + workspace owner is admin
+    // Preview / test sends: skip credits + tracking + recipient-side rewriting.
+    // These are user-initiated tests from the editor (not service-role driven),
+    // and we still log them to email_logs for visibility.
+    const isPreview = templateSettings && (templateSettings as any).preview === true;
+
+    // Check and deduct credits — only skip if (a) preview, or
+    // (b) service-role + skipCredits + workspace owner is admin
     const skipCredits = body.skipCredits;
-    let shouldDeductCredits = true;
-    if (isServiceRole && skipCredits) {
+    let shouldDeductCredits = !isPreview;
+    if (shouldDeductCredits && isServiceRole && skipCredits) {
       const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
       if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
         shouldDeductCredits = false;
@@ -116,7 +122,7 @@ Deno.serve(async (req) => {
       unsubUrl,
     });
 
-    if (leadId && workspaceId) {
+    if (leadId && workspaceId && !isPreview) {
       // Rewrite <a href="..."> links to go through track-click
       trackedHtml = trackedHtml.replace(
         /<a\s+([^>]*?)href=["']([^"']+)["']([^>]*?)>/gi,
@@ -141,8 +147,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    const finalSubject = isPreview ? `[TEST] ${subject}` : subject;
     const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
-    const result = await sendResend(apiKey, from, to, subject, trackedHtml, replyTo);
+    const result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
 
     // Log outbound email
     try {
@@ -150,7 +157,7 @@ Deno.serve(async (req) => {
         workspace_id: workspaceId,
         to_email: to,
         from_email: fromEmail,
-        subject,
+        subject: isPreview ? `[TEST] ${subject}` : subject,
         direction: "outbound",
         status: "sent",
         provider_message_id: result.messageId,

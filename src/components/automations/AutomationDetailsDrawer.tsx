@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter, AlertTriangle, RotateCcw, Wallet } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter, AlertTriangle, RotateCcw, Wallet, Mail, Copy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,6 +15,7 @@ import {
   TRIGGER_OPTIONS,
   useAutomationSteps,
   useAutomationLogs,
+  useAutomationEmailDeliveries,
   useUpdateAutomation,
   useSimulateAutomation,
 } from "@/hooks/useAutomations";
@@ -45,6 +46,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const workspaceId = useWorkspaceId();
   const { data: savedSteps, isLoading: stepsLoading, isError: stepsError, error: stepsErr, refetch: refetchSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs, isLoading: logsLoading, isError: logsError, error: logsErrObj, refetch: refetchLogs, isFetching: logsFetching } = useAutomationLogs(automation?.id ?? null);
+  const { data: emailDeliveries } = useAutomationEmailDeliveries(automation?.id ?? null, automation?.workspace_id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
   const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
@@ -61,7 +63,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const [testLeadId, setTestLeadId] = useState<string>("");
   const [testCriterionIdx, setTestCriterionIdx] = useState<string>("0");
   const [testRunning, setTestRunning] = useState(false);
-  const [logsFilter, setLogsFilter] = useState<"all" | "exit" | "errors">("all");
+  const [logsFilter, setLogsFilter] = useState<"all" | "exit" | "errors" | "email_issues">("all");
   const { data: leads } = useLeads(workspaceId);
   const qc = useQueryClient();
 
@@ -347,6 +349,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 { v: "all", label: "All events" },
                 { v: "exit", label: "Exit criteria" },
                 { v: "errors", label: "Errors only" },
+                { v: "email_issues", label: "Email issues" },
               ] as const).map((f) => (
                 <Button
                   key={f.v}
@@ -400,6 +403,13 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 if (logsFilter === "exit") return log.event_type.startsWith("exit_criteria:");
                 if (logsFilter === "errors")
                   return log.status === "failed" || log.status === "cancelled" || log.status === "insufficient_credits";
+                if (logsFilter === "email_issues") {
+                  if (log.event_type !== "action:send_email") return false;
+                  if (log.status !== "success") return true;
+                  if (!log.lead_id) return false;
+                  const d = emailDeliveries?.get(log.lead_id);
+                  return !d || d.status !== "sent" || !!d.error;
+                }
                 return true;
               });
               const creditBanner = insufficientCreditChannels.length > 0 ? (
@@ -436,6 +446,12 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               return (
                 <>
                   {creditBanner}
+                  <div className="flex items-start gap-2 rounded-md border border-blue-100 bg-blue-50/50 p-2 text-[11px] text-blue-900/80">
+                    <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-700" />
+                    <span>
+                      <strong>Delivered to provider</strong> = Resend accepted the email. If a recipient says it didn't arrive, ask them to check spam — bounces and inbox placement happen after our hand-off. Use <strong>Send test</strong> in the email step editor to verify deliverability without waiting for a trigger.
+                    </span>
+                  </div>
                   <div className="rounded-lg border">
                     <Table>
                       <TableHeader>
@@ -451,6 +467,8 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                           const isExit = log.event_type.startsWith("exit_criteria:");
                           const isInsufficient = log.status === "insufficient_credits";
                           const channel = (log.details as any)?.channel as string | undefined;
+                          const isEmailAction = log.event_type === "action:send_email";
+                          const delivery = isEmailAction && log.lead_id ? emailDeliveries?.get(log.lead_id) : undefined;
                           return (
                             <TableRow
                               key={log.id}
@@ -500,10 +518,57 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
-                                {isInsufficient
-                                  ? ((log.details as any)?.message || `Out of ${channel || "channel"} credits — top up to resume.`)
-                                  : JSON.stringify(log.details)}
+                              <TableCell className="text-xs text-muted-foreground max-w-[320px]">
+                                {isEmailAction ? (
+                                  <div className="space-y-1">
+                                    {delivery ? (
+                                      delivery.status === "sent" ? (
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px]">
+                                            <Mail className="h-3 w-3" /> Delivered to provider
+                                          </Badge>
+                                          <span className="text-foreground/80 truncate max-w-[200px]" title={delivery.to_email}>
+                                            {delivery.to_email}
+                                          </span>
+                                          {delivery.provider_message_id && (
+                                            <button
+                                              type="button"
+                                              className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigator.clipboard.writeText(delivery.provider_message_id!);
+                                                toast.success("Message ID copied");
+                                              }}
+                                              title={delivery.provider_message_id}
+                                            >
+                                              <Copy className="h-2.5 w-2.5" />
+                                              {delivery.provider_message_id.slice(0, 8)}…
+                                            </button>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 gap-1 text-[10px]">
+                                            <XCircle className="h-3 w-3" /> Delivery failed
+                                          </Badge>
+                                          <span className="text-red-700/90 truncate max-w-[220px]" title={delivery.error || ""}>
+                                            {delivery.error || "Provider rejected the email."}
+                                          </span>
+                                        </div>
+                                      )
+                                    ) : (
+                                      <Badge variant="outline" className="bg-muted text-muted-foreground border-border gap-1 text-[10px]">
+                                        <Clock className="h-3 w-3" /> Awaiting provider log
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ) : isInsufficient ? (
+                                  <span className="block truncate">
+                                    {(log.details as any)?.message || `Out of ${channel || "channel"} credits — top up to resume.`}
+                                  </span>
+                                ) : (
+                                  <span className="block truncate">{JSON.stringify(log.details)}</span>
+                                )}
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">
                                 <div className="flex items-center gap-1">

@@ -4,9 +4,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Eye, EyeOff, Monitor, Smartphone, LayoutTemplate,
-  Bold, Italic, Strikethrough, Code, Link2, Smile,
+  Bold, Italic, Strikethrough, Code, Link2, Smile, Send, Loader2,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import InsertDropdown from "./InsertDropdown";
@@ -16,6 +17,10 @@ import { buildPreviewHtml } from "./emailPreviewRenderer";
 import { EMAIL_PRESETS } from "./emailPresets";
 import EmailBlockEditor from "./email-blocks/EmailBlockEditor";
 import { parseBlocksFromMessage, blocksToHtml } from "./email-blocks/emailBlockSerializer";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AutomationEmailEditorProps {
   isEmail: boolean;
@@ -112,6 +117,51 @@ export default function AutomationEmailEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const { user } = useAuth();
+  const workspaceId = useWorkspaceId();
+  const [testEmail, setTestEmail] = useState<string>("");
+  const [testSending, setTestSending] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+
+  // Pre-fill test recipient with the logged-in user's email when the popover opens.
+  useEffect(() => {
+    if (testOpen && !testEmail && user?.email) setTestEmail(user.email);
+  }, [testOpen, testEmail, user?.email]);
+
+  const sendTestEmail = useCallback(async () => {
+    if (!isEmail) return;
+    if (!subject?.trim() || !message?.trim()) {
+      toast.error("Add a subject and a message before sending a test.");
+      return;
+    }
+    if (!testEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (!workspaceId) {
+      toast.error("Workspace not ready — try again in a moment.");
+      return;
+    }
+    setTestSending(true);
+    try {
+      const { error } = await supabase.functions.invoke("email-send", {
+        body: {
+          workspaceId,
+          to: testEmail,
+          subject,
+          html: message,
+          templateSettings: { ...(templateSettings ?? {}), preview: true },
+        },
+      });
+      if (error) throw error;
+      toast.success(`Test sent to ${testEmail}. Check your inbox (and spam folder).`);
+      setTestOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to send test email.");
+    } finally {
+      setTestSending(false);
+    }
+  }, [isEmail, subject, message, testEmail, workspaceId, templateSettings]);
 
   const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
 
@@ -249,6 +299,60 @@ export default function AutomationEmailEditor({
                   <Smartphone className="h-3.5 w-3.5" />
                 </Button>
               </div>
+            )}
+            {isEmail && (
+              <Popover open={testOpen} onOpenChange={setTestOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-8 text-xs"
+                    disabled={!subject?.trim() || !message?.trim()}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Send test
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-3 space-y-2">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Send a test email</p>
+                    <p className="text-xs text-muted-foreground">
+                      We'll send the current draft to this address using the same provider as live automations. No credits used. Subject is prefixed with [TEST].
+                    </p>
+                  </div>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    disabled={testSending}
+                    className="h-8 text-sm"
+                  />
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setTestOpen(false)}
+                      disabled={testSending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={sendTestEmail}
+                      disabled={testSending}
+                    >
+                      {testSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      {testSending ? "Sending…" : "Send test"}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
             <Button
               type="button"
