@@ -349,6 +349,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 { v: "all", label: "All events" },
                 { v: "exit", label: "Exit criteria" },
                 { v: "errors", label: "Errors only" },
+                { v: "email_issues", label: "Email issues" },
               ] as const).map((f) => (
                 <Button
                   key={f.v}
