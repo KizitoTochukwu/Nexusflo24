@@ -40,8 +40,8 @@ interface Props {
 
 export default function AutomationDetailsDrawer({ automation, open, onClose }: Props) {
   const workspaceId = useWorkspaceId();
-  const { data: savedSteps } = useAutomationSteps(automation?.id ?? null);
-  const { data: logs } = useAutomationLogs(automation?.id ?? null);
+  const { data: savedSteps, isLoading: stepsLoading, isError: stepsError, error: stepsErr, refetch: refetchSteps } = useAutomationSteps(automation?.id ?? null);
+  const { data: logs, isLoading: logsLoading, isError: logsError, error: logsErrObj, refetch: refetchLogs, isFetching: logsFetching } = useAutomationLogs(automation?.id ?? null);
   const { data: funnels } = useFunnels(workspaceId);
   const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
