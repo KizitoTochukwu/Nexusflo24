@@ -1,64 +1,68 @@
+## Diagnosis
 
+WhatsApp delivery is **not broken**. The Meta integration is working — earlier today (14:31 UTC) the same automation successfully sent three WhatsApp messages from this workspace with `credentialSource: workspace` and real `wamid` IDs returned by Meta.
 
-## Confirming Exit Criteria & Automation Logic Are Working
+What changed: the workspace has **run out of WhatsApp credits** (and SMS credits).
 
-### What I verified (already correct in your codebase)
+### Evidence from the database
 
-✅ **Database** — `automations.exit_criteria` and `automations.exit_actions` columns exist, both `jsonb default '[]'`.
-✅ **UI** — `ExitCriteriaEditor` is wired into both `CreateAutomationDialog` and `AutomationDetailsDrawer`, with smart defaults pre-filled for nurture-style triggers (`new_lead`, `lead_added_to_folder`, `form_submitted`, etc.).
-✅ **Hooks** — `useCreateAutomation` / `useUpdateAutomation` save `exit_criteria` to the DB.
-✅ **Cancellation sweep** — `fireAutomationsForLeads` (`src/lib/automations/fireTriggers.ts`) scans active automations on every event and bulk-cancels matching pending `scheduled_jobs`, then writes an `exit_criteria:<event>` row to `automation_logs`.
-✅ **Defense-in-depth** — `execute-automation` re-evaluates exit criteria on every scheduled resume and aborts with an `exit_criteria:<type>` log if matched (catches race conditions).
+`message_credits` row for the active workspace `95bc7e99-798e-49ef-a5c3-ab68bbc08950`:
+- `email_balance: 500` ✅
+- `sms_balance: 0` ❌
+- `whatsapp_balance: 0` ❌
 
-### What I found in your live data
+Most recent `automation_logs` for this run:
+```
+action:send_email     → success
+action:send_whatsapp  → error  "Insufficient whatsapp credits. Buy more in Settings → Usage."
+action:send_sms       → error  "Insufficient sms credits. Buy more in Settings → Usage."
+```
 
-⚠️ **Zero automations currently have exit criteria set** — every row in `automations.exit_criteria` is `[]`. That means there is nothing for the system to "fire" yet, which is why `automation_logs` shows no `exit_criteria:*` rows and no `scheduled_jobs` are marked with `error LIKE 'Exit criteria met%'`.
+The credit check in `execute-automation/index.ts` (line 261-267) calls `deductCredit()` *before* the WhatsApp HTTP call. With balance at 0 it throws and the step is logged as `error`. The WhatsApp Cloud API is never contacted, which is why there's no entry in `whatsapp_messages` and no error in the `whatsapp-send` edge logs.
 
-Your existing nurture automations (e.g. *AI Sales Blueprint – New Lead Nurture*, *10 Day Lead Nurture Sequence*) were created **before** the exit-criteria feature shipped, so they have no rules. The smart defaults only auto-fill for *newly-created* nurture automations.
+### Why earlier WhatsApp sends worked
 
-### How to confirm it's firing — 3-step verification
+The Plus plan only includes 100 WhatsApp credits/month. Looking at `automation_logs` for today, the user has already burned through them on previous runs (3 successful WhatsApp sends in one run alone, plus likely many more across the test sessions).
 
-**Step 1 — Add exit criteria to an existing nurture automation**
-- Open any active multi-day automation (e.g. *AI Sales Blueprint*).
-- In the drawer, scroll to the new **"Exit criteria"** block.
-- Click **"Use suggested defaults"** → adds `Lead purchases` + `Lead unsubscribes`.
-- Save.
+## Fix
 
-**Step 2 — Trigger the automation for a test lead**
-- Create a test lead (or pick one with no pending jobs). The first delay step will queue jobs in `scheduled_jobs`.
-- Confirm jobs queued: I can run a query like
-  `SELECT id, run_at, status FROM scheduled_jobs WHERE lead_id='<test-lead>' AND automation_id='<auto>' ORDER BY run_at;`
+Two parts: top up the workspace immediately (so the user can verify it works), and improve the engine so credit-exhaustion is reported clearly instead of looking like a "WhatsApp broken" failure.
 
-**Step 3 — Trigger the exit event and confirm the cancel**
-Three ways to fire an exit:
-  - **Unsubscribe** — open the unsubscribe URL for the test lead. The `unsubscribed` tag gets added → next page action fires `fireAutomationsForLeads` → sweep cancels remaining jobs.
-  - **Purchase** — call the `track-event` edge function with `type=purchase` for the lead.
-  - **Tag** — manually add the configured tag to the lead.
+### 1. Top up credits for the affected workspace
 
-Then confirm:
-1. `scheduled_jobs` rows for that lead/automation flip to `status='cancelled'` with `error='Exit criteria met: <event>'`.
-2. `automation_logs` gets new rows with `event_type='exit_criteria:<event>'`, `status='cancelled'`.
-3. The lead receives no further messages from that automation.
+Add a one-off credit grant via migration:
+- `+200 whatsapp` credits
+- `+200 sms` credits
+- Logged in `credit_transactions` with reason `manual_topup`
 
-### What I'll add to make this self-service for you (the actual implementation work)
+This unblocks the user immediately so they can confirm the automation fires end-to-end.
 
-To make verification a one-click thing instead of running SQL manually, I'll add:
+### 2. Distinguish "no credits" from "send failed" in the automation engine
 
-1. **"Test exit criteria" button** in `AutomationDetailsDrawer` — pick a lead, simulate one of the configured exit events, and show a result toast (e.g. *"3 pending jobs cancelled, 1 log written"*).
-2. **Backfill helper** in the Automations list — small banner: *"3 active nurture automations have no exit criteria — apply suggested defaults?"* with a one-click "Apply to all" action that uses `getDefaultExitCriteria` per trigger type.
-3. **Logs tab filter** — a chip on the Logs tab that filters to `exit_criteria:*` events so you can see at a glance whether exits have fired for that automation.
-4. **Counter on the automation card** — show *"X leads exited"* alongside the existing run-count, sourced from `automation_logs` where `event_type LIKE 'exit_criteria:%'`.
+In `supabase/functions/execute-automation/index.ts`:
 
-### Files I'll touch
+- Wrap the `deductCredit()` call so when `allowed: false`, the step is logged with `event_type: action:send_whatsapp` and a dedicated `status: insufficient_credits` (instead of the generic `error`). Same for `send_sms` and `send_email`.
+- Include the channel and remaining balance in `details` so the UI can render a friendly "Top up credits" CTA instead of a red error chip.
 
-- `src/components/automations/AutomationDetailsDrawer.tsx` — add "Test exit" button + lead picker + result toast.
-- `src/components/automations/AutomationDetailsDrawer.tsx` (Logs tab) — add filter chip for exit events.
-- `src/pages/dashboard/DashboardAutomations.tsx` — add backfill banner + per-row "Exited" count.
-- `src/hooks/useAutomations.ts` — new `useExitedCount(automationId)` query + `useBackfillExitDefaults()` mutation.
-- `src/lib/automations/exitCriteria.ts` — small helper `simulateExitEvent({ automationId, leadId, eventType })` that calls the same code path the live triggers use.
+### 3. Surface low-credit warnings in the Automation Details drawer
 
-### Why this is enough
+In `src/components/automations/AutomationDetailsDrawer.tsx` (Logs tab):
+- When a log row has `status: insufficient_credits`, render an amber alert with the channel name and a "Top up in Settings → Usage" link button (route: `/dashboard/:workspaceId/settings?tab=usage`) instead of the generic red error icon.
+- Add a one-line banner at the top of the Logs tab if any recent step failed with `insufficient_credits`, explaining the automation will resume sending on that channel as soon as credits are available.
 
-- The cancellation logic is already covered in two places (live event sweep + on-resume re-check) — the gap is purely *visibility* and the fact that legacy automations have no rules. The plan above closes both.
-- After backfill + one test run, you'll have concrete log entries and cancelled jobs you can point at to prove "yes, it fires."
+### 4. Pre-flight credit check on automation activation (optional polish)
 
+In `useAutomations` (or the `Activate` mutation), before flipping `status` to `active`, fetch the workspace's `message_credits` and warn (toast) if any channel used by the automation's steps has 0 balance. This prevents the user from launching a workflow that's guaranteed to fail mid-flight.
+
+## Files to change
+
+- `supabase/migrations/<new>_topup_workspace_credits.sql` — credit grant + transaction log
+- `supabase/functions/execute-automation/index.ts` — split credit-exhaustion from generic errors
+- `src/components/automations/AutomationDetailsDrawer.tsx` — friendly insufficient-credits UI in Logs tab
+- `src/hooks/useAutomations.ts` — optional pre-flight credit warning on activation
+
+## What the user will see after the fix
+
+1. The current workflow run resumes — next WhatsApp step in the schedule will fire successfully (credits restored).
+2. If credits ever run out again, the Logs tab shows a clear "Out of WhatsApp credits — top up to resume" message with a direct link, instead of looking like the WhatsApp integration is broken.
+3. Activating an automation with a channel at 0 credits shows a warning toast.
