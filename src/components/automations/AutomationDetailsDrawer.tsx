@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter, AlertTriangle, RotateCcw } from "lucide-react";
+import { Zap, Play, Pause, CheckCircle2, XCircle, Clock, ArrowLeft, DoorOpen, FlaskConical, Filter, AlertTriangle, RotateCcw, Wallet } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
