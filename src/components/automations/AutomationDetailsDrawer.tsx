@@ -446,6 +446,12 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               return (
                 <>
                   {creditBanner}
+                  <div className="flex items-start gap-2 rounded-md border border-blue-100 bg-blue-50/50 p-2 text-[11px] text-blue-900/80">
+                    <Mail className="h-3.5 w-3.5 mt-0.5 shrink-0 text-blue-700" />
+                    <span>
+                      <strong>Delivered to provider</strong> = Resend accepted the email. If a recipient says it didn't arrive, ask them to check spam — bounces and inbox placement happen after our hand-off. Use <strong>Send test</strong> in the email step editor to verify deliverability without waiting for a trigger.
+                    </span>
+                  </div>
                   <div className="rounded-lg border">
                     <Table>
                       <TableHeader>
