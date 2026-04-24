@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       unsubUrl,
     });
 
-    if (leadId && workspaceId) {
+    if (leadId && workspaceId && !isPreview) {
       // Rewrite <a href="..."> links to go through track-click
       trackedHtml = trackedHtml.replace(
         /<a\s+([^>]*?)href=["']([^"']+)["']([^>]*?)>/gi,
@@ -147,8 +147,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    const finalSubject = isPreview ? `[TEST] ${subject}` : subject;
     const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
-    const result = await sendResend(apiKey, from, to, subject, trackedHtml, replyTo);
+    const result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
 
     // Log outbound email
     try {
