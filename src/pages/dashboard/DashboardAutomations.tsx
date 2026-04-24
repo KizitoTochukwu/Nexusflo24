@@ -6,7 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock, DoorOpen, Sparkles, X } from "lucide-react";
+import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock, DoorOpen, Sparkles, X, AlertTriangle, RotateCcw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   useAutomations, useDeleteAutomation, useUpdateAutomation, useCreateAutomation, useSimulateAutomation,
@@ -20,7 +22,7 @@ import { format } from "date-fns";
 
 const DashboardAutomations = () => {
   const workspaceId = useWorkspaceId();
-  const { data: automations, isLoading } = useAutomations(workspaceId);
+  const { data: automations, isLoading, isError, error, refetch, isFetching } = useAutomations(workspaceId);
   const deleteAutomation = useDeleteAutomation();
   const updateAutomation = useUpdateAutomation();
   const createAutomation = useCreateAutomation();
@@ -119,7 +121,39 @@ const DashboardAutomations = () => {
 
       <div className="mt-6 rounded-xl border bg-card shadow-card">
         {isLoading ? (
-          <div className="p-10 text-center text-muted-foreground">Loading automations…</div>
+          <div className="p-6 space-y-3" aria-busy="true" aria-label="Loading automations">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-2">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-4 w-1/6" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-4 w-1/6" />
+                <Skeleton className="ml-auto h-4 w-10" />
+                <Skeleton className="h-4 w-10" />
+                <Skeleton className="h-8 w-8 rounded-md" />
+              </div>
+            ))}
+          </div>
+        ) : isError ? (
+          <div className="p-6">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Couldn't load automations</AlertTitle>
+              <AlertDescription className="mt-1">
+                {(error as Error)?.message || "Something went wrong while fetching your automations. Please try again."}
+              </AlertDescription>
+              <div className="mt-3">
+                <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching}>
+                  <RotateCcw className={`mr-2 h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+                  {isFetching ? "Retrying…" : "Retry"}
+                </Button>
+              </div>
+            </Alert>
+          </div>
         ) : !automations?.length ? (
           <div className="p-10 text-center text-muted-foreground">
             <Zap className="mx-auto mb-3 h-10 w-10 opacity-30" />
