@@ -300,6 +300,60 @@ export default function AutomationEmailEditor({
                 </Button>
               </div>
             )}
+            {isEmail && (
+              <Popover open={testOpen} onOpenChange={setTestOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 h-8 text-xs"
+                    disabled={!subject?.trim() || !message?.trim()}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Send test
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-3 space-y-2">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Send a test email</p>
+                    <p className="text-xs text-muted-foreground">
+                      We'll send the current draft to this address using the same provider as live automations. No credits used. Subject is prefixed with [TEST].
+                    </p>
+                  </div>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    disabled={testSending}
+                    className="h-8 text-sm"
+                  />
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => setTestOpen(false)}
+                      disabled={testSending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={sendTestEmail}
+                      disabled={testSending}
+                    >
+                      {testSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                      {testSending ? "Sending…" : "Send test"}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
             <Button
               type="button"
               variant={preview ? "default" : "ghost"}
