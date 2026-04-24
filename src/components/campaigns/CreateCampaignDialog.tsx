@@ -407,6 +407,7 @@ export default function CreateCampaignDialog() {
 
             <AutomationEmailEditor
               isEmail={type === "email"}
+              channel={type === "email" ? "email" : type === "whatsapp" ? "whatsapp" : "sms"}
               subject={subject}
               onSubjectChange={setSubject}
               message={body}
