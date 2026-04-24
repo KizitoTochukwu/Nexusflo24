@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
