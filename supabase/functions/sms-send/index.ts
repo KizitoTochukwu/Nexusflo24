@@ -98,10 +98,14 @@ Deno.serve(async (req) => {
 
     requestBody = await req.json();
     const { workspaceId, to } = requestBody;
+    // Preview / test sends from the editor — skip credits + prefix [TEST].
+    // Only honored for authenticated user calls (never service-role).
+    const isPreview = (requestBody as any).preview === true;
     // SMS is a plain-text channel — strip any HTML that may have leaked in
     // from the rich-text editor (legacy automation/campaign steps store
     // contentEditable innerHTML).
-    const message = htmlToPlainText(requestBody.message);
+    let message = htmlToPlainText(requestBody.message);
+    if (isPreview && message) message = `[TEST] ${message}`;
     requestBody.message = message;
 
     if (!workspaceId || !to || !message) {
@@ -134,10 +138,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits — only skip if service-role + skipCredits + workspace owner is admin
+    // Check and deduct credits — skip on preview tests, or if service-role + skipCredits + workspace owner is admin
     const skipCredits = (requestBody as any).skipCredits;
-    let shouldDeductCredits = true;
-    if (isServiceRole && skipCredits) {
+    let shouldDeductCredits = !isPreview;
+    if (shouldDeductCredits && isServiceRole && skipCredits) {
       const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
       if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
         shouldDeductCredits = false;

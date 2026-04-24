@@ -604,6 +604,7 @@ function NodeInspector({ node, workspaceId, onChange, onDelete, onClose }: { nod
         <div className="rounded-md border bg-background p-2">
           <AutomationEmailEditor
             isEmail={false}
+            channel={data.subType === "send_whatsapp" ? "whatsapp" : "sms"}
             subject=""
             message={(data.config?.message as string) || ""}
             onSubjectChange={() => {}}

@@ -325,6 +325,13 @@ export default function AutomationStepEditor({ steps, onChange, triggerType }: P
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
                     <AutomationEmailEditor
                       isEmail={(step.config.action as string) === "send_email"}
+                      channel={
+                        (step.config.action as string) === "send_email"
+                          ? "email"
+                          : (step.config.action as string) === "send_whatsapp"
+                            ? "whatsapp"
+                            : "sms"
+                      }
                       subject={(step.config.subject as string) || ""}
                       message={(step.config.message as string) || ""}
                       onSubjectChange={(v) => updateStep(i, { subject: v })}

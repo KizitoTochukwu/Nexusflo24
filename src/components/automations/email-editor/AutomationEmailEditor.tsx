@@ -24,6 +24,8 @@ import { toast } from "sonner";
 
 interface AutomationEmailEditorProps {
   isEmail: boolean;
+  /** Optional explicit channel — defaults to "email" when isEmail, else "sms". */
+  channel?: "email" | "sms" | "whatsapp";
   subject: string;
   message: string;
   onSubjectChange: (v: string) => void;
@@ -106,6 +108,7 @@ function renderWhatsAppPreview(text: string): string {
 
 export default function AutomationEmailEditor({
   isEmail,
+  channel,
   subject,
   message,
   onSubjectChange,
@@ -119,49 +122,83 @@ export default function AutomationEmailEditor({
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const { user } = useAuth();
   const workspaceId = useWorkspaceId();
-  const [testEmail, setTestEmail] = useState<string>("");
+  const resolvedChannel: "email" | "sms" | "whatsapp" = channel ?? (isEmail ? "email" : "sms");
+  const [testRecipient, setTestRecipient] = useState<string>("");
   const [testSending, setTestSending] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
 
-  // Pre-fill test recipient with the logged-in user's email when the popover opens.
+  // Pre-fill test recipient with the logged-in user's email when the popover
+  // opens for an email step. SMS/WhatsApp default to empty so the user pastes
+  // their own E.164 number.
   useEffect(() => {
-    if (testOpen && !testEmail && user?.email) setTestEmail(user.email);
-  }, [testOpen, testEmail, user?.email]);
+    if (testOpen && resolvedChannel === "email" && !testRecipient && user?.email) {
+      setTestRecipient(user.email);
+    }
+  }, [testOpen, testRecipient, user?.email, resolvedChannel]);
 
-  const sendTestEmail = useCallback(async () => {
-    if (!isEmail) return;
-    if (!subject?.trim() || !message?.trim()) {
-      toast.error("Add a subject and a message before sending a test.");
+  const sendTest = useCallback(async () => {
+    if (!message?.trim()) {
+      toast.error("Add a message before sending a test.");
       return;
     }
-    if (!testEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) {
-      toast.error("Enter a valid email address.");
+    if (resolvedChannel === "email" && !subject?.trim()) {
+      toast.error("Add a subject before sending a test email.");
       return;
     }
     if (!workspaceId) {
       toast.error("Workspace not ready — try again in a moment.");
       return;
     }
+
+    if (resolvedChannel === "email") {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testRecipient)) {
+        toast.error("Enter a valid email address.");
+        return;
+      }
+    } else {
+      const cleaned = testRecipient.replace(/[\s\-()]/g, "");
+      if (!/^\+?\d{8,15}$/.test(cleaned)) {
+        toast.error("Enter a valid phone number in international format (e.g. +447517327597).");
+        return;
+      }
+    }
+
     setTestSending(true);
     try {
-      const { error } = await supabase.functions.invoke("email-send", {
-        body: {
-          workspaceId,
-          to: testEmail,
-          subject,
-          html: message,
-          templateSettings: { ...(templateSettings ?? {}), preview: true },
-        },
-      });
-      if (error) throw error;
-      toast.success(`Test sent to ${testEmail}. Check your inbox (and spam folder).`);
+      if (resolvedChannel === "email") {
+        const { error } = await supabase.functions.invoke("email-send", {
+          body: {
+            workspaceId,
+            to: testRecipient,
+            subject,
+            html: message,
+            templateSettings: { ...(templateSettings ?? {}), preview: true },
+          },
+        });
+        if (error) throw error;
+      } else if (resolvedChannel === "sms") {
+        const { data, error } = await supabase.functions.invoke("sms-send", {
+          body: { workspaceId, to: testRecipient, message, preview: true },
+        });
+        if (error) throw error;
+        if (data && (data as any).success === false) throw new Error((data as any).error || "SMS test failed");
+      } else {
+        const { data, error } = await supabase.functions.invoke("whatsapp-send", {
+          body: { workspaceId, to: testRecipient, body: message, preview: true },
+        });
+        if (error) throw error;
+        if (data && (data as any).success === false) throw new Error((data as any).error || "WhatsApp test failed");
+      }
+
+      const channelLabel = resolvedChannel === "email" ? "email" : resolvedChannel === "sms" ? "SMS" : "WhatsApp message";
+      toast.success(`Test ${channelLabel} sent to ${testRecipient}.`);
       setTestOpen(false);
     } catch (e: any) {
-      toast.error(e?.message || "Failed to send test email.");
+      toast.error(e?.message || `Failed to send test ${resolvedChannel}.`);
     } finally {
       setTestSending(false);
     }
-  }, [isEmail, subject, message, testEmail, workspaceId, templateSettings]);
+  }, [resolvedChannel, subject, message, testRecipient, workspaceId, templateSettings]);
 
   const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
 
@@ -300,60 +337,69 @@ export default function AutomationEmailEditor({
                 </Button>
               </div>
             )}
-            {isEmail && (
-              <Popover open={testOpen} onOpenChange={setTestOpen}>
-                <PopoverTrigger asChild>
+            <Popover open={testOpen} onOpenChange={setTestOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs"
+                  disabled={
+                    !message?.trim() ||
+                    (resolvedChannel === "email" && !subject?.trim())
+                  }
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Send test
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-3 space-y-2">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    {resolvedChannel === "email" && "Send a test email"}
+                    {resolvedChannel === "sms" && "Send a test SMS"}
+                    {resolvedChannel === "whatsapp" && "Send a test WhatsApp"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {resolvedChannel === "email"
+                      ? "We'll send the current draft to this address using the same provider as live automations. No credits used. Subject is prefixed with [TEST]."
+                      : resolvedChannel === "sms"
+                        ? "We'll send the current draft via Twilio to this number. No credits used. Body is prefixed with [TEST]."
+                        : "We'll send the current draft via the WhatsApp Cloud API to this number. No credits used. Body is prefixed with [TEST]. If the 24h conversation window is closed, Meta will deliver it as the hello_world template."}
+                  </p>
+                </div>
+                <Input
+                  type={resolvedChannel === "email" ? "email" : "tel"}
+                  placeholder={resolvedChannel === "email" ? "you@example.com" : "+447517327597"}
+                  value={testRecipient}
+                  onChange={(e) => setTestRecipient(e.target.value)}
+                  disabled={testSending}
+                  className="h-8 text-sm"
+                />
+                <div className="flex justify-end gap-2 pt-1">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="gap-1.5 h-8 text-xs"
-                    disabled={!subject?.trim() || !message?.trim()}
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                    Send test
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-80 p-3 space-y-2">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Send a test email</p>
-                    <p className="text-xs text-muted-foreground">
-                      We'll send the current draft to this address using the same provider as live automations. No credits used. Subject is prefixed with [TEST].
-                    </p>
-                  </div>
-                  <Input
-                    type="email"
-                    placeholder="you@example.com"
-                    value={testEmail}
-                    onChange={(e) => setTestEmail(e.target.value)}
+                    className="h-8"
+                    onClick={() => setTestOpen(false)}
                     disabled={testSending}
-                    className="h-8 text-sm"
-                  />
-                  <div className="flex justify-end gap-2 pt-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8"
-                      onClick={() => setTestOpen(false)}
-                      disabled={testSending}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 gap-1.5"
-                      onClick={sendTestEmail}
-                      disabled={testSending}
-                    >
-                      {testSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                      {testSending ? "Sending…" : "Send test"}
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 gap-1.5"
+                    onClick={sendTest}
+                    disabled={testSending}
+                  >
+                    {testSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    {testSending ? "Sending…" : "Send test"}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button
               type="button"
               variant={preview ? "default" : "ghost"}

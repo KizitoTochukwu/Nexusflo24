@@ -136,10 +136,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { workspaceId, to, type = "text", leadId, campaignId, template, skipCredits } = body;
+    // Preview / test sends from the editor — skip credits + prefix [TEST].
+    const isPreview = (body as any).preview === true;
     // WhatsApp text messages are plain-text — strip any HTML that may have
     // leaked in from the rich-text editor (legacy automation/campaign steps
     // store contentEditable innerHTML which renders literally on WhatsApp).
-    const msgBody = htmlToPlainText(body?.body);
+    let msgBody = htmlToPlainText(body?.body);
+    if (isPreview && msgBody) msgBody = `[TEST] ${msgBody}`;
 
     if (!workspaceId || !to || (!msgBody && !template)) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body (or template)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -171,9 +174,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check and deduct credits — only skip if service-role + skipCredits + workspace owner is admin
-    let shouldDeductCredits = true;
-    if (isServiceRole && skipCredits) {
+    // Check and deduct credits — skip on preview tests, or if service-role + skipCredits + workspace owner is admin
+    let shouldDeductCredits = !isPreview;
+    if (shouldDeductCredits && isServiceRole && skipCredits) {
       const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
       if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
         shouldDeductCredits = false;
