@@ -473,7 +473,7 @@ Deno.serve(async (req) => {
                 .eq("lead_id", lead_id)
                 .eq("direction", "inbound")
                 .limit(1);
-              const hasReply = (replies && replies.length > 0);
+              const hasReply: boolean = !!(replies && replies.length > 0);
 
               if (conditionType === "reply_status") {
                 const targetStage = hasReply
