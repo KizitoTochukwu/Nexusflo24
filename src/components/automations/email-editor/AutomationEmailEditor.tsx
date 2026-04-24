@@ -1,31 +1,21 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Eye, EyeOff, Monitor, Smartphone, LayoutTemplate,
-  Bold, Italic, Underline, Strikethrough,
-  List, ListOrdered, Link2, AlignLeft, AlignCenter,
-  AlignRight, AlignJustify, Minus, Type, Paintbrush,
-  Undo2, Redo2, Quote, Smile
+  Bold, Italic, Strikethrough, Code, Link2, Smile,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import InsertDropdown from "./InsertDropdown";
-import ButtonInsertDialog from "./ButtonInsertDialog";
 import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "./EmailTemplateSettings";
 import { VARIABLE_OPTIONS, PREVIEW_VALUES } from "./editorConstants";
 import { buildPreviewHtml } from "./emailPreviewRenderer";
 import { EMAIL_PRESETS } from "./emailPresets";
 import EmailBlockEditor from "./email-blocks/EmailBlockEditor";
 import { parseBlocksFromMessage, blocksToHtml } from "./email-blocks/emailBlockSerializer";
-
-const COLOR_PRESETS = [
-  "#000000", "#434343", "#666666", "#999999", "#FFFFFF",
-  "#FF0000", "#FF9900", "#00FF00", "#0000FF", "#9900FF", "#FF00FF",
-  "#0B1F3A", "#D4AF37", "#2563EB", "#16A34A", "#DC2626", "#EA580C",
-];
 
 interface AutomationEmailEditorProps {
   isEmail: boolean;
@@ -52,40 +42,61 @@ function ToolbarBtn({ icon: Icon, label, onClick }: {
   );
 }
 
-function ColorPicker({ colors, onSelect, label, icon: Icon }: {
-  colors: string[]; onSelect: (hex: string) => void; label: string; icon: React.ElementType;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
-              <Icon className="h-3.5 w-3.5" />
-            </Button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">{label}</TooltipContent>
-      </Tooltip>
-      <PopoverContent className="w-auto p-3" align="start" sideOffset={8}>
-        <div className="grid grid-cols-6 gap-1.5 mb-2">
-          {colors.map((hex) => (
-            <button key={hex} type="button"
-              className="h-5 w-5 rounded border border-border hover:scale-125 transition-transform"
-              style={{ backgroundColor: hex }}
-              onClick={() => { onSelect(hex); setOpen(false); }}
-            />
-          ))}
-        </div>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-          Custom
-          <input type="color" className="h-5 w-5 rounded border-none cursor-pointer p-0"
-            onChange={(e) => { onSelect(e.target.value); setOpen(false); }} />
-        </label>
-      </PopoverContent>
-    </Popover>
-  );
+/**
+ * Strip HTML tags and decode common entities — used once on mount to migrate
+ * legacy SMS/WhatsApp messages that were saved as contentEditable innerHTML
+ * back into plain text. This keeps existing automations editable without
+ * losing their content, and ensures the next save persists clean plain text.
+ */
+function legacyHtmlToPlain(input: string): string {
+  if (!input) return "";
+  if (!/[<&]/.test(input)) return input;
+  let s = input
+    .replace(/<a\b[^>]*?href\s*=\s*(["'])([\s\S]*?)\1[^>]*>([\s\S]*?)<\/a\s*>/gi,
+      (_m, _q, href, label) => {
+        const text = String(label).replace(/<\/?[^>]+>/g, "").trim();
+        const url = String(href).trim();
+        return !text || text === url ? url : `${text} (${url})`;
+      })
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/\s*(div|p|li|h[1-6]|tr|blockquote)\s*>/gi, "\n")
+    .replace(/<\s*li\b[^>]*>/gi, "\n• ")
+    .replace(/<\/?[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+  return s.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** Render WhatsApp-style markdown for the in-editor preview. */
+function renderWhatsAppPreview(text: string): string {
+  // Escape HTML first so user input can't inject markup.
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  let html = escaped
+    .replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>")
+    .replace(/_([^_\n]+)_/g, "<em>$1</em>")
+    .replace(/~([^~\n]+)~/g, "<s>$1</s>")
+    .replace(/```([^`]+)```/g, '<code class="font-mono bg-muted px-1 rounded">$1</code>')
+    .replace(/`([^`\n]+)`/g, '<code class="font-mono bg-muted px-1 rounded">$1</code>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a class="text-primary underline">$1</a>')
+    .replace(/\n/g, "<br />");
+
+  // Substitute variable previews.
+  for (const [key, val] of Object.entries(PREVIEW_VALUES)) {
+    html = html.split(key).join(`<span class="font-semibold">${val}</span>`);
+  }
+  // Unknown {{variables}} get a muted placeholder.
+  html = html.replace(/\{\{(\w+)\}\}/g, '<span class="text-muted-foreground">[$1]</span>');
+
+  return html;
 }
 
 export default function AutomationEmailEditor({
@@ -95,14 +106,12 @@ export default function AutomationEmailEditor({
   onSubjectChange,
   onMessageChange,
   templateSettings,
-  onTemplateSettingsChange
+  onTemplateSettingsChange,
 }: AutomationEmailEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
-  const [buttonDialogOpen, setButtonDialogOpen] = useState(false);
-  const isInternalUpdate = useRef(false);
 
   const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
 
@@ -113,40 +122,62 @@ export default function AutomationEmailEditor({
     return message;
   }, [message]);
 
-  // Sync value prop → editor (SMS/WhatsApp only)
+  // One-time migration: if a legacy SMS/WhatsApp step was saved as HTML,
+  // convert it back to plain text on first render so the user can edit it
+  // cleanly and the next save persists the plain version.
+  const didMigrateRef = useRef(false);
   useEffect(() => {
-    if (isEmail) return;
-    const el = editorRef.current;
-    if (!el) return;
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
+    if (isEmail || didMigrateRef.current) return;
+    if (!message) { didMigrateRef.current = true; return; }
+    if (!/[<&][a-zA-Z\/!#]/.test(message)) { didMigrateRef.current = true; return; }
+    const plain = legacyHtmlToPlain(message);
+    if (plain !== message) onMessageChange(plain);
+    didMigrateRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmail]);
+
+  // Insert text at the current cursor position in the textarea.
+  const insertAtCursor = useCallback((text: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      onMessageChange((message || "") + text);
       return;
     }
-    if (el.innerHTML !== message) {
-      el.innerHTML = message;
-    }
-  }, [message, isEmail]);
+    const start = ta.selectionStart ?? message.length;
+    const end = ta.selectionEnd ?? message.length;
+    const next = message.slice(0, start) + text + message.slice(end);
+    onMessageChange(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + text.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  }, [message, onMessageChange]);
 
-  const emitChange = useCallback(() => {
-    const el = editorRef.current;
-    if (!el) return;
-    isInternalUpdate.current = true;
-    onMessageChange(el.innerHTML);
-  }, [onMessageChange]);
+  // Wrap the current selection with markers (or insert markers if no
+  // selection). Used for WhatsApp-style *bold*, _italic_, ~strike~, `code`.
+  const wrapSelection = useCallback((open: string, close: string = open, placeholder = "text") => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart ?? 0;
+    const end = ta.selectionEnd ?? 0;
+    const sel = message.slice(start, end) || placeholder;
+    const next = message.slice(0, start) + open + sel + close + message.slice(end);
+    onMessageChange(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const selStart = start + open.length;
+      ta.setSelectionRange(selStart, selStart + sel.length);
+    });
+  }, [message, onMessageChange]);
 
-  const exec = useCallback((cmd: string, val?: string) => {
-    editorRef.current?.focus();
-    document.execCommand(cmd, false, val);
-    emitChange();
-  }, [emitChange]);
+  const insertLink = useCallback(() => {
+    const url = prompt("Enter URL (https://...):");
+    if (!url) return;
+    insertAtCursor(url);
+  }, [insertAtCursor]);
 
-  const insertHtml = useCallback((html: string) => {
-    editorRef.current?.focus();
-    document.execCommand("insertHTML", false, html);
-    emitChange();
-  }, [emitChange]);
-
-  // Write preview HTML to iframe
+  // Write preview HTML to iframe (email only)
   useEffect(() => {
     if (preview && iframeRef.current && isEmail) {
       const htmlBody = getEmailHtml();
@@ -155,6 +186,9 @@ export default function AutomationEmailEditor({
       if (doc) { doc.open(); doc.write(html); doc.close(); }
     }
   }, [preview, message, subject, previewDevice, currentSettings, isEmail, getEmailHtml]);
+
+  const charCount = message.length;
+  const smsSegments = Math.max(1, Math.ceil(charCount / 160));
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -175,7 +209,7 @@ export default function AutomationEmailEditor({
         {/* Toolbar row */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-1.5">
-            {!isEmail && <InsertDropdown onInsert={(text) => insertHtml(text)} />}
+            {!isEmail && <InsertDropdown onInsert={(text) => insertAtCursor(text)} />}
             {isEmail && !preview && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -241,23 +275,16 @@ export default function AutomationEmailEditor({
               </div>
             </div>
           ) : (
+            // WhatsApp / SMS plain-text preview rendered with WhatsApp-style
+            // formatting so users see *bold*, _italic_, ~strike~, links, etc.
             <div className="p-4 min-h-[300px] bg-muted/30 border border-border rounded-lg">
               <div className="bg-background rounded-lg border border-border p-4 max-w-md mx-auto">
                 <p className="text-xs text-muted-foreground mb-2 font-medium">
-                  {message.length > 0 ? `${message.length} characters` : "Empty message"}
+                  {charCount > 0 ? `${charCount} characters` : "Empty message"}
                 </p>
                 <div
-                  className="text-sm leading-relaxed prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: (() => {
-                      let result = message;
-                      for (const [key, val] of Object.entries(PREVIEW_VALUES)) {
-                        result = result.split(key).join(`<span class="font-semibold">${val}</span>`);
-                      }
-                      result = result.replace(/\{\{(\w+)\}\}/g, '<span class="text-muted-foreground">[$1]</span>');
-                      return result;
-                    })()
-                  }}
+                  className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                  dangerouslySetInnerHTML={{ __html: renderWhatsAppPreview(message) }}
                 />
               </div>
             </div>
@@ -266,57 +293,34 @@ export default function AutomationEmailEditor({
           /* Block editor for email */
           <EmailBlockEditor message={message} onMessageChange={onMessageChange} />
         ) : (
-          /* WYSIWYG Editor for SMS/WhatsApp */
+          /* Plain-text editor for SMS/WhatsApp — WhatsApp & SMS render
+             literal text only, so we must store plain text (no HTML). */
           <div className="border border-border rounded-lg bg-background overflow-hidden">
-            {/* Formatting toolbar */}
+            {/* Lightweight WhatsApp-formatting toolbar */}
             <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/30">
-              <ToolbarBtn icon={Undo2} label="Undo" onClick={() => exec("undo")} />
-              <ToolbarBtn icon={Redo2} label="Redo" onClick={() => exec("redo")} />
+              <ToolbarBtn icon={Bold} label="Bold (*text*)" onClick={() => wrapSelection("*", "*", "bold")} />
+              <ToolbarBtn icon={Italic} label="Italic (_text_)" onClick={() => wrapSelection("_", "_", "italic")} />
+              <ToolbarBtn icon={Strikethrough} label="Strikethrough (~text~)" onClick={() => wrapSelection("~", "~", "strike")} />
+              <ToolbarBtn icon={Code} label="Monospace (`text`)" onClick={() => wrapSelection("`", "`", "code")} />
               <div className="w-px h-4 bg-border mx-0.5" />
-              <ToolbarBtn icon={Bold} label="Bold" onClick={() => exec("bold")} />
-              <ToolbarBtn icon={Italic} label="Italic" onClick={() => exec("italic")} />
-              <ToolbarBtn icon={Underline} label="Underline" onClick={() => exec("underline")} />
-              <ToolbarBtn icon={Strikethrough} label="Strikethrough" onClick={() => exec("strikeThrough")} />
-              <div className="w-px h-4 bg-border mx-0.5" />
-              <ToolbarBtn icon={AlignLeft} label="Align left" onClick={() => exec("justifyLeft")} />
-              <ToolbarBtn icon={AlignCenter} label="Align center" onClick={() => exec("justifyCenter")} />
-              <ToolbarBtn icon={AlignRight} label="Align right" onClick={() => exec("justifyRight")} />
-              <ToolbarBtn icon={AlignJustify} label="Justify" onClick={() => exec("justifyFull")} />
-              <div className="w-px h-4 bg-border mx-0.5" />
-              <ToolbarBtn icon={List} label="Bullet list" onClick={() => exec("insertUnorderedList")} />
-              <ToolbarBtn icon={ListOrdered} label="Numbered list" onClick={() => exec("insertOrderedList")} />
-              <ToolbarBtn icon={Quote} label="Blockquote" onClick={() => exec("formatBlock", "blockquote")} />
-              <ToolbarBtn icon={Minus} label="Divider" onClick={() => exec("insertHorizontalRule")} />
-              <ToolbarBtn icon={Link2} label="Insert link" onClick={() => {
-                const url = prompt("Enter URL:");
-                if (url) exec("createLink", url);
-              }} />
-              <ToolbarBtn icon={Smile} label="Emoji" onClick={() => insertHtml("😊")} />
-              <div className="w-px h-4 bg-border mx-0.5" />
-              <ColorPicker icon={Type} label="Text color" colors={COLOR_PRESETS}
-                onSelect={(hex) => exec("foreColor", hex)} />
-              <ColorPicker icon={Paintbrush} label="Highlight" colors={COLOR_PRESETS}
-                onSelect={(hex) => exec("hiliteColor", hex)} />
+              <ToolbarBtn icon={Link2} label="Insert link" onClick={insertLink} />
+              <ToolbarBtn icon={Smile} label="Emoji" onClick={() => insertAtCursor("😊")} />
+              <div className="ml-auto text-[10px] text-muted-foreground pr-1">
+                {charCount} chars · {smsSegments} SMS segment{smsSegments === 1 ? "" : "s"}
+              </div>
             </div>
 
-            {/* WYSIWYG area */}
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              className="w-full min-h-[300px] bg-transparent text-sm leading-relaxed p-4 outline-none prose prose-sm max-w-none
-                [&_p]:mb-2
-                [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2
-                [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2
-                [&_blockquote]:border-l-4 [&_blockquote]:border-accent [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground
-                [&_a]:text-primary [&_a]:underline
-                [&_hr]:my-3 [&_hr]:border-border"
-              style={{ lineHeight: 1.7 }}
-              onInput={emitChange}
-              onBlur={emitChange}
-              dangerouslySetInnerHTML={{ __html: message }}
-              data-placeholder="Hi {{first_name}}, thanks for signing up!"
+            <Textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => onMessageChange(e.target.value)}
+              placeholder="Hi {{first_name}}, thanks for signing up!"
+              className="min-h-[260px] border-0 rounded-none resize-y focus-visible:ring-0 focus-visible:ring-offset-0 text-sm leading-relaxed"
             />
+
+            <div className="px-3 py-2 border-t border-border bg-muted/20 text-[10px] text-muted-foreground">
+              WhatsApp formatting: <code className="font-mono">*bold*</code> · <code className="font-mono">_italic_</code> · <code className="font-mono">~strike~</code> · <code className="font-mono">`code`</code>
+            </div>
           </div>
         )}
 
@@ -325,7 +329,7 @@ export default function AutomationEmailEditor({
           <EmailTemplateSettings settings={currentSettings} onChange={onTemplateSettingsChange} />
         )}
 
-        {/* Quick-insert variable badges (SMS only) */}
+        {/* Quick-insert variable badges (SMS/WhatsApp only) */}
         {!preview && !isEmail && (
           <div className="flex flex-wrap gap-1">
             {VARIABLE_OPTIONS.slice(0, 5).map((v) => (
@@ -333,19 +337,13 @@ export default function AutomationEmailEditor({
                 key={v.value}
                 variant="secondary"
                 className="cursor-pointer hover:bg-accent transition-colors text-[10px]"
-                onClick={() => insertHtml(v.value)}
+                onClick={() => insertAtCursor(v.value)}
               >
                 {v.value}
               </Badge>
             ))}
           </div>
         )}
-
-        <ButtonInsertDialog
-          open={buttonDialogOpen}
-          onOpenChange={setButtonDialogOpen}
-          onInsert={(text) => insertHtml(text)}
-        />
       </div>
     </TooltipProvider>
   );

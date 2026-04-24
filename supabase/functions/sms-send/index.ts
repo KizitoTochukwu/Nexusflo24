@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -96,7 +97,12 @@ Deno.serve(async (req) => {
     const isServiceRole = token === serviceRoleKey;
 
     requestBody = await req.json();
-    const { workspaceId, to, message } = requestBody;
+    const { workspaceId, to } = requestBody;
+    // SMS is a plain-text channel — strip any HTML that may have leaked in
+    // from the rich-text editor (legacy automation/campaign steps store
+    // contentEditable innerHTML).
+    const message = htmlToPlainText(requestBody.message);
+    requestBody.message = message;
 
     if (!workspaceId || !to || !message) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, message" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });

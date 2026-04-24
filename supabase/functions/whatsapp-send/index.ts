@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -134,7 +135,11 @@ Deno.serve(async (req) => {
     const isServiceRole = token === serviceRoleKey;
 
     const body = await req.json();
-    const { workspaceId, to, type = "text", body: msgBody, leadId, campaignId, template, skipCredits } = body;
+    const { workspaceId, to, type = "text", leadId, campaignId, template, skipCredits } = body;
+    // WhatsApp text messages are plain-text — strip any HTML that may have
+    // leaked in from the rich-text editor (legacy automation/campaign steps
+    // store contentEditable innerHTML which renders literally on WhatsApp).
+    const msgBody = htmlToPlainText(body?.body);
 
     if (!workspaceId || !to || (!msgBody && !template)) {
       return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, body (or template)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
