@@ -117,8 +117,51 @@ export default function AutomationEmailEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const { user } = useAuth();
+  const workspaceId = useWorkspaceId();
+  const [testEmail, setTestEmail] = useState<string>("");
+  const [testSending, setTestSending] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
 
-  const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
+  // Pre-fill test recipient with the logged-in user's email when the popover opens.
+  useEffect(() => {
+    if (testOpen && !testEmail && user?.email) setTestEmail(user.email);
+  }, [testOpen, testEmail, user?.email]);
+
+  const sendTestEmail = useCallback(async () => {
+    if (!isEmail) return;
+    if (!subject?.trim() || !message?.trim()) {
+      toast.error("Add a subject and a message before sending a test.");
+      return;
+    }
+    if (!testEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (!workspaceId) {
+      toast.error("Workspace not ready — try again in a moment.");
+      return;
+    }
+    setTestSending(true);
+    try {
+      const { error } = await supabase.functions.invoke("email-send", {
+        body: {
+          workspaceId,
+          to: testEmail,
+          subject,
+          html: message,
+          templateSettings: { ...(templateSettings ?? {}), preview: true },
+        },
+      });
+      if (error) throw error;
+      toast.success(`Test sent to ${testEmail}. Check your inbox (and spam folder).`);
+      setTestOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to send test email.");
+    } finally {
+      setTestSending(false);
+    }
+  }, [isEmail, subject, message, testEmail, workspaceId, templateSettings]);
 
   // For email, determine the HTML to preview (blocks → HTML or legacy)
   const getEmailHtml = useCallback(() => {
