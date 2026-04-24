@@ -4,9 +4,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Eye, EyeOff, Monitor, Smartphone, LayoutTemplate,
-  Bold, Italic, Strikethrough, Code, Link2, Smile,
+  Bold, Italic, Strikethrough, Code, Link2, Smile, Send, Loader2,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import InsertDropdown from "./InsertDropdown";
@@ -16,6 +17,10 @@ import { buildPreviewHtml } from "./emailPreviewRenderer";
 import { EMAIL_PRESETS } from "./emailPresets";
 import EmailBlockEditor from "./email-blocks/EmailBlockEditor";
 import { parseBlocksFromMessage, blocksToHtml } from "./email-blocks/emailBlockSerializer";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AutomationEmailEditorProps {
   isEmail: boolean;
