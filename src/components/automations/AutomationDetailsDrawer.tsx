@@ -339,7 +339,32 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               ))}
             </div>
 
-            {(() => {
+            {logsLoading ? (
+              <div className="rounded-lg border bg-card p-4 space-y-3" aria-busy="true" aria-label="Loading logs">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-4 flex-1" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                ))}
+              </div>
+            ) : logsError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Couldn't load logs</AlertTitle>
+                <AlertDescription className="mt-1">
+                  {(logsErrObj as Error)?.message || "Failed to load execution logs."}
+                </AlertDescription>
+                <div className="mt-3">
+                  <Button size="sm" variant="outline" onClick={() => refetchLogs()} disabled={logsFetching}>
+                    <RotateCcw className={`mr-2 h-3.5 w-3.5 ${logsFetching ? "animate-spin" : ""}`} />
+                    {logsFetching ? "Retrying…" : "Retry"}
+                  </Button>
+                </div>
+              </Alert>
+            ) : (() => {
               const filtered = (logs ?? []).filter((log) => {
                 if (logsFilter === "exit") return log.event_type.startsWith("exit_criteria:");
                 if (logsFilter === "errors") return log.status === "failed" || log.status === "cancelled";
