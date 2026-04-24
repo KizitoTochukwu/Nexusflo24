@@ -126,13 +126,15 @@ Deno.serve(async (req) => {
         global: { headers: { Authorization: authHeader } },
       });
 
-      const { data: { user }, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !user) {
+      // Validate JWT locally via signing-keys (JWKS). Avoids flaky /auth/v1/user 401s.
+      const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(token);
+      if (claimsErr || !claimsData?.claims?.sub) {
+        console.error("sms-send auth failed:", claimsErr?.message);
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      callerUserId = user.id;
+      callerUserId = claimsData.claims.sub as string;
 
-      const { data: isMember } = await adminClient.rpc("is_workspace_member", { _user_id: user.id, _workspace_id: workspaceId });
+      const { data: isMember } = await adminClient.rpc("is_workspace_member", { _user_id: callerUserId, _workspace_id: workspaceId });
       if (!isMember) {
         return new Response(JSON.stringify({ error: "Access denied" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
