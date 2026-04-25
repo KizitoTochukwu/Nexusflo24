@@ -1,0 +1,226 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export type FormFieldType =
+  | "short_text"
+  | "long_text"
+  | "email"
+  | "phone"
+  | "number"
+  | "select"
+  | "checkbox"
+  | "checkbox_group"
+  | "radio"
+  | "consent"
+  | "hidden"
+  | "date"
+  | "divider"
+  | "heading"
+  | "paragraph";
+
+export interface FormField {
+  id: string;
+  type: FormFieldType;
+  label: string;
+  name: string; // maps to lead field or extra meta key
+  placeholder?: string;
+  help_text?: string;
+  required?: boolean;
+  default_value?: string;
+  options?: { label: string; value: string }[];
+  // mapping target: "full_name" | "email" | "phone" | "notes" | "meta"
+  map_to?: "full_name" | "email" | "phone" | "notes" | "meta";
+}
+
+export interface FormStep {
+  id: string;
+  title?: string;
+  fields: FormField[];
+}
+
+export interface FormSchema {
+  steps: FormStep[];
+}
+
+export interface FormSettings {
+  submit_text: string;
+  success_message: string;
+  redirect_url: string;
+  source: string;
+  tags: string[];
+  folder_name: string;
+  pipeline_stage: string;
+}
+
+export interface FormTheme {
+  bg_color: string;
+  accent_color: string;
+  text_color: string;
+  font: string;
+  border_radius: number;
+  logo_url: string;
+}
+
+export interface FormRecord {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  name: string;
+  slug: string;
+  description: string;
+  status: "draft" | "active";
+  schema: FormSchema;
+  settings: FormSettings;
+  theme: FormTheme;
+  submission_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const DEFAULT_SCHEMA: FormSchema = {
+  steps: [
+    {
+      id: "step-1",
+      title: "",
+      fields: [
+        {
+          id: "f-name",
+          type: "short_text",
+          label: "Full name",
+          name: "full_name",
+          placeholder: "Jane Doe",
+          required: false,
+          map_to: "full_name",
+        },
+        {
+          id: "f-email",
+          type: "email",
+          label: "Email",
+          name: "email",
+          placeholder: "you@example.com",
+          required: true,
+          map_to: "email",
+        },
+      ],
+    },
+  ],
+};
+
+export const DEFAULT_SETTINGS: FormSettings = {
+  submit_text: "Submit",
+  success_message: "Thanks! We received your submission.",
+  redirect_url: "",
+  source: "Form",
+  tags: [],
+  folder_name: "",
+  pipeline_stage: "new_lead",
+};
+
+export const DEFAULT_THEME: FormTheme = {
+  bg_color: "#FFFFFF",
+  accent_color: "#0B1F3B",
+  text_color: "#0B1F3B",
+  font: "Inter",
+  border_radius: 12,
+  logo_url: "",
+};
+
+export const useForms = (workspaceId?: string) =>
+  useQuery({
+    queryKey: ["forms", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("forms")
+        .select("*")
+        .eq("workspace_id", workspaceId!)
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as FormRecord[];
+    },
+  });
+
+export const useForm = (formId?: string) =>
+  useQuery({
+    queryKey: ["form", formId],
+    enabled: !!formId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("forms")
+        .select("*")
+        .eq("id", formId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as unknown as FormRecord | null;
+    },
+  });
+
+export const useCreateForm = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { workspace_id: string; name: string }) => {
+      const { data: userRes } = await supabase.auth.getUser();
+      if (!userRes.user) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("forms")
+        .insert({
+          workspace_id: params.workspace_id,
+          user_id: userRes.user.id,
+          name: params.name,
+          schema: DEFAULT_SCHEMA as any,
+          settings: DEFAULT_SETTINGS as any,
+          theme: DEFAULT_THEME as any,
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as unknown as FormRecord;
+    },
+    onSuccess: (form) => {
+      qc.invalidateQueries({ queryKey: ["forms", form.workspace_id] });
+      toast.success("Form created");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+};
+
+export const useUpdateForm = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      params: Partial<FormRecord> & { id: string }
+    ) => {
+      const { id, ...rest } = params;
+      const { data, error } = await supabase
+        .from("forms")
+        .update(rest as any)
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as unknown as FormRecord;
+    },
+    onSuccess: (form) => {
+      qc.invalidateQueries({ queryKey: ["forms", form.workspace_id] });
+      qc.invalidateQueries({ queryKey: ["form", form.id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+};
+
+export const useDeleteForm = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { id: string; workspace_id: string }) => {
+      const { error } = await supabase.from("forms").delete().eq("id", params.id);
+      if (error) throw error;
+      return params;
+    },
+    onSuccess: ({ workspace_id }) => {
+      qc.invalidateQueries({ queryKey: ["forms", workspace_id] });
+      toast.success("Form deleted");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+};
