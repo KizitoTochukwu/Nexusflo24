@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Code, Copy, Check } from "lucide-react";
+import { Code, Copy, Check, ExternalLink, Share2 } from "lucide-react";
 
 interface Props {
   workspaceId: string;
