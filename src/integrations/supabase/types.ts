@@ -795,6 +795,81 @@ export type Database = {
         }
         Relationships: []
       }
+      form_submissions: {
+        Row: {
+          created_at: string
+          data: Json
+          form_id: string
+          id: string
+          lead_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          form_id: string
+          id?: string
+          lead_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          form_id?: string
+          id?: string
+          lead_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      forms: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          schema: Json
+          settings: Json
+          slug: string | null
+          status: string
+          submission_count: number
+          theme: Json
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          schema?: Json
+          settings?: Json
+          slug?: string | null
+          status?: string
+          submission_count?: number
+          theme?: Json
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          schema?: Json
+          settings?: Json
+          slug?: string | null
+          status?: string
+          submission_count?: number
+          theme?: Json
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       funnel_steps: {
         Row: {
           conversion_rate: number
