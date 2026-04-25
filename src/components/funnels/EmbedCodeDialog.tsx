@@ -32,7 +32,14 @@ export default function EmbedCodeDialog({ workspaceId, funnelName }: Props) {
   const [accentColor, setAccentColor] = useState("#D4AF37");
   const [copied, setCopied] = useState<string | null>(null);
 
-  const origin = window.location.origin;
+  // Always use the PUBLIC published origin for share links — never the
+  // gated `id-preview--*.lovable.app` host (which requires a Lovable login).
+  const rawOrigin = window.location.origin;
+  const PUBLIC_ORIGIN = "https://nexusflo24.com";
+  const origin =
+    rawOrigin.includes("id-preview--") || rawOrigin.includes("lovableproject.com")
+      ? PUBLIC_ORIGIN
+      : rawOrigin;
 
   const toggleField = (f: string) => {
     setFields((prev) =>
