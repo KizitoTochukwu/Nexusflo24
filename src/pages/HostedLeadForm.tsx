@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -56,6 +55,24 @@ export default function HostedLeadForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Set document title + meta description for the standalone share page
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = `${title} | NexusFlo24`;
+    let meta = document.querySelector('meta[name="description"]');
+    const prevDesc = meta?.getAttribute("content") || "";
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", subtitle.slice(0, 160));
+    return () => {
+      document.title = prevTitle;
+      if (meta && prevDesc) meta.setAttribute("content", prevDesc);
+    };
+  }, [title, subtitle]);
 
   // Auto-redirect after success if requested
   useEffect(() => {
@@ -133,12 +150,6 @@ export default function HostedLeadForm() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-muted/30">
-      <Helmet>
-        <title>{title} | NexusFlo24</title>
-        <meta name="description" content={subtitle.slice(0, 160)} />
-        <meta name="robots" content="noindex,follow" />
-      </Helmet>
-
       {/* Top bar */}
       <header className="w-full border-b border-border/40 bg-background/60 backdrop-blur-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
