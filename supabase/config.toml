@@ -5,6 +5,8 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.capture-lead]
     verify_jwt = false
+  [functions.notify-form-submission]
+    verify_jwt = false
   [functions.generate-campaign-copy]
     verify_jwt = false
   [functions.ingest-leads]
