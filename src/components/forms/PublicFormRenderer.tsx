@@ -103,11 +103,25 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       });
 
       // Increment submission_count (best effort)
-      await supabase.rpc as any; // noop placeholder
       await supabase
         .from("forms")
         .update({ submission_count: (form.submission_count ?? 0) + 1 })
         .eq("id", form.id);
+
+      // Fire-and-forget: notify workspace users with full submission details
+      try {
+        await supabase.functions.invoke("notify-form-submission", {
+          body: {
+            form_id: form.id,
+            workspace_id: form.workspace_id,
+            values,
+            lead_email: lead.email ?? null,
+            lead_name: lead.full_name ?? null,
+          },
+        });
+      } catch (notifyErr) {
+        console.warn("notify-form-submission failed:", notifyErr);
+      }
 
       if (settings.redirect_url) {
         window.location.href = settings.redirect_url;

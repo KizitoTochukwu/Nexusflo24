@@ -43,6 +43,12 @@ export interface FormSchema {
   steps: FormStep[];
 }
 
+export interface FormNotifyChannels {
+  email: boolean;
+  sms: boolean;
+  whatsapp: boolean;
+}
+
 export interface FormSettings {
   submit_text: string;
   success_message: string;
@@ -51,6 +57,9 @@ export interface FormSettings {
   tags: string[];
   folder_name: string;
   pipeline_stage: string;
+  notify_channels?: FormNotifyChannels;
+  notify_emails?: string[];
+  notify_phones?: string[];
 }
 
 export interface FormTheme {
@@ -115,6 +124,9 @@ export const DEFAULT_SETTINGS: FormSettings = {
   tags: [],
   folder_name: "",
   pipeline_stage: "new_lead",
+  notify_channels: { email: true, sms: false, whatsapp: false },
+  notify_emails: [],
+  notify_phones: [],
 };
 
 export const DEFAULT_THEME: FormTheme = {

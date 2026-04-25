@@ -2,6 +2,7 @@ import type { FormSettings, FormTheme } from "@/hooks/useForms";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -93,6 +94,62 @@ export default function FormSettingsPanel({
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Submission notifications</p>
+        <p className="text-xs text-muted-foreground">
+          Alert your team whenever someone submits this form. Defaults to workspace owners/admins if no recipients are set.
+        </p>
+
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Email notification</Label>
+          <Switch
+            checked={settings.notify_channels?.email ?? true}
+            onCheckedChange={(v) =>
+              setS("notify_channels", { ...(settings.notify_channels ?? { email: true, sms: false, whatsapp: false }), email: v })
+            }
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">SMS notification</Label>
+          <Switch
+            checked={settings.notify_channels?.sms ?? false}
+            onCheckedChange={(v) =>
+              setS("notify_channels", { ...(settings.notify_channels ?? { email: true, sms: false, whatsapp: false }), sms: v })
+            }
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">WhatsApp notification</Label>
+          <Switch
+            checked={settings.notify_channels?.whatsapp ?? false}
+            onCheckedChange={(v) =>
+              setS("notify_channels", { ...(settings.notify_channels ?? { email: true, sms: false, whatsapp: false }), whatsapp: v })
+            }
+          />
+        </div>
+
+        <div>
+          <Label className="text-xs">Recipient emails (comma-separated)</Label>
+          <Input
+            placeholder="alex@team.com, sales@team.com"
+            value={(settings.notify_emails ?? []).join(", ")}
+            onChange={(e) =>
+              setS("notify_emails", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))
+            }
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Recipient phones (E.164, comma-separated)</Label>
+          <Input
+            placeholder="+15551234567, +447900000000"
+            value={(settings.notify_phones ?? []).join(", ")}
+            onChange={(e) =>
+              setS("notify_phones", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))
+            }
+          />
         </div>
       </div>
 
