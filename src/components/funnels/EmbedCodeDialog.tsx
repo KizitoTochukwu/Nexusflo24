@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Code, Copy, Check } from "lucide-react";
+import { Code, Copy, Check, ExternalLink, Share2 } from "lucide-react";
 
 interface Props {
   workspaceId: string;
@@ -53,6 +53,18 @@ export default function EmbedCodeDialog({ workspaceId, funnelName }: Props) {
   if (tags.trim()) params.set("tags", tags.trim());
 
   const embedUrl = `${origin}/embed/form?${params.toString()}`;
+
+  // Hosted standalone share page (no workspace param needed — it's in the path)
+  const hostedParams = new URLSearchParams({
+    fields: finalFields.join(","),
+    source,
+    button: buttonText,
+  });
+  if (tags.trim()) hostedParams.set("tags", tags.trim());
+  if (accentColor && accentColor.toLowerCase() !== "#d4af37") {
+    hostedParams.set("color", accentColor);
+  }
+  const hostedUrl = `${origin}/form/${workspaceId}?${hostedParams.toString()}`;
 
   const iframeSnippet = `<iframe
   src="${embedUrl}"
@@ -161,12 +173,44 @@ window.addEventListener("message",function(e){
           </div>
 
           {/* Code snippets */}
-          <Tabs defaultValue="link">
-            <TabsList>
+          <Tabs defaultValue="hosted">
+            <TabsList className="flex-wrap h-auto">
+              <TabsTrigger value="hosted">
+                <Share2 className="mr-1 h-3.5 w-3.5" /> Share Link
+              </TabsTrigger>
               <TabsTrigger value="link">Direct Link</TabsTrigger>
               <TabsTrigger value="iframe">iFrame Embed</TabsTrigger>
               <TabsTrigger value="js">JavaScript Snippet</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="hosted" className="mt-3">
+              <div className="relative">
+                <pre className="overflow-x-auto rounded-lg border bg-muted p-4 pr-20 text-xs leading-relaxed whitespace-pre-wrap break-all">
+                  {hostedUrl}
+                </pre>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute right-2 top-2"
+                  onClick={() => copyCode(hostedUrl, "Hosted")}
+                >
+                  {copied === "Hosted" ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}
+                  {copied === "Hosted" ? "Copied" : "Copy"}
+                </Button>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground flex-1">
+                    Polished standalone page — perfect for Instagram bios, WhatsApp, QR codes, and email signatures.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(hostedUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    <ExternalLink className="mr-1 h-3.5 w-3.5" /> Preview
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
 
             <TabsContent value="link" className="mt-3">
               <div className="relative">

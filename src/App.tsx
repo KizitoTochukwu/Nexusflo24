@@ -51,6 +51,7 @@ import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
 import DashboardMessages from "./pages/dashboard/DashboardMessages";
 import EmbedForm from "./pages/EmbedForm";
+import HostedLeadForm from "./pages/HostedLeadForm";
 import PublicBooking from "./pages/PublicBooking";
 import RescheduleBooking from "./pages/RescheduleBooking";
 import HowCapture from "./pages/HowCapture";
@@ -129,8 +130,11 @@ const App = () => (
               <Route path="/f/:slug" element={<PublicFunnel />} />
               <Route path="/f/:slug/:stepPath" element={<PublicFunnel />} />
 
-              {/* Embeddable form */}
+              {/* Embeddable form (iframe-friendly) */}
               <Route path="/embed/form" element={<EmbedForm />} />
+
+              {/* Hosted standalone share form */}
+              <Route path="/form/:workspaceId" element={<HostedLeadForm />} />
 
               {/* Public booking routes */}
               <Route path="/book/:slug" element={<PublicBooking />} />
