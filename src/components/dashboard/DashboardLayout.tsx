@@ -8,7 +8,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
@@ -34,6 +34,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
   { icon: Users, label: "CRM (Leads)", to: `/dashboard/${workspaceId}/leads` },
+  { icon: FormInput, label: "Forms", to: `/dashboard/${workspaceId}/forms` },
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
   { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },

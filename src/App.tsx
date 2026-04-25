@@ -51,6 +51,9 @@ import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
 import DashboardMessages from "./pages/dashboard/DashboardMessages";
 import EmbedForm from "./pages/EmbedForm";
+import DashboardForms from "./pages/dashboard/DashboardForms";
+import FormBuilder from "./pages/dashboard/FormBuilder";
+import PublicForm from "./pages/PublicForm";
 import PublicBooking from "./pages/PublicBooking";
 import RescheduleBooking from "./pages/RescheduleBooking";
 import HowCapture from "./pages/HowCapture";
@@ -108,6 +111,8 @@ const App = () => (
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
+                <Route path="forms" element={<DashboardForms />} />
+                <Route path="forms/:formId" element={<FormBuilder />} />
                 <Route path="bookings" element={<DashboardBookings />} />
                 
                 <Route path="messages" element={<DashboardMessages />} />
@@ -131,6 +136,9 @@ const App = () => (
 
               {/* Embeddable form */}
               <Route path="/embed/form" element={<EmbedForm />} />
+
+              {/* Public hosted form */}
+              <Route path="/forms/:slug" element={<PublicForm />} />
 
               {/* Public booking routes */}
               <Route path="/book/:slug" element={<PublicBooking />} />
