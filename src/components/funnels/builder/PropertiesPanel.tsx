@@ -64,6 +64,7 @@ export default function PropertiesPanel({ block, onChange }: Props) {
       {block.type === "embed" && <EmbedProps p={p} update={update} />}
       {block.type === "video" && <VideoProps p={p} update={update} />}
       {block.type === "booking" && <BookingProps p={p} update={update} />}
+      {block.type === "countdown" && <CountdownProps p={p} update={update} />}
       {block.type === "cards" && <CardsProps p={p} update={update} onChange={(id, props) => onChange(block.id, props)} blockId={block.id} />}
     </div>
   );
