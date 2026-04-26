@@ -230,6 +230,21 @@ function FieldRenderer({
       return <p className="text-sm opacity-80">{field.label}</p>;
     case "divider":
       return <hr className="border-t" />;
+    case "image": {
+      if (!field.image_url) return null;
+      const align = field.image_align ?? "center";
+      const justify = align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center";
+      return (
+        <div className={`flex ${justify}`}>
+          <img
+            src={field.image_url}
+            alt={field.image_alt ?? ""}
+            style={{ width: `${field.image_width ?? 100}%` }}
+            className="rounded-md"
+          />
+        </div>
+      );
+    }
     case "hidden":
       return null;
     case "long_text":
