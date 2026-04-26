@@ -29,6 +29,7 @@ const FIELD_TYPE_LABEL: Record<string, string> = {
   divider: "Divider",
   heading: "Heading",
   paragraph: "Paragraph",
+  image: "Image",
 };
 
 export default function FormCanvas({

@@ -1,7 +1,7 @@
 import type { FormFieldType, FormField } from "@/hooks/useForms";
 import {
   Type, AlignLeft, Mail, Phone, Hash, ChevronDown, CheckSquare,
-  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow,
+  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow, Image as ImageIcon,
 } from "lucide-react";
 
 export const FIELD_DEFS: {
@@ -104,6 +104,20 @@ export const FIELD_DEFS: {
     label: "Divider",
     icon: Minus,
     defaults: () => ({ type: "divider", label: "", name: "divider" }),
+  },
+  {
+    type: "image",
+    label: "Image",
+    icon: ImageIcon,
+    defaults: () => ({
+      type: "image",
+      label: "Image",
+      name: "image",
+      image_url: "",
+      image_alt: "",
+      image_align: "center",
+      image_width: 100,
+    }),
   },
 ];
 

@@ -5,6 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useState } from "react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -18,6 +21,7 @@ const HAS_OPTIONS = new Set(["select", "radio", "checkbox_group"]);
 const HAS_PLACEHOLDER = new Set(["short_text", "long_text", "email", "phone", "number", "select"]);
 
 export default function FieldPropertiesPanel({ field, onChange }: Props) {
+  const [uploading, setUploading] = useState(false);
   const update = <K extends keyof FormField>(k: K, v: FormField[K]) =>
     onChange({ ...field, [k]: v });
 
@@ -27,14 +31,41 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
     update("options", opts);
   };
 
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const { data: userRes } = await supabase.auth.getUser();
+      if (!userRes.user) throw new Error("Not authenticated");
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${userRes.user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("funnel-assets").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("funnel-assets").getPublicUrl(path);
+      update("image_url", pub.publicUrl);
+      toast.success("Image uploaded");
+    } catch (e: any) {
+      toast.error(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const isImage = field.type === "image";
+  const isDisplayOnly = ["heading", "paragraph", "divider", "image"].includes(field.type);
+
   return (
     <div className="space-y-4">
-      <div>
-        <Label className="text-xs">Label</Label>
-        <Input value={field.label ?? ""} onChange={(e) => update("label", e.target.value)} />
-      </div>
+      {!isImage && (
+        <div>
+          <Label className="text-xs">Label</Label>
+          <Input value={field.label ?? ""} onChange={(e) => update("label", e.target.value)} />
+        </div>
+      )}
 
-      {field.type !== "heading" && field.type !== "paragraph" && field.type !== "divider" && (
+      {!isDisplayOnly && (
         <div>
           <Label className="text-xs">Field name (key)</Label>
           <Input
@@ -52,7 +83,7 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
         </div>
       )}
 
-      {field.type !== "heading" && field.type !== "paragraph" && field.type !== "divider" && field.type !== "hidden" && (
+      {!isDisplayOnly && field.type !== "hidden" && (
         <div>
           <Label className="text-xs">Help text</Label>
           <Textarea
@@ -70,7 +101,82 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
         </div>
       )}
 
-      {!["heading", "paragraph", "divider", "hidden"].includes(field.type) && (
+      {isImage && (
+        <>
+          <div>
+            <Label className="text-xs">Image URL</Label>
+            <Input
+              value={field.image_url ?? ""}
+              placeholder="https://…"
+              onChange={(e) => update("image_url", e.target.value)}
+            />
+            <div className="mt-2">
+              <input
+                id={`img-upload-${field.id}`}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleImageUpload(f);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => document.getElementById(`img-upload-${field.id}`)?.click()}
+              >
+                {uploading ? "Uploading…" : "Upload image"}
+              </Button>
+            </div>
+            {field.image_url && (
+              <img
+                src={field.image_url}
+                alt={field.image_alt ?? ""}
+                className="mt-2 max-h-32 rounded-md border object-contain"
+              />
+            )}
+          </div>
+          <div>
+            <Label className="text-xs">Alt text</Label>
+            <Input
+              value={field.image_alt ?? ""}
+              onChange={(e) => update("image_alt", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Alignment</Label>
+            <Select
+              value={field.image_align ?? "center"}
+              onValueChange={(v) => update("image_align", v as "left" | "center" | "right")}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Width ({field.image_width ?? 100}%)</Label>
+            <input
+              type="range"
+              min={20}
+              max={100}
+              step={5}
+              value={field.image_width ?? 100}
+              onChange={(e) => update("image_width", Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
+        </>
+      )}
+
+      {!isDisplayOnly && field.type !== "hidden" && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
           <div>
             <Label className="text-sm">Required</Label>
@@ -80,7 +186,7 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
         </div>
       )}
 
-      {!["heading", "paragraph", "divider"].includes(field.type) && (
+      {!isDisplayOnly && (
         <div>
           <Label className="text-xs">Map to lead field</Label>
           <Select
