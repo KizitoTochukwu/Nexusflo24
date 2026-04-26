@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useLayoutEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -88,31 +88,36 @@ export default function FunnelTextEditor({
   const [preview, setPreview] = useState(false);
   const [buttonDialogOpen, setButtonDialogOpen] = useState(false);
   const lastEmittedValue = useRef<string>(value);
+  const hasInitializedEditor = useRef(false);
 
   // Sync value prop → editor only when it differs from what the user last typed.
   // This prevents the caret from being destroyed when a parent normalizes HTML
   // (e.g. trimming empty tags) and sends back a slightly different value while
   // the user is mid-edit.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = editorRef.current;
     if (!el) return;
+
+    if (!hasInitializedEditor.current) {
+      el.innerHTML = value || "";
+      lastEmittedValue.current = value || "";
+      hasInitializedEditor.current = true;
+      return;
+    }
+
     // If this value is what we just emitted, do nothing — DOM is already correct.
     if (value === lastEmittedValue.current) return;
+
+    // While typing/deleting, keep the DOM as the source of truth. Parent-level
+    // normalization can produce a different HTML string and rewriting it here
+    // destroys the browser selection/caret.
+    if (document.activeElement === el) return;
+
     // External update (different from what user typed). Only overwrite DOM
-    // if it actually differs, and try to preserve focus/caret when possible.
+    // if it actually differs.
     if (el.innerHTML !== value) {
-      const wasFocused = document.activeElement === el;
       el.innerHTML = value;
       lastEmittedValue.current = value;
-      if (wasFocused) {
-        // Move caret to end so user can continue typing
-        const range = document.createRange();
-        range.selectNodeContents(el);
-        range.collapse(false);
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-      }
     }
   }, [value]);
 
@@ -252,7 +257,6 @@ export default function FunnelTextEditor({
               style={{ minHeight }}
               onInput={emitChange}
               onBlur={emitChange}
-              dangerouslySetInnerHTML={{ __html: value }}
               data-placeholder={placeholder}
             />
           )}
