@@ -57,20 +57,30 @@ function renderBlockContent(block: Block) {
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
       const defaultSizes: Record<string, string> = { h1: "text-3xl", h2: "text-2xl", h3: "text-xl" };
+      const rawHeading = (p.text as string) || "Heading";
+      const headingHasHtml = /<[a-z][\s\S]*>/i.test(rawHeading);
+      const headingWrapStyle: React.CSSProperties = {
+        maxWidth: (p.maxWidth as string) || undefined,
+        margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+      };
+      const headingInnerStyle: React.CSSProperties = {
+        color: p.color as string,
+        textAlign: p.align as any,
+        fontSize: (p.fontSize as string) || undefined,
+        fontWeight: (p.fontWeight as string) || "bold",
+        lineHeight: (p.lineHeight as string) || undefined,
+      };
+      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || "text-2xl" : ""} leading-tight`;
+      if (headingHasHtml) {
+        return (
+          <div style={headingWrapStyle}>
+            <Tag className={headingClass} style={headingInnerStyle} dangerouslySetInnerHTML={{ __html: rawHeading }} />
+          </div>
+        );
+      }
       return (
-        <div style={{ maxWidth: (p.maxWidth as string) || undefined, margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined }}>
-          <Tag
-            className={`${!p.fontSize ? defaultSizes[p.level as string] || "text-2xl" : ""} leading-tight`}
-            style={{
-              color: p.color as string,
-              textAlign: p.align as any,
-              fontSize: (p.fontSize as string) || undefined,
-              fontWeight: (p.fontWeight as string) || "bold",
-              lineHeight: (p.lineHeight as string) || undefined,
-            }}
-          >
-            {(p.text as string) || "Heading"}
-          </Tag>
+        <div style={headingWrapStyle}>
+          <Tag className={headingClass} style={headingInnerStyle}>{rawHeading}</Tag>
         </div>
       );
     }
