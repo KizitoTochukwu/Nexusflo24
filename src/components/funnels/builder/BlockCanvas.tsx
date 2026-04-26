@@ -57,8 +57,11 @@ function renderBlockContent(block: Block) {
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
       const defaultSizes: Record<string, string> = { h1: "text-3xl", h2: "text-2xl", h3: "text-xl" };
-      const rawHeading = (p.text as string) || "Heading";
-      const headingHasHtml = /<[a-z][\s\S]*>/i.test(rawHeading);
+      let rawHeading = (p.text as string) || "";
+      // Treat empty rich-text output (e.g. "<p><br></p>", "<br>", whitespace) as empty
+      const stripped = rawHeading.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+      if (!stripped) rawHeading = "Heading";
+      const headingHasHtml = stripped ? /<[a-z][\s\S]*>/i.test(rawHeading) : false;
       const headingWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
@@ -85,8 +88,10 @@ function renderBlockContent(block: Block) {
       );
     }
     case "text": {
-      const rawText = (p.text as string) || "Text block";
-      const textHasHtml = /<[a-z][\s\S]*>/i.test(rawText);
+      const rawTextValue = (p.text as string) || "";
+      const strippedText = rawTextValue.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+      const rawText = strippedText ? rawTextValue : "Text block";
+      const textHasHtml = strippedText ? /<[a-z][\s\S]*>/i.test(rawText) : false;
       const textWrapStyle: React.CSSProperties = { maxWidth: (p.maxWidth as string) || undefined, margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined };
       const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
       if (textHasHtml) {
