@@ -142,7 +142,7 @@ export function reorderBlockInTree(blocks: Block[], fromId: string, toIndex: num
 
 /** Check if a block type is a container */
 export function isContainer(type: string): boolean {
-  return type === "section" || type === "columns2" || type === "columns3";
+  return type === "section" || type === "columns2" || type === "columns3" || type === "columns4";
 }
 
 /** Get breadcrumb path to a block */

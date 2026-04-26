@@ -416,10 +416,11 @@ function BlockItem({
           </div>
         )}
 
-        {(block.type === "columns2" || block.type === "columns3") && (() => {
-          const widths = getColumnWidths((p.columnWidths as string) || (block.type === "columns2" ? "50/50" : "33/33/33"));
+        {(block.type === "columns2" || block.type === "columns3" || block.type === "columns4") && (() => {
+          const defaultWidths = block.type === "columns2" ? "50/50" : block.type === "columns3" ? "33/33/33" : "25/25/25/25";
+          const widths = getColumnWidths((p.columnWidths as string) || defaultWidths);
           const vAlign = p.verticalAlign === "center" ? "center" : p.verticalAlign === "bottom" ? "flex-end" : "flex-start";
-          const colCount = block.type === "columns2" ? 2 : 3;
+          const colCount = block.type === "columns2" ? 2 : block.type === "columns3" ? 3 : 4;
           // Split children into columns based on a simple approach: distribute sequentially
           const childrenPerCol: Block[][] = Array.from({ length: colCount }, () => []);
           (block.children || []).forEach((child, i) => {

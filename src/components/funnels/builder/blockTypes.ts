@@ -2,6 +2,7 @@ export type BlockType =
   | "section"
   | "columns2"
   | "columns3"
+  | "columns4"
   | "heading"
   | "text"
   | "image"
@@ -72,6 +73,14 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     verticalAlign: "top",
     stackOnMobile: true,
     columnStyles: [{}, {}, {}],
+  }),
+  columns4: () => ({
+    gap: "24px",
+    columnWidths: "25/25/25/25",
+    customWidths: "",
+    verticalAlign: "top",
+    stackOnMobile: true,
+    columnStyles: [{}, {}, {}, {}],
   }),
   heading: () => ({
     text: "Your Headline Here",
@@ -193,6 +202,7 @@ export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = 
   section: { label: "Section", icon: "LayoutTemplate" },
   columns2: { label: "2 Columns", icon: "Columns2" },
   columns3: { label: "3 Columns", icon: "Columns3" },
+  columns4: { label: "4 Columns", icon: "Columns4" },
   heading: { label: "Heading", icon: "Type" },
   text: { label: "Text", icon: "AlignLeft" },
   image: { label: "Image", icon: "ImageIcon" },

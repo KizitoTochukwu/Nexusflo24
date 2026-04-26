@@ -261,8 +261,10 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       );
     }
     case "columns2":
-    case "columns3": {
-      const widths = ((p.columnWidths as string) || (block.type === "columns2" ? "50/50" : "33/33/33")).split("/");
+    case "columns3":
+    case "columns4": {
+      const defaultWidths = block.type === "columns2" ? "50/50" : block.type === "columns3" ? "33/33/33" : "25/25/25/25";
+      const widths = ((p.columnWidths as string) || defaultWidths).split("/");
       const cols = widths.map((w) => `${w.trim()}%`);
       const vAlign = p.verticalAlign === "center" ? "center" : p.verticalAlign === "bottom" ? "flex-end" : "flex-start";
       const colCount = widths.length;

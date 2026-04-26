@@ -50,7 +50,7 @@ export default function PropertiesPanel({ block, onChange }: Props) {
       </div>
 
       {block.type === "section" && <SectionProps p={p} update={update} />}
-      {(block.type === "columns2" || block.type === "columns3") && <ColumnsProps p={p} update={update} type={block.type} />}
+      {(block.type === "columns2" || block.type === "columns3" || block.type === "columns4") && <ColumnsProps p={p} update={update} type={block.type} />}
       {block.type === "heading" && <HeadingProps p={p} update={update} />}
       {block.type === "text" && <TextProps p={p} update={update} />}
       {block.type === "image" && <ImageProps p={p} update={update} />}
@@ -230,7 +230,9 @@ function SectionProps({ p, update }: { p: Record<string, unknown>; update: (k: s
 function ColumnsProps({ p, update, type }: { p: Record<string, unknown>; update: (k: string, v: unknown) => void; type: string }) {
   const presets = type === "columns2"
     ? ["50/50", "60/40", "40/60", "70/30", "30/70"]
-    : ["33/33/33", "50/25/25", "25/50/25", "25/25/50"];
+    : type === "columns3"
+    ? ["33/33/33", "50/25/25", "25/50/25", "25/25/50"]
+    : ["25/25/25/25", "40/20/20/20", "20/20/20/40", "30/20/20/30"];
   const useCustom = !presets.includes((p.columnWidths as string) || presets[0]);
   
   return (
