@@ -87,9 +87,15 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
             .replace(/<\/(p|div|h[1-6])>/gi, "")
         : resolvedText;
       const useHtml = !isEffectivelyEmpty(sanitizedText) && hasHtml(sanitizedText);
+      const headingBorderWidth = Number(p.borderWidth ?? 0);
       const headingWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+        borderWidth: headingBorderWidth > 0 ? `${headingBorderWidth}px` : undefined,
+        borderColor: headingBorderWidth > 0 ? ((p.borderColor as string) || "#e5e7eb") : undefined,
+        borderStyle: headingBorderWidth > 0 ? "solid" : undefined,
+        borderRadius: Number(p.borderRadius ?? 0) > 0 ? `${p.borderRadius}px` : undefined,
+        padding: Number(p.borderPadding ?? 0) > 0 ? `${p.borderPadding}px` : undefined,
       };
       const baseStyle: React.CSSProperties = {
         color: p.color as string,
@@ -122,9 +128,15 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       const rawText = (p.text as string) || "";
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
       const useHtml = !isEffectivelyEmpty(resolvedText) && hasHtml(resolvedText);
+      const textBorderWidth = Number(p.borderWidth ?? 0);
       const textWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+        borderWidth: textBorderWidth > 0 ? `${textBorderWidth}px` : undefined,
+        borderColor: textBorderWidth > 0 ? ((p.borderColor as string) || "#e5e7eb") : undefined,
+        borderStyle: textBorderWidth > 0 ? "solid" : undefined,
+        borderRadius: Number(p.borderRadius ?? 0) > 0 ? `${p.borderRadius}px` : undefined,
+        padding: Number(p.borderPadding ?? 0) > 0 ? `${p.borderPadding}px` : undefined,
       };
       const textStyle: React.CSSProperties = {
         color: p.color as string,
@@ -211,9 +223,6 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         marginTop: `${p.marginTop ?? 0}px`,
         marginBottom: `${p.marginBottom ?? 0}px`,
         borderRadius: `${p.borderRadius ?? 0}px`,
-        borderWidth: Number(p.borderWidth ?? 0) > 0 ? `${p.borderWidth}px` : undefined,
-        borderColor: (p.borderColor as string) || undefined,
-        borderStyle: Number(p.borderWidth ?? 0) > 0 ? "solid" : undefined,
         position: "relative",
         overflow: "hidden",
       };
