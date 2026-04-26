@@ -65,7 +65,7 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
         </div>
       )}
 
-      {field.type !== "heading" && field.type !== "paragraph" && field.type !== "divider" && (
+      {!isDisplayOnly && (
         <div>
           <Label className="text-xs">Field name (key)</Label>
           <Input
@@ -83,7 +83,7 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
         </div>
       )}
 
-      {field.type !== "heading" && field.type !== "paragraph" && field.type !== "divider" && field.type !== "hidden" && (
+      {!isDisplayOnly && field.type !== "hidden" && (
         <div>
           <Label className="text-xs">Help text</Label>
           <Textarea
@@ -101,7 +101,82 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
         </div>
       )}
 
-      {!["heading", "paragraph", "divider", "hidden"].includes(field.type) && (
+      {isImage && (
+        <>
+          <div>
+            <Label className="text-xs">Image URL</Label>
+            <Input
+              value={field.image_url ?? ""}
+              placeholder="https://…"
+              onChange={(e) => update("image_url", e.target.value)}
+            />
+            <div className="mt-2">
+              <input
+                id={`img-upload-${field.id}`}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleImageUpload(f);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => document.getElementById(`img-upload-${field.id}`)?.click()}
+              >
+                {uploading ? "Uploading…" : "Upload image"}
+              </Button>
+            </div>
+            {field.image_url && (
+              <img
+                src={field.image_url}
+                alt={field.image_alt ?? ""}
+                className="mt-2 max-h-32 rounded-md border object-contain"
+              />
+            )}
+          </div>
+          <div>
+            <Label className="text-xs">Alt text</Label>
+            <Input
+              value={field.image_alt ?? ""}
+              onChange={(e) => update("image_alt", e.target.value)}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Alignment</Label>
+            <Select
+              value={field.image_align ?? "center"}
+              onValueChange={(v) => update("image_align", v as "left" | "center" | "right")}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Width ({field.image_width ?? 100}%)</Label>
+            <input
+              type="range"
+              min={20}
+              max={100}
+              step={5}
+              value={field.image_width ?? 100}
+              onChange={(e) => update("image_width", Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
+        </>
+      )}
+
+      {!isDisplayOnly && field.type !== "hidden" && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
           <div>
             <Label className="text-sm">Required</Label>
@@ -111,7 +186,7 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
         </div>
       )}
 
-      {!["heading", "paragraph", "divider"].includes(field.type) && (
+      {!isDisplayOnly && (
         <div>
           <Label className="text-xs">Map to lead field</Label>
           <Select
