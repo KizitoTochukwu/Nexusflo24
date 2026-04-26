@@ -51,21 +51,21 @@ const CookieConsentBanner = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] border-t bg-background/95 backdrop-blur-lg shadow-lg">
-      <div className="container py-4">
+      <div className="container px-3 py-2 sm:py-4">
         {!showManage ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <p className="text-xs text-muted-foreground sm:text-sm">
               We use cookies to improve your experience.{" "}
               <Link to="/cookie-policy" className="text-accent hover:underline">Learn more</Link>
             </p>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={rejectNonEssential}>
-                Reject Non-Essential
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <Button size="sm" variant="outline" onClick={rejectNonEssential} className="h-8 flex-1 px-2 text-xs sm:h-9 sm:flex-none sm:px-3 sm:text-sm">
+                Reject
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowManage(true)}>
-                Manage Preferences
+              <Button size="sm" variant="outline" onClick={() => setShowManage(true)} className="h-8 flex-1 px-2 text-xs sm:h-9 sm:flex-none sm:px-3 sm:text-sm">
+                Manage
               </Button>
-              <Button size="sm" className="bg-accent text-accent-foreground hover:bg-gold-dark" onClick={acceptAll}>
+              <Button size="sm" className="h-8 flex-1 bg-accent px-2 text-xs text-accent-foreground hover:bg-gold-dark sm:h-9 sm:flex-none sm:px-3 sm:text-sm" onClick={acceptAll}>
                 Accept All
               </Button>
             </div>
