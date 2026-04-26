@@ -267,19 +267,34 @@ function FieldRenderer({
     }
     case "hidden":
       return null;
-    case "long_text":
+    case "long_text": {
+      const len = typeof value === "string" ? value.length : 0;
       return (
         <div>
-          {labelEl}
+          {styledLabel()}
           <Textarea
             value={value ?? ""}
             placeholder={field.placeholder}
             onChange={(e) => onChange(e.target.value)}
-            rows={4}
+            rows={field.rows ?? 4}
+            minLength={field.min_length}
+            maxLength={field.max_length}
+            autoComplete={field.autocomplete}
+            style={inputStyle}
           />
-          {field.help_text && <p className="mt-1 text-xs opacity-60">{field.help_text}</p>}
+          <div className="mt-1 flex items-center justify-between gap-2">
+            {field.help_text ? (
+              <p className="text-xs opacity-60">{field.help_text}</p>
+            ) : <span />}
+            {field.show_counter && (
+              <p className="text-xs opacity-60 tabular-nums">
+                {len}{field.max_length ? ` / ${field.max_length}` : ""}
+              </p>
+            )}
+          </div>
         </div>
       );
+    }
     case "select":
       return (
         <div>
