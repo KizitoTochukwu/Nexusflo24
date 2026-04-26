@@ -335,6 +335,10 @@ function HeadingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
       </Field>
       <Field label="Line Height"><Input value={(p.lineHeight as string) || ""} onChange={(e) => update("lineHeight", e.target.value)} placeholder="e.g. 1.2" /></Field>
       <Field label="Max Width"><Input value={(p.maxWidth as string) || ""} onChange={(e) => update("maxWidth", e.target.value)} placeholder="e.g. 600px" /></Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Border Width"><Input value={String(p.borderWidth ?? "0")} onChange={(e) => update("borderWidth", e.target.value)} placeholder="e.g. 2" className="h-8 text-xs" /></Field>
+        <ColorField label="Border Color" value={(p.borderColor as string) || "#e5e7eb"} onChange={(v) => update("borderColor", v)} />
+      </div>
     </>
   );
 }
