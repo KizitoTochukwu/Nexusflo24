@@ -1,7 +1,7 @@
 import type { FormFieldType, FormField } from "@/hooks/useForms";
 import {
   Type, AlignLeft, Mail, Phone, Hash, ChevronDown, CheckSquare,
-  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow, Image as ImageIcon,
+  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow, Image as ImageIcon, Stamp,
 } from "lucide-react";
 
 export const FIELD_DEFS: {
