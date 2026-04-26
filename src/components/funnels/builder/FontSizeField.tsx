@@ -148,6 +148,9 @@ export const HEADING_FONT_PRESETS = [
   { label: "M", value: "36px" },
   { label: "L", value: "48px" },
   { label: "XL", value: "64px" },
+  { label: "2XL", value: "80px" },
+  { label: "3XL", value: "96px" },
+  { label: "Hero", value: "120px" },
 ];
 
 export const TEXT_FONT_PRESETS = [
