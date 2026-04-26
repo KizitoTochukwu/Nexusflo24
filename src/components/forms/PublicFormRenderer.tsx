@@ -83,6 +83,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       const { error } = await supabase.functions.invoke("capture-lead", {
         body: {
           ...lead,
+          workspace_id: form.workspace_id,
           source: settings.source,
           tags: settings.tags,
           lead_destination: {
@@ -101,12 +102,6 @@ export default function PublicFormRenderer({ form, preview }: Props) {
         workspace_id: form.workspace_id,
         data: values,
       });
-
-      // Increment submission_count (best effort)
-      await supabase
-        .from("forms")
-        .update({ submission_count: (form.submission_count ?? 0) + 1 })
-        .eq("id", form.id);
 
       // Fire-and-forget: notify workspace users with full submission details
       try {

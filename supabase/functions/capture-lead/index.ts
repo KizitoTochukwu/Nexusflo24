@@ -93,38 +93,59 @@ Deno.serve(async (req) => {
       if (user) ownerId = user.id;
     }
 
-    if (!ownerId) {
+    // Prefer the workspace explicitly provided by the public form/funnel.
+    // Fallback to the authenticated user's first workspace, then to the first profile.
+    let workspaceId: string | null =
+      typeof body.workspace_id === "string" && body.workspace_id ? body.workspace_id : null;
+
+    if (!workspaceId && ownerId) {
+      const { data: membership } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", ownerId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (membership) workspaceId = membership.workspace_id;
+    }
+
+    if (!workspaceId) {
+      // Last-resort fallback for legacy single-tenant calls
       const { data: firstProfile } = await supabase
         .from("profiles")
         .select("id")
         .order("created_at", { ascending: true })
         .limit(1)
         .single();
-      if (!firstProfile) {
-        return new Response(JSON.stringify({ error: "No owner configured" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (firstProfile) {
+        ownerId = ownerId ?? firstProfile.id;
+        const { data: membership } = await supabase
+          .from("workspace_members")
+          .select("workspace_id")
+          .eq("user_id", firstProfile.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (membership) workspaceId = membership.workspace_id;
       }
-      ownerId = firstProfile.id;
     }
 
-    const { data: membership } = await supabase
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", ownerId)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (!membership) {
+    if (!workspaceId) {
       return new Response(JSON.stringify({ error: "No workspace found" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const workspaceId = membership.workspace_id;
+    // Ensure ownerId is set (fallback to workspace owner)
+    if (!ownerId) {
+      const { data: ws } = await supabase
+        .from("workspaces")
+        .select("owner_user_id")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      ownerId = ws?.owner_user_id ?? null;
+    }
     const normalizedEmail = email.toLowerCase();
 
     // Deduplicate by email first, then by phone if no email match
