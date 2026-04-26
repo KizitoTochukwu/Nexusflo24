@@ -3,6 +3,7 @@ import { Block, BLOCK_LABELS } from "./blockTypes";
 import { isContainer } from "./blockTreeUtils";
 import { ArrowUp, ArrowDown, Copy, Trash2, GripVertical, Plus } from "lucide-react";
 import { parseVideoUrl, buildEmbedParams } from "./videoUtils";
+import CountdownBlock, { getCountdownPropsFromBlock } from "./CountdownBlock";
 
 interface Props {
   blocks: Block[];
@@ -287,6 +288,9 @@ function renderBlockContent(block: Block) {
           ))}
         </div>
       );
+    }
+    case "countdown": {
+      return <CountdownBlock {...getCountdownPropsFromBlock(p)} />;
     }
     default:
       return <div className="p-2 text-xs text-muted-foreground">Unknown block: {block.type}</div>;
