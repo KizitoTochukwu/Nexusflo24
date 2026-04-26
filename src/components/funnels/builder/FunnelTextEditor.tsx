@@ -169,13 +169,13 @@ export default function FunnelTextEditor({
       <div className="space-y-2 w-full">
         {/* Toolbar */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap min-w-0">
             <InsertDropdown onInsert={(text) => insertHtml(text)} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" size="sm" className="gap-1 h-7 text-xs">
                   <WrapText className="h-3.5 w-3.5" />
-                  Conditional
+                  <span className="hidden sm:inline">Conditional</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -191,7 +191,7 @@ export default function FunnelTextEditor({
             type="button"
             variant={preview ? "secondary" : "ghost"}
             size="sm"
-            className="gap-1.5 h-7 text-xs"
+            className="gap-1.5 h-7 text-xs shrink-0"
             onClick={() => setPreview(!preview)}
           >
             {preview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -203,32 +203,47 @@ export default function FunnelTextEditor({
         <div className="relative border border-border rounded-lg bg-background overflow-hidden">
           {!preview && (
             <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/30">
-              <ToolbarBtn icon={Undo2} label="Undo" onClick={() => exec("undo")} />
-              <ToolbarBtn icon={Redo2} label="Redo" onClick={() => exec("redo")} />
-              <div className="w-px h-4 bg-border mx-0.5" />
-              <ToolbarBtn icon={Bold} label="Bold" onClick={() => exec("bold")} />
-              <ToolbarBtn icon={Italic} label="Italic" onClick={() => exec("italic")} />
-              <ToolbarBtn icon={Underline} label="Underline" onClick={() => exec("underline")} />
-              <ToolbarBtn icon={Strikethrough} label="Strikethrough" onClick={() => exec("strikeThrough")} />
-              <div className="w-px h-4 bg-border mx-0.5" />
-              <ToolbarBtn icon={AlignLeft} label="Align left" onClick={() => exec("justifyLeft")} />
-              <ToolbarBtn icon={AlignCenter} label="Align center" onClick={() => exec("justifyCenter")} />
-              <ToolbarBtn icon={AlignRight} label="Align right" onClick={() => exec("justifyRight")} />
-              <ToolbarBtn icon={AlignJustify} label="Justify" onClick={() => exec("justifyFull")} />
-              <div className="w-px h-4 bg-border mx-0.5" />
-              <ToolbarBtn icon={List} label="Bullet list" onClick={() => exec("insertUnorderedList")} />
-              <ToolbarBtn icon={ListOrdered} label="Numbered list" onClick={() => exec("insertOrderedList")} />
-              <ToolbarBtn icon={Quote} label="Blockquote" onClick={() => exec("formatBlock", "blockquote")} />
-              <ToolbarBtn icon={Minus} label="Horizontal rule" onClick={() => exec("insertHorizontalRule")} />
-              <ToolbarBtn icon={Link2} label="Insert link" onClick={() => {
-                const url = prompt("Enter URL:");
-                if (url) exec("createLink", url);
-              }} />
-              <div className="w-px h-4 bg-border mx-0.5" />
-              <ColorPicker icon={Type} label="Text color" colors={COLOR_PRESETS}
-                onSelect={(hex) => exec("foreColor", hex)} />
-              <ColorPicker icon={Paintbrush} label="Highlight" colors={COLOR_PRESETS}
-                onSelect={(hex) => exec("hiliteColor", hex)} />
+              {/* Group: history */}
+              <div className="flex items-center gap-0.5">
+                <ToolbarBtn icon={Undo2} label="Undo" onClick={() => exec("undo")} />
+                <ToolbarBtn icon={Redo2} label="Redo" onClick={() => exec("redo")} />
+              </div>
+              <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
+              {/* Group: inline formatting */}
+              <div className="flex items-center gap-0.5">
+                <ToolbarBtn icon={Bold} label="Bold" onClick={() => exec("bold")} />
+                <ToolbarBtn icon={Italic} label="Italic" onClick={() => exec("italic")} />
+                <ToolbarBtn icon={Underline} label="Underline" onClick={() => exec("underline")} />
+                <ToolbarBtn icon={Strikethrough} label="Strikethrough" onClick={() => exec("strikeThrough")} />
+              </div>
+              <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
+              {/* Group: alignment */}
+              <div className="flex items-center gap-0.5">
+                <ToolbarBtn icon={AlignLeft} label="Align left" onClick={() => exec("justifyLeft")} />
+                <ToolbarBtn icon={AlignCenter} label="Align center" onClick={() => exec("justifyCenter")} />
+                <ToolbarBtn icon={AlignRight} label="Align right" onClick={() => exec("justifyRight")} />
+                <ToolbarBtn icon={AlignJustify} label="Justify" onClick={() => exec("justifyFull")} />
+              </div>
+              <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
+              {/* Group: blocks/inserts */}
+              <div className="flex items-center gap-0.5">
+                <ToolbarBtn icon={List} label="Bullet list" onClick={() => exec("insertUnorderedList")} />
+                <ToolbarBtn icon={ListOrdered} label="Numbered list" onClick={() => exec("insertOrderedList")} />
+                <ToolbarBtn icon={Quote} label="Blockquote" onClick={() => exec("formatBlock", "blockquote")} />
+                <ToolbarBtn icon={Minus} label="Horizontal rule" onClick={() => exec("insertHorizontalRule")} />
+                <ToolbarBtn icon={Link2} label="Insert link" onClick={() => {
+                  const url = prompt("Enter URL:");
+                  if (url) exec("createLink", url);
+                }} />
+              </div>
+              <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
+              {/* Group: color */}
+              <div className="flex items-center gap-0.5">
+                <ColorPicker icon={Type} label="Text color" colors={COLOR_PRESETS}
+                  onSelect={(hex) => exec("foreColor", hex)} />
+                <ColorPicker icon={Paintbrush} label="Highlight" colors={COLOR_PRESETS}
+                  onSelect={(hex) => exec("hiliteColor", hex)} />
+              </div>
             </div>
           )}
 
