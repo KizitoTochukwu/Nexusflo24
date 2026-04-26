@@ -188,12 +188,16 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     // Format as local datetime-local string YYYY-MM-DDTHH:mm
     const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    let viewerTz = "UTC";
+    try { viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch {}
     return {
       targetDate: local,
+      timezone: viewerTz,
       introText: "EVENT STARTS IN",
       expiredText: "Event has started",
       showLabels: true,
       showDateTime: true,
+      showTimezone: true,
       dateLabel: "",
       timeLabel: "",
       align: "center",
