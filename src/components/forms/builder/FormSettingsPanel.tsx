@@ -20,6 +20,17 @@ const PIPELINE_STAGES = [
   "new_lead", "contacted", "engaged", "qualified", "demo_booked", "proposal_sent", "negotiation", "closed_won",
 ];
 
+const COLOR_PALETTES: { name: string; bg: string; accent: string; text: string }[] = [
+  { name: "NexusFlo Navy", bg: "#FFFFFF", accent: "#0B1F3B", text: "#0B1F3B" },
+  { name: "Gold Luxe", bg: "#FFFFFF", accent: "#C9A227", text: "#1F2937" },
+  { name: "Midnight", bg: "#0F172A", accent: "#6366F1", text: "#F8FAFC" },
+  { name: "Ocean", bg: "#F0F9FF", accent: "#0284C7", text: "#0C4A6E" },
+  { name: "Forest", bg: "#F0FDF4", accent: "#16A34A", text: "#14532D" },
+  { name: "Sunset", bg: "#FFF7ED", accent: "#EA580C", text: "#7C2D12" },
+  { name: "Rose", bg: "#FFF1F2", accent: "#E11D48", text: "#881337" },
+  { name: "Mono", bg: "#FAFAFA", accent: "#111111", text: "#111111" },
+];
+
 export default function FormSettingsPanel({
   description, settings, theme, onChangeDescription, onChangeSettings, onChangeTheme,
 }: Props) {
