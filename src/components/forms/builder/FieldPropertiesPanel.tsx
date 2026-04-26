@@ -503,6 +503,161 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
           </div>
         </>
       )}
+
+      {HAS_HEADING_STYLING.has(field.type) && (
+        <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {field.type === "heading" ? "Heading styling" : "Paragraph styling"}
+          </p>
+
+          {field.type === "heading" && (
+            <div>
+              <Label className="text-xs">Heading level</Label>
+              <Select
+                value={field.heading_level ?? "h2"}
+                onValueChange={(v) => update("heading_level", v as any)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="h1">H1 — Largest</SelectItem>
+                  <SelectItem value="h2">H2</SelectItem>
+                  <SelectItem value="h3">H3</SelectItem>
+                  <SelectItem value="h4">H4</SelectItem>
+                  <SelectItem value="h5">H5</SelectItem>
+                  <SelectItem value="h6">H6 — Smallest</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs">Text alignment</Label>
+            <Select
+              value={field.text_align ?? "left"}
+              onValueChange={(v) => update("text_align", v as any)}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Left</SelectItem>
+                <SelectItem value="center">Center</SelectItem>
+                <SelectItem value="right">Right</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Font size (px)</Label>
+              <Input
+                type="number"
+                min={10}
+                max={120}
+                value={field.font_size ?? ""}
+                onChange={(e) =>
+                  update("font_size", e.target.value === "" ? undefined : Number(e.target.value))
+                }
+                placeholder={field.type === "heading" ? "32" : "14"}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Font weight</Label>
+              <Select
+                value={field.font_weight ?? (field.type === "heading" ? "bold" : "normal")}
+                onValueChange={(v) => update("font_weight", v as any)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="semibold">Semibold</SelectItem>
+                  <SelectItem value="bold">Bold</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Line height</Label>
+              <Input
+                type="number"
+                step={0.1}
+                min={0.8}
+                max={3}
+                value={field.line_height ?? ""}
+                onChange={(e) =>
+                  update("line_height", e.target.value === "" ? undefined : Number(e.target.value))
+                }
+                placeholder="1.2"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Letter spacing (px)</Label>
+              <Input
+                type="number"
+                step={0.5}
+                value={field.letter_spacing ?? ""}
+                onChange={(e) =>
+                  update("letter_spacing", e.target.value === "" ? undefined : Number(e.target.value))
+                }
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <ColorInput
+              label="Text color"
+              value={field.text_color ?? ""}
+              onChange={(v) => update("text_color", v || undefined)}
+            />
+            <ColorInput
+              label="Background"
+              value={field.background_color ?? ""}
+              onChange={(v) => update("background_color", v || undefined)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Margin top (px)</Label>
+              <Input
+                type="number"
+                value={field.margin_top ?? ""}
+                onChange={(e) =>
+                  update("margin_top", e.target.value === "" ? undefined : Number(e.target.value))
+                }
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Margin bottom (px)</Label>
+              <Input
+                type="number"
+                value={field.margin_bottom ?? ""}
+                onChange={(e) =>
+                  update("margin_bottom", e.target.value === "" ? undefined : Number(e.target.value))
+                }
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Padding / border radius (px)</Label>
+            <Input
+              type="number"
+              min={0}
+              max={64}
+              value={field.border_radius ?? ""}
+              onChange={(e) =>
+                update("border_radius", e.target.value === "" ? undefined : Number(e.target.value))
+              }
+              placeholder="0"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
