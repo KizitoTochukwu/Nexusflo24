@@ -92,7 +92,7 @@ function renderBlockContent(block: Block) {
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
       };
-      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!text-[inherit] [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
+      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
       if (headingHasHtml) {
         return (
           <div style={headingWrapStyle}>

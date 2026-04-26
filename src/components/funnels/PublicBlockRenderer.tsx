@@ -103,7 +103,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
       };
-      const headingClass = `${!p.fontSize ? sizes[p.level as string] || sizes.h2 : ""} leading-tight [&_*]:!text-[inherit] [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
+      const headingClass = `${!p.fontSize ? sizes[p.level as string] || sizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
       if (useHtml) {
         return (
           <div style={headingWrapStyle}>
