@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import FunnelTextEditor from "./FunnelTextEditor";
 import FontSizeField, { HEADING_FONT_PRESETS, TEXT_FONT_PRESETS } from "./FontSizeField";
+import ColorPaletteField from "./ColorPaletteField";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Button } from "@/components/ui/button";
@@ -74,14 +75,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <Field label={label}>
-      <div className="flex items-center gap-2">
-        <input type="color" value={value || "#000000"} onChange={(e) => onChange(e.target.value)} className="h-8 w-10 cursor-pointer rounded border" />
-        <Input value={value || ""} onChange={(e) => onChange(e.target.value)} className="h-8 text-xs" />
-      </div>
-    </Field>
-  );
+  return <ColorPaletteField label={label} value={value} onChange={onChange} />;
 }
 
 function AlignField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -327,7 +321,7 @@ function HeadingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
         presets={HEADING_FONT_PRESETS}
         step={2}
         min={12}
-        max={120}
+        max={200}
         fallbackPx={36}
       />
       <Field label="Font Weight">
