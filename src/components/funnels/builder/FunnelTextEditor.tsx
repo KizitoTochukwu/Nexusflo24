@@ -87,26 +87,41 @@ export default function FunnelTextEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState(false);
   const [buttonDialogOpen, setButtonDialogOpen] = useState(false);
-  const isInternalUpdate = useRef(false);
+  const lastEmittedValue = useRef<string>(value);
 
-  // Sync value prop → editor
+  // Sync value prop → editor only when it differs from what the user last typed.
+  // This prevents the caret from being destroyed when a parent normalizes HTML
+  // (e.g. trimming empty tags) and sends back a slightly different value while
+  // the user is mid-edit.
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
-      return;
-    }
+    // If this value is what we just emitted, do nothing — DOM is already correct.
+    if (value === lastEmittedValue.current) return;
+    // External update (different from what user typed). Only overwrite DOM
+    // if it actually differs, and try to preserve focus/caret when possible.
     if (el.innerHTML !== value) {
+      const wasFocused = document.activeElement === el;
       el.innerHTML = value;
+      lastEmittedValue.current = value;
+      if (wasFocused) {
+        // Move caret to end so user can continue typing
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
     }
   }, [value]);
 
   const emitChange = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
-    isInternalUpdate.current = true;
-    onChange(el.innerHTML);
+    const html = el.innerHTML;
+    lastEmittedValue.current = html;
+    onChange(html);
   }, [onChange]);
 
   const exec = useCallback((cmd: string, val?: string) => {
