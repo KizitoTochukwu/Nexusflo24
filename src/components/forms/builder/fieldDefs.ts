@@ -72,7 +72,10 @@ export const FIELD_DEFS: {
     label: "Consent",
     icon: ShieldCheck,
     defaults: () => ({
-      type: "consent", label: "I agree to receive marketing emails.", name: "consent", required: true,
+      type: "consent",
+      label: "I agree to receive marketing communications, and you can unsubscribe at any time.",
+      name: "consent",
+      required: true,
     }),
   },
   {
