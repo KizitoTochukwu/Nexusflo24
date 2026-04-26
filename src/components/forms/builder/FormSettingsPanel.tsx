@@ -155,6 +155,44 @@ export default function FormSettingsPanel({
 
       <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Branding</p>
+
+        <div>
+          <Label className="text-xs">Color palette</Label>
+          <div className="mt-1.5 grid grid-cols-2 gap-2">
+            {COLOR_PALETTES.map((p) => {
+              const active =
+                theme.bg_color.toLowerCase() === p.bg.toLowerCase() &&
+                theme.accent_color.toLowerCase() === p.accent.toLowerCase() &&
+                theme.text_color.toLowerCase() === p.text.toLowerCase();
+              return (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() =>
+                    onChangeTheme({
+                      ...theme,
+                      bg_color: p.bg,
+                      accent_color: p.accent,
+                      text_color: p.text,
+                    })
+                  }
+                  className={`group flex items-center gap-2 rounded-md border p-2 text-left transition hover:border-primary ${
+                    active ? "border-primary ring-2 ring-primary/30" : "border-border"
+                  }`}
+                  title={p.name}
+                >
+                  <div className="flex -space-x-1">
+                    <span className="h-5 w-5 rounded-full border border-background" style={{ background: p.bg }} />
+                    <span className="h-5 w-5 rounded-full border border-background" style={{ background: p.accent }} />
+                    <span className="h-5 w-5 rounded-full border border-background" style={{ background: p.text }} />
+                  </div>
+                  <span className="truncate text-xs">{p.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs">Background</Label>
