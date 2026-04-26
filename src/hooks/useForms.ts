@@ -37,6 +37,27 @@ export interface FormField {
   image_alt?: string;
   image_align?: "left" | "center" | "right";
   image_width?: number; // % of container
+  // short_text / long_text — visual styling
+  text_color?: string;
+  background_color?: string;
+  border_color?: string;
+  border_radius?: number; // px
+  font_size?: number; // px
+  font_weight?: "normal" | "medium" | "semibold" | "bold";
+  text_align?: "left" | "center" | "right";
+  label_color?: string;
+  label_size?: number; // px
+  label_weight?: "normal" | "medium" | "semibold" | "bold";
+  // short_text / long_text — validation & behavior
+  min_length?: number;
+  max_length?: number;
+  pattern?: string; // regex source
+  pattern_message?: string;
+  autocomplete?: string; // e.g. "name", "off"
+  // long_text only
+  rows?: number;
+  resize?: "none" | "vertical" | "horizontal" | "both";
+  show_counter?: boolean;
 }
 
 export interface FormStep {

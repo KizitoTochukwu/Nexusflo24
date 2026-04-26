@@ -19,6 +19,7 @@ interface Props {
 
 const HAS_OPTIONS = new Set(["select", "radio", "checkbox_group"]);
 const HAS_PLACEHOLDER = new Set(["short_text", "long_text", "email", "phone", "number", "select"]);
+const HAS_EDITOR_STYLING = new Set(["short_text", "long_text"]);
 
 export default function FieldPropertiesPanel({ field, onChange }: Props) {
   const [uploading, setUploading] = useState(false);
@@ -250,6 +251,290 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
           </div>
         </div>
       )}
+
+      {HAS_EDITOR_STYLING.has(field.type) && (
+        <>
+          {/* ── Validation & behavior ── */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Validation & behavior
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Min length</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={field.min_length ?? ""}
+                  onChange={(e) =>
+                    update("min_length", e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Max length</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={field.max_length ?? ""}
+                  onChange={(e) =>
+                    update("max_length", e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs">Default value</Label>
+              <Input
+                value={field.default_value ?? ""}
+                onChange={(e) => update("default_value", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Validation pattern (regex)</Label>
+              <Input
+                value={field.pattern ?? ""}
+                onChange={(e) => update("pattern", e.target.value)}
+                placeholder="^[A-Za-z ]+$"
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Pattern error message</Label>
+              <Input
+                value={field.pattern_message ?? ""}
+                onChange={(e) => update("pattern_message", e.target.value)}
+                placeholder="Please enter a valid value"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Autocomplete</Label>
+              <Select
+                value={field.autocomplete ?? "on"}
+                onValueChange={(v) => update("autocomplete", v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="on">On</SelectItem>
+                  <SelectItem value="off">Off</SelectItem>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="given-name">First name</SelectItem>
+                  <SelectItem value="family-name">Last name</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="tel">Phone</SelectItem>
+                  <SelectItem value="organization">Organization</SelectItem>
+                  <SelectItem value="street-address">Street address</SelectItem>
+                  <SelectItem value="postal-code">Postal code</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {field.type === "long_text" && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Rows</Label>
+                    <Input
+                      type="number"
+                      min={2}
+                      max={20}
+                      value={field.rows ?? 4}
+                      onChange={(e) => update("rows", Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Resize</Label>
+                    <Select
+                      value={field.resize ?? "vertical"}
+                      onValueChange={(v) => update("resize", v as any)}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="vertical">Vertical</SelectItem>
+                        <SelectItem value="horizontal">Horizontal</SelectItem>
+                        <SelectItem value="both">Both</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border bg-background p-2">
+                  <Label className="text-sm">Show character counter</Label>
+                  <Switch
+                    checked={!!field.show_counter}
+                    onCheckedChange={(v) => update("show_counter", v)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Visual styling ── */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Visual styling
+            </p>
+
+            <div>
+              <Label className="text-xs">Text alignment</Label>
+              <Select
+                value={field.text_align ?? "left"}
+                onValueChange={(v) => update("text_align", v as any)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Font size (px)</Label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={32}
+                  value={field.font_size ?? ""}
+                  onChange={(e) =>
+                    update("font_size", e.target.value === "" ? undefined : Number(e.target.value))
+                  }
+                  placeholder="14"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Font weight</Label>
+                <Select
+                  value={field.font_weight ?? "normal"}
+                  onValueChange={(v) => update("font_weight", v as any)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="semibold">Semibold</SelectItem>
+                    <SelectItem value="bold">Bold</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <ColorInput
+                label="Text"
+                value={field.text_color ?? ""}
+                onChange={(v) => update("text_color", v || undefined)}
+              />
+              <ColorInput
+                label="Background"
+                value={field.background_color ?? ""}
+                onChange={(v) => update("background_color", v || undefined)}
+              />
+              <ColorInput
+                label="Border"
+                value={field.border_color ?? ""}
+                onChange={(v) => update("border_color", v || undefined)}
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs">Border radius (px)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={32}
+                value={field.border_radius ?? ""}
+                onChange={(e) =>
+                  update("border_radius", e.target.value === "" ? undefined : Number(e.target.value))
+                }
+                placeholder="6"
+              />
+            </div>
+
+            <div className="border-t pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Label styling
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <ColorInput
+                  label="Color"
+                  value={field.label_color ?? ""}
+                  onChange={(v) => update("label_color", v || undefined)}
+                />
+                <div>
+                  <Label className="text-xs">Size (px)</Label>
+                  <Input
+                    type="number"
+                    min={10}
+                    max={24}
+                    value={field.label_size ?? ""}
+                    onChange={(e) =>
+                      update("label_size", e.target.value === "" ? undefined : Number(e.target.value))
+                    }
+                    placeholder="14"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Weight</Label>
+                  <Select
+                    value={field.label_weight ?? "medium"}
+                    onValueChange={(v) => update("label_weight", v as any)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="semibold">Semibold</SelectItem>
+                      <SelectItem value="bold">Bold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* Compact label + native color input + hex input */
+function ColorInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <Label className="text-xs">{label}</Label>
+      <div className="flex items-center gap-1">
+        <input
+          type="color"
+          value={value || "#000000"}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-9 w-9 cursor-pointer rounded border bg-transparent p-0.5"
+          aria-label={`${label} color`}
+        />
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="#"
+          className="h-9 flex-1 font-mono text-[11px] uppercase"
+          maxLength={9}
+        />
+      </div>
     </div>
   );
 }

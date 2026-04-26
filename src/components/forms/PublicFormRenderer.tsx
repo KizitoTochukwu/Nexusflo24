@@ -211,12 +211,37 @@ function FieldRenderer({
   onChange: (v: any) => void;
   accent: string;
 }) {
+  const styledLabel = (extra?: React.CSSProperties) => (
+    <Label
+      className="mb-1.5 block font-medium"
+      style={{
+        color: field.label_color || undefined,
+        fontSize: field.label_size ? `${field.label_size}px` : undefined,
+        fontWeight: field.label_weight || undefined,
+        ...extra,
+      }}
+    >
+      {field.label}
+      {field.required && <span style={{ color: accent }}>{" *"}</span>}
+    </Label>
+  );
   const labelEl = (
     <Label className="mb-1.5 block text-sm font-medium">
       {field.label}
       {field.required && <span style={{ color: accent }}>{" *"}</span>}
     </Label>
   );
+
+  const inputStyle: React.CSSProperties = {
+    color: field.text_color || undefined,
+    backgroundColor: field.background_color || undefined,
+    borderColor: field.border_color || undefined,
+    borderRadius: field.border_radius != null ? `${field.border_radius}px` : undefined,
+    fontSize: field.font_size ? `${field.font_size}px` : undefined,
+    fontWeight: field.font_weight || undefined,
+    textAlign: (field.text_align as any) || undefined,
+    resize: field.resize as any,
+  };
 
   switch (field.type) {
     case "heading":
@@ -242,19 +267,34 @@ function FieldRenderer({
     }
     case "hidden":
       return null;
-    case "long_text":
+    case "long_text": {
+      const len = typeof value === "string" ? value.length : 0;
       return (
         <div>
-          {labelEl}
+          {styledLabel()}
           <Textarea
             value={value ?? ""}
             placeholder={field.placeholder}
             onChange={(e) => onChange(e.target.value)}
-            rows={4}
+            rows={field.rows ?? 4}
+            minLength={field.min_length}
+            maxLength={field.max_length}
+            autoComplete={field.autocomplete}
+            style={inputStyle}
           />
-          {field.help_text && <p className="mt-1 text-xs opacity-60">{field.help_text}</p>}
+          <div className="mt-1 flex items-center justify-between gap-2">
+            {field.help_text ? (
+              <p className="text-xs opacity-60">{field.help_text}</p>
+            ) : <span />}
+            {field.show_counter && (
+              <p className="text-xs opacity-60 tabular-nums">
+                {len}{field.max_length ? ` / ${field.max_length}` : ""}
+              </p>
+            )}
+          </div>
         </div>
       );
+    }
     case "select":
       return (
         <div>
@@ -377,12 +417,25 @@ function FieldRenderer({
         </div>
       );
     case "short_text":
-    default:
+    default: {
+      const isShortText = field.type === "short_text";
       return (
         <div>
-          {labelEl}
-          <Input value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+          {isShortText ? styledLabel() : labelEl}
+          <Input
+            value={value ?? ""}
+            placeholder={field.placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            minLength={isShortText ? field.min_length : undefined}
+            maxLength={isShortText ? field.max_length : undefined}
+            pattern={isShortText ? field.pattern : undefined}
+            title={isShortText ? field.pattern_message : undefined}
+            autoComplete={isShortText ? field.autocomplete : undefined}
+            style={isShortText ? inputStyle : undefined}
+          />
+          {field.help_text && <p className="mt-1 text-xs opacity-60">{field.help_text}</p>}
         </div>
       );
+    }
   }
 }
