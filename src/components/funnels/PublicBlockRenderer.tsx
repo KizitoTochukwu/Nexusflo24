@@ -111,7 +111,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
     case "text": {
       const rawText = (p.text as string) || "";
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
-      const useHtml = hasHtml(resolvedText);
+      const useHtml = !isEffectivelyEmpty(resolvedText) && hasHtml(resolvedText);
       const textWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
