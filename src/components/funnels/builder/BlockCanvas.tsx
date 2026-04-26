@@ -24,9 +24,6 @@ function getSectionStyle(p: Record<string, unknown>): React.CSSProperties {
     marginTop: `${p.marginTop ?? 0}px`,
     marginBottom: `${p.marginBottom ?? 0}px`,
     borderRadius: `${p.borderRadius ?? 0}px`,
-    borderWidth: `${p.borderWidth ?? 0}px`,
-    borderColor: (p.borderColor as string) || "#e5e7eb",
-    borderStyle: Number(p.borderWidth ?? 0) > 0 ? "solid" : "none",
     position: "relative",
   };
   if (bgType === "solid") style.backgroundColor = (p.backgroundColor as string) || "#ffffff";

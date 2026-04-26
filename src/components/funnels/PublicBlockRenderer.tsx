@@ -211,9 +211,6 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         marginTop: `${p.marginTop ?? 0}px`,
         marginBottom: `${p.marginBottom ?? 0}px`,
         borderRadius: `${p.borderRadius ?? 0}px`,
-        borderWidth: Number(p.borderWidth ?? 0) > 0 ? `${p.borderWidth}px` : undefined,
-        borderColor: (p.borderColor as string) || undefined,
-        borderStyle: Number(p.borderWidth ?? 0) > 0 ? "solid" : undefined,
         position: "relative",
         overflow: "hidden",
       };
