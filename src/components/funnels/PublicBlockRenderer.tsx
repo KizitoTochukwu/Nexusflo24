@@ -105,10 +105,16 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         lineHeight: (p.lineHeight as string) || undefined,
       };
       const headingClass = `${!p.fontSize ? sizes[p.level as string] || sizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
+      const headingScopeId = `pr-h-${block.id}`;
+      const headingColorOverride = p.color ? (
+        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${headingScopeId}"], [data-pr-scope="${headingScopeId}"] * { color: ${p.color} !important; }` }} />
+      ) : null;
       if (useHtml) {
         return (
           <div style={headingWrapStyle}>
+            {headingColorOverride}
             <Tag
+              data-pr-scope={headingScopeId}
               className={headingClass}
               style={baseStyle}
               dangerouslySetInnerHTML={{ __html: sanitizedText }}
@@ -118,7 +124,8 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       }
       return (
         <div style={headingWrapStyle}>
-          <Tag className={headingClass} style={baseStyle}>
+          {headingColorOverride}
+          <Tag data-pr-scope={headingScopeId} className={headingClass} style={baseStyle}>
             {sanitizedText}
           </Tag>
         </div>
@@ -144,10 +151,16 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         fontWeight: (p.fontWeight as string) || undefined,
         lineHeight: (p.lineHeight as string) || undefined,
       };
+      const textScopeId = `pr-t-${block.id}`;
+      const textColorOverride = p.color ? (
+        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${textScopeId}"], [data-pr-scope="${textScopeId}"] * { color: ${p.color} !important; }` }} />
+      ) : null;
       if (useHtml) {
         return (
           <div style={textWrapStyle}>
+            {textColorOverride}
             <div
+              data-pr-scope={textScopeId}
               className="text-base md:text-lg leading-relaxed"
               style={textStyle}
               dangerouslySetInnerHTML={{ __html: resolvedText }}
@@ -157,7 +170,8 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       }
       return (
         <div style={textWrapStyle}>
-          <p className="text-base md:text-lg leading-relaxed" style={{ ...textStyle, whiteSpace: "pre-wrap" }}>
+          {textColorOverride}
+          <p data-pr-scope={textScopeId} className="text-base md:text-lg leading-relaxed" style={{ ...textStyle, whiteSpace: "pre-wrap" }}>
             {resolvedText}
           </p>
         </div>

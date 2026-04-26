@@ -94,16 +94,22 @@ function renderBlockContent(block: Block) {
         lineHeight: (p.lineHeight as string) || undefined,
       };
       const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
+      const headingScopeId = `bc-h-${block.id}`;
+      const headingColorOverride = p.color ? (
+        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${headingScopeId}"], [data-bc-scope="${headingScopeId}"] * { color: ${p.color} !important; }` }} />
+      ) : null;
       if (headingHasHtml) {
         return (
           <div style={headingWrapStyle}>
-            <Tag className={headingClass} style={headingInnerStyle} dangerouslySetInnerHTML={{ __html: sanitizedHeading }} />
+            {headingColorOverride}
+            <Tag data-bc-scope={headingScopeId} className={headingClass} style={headingInnerStyle} dangerouslySetInnerHTML={{ __html: sanitizedHeading }} />
           </div>
         );
       }
       return (
         <div style={headingWrapStyle}>
-          <Tag className={headingClass} style={headingInnerStyle}>{sanitizedHeading}</Tag>
+          {headingColorOverride}
+          <Tag data-bc-scope={headingScopeId} className={headingClass} style={headingInnerStyle}>{sanitizedHeading}</Tag>
         </div>
       );
     }
@@ -122,17 +128,23 @@ function renderBlockContent(block: Block) {
         padding: textBorderWidth > 0 ? "8px 12px" : undefined,
       };
       const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
+      const textScopeId = `bc-t-${block.id}`;
+      const textColorOverride = p.color ? (
+        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${textScopeId}"], [data-bc-scope="${textScopeId}"] * { color: ${p.color} !important; }` }} />
+      ) : null;
       if (textHasHtml) {
         const htmlContent = rawText.replace(/\n/g, "<br/>");
         return (
           <div style={textWrapStyle}>
-            <div className="text-sm leading-relaxed" style={textInnerStyle} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            {textColorOverride}
+            <div data-bc-scope={textScopeId} className="text-sm leading-relaxed" style={textInnerStyle} dangerouslySetInnerHTML={{ __html: htmlContent }} />
           </div>
         );
       }
       return (
         <div style={textWrapStyle}>
-          <p className="text-sm leading-relaxed" style={{ ...textInnerStyle, whiteSpace: "pre-wrap" }}>
+          {textColorOverride}
+          <p data-bc-scope={textScopeId} className="text-sm leading-relaxed" style={{ ...textInnerStyle, whiteSpace: "pre-wrap" }}>
             {rawText}
           </p>
         </div>
