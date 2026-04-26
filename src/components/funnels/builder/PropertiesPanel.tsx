@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import FunnelTextEditor from "./FunnelTextEditor";
 import FontSizeField, { HEADING_FONT_PRESETS, TEXT_FONT_PRESETS } from "./FontSizeField";
 import ColorPaletteField from "./ColorPaletteField";
+import { TIMEZONE_OPTIONS } from "./CountdownBlock";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Button } from "@/components/ui/button";
