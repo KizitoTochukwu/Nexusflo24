@@ -211,12 +211,37 @@ function FieldRenderer({
   onChange: (v: any) => void;
   accent: string;
 }) {
+  const styledLabel = (extra?: React.CSSProperties) => (
+    <Label
+      className="mb-1.5 block font-medium"
+      style={{
+        color: field.label_color || undefined,
+        fontSize: field.label_size ? `${field.label_size}px` : undefined,
+        fontWeight: field.label_weight || undefined,
+        ...extra,
+      }}
+    >
+      {field.label}
+      {field.required && <span style={{ color: accent }}>{" *"}</span>}
+    </Label>
+  );
   const labelEl = (
     <Label className="mb-1.5 block text-sm font-medium">
       {field.label}
       {field.required && <span style={{ color: accent }}>{" *"}</span>}
     </Label>
   );
+
+  const inputStyle: React.CSSProperties = {
+    color: field.text_color || undefined,
+    backgroundColor: field.background_color || undefined,
+    borderColor: field.border_color || undefined,
+    borderRadius: field.border_radius != null ? `${field.border_radius}px` : undefined,
+    fontSize: field.font_size ? `${field.font_size}px` : undefined,
+    fontWeight: field.font_weight || undefined,
+    textAlign: (field.text_align as any) || undefined,
+    resize: field.resize as any,
+  };
 
   switch (field.type) {
     case "heading":
