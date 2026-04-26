@@ -76,9 +76,14 @@ function renderBlockContent(block: Block) {
             .replace(/<\/(p|div|h[1-6])>/gi, "")
         : rawHeading;
       const headingHasHtml = stripped ? /<[a-z][\s\S]*>/i.test(sanitizedHeading) : false;
+      const headingBorderWidth = Number(p.borderWidth ?? 0);
       const headingWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+        borderWidth: headingBorderWidth > 0 ? `${headingBorderWidth}px` : undefined,
+        borderColor: headingBorderWidth > 0 ? ((p.borderColor as string) || "#e5e7eb") : undefined,
+        borderStyle: headingBorderWidth > 0 ? "solid" : undefined,
+        padding: headingBorderWidth > 0 ? "8px 12px" : undefined,
       };
       const headingInnerStyle: React.CSSProperties = {
         color: p.color as string,
