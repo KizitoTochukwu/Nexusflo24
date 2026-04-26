@@ -21,6 +21,7 @@ const HAS_OPTIONS = new Set(["select", "radio", "checkbox_group"]);
 const HAS_PLACEHOLDER = new Set(["short_text", "long_text", "email", "phone", "number", "select"]);
 
 export default function FieldPropertiesPanel({ field, onChange }: Props) {
+  const [uploading, setUploading] = useState(false);
   const update = <K extends keyof FormField>(k: K, v: FormField[K]) =>
     onChange({ ...field, [k]: v });
 
@@ -30,12 +31,39 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
     update("options", opts);
   };
 
+  const handleImageUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const { data: userRes } = await supabase.auth.getUser();
+      if (!userRes.user) throw new Error("Not authenticated");
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${userRes.user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("funnel-assets").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("funnel-assets").getPublicUrl(path);
+      update("image_url", pub.publicUrl);
+      toast.success("Image uploaded");
+    } catch (e: any) {
+      toast.error(e.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const isImage = field.type === "image";
+  const isDisplayOnly = ["heading", "paragraph", "divider", "image"].includes(field.type);
+
   return (
     <div className="space-y-4">
-      <div>
-        <Label className="text-xs">Label</Label>
-        <Input value={field.label ?? ""} onChange={(e) => update("label", e.target.value)} />
-      </div>
+      {!isImage && (
+        <div>
+          <Label className="text-xs">Label</Label>
+          <Input value={field.label ?? ""} onChange={(e) => update("label", e.target.value)} />
+        </div>
+      )}
 
       {field.type !== "heading" && field.type !== "paragraph" && field.type !== "divider" && (
         <div>
