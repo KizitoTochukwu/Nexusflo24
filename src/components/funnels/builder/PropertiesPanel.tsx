@@ -50,7 +50,7 @@ export default function PropertiesPanel({ block, onChange }: Props) {
       </div>
 
       {block.type === "section" && <SectionProps p={p} update={update} />}
-      {(block.type === "columns2" || block.type === "columns3") && <ColumnsProps p={p} update={update} type={block.type} />}
+      {(block.type === "columns2" || block.type === "columns3" || block.type === "columns4") && <ColumnsProps p={p} update={update} type={block.type} />}
       {block.type === "heading" && <HeadingProps p={p} update={update} />}
       {block.type === "text" && <TextProps p={p} update={update} />}
       {block.type === "image" && <ImageProps p={p} update={update} />}
