@@ -111,7 +111,15 @@ function renderBlockContent(block: Block) {
       const strippedText = rawTextValue.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
       const rawText = strippedText ? rawTextValue : "Text block";
       const textHasHtml = strippedText ? /<[a-z][\s\S]*>/i.test(rawText) : false;
-      const textWrapStyle: React.CSSProperties = { maxWidth: (p.maxWidth as string) || undefined, margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined };
+      const textBorderWidth = Number(p.borderWidth ?? 0);
+      const textWrapStyle: React.CSSProperties = {
+        maxWidth: (p.maxWidth as string) || undefined,
+        margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+        borderWidth: textBorderWidth > 0 ? `${textBorderWidth}px` : undefined,
+        borderColor: textBorderWidth > 0 ? ((p.borderColor as string) || "#e5e7eb") : undefined,
+        borderStyle: textBorderWidth > 0 ? "solid" : undefined,
+        padding: textBorderWidth > 0 ? "8px 12px" : undefined,
+      };
       const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
       if (textHasHtml) {
         const htmlContent = rawText.replace(/\n/g, "<br/>");
