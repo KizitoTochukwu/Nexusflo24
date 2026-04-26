@@ -395,6 +395,8 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         </div>
       );
     }
+    case "countdown":
+      return <CountdownBlock {...getCountdownPropsFromBlock(p)} />;
     default:
       return null;
   }
