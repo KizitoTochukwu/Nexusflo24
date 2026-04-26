@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import type { Block } from "@/components/funnels/builder/blockTypes";
 import { parseVideoUrl, buildEmbedParams } from "@/components/funnels/builder/videoUtils";
+import CountdownBlock, { getCountdownPropsFromBlock } from "@/components/funnels/builder/CountdownBlock";
 
 interface Props {
   blocks: Block[];
@@ -394,6 +395,8 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         </div>
       );
     }
+    case "countdown":
+      return <CountdownBlock {...getCountdownPropsFromBlock(p)} />;
     default:
       return null;
   }

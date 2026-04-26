@@ -64,6 +64,7 @@ export default function PropertiesPanel({ block, onChange }: Props) {
       {block.type === "embed" && <EmbedProps p={p} update={update} />}
       {block.type === "video" && <VideoProps p={p} update={update} />}
       {block.type === "booking" && <BookingProps p={p} update={update} />}
+      {block.type === "countdown" && <CountdownProps p={p} update={update} />}
       {block.type === "cards" && <CardsProps p={p} update={update} onChange={(id, props) => onChange(block.id, props)} blockId={block.id} />}
     </div>
   );
@@ -829,6 +830,141 @@ function CardsProps({ p, update, onChange, blockId }: { p: Record<string, unknow
         <Button variant="outline" size="sm" className="w-full" onClick={addItem}>
           <Plus className="mr-1 h-3 w-3" /> Add Card
         </Button>
+      </div>
+    </>
+  );
+}
+
+/* ─── Countdown ─── */
+function CountdownProps({ p, update }: { p: Record<string, unknown>; update: (k: string, v: unknown) => void }) {
+  return (
+    <>
+      <Field label="Target Date & Time">
+        <Input
+          type="datetime-local"
+          value={(p.targetDate as string) || ""}
+          onChange={(e) => update("targetDate", e.target.value)}
+          className="h-9 text-xs"
+        />
+      </Field>
+      <Field label="Intro Text (above timer)">
+        <Input
+          value={(p.introText as string) || ""}
+          onChange={(e) => update("introText", e.target.value)}
+          placeholder="EVENT STARTS IN"
+        />
+      </Field>
+      <Field label="Expired Message">
+        <Input
+          value={(p.expiredText as string) || ""}
+          onChange={(e) => update("expiredText", e.target.value)}
+          placeholder="Event has started"
+        />
+      </Field>
+      <SwitchField
+        label="Show Date & Time pills"
+        checked={p.showDateTime !== false}
+        onChange={(v) => update("showDateTime", v)}
+      />
+      {p.showDateTime !== false && (
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Date Label (override)">
+            <Input
+              value={(p.dateLabel as string) || ""}
+              onChange={(e) => update("dateLabel", e.target.value)}
+              placeholder="Auto"
+              className="h-8 text-xs"
+            />
+          </Field>
+          <Field label="Time Label (override)">
+            <Input
+              value={(p.timeLabel as string) || ""}
+              onChange={(e) => update("timeLabel", e.target.value)}
+              placeholder="Auto"
+              className="h-8 text-xs"
+            />
+          </Field>
+        </div>
+      )}
+      <SwitchField
+        label="Show Unit Labels (DAYS, HOURS…)"
+        checked={p.showLabels !== false}
+        onChange={(v) => update("showLabels", v)}
+      />
+      <AlignField value={(p.align as string) || "center"} onChange={(v) => update("align", v)} />
+
+      <div className="pt-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Style</p>
+        <div className="space-y-3">
+          <ColorField label="Number Color" value={(p.numberColor as string) || "#D4AF37"} onChange={(v) => update("numberColor", v)} />
+          <ColorField label="Label Color" value={(p.labelColor as string) || "#94a3b8"} onChange={(v) => update("labelColor", v)} />
+          <ColorField label="Intro Text Color" value={(p.introColor as string) || "#94a3b8"} onChange={(v) => update("introColor", v)} />
+          <ColorField label="Pill Background" value={(p.pillBg as string) || "rgba(255,255,255,0.04)"} onChange={(v) => update("pillBg", v)} />
+          <ColorField label="Pill Border Color" value={(p.pillBorderColor as string) || "rgba(255,255,255,0.08)"} onChange={(v) => update("pillBorderColor", v)} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Number Size (px)">
+          <Input
+            type="number"
+            min={12}
+            max={120}
+            value={String(p.numberSize ?? 32)}
+            onChange={(e) => update("numberSize", Number(e.target.value))}
+            className="h-8 text-xs"
+          />
+        </Field>
+        <Field label="Label Size (px)">
+          <Input
+            type="number"
+            min={8}
+            max={32}
+            value={String(p.labelSize ?? 11)}
+            onChange={(e) => update("labelSize", Number(e.target.value))}
+            className="h-8 text-xs"
+          />
+        </Field>
+        <Field label="Pill Border Radius">
+          <Input
+            type="number"
+            min={0}
+            max={48}
+            value={String(p.pillBorderRadius ?? 12)}
+            onChange={(e) => update("pillBorderRadius", Number(e.target.value))}
+            className="h-8 text-xs"
+          />
+        </Field>
+        <Field label="Pill Border Width">
+          <Input
+            type="number"
+            min={0}
+            max={6}
+            value={String(p.pillBorderWidth ?? 1)}
+            onChange={(e) => update("pillBorderWidth", Number(e.target.value))}
+            className="h-8 text-xs"
+          />
+        </Field>
+        <Field label="Gap (px)">
+          <Input
+            type="number"
+            min={0}
+            max={48}
+            value={String(p.gap ?? 12)}
+            onChange={(e) => update("gap", Number(e.target.value))}
+            className="h-8 text-xs"
+          />
+        </Field>
+        <Field label="Intro Text Size">
+          <Input
+            type="number"
+            min={8}
+            max={32}
+            value={String(p.introSize ?? 12)}
+            onChange={(e) => update("introSize", Number(e.target.value))}
+            className="h-8 text-xs"
+          />
+        </Field>
       </div>
     </>
   );
