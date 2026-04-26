@@ -15,7 +15,8 @@ export type BlockType =
   | "faq"
    | "embed"
    | "video"
-   | "booking"
+    | "booking"
+   | "countdown"
    | "cards";
 
 export interface Block {
@@ -180,6 +181,35 @@ export const BLOCK_DEFAULTS: Record<BlockType, () => Record<string, unknown>> = 
     buttonText: "Book a Call",
     buttonColor: "#D4AF37",
   }),
+  countdown: () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    d.setHours(20, 30, 0, 0);
+    // Format as local datetime-local string YYYY-MM-DDTHH:mm
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return {
+      targetDate: local,
+      introText: "EVENT STARTS IN",
+      expiredText: "Event has started",
+      showLabels: true,
+      showDateTime: true,
+      dateLabel: "",
+      timeLabel: "",
+      align: "center",
+      numberColor: "#D4AF37",
+      labelColor: "#94a3b8",
+      introColor: "#94a3b8",
+      pillBg: "rgba(255,255,255,0.04)",
+      pillBorderColor: "rgba(255,255,255,0.08)",
+      pillBorderWidth: 1,
+      pillBorderRadius: 12,
+      numberSize: 32,
+      labelSize: 11,
+      introSize: 12,
+      gap: 12,
+    };
+  },
   cards: () => ({
     columns: 3,
     backgroundColor: "#f1f5f9",
@@ -216,6 +246,7 @@ export const BLOCK_LABELS: Record<BlockType, { label: string; icon: string }> = 
   embed: { label: "Embed", icon: "Code" },
   video: { label: "Video", icon: "Video" },
   booking: { label: "Booking", icon: "CalendarDays" },
+  countdown: { label: "Countdown", icon: "Timer" },
   cards: { label: "Cards", icon: "LayoutGrid" },
 };
 
