@@ -61,6 +61,10 @@ function hasHtml(text: string): boolean {
   return /<[a-z][\s\S]*>/i.test(text);
 }
 
+function isEffectivelyEmpty(text: string): boolean {
+  return !text.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+}
+
 function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { block: Block; onFormSubmit?: Props["onFormSubmit"]; formSubmitting?: boolean; leadData?: Record<string, string> }) {
   const p = block.props;
 
