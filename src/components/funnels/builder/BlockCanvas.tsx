@@ -24,6 +24,9 @@ function getSectionStyle(p: Record<string, unknown>): React.CSSProperties {
     marginTop: `${p.marginTop ?? 0}px`,
     marginBottom: `${p.marginBottom ?? 0}px`,
     borderRadius: `${p.borderRadius ?? 0}px`,
+    borderWidth: `${p.borderWidth ?? 0}px`,
+    borderColor: (p.borderColor as string) || "#e5e7eb",
+    borderStyle: Number(p.borderWidth ?? 0) > 0 ? "solid" : "none",
     position: "relative",
   };
   if (bgType === "solid") style.backgroundColor = (p.backgroundColor as string) || "#ffffff";
@@ -73,15 +76,9 @@ function renderBlockContent(block: Block) {
             .replace(/<\/(p|div|h[1-6])>/gi, "")
         : rawHeading;
       const headingHasHtml = stripped ? /<[a-z][\s\S]*>/i.test(sanitizedHeading) : false;
-      const headingBorderWidth = Number(p.borderWidth ?? 0);
       const headingWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
-        borderWidth: headingBorderWidth > 0 ? `${headingBorderWidth}px` : undefined,
-        borderColor: headingBorderWidth > 0 ? ((p.borderColor as string) || "#e5e7eb") : undefined,
-        borderStyle: headingBorderWidth > 0 ? "solid" : undefined,
-        borderRadius: Number(p.borderRadius ?? 0) > 0 ? `${p.borderRadius}px` : undefined,
-        padding: Number(p.borderPadding ?? 0) > 0 ? `${p.borderPadding}px` : undefined,
       };
       const headingInnerStyle: React.CSSProperties = {
         color: p.color as string,
@@ -109,16 +106,7 @@ function renderBlockContent(block: Block) {
       const strippedText = rawTextValue.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
       const rawText = strippedText ? rawTextValue : "Text block";
       const textHasHtml = strippedText ? /<[a-z][\s\S]*>/i.test(rawText) : false;
-      const textBorderWidth = Number(p.borderWidth ?? 0);
-      const textWrapStyle: React.CSSProperties = {
-        maxWidth: (p.maxWidth as string) || undefined,
-        margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
-        borderWidth: textBorderWidth > 0 ? `${textBorderWidth}px` : undefined,
-        borderColor: textBorderWidth > 0 ? ((p.borderColor as string) || "#e5e7eb") : undefined,
-        borderStyle: textBorderWidth > 0 ? "solid" : undefined,
-        borderRadius: Number(p.borderRadius ?? 0) > 0 ? `${p.borderRadius}px` : undefined,
-        padding: Number(p.borderPadding ?? 0) > 0 ? `${p.borderPadding}px` : undefined,
-      };
+      const textWrapStyle: React.CSSProperties = { maxWidth: (p.maxWidth as string) || undefined, margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined };
       const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
       if (textHasHtml) {
         const htmlContent = rawText.replace(/\n/g, "<br/>");
