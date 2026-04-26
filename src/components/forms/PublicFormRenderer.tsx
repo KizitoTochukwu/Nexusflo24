@@ -243,28 +243,11 @@ function FieldRenderer({
     resize: field.resize as any,
   };
 
-  const headingStyle: React.CSSProperties = {
-    color: field.text_color || undefined,
-    backgroundColor: field.background_color || undefined,
-    fontSize: field.font_size ? `${field.font_size}px` : undefined,
-    fontWeight: field.font_weight || undefined,
-    textAlign: (field.text_align as any) || undefined,
-    textTransform: (field.text_transform as any) || undefined,
-    lineHeight: field.line_height || undefined,
-    letterSpacing: field.letter_spacing != null ? `${field.letter_spacing}px` : undefined,
-    marginTop: field.margin_top != null ? `${field.margin_top}px` : undefined,
-    marginBottom: field.margin_bottom != null ? `${field.margin_bottom}px` : undefined,
-    borderRadius: field.border_radius != null ? `${field.border_radius}px` : undefined,
-    padding: field.background_color || field.border_radius ? "8px 12px" : undefined,
-  };
-
   switch (field.type) {
-    case "heading": {
-      const Tag = (field.heading_level ?? "h3") as keyof JSX.IntrinsicElements;
-      return <Tag className="text-base font-semibold" style={headingStyle}>{field.label}</Tag>;
-    }
+    case "heading":
+      return <h3 className="text-base font-semibold">{field.label}</h3>;
     case "paragraph":
-      return <p className="text-sm opacity-80" style={headingStyle}>{field.label}</p>;
+      return <p className="text-sm opacity-80">{field.label}</p>;
     case "divider":
       return <hr className="border-t" />;
     case "image": {
