@@ -848,6 +848,28 @@ function CountdownProps({ p, update }: { p: Record<string, unknown>; update: (k:
           className="h-9 text-xs"
         />
       </Field>
+      <Field label="Timezone">
+        <Select
+          value={(p.timezone as string) || "viewer-local"}
+          onValueChange={(v) => update("timezone", v)}
+        >
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            {TIMEZONE_OPTIONS.map((tz) => (
+              <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="mt-1 text-[10px] text-muted-foreground leading-snug">
+          The date/time above is interpreted in this timezone. Choose <em>Viewer's local timezone</em> so
+          each visitor sees the countdown in their own time.
+        </p>
+      </Field>
+      <SwitchField
+        label="Show timezone abbreviation (e.g. GMT)"
+        checked={p.showTimezone !== false}
+        onChange={(v) => update("showTimezone", v)}
+      />
       <Field label="Intro Text (above timer)">
         <Input
           value={(p.introText as string) || ""}
