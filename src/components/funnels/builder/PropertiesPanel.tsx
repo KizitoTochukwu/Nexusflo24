@@ -365,7 +365,16 @@ function TextProps({ p, update }: { p: Record<string, unknown>; update: (k: stri
       </div>
       <AlignField value={p.align as string} onChange={(v) => update("align", v)} />
       <ColorField label="Color" value={p.color as string} onChange={(v) => update("color", v)} />
-      <Field label="Font Size"><Input value={(p.fontSize as string) || ""} onChange={(e) => update("fontSize", e.target.value)} placeholder="e.g. 16px" /></Field>
+      <FontSizeField
+        value={(p.fontSize as string) || ""}
+        onChange={(v) => update("fontSize", v)}
+        presets={TEXT_FONT_PRESETS}
+        step={1}
+        min={10}
+        max={72}
+        fallbackPx={16}
+      />
+
       <Field label="Font Weight">
         <Select value={(p.fontWeight as string) || "normal"} onValueChange={(v) => update("fontWeight", v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
