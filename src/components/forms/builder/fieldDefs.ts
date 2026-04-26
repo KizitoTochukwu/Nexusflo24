@@ -1,7 +1,7 @@
 import type { FormFieldType, FormField } from "@/hooks/useForms";
 import {
   Type, AlignLeft, Mail, Phone, Hash, ChevronDown, CheckSquare,
-  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow, Image as ImageIcon,
+  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow, Image as ImageIcon, Stamp,
 } from "lucide-react";
 
 export const FIELD_DEFS: {
@@ -120,6 +120,20 @@ export const FIELD_DEFS: {
       image_alt: "",
       image_align: "center",
       image_width: 100,
+    }),
+  },
+  {
+    type: "logo",
+    label: "Logo",
+    icon: Stamp,
+    defaults: () => ({
+      type: "logo",
+      label: "Logo",
+      name: "logo",
+      image_url: "",
+      image_alt: "Logo",
+      image_align: "center",
+      image_width: 40,
     }),
   },
 ];

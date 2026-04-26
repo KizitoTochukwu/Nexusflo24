@@ -30,6 +30,7 @@ const FIELD_TYPE_LABEL: Record<string, string> = {
   heading: "Heading",
   paragraph: "Paragraph",
   image: "Image",
+  logo: "Logo",
 };
 
 export default function FormCanvas({

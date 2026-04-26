@@ -18,7 +18,8 @@ export type FormFieldType =
   | "divider"
   | "heading"
   | "paragraph"
-  | "image";
+  | "image"
+  | "logo";
 
 export interface FormField {
   id: string;

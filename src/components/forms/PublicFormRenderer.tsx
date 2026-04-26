@@ -273,7 +273,8 @@ function FieldRenderer({
       return <p className="text-sm opacity-80" style={headingStyle}>{field.label}</p>;
     case "divider":
       return <hr className="border-t" />;
-    case "image": {
+    case "image":
+    case "logo": {
       if (!field.image_url) return null;
       const align = field.image_align ?? "center";
       const justify = align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center";
@@ -281,8 +282,8 @@ function FieldRenderer({
         <div className={`flex ${justify}`}>
           <img
             src={field.image_url}
-            alt={field.image_alt ?? ""}
-            style={{ width: `${field.image_width ?? 100}%` }}
+            alt={field.image_alt ?? (field.type === "logo" ? "Logo" : "")}
+            style={{ width: `${field.image_width ?? (field.type === "logo" ? 40 : 100)}%` }}
             className="rounded-md"
           />
         </div>

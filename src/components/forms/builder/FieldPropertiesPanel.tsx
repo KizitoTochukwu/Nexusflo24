@@ -55,8 +55,8 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
     }
   };
 
-  const isImage = field.type === "image";
-  const isDisplayOnly = ["heading", "paragraph", "divider", "image"].includes(field.type);
+  const isImage = field.type === "image" || field.type === "logo";
+  const isDisplayOnly = ["heading", "paragraph", "divider", "image", "logo"].includes(field.type);
 
   return (
     <div className="space-y-4">
@@ -106,7 +106,7 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
       {isImage && (
         <>
           <div>
-            <Label className="text-xs">Image URL</Label>
+            <Label className="text-xs">{field.type === "logo" ? "Logo URL" : "Image URL"}</Label>
             <Input
               value={field.image_url ?? ""}
               placeholder="https://…"
@@ -131,7 +131,7 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
                 disabled={uploading}
                 onClick={() => document.getElementById(`img-upload-${field.id}`)?.click()}
               >
-                {uploading ? "Uploading…" : "Upload image"}
+                {uploading ? "Uploading…" : field.type === "logo" ? "Upload logo" : "Upload image"}
               </Button>
             </div>
             {field.image_url && (
