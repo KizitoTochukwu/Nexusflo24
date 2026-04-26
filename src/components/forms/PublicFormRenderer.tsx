@@ -243,11 +243,34 @@ function FieldRenderer({
     resize: field.resize as any,
   };
 
+  const headingStyle: React.CSSProperties = {
+    color: field.text_color || undefined,
+    backgroundColor: field.background_color || undefined,
+    borderRadius: field.border_radius != null ? `${field.border_radius}px` : undefined,
+    padding: field.background_color || field.border_radius ? "0.5rem 0.75rem" : undefined,
+    fontSize: field.font_size ? `${field.font_size}px` : undefined,
+    fontWeight: field.font_weight || undefined,
+    textAlign: (field.text_align as any) || undefined,
+    lineHeight: field.line_height || undefined,
+    letterSpacing: field.letter_spacing != null ? `${field.letter_spacing}px` : undefined,
+    marginTop: field.margin_top != null ? `${field.margin_top}px` : undefined,
+    marginBottom: field.margin_bottom != null ? `${field.margin_bottom}px` : undefined,
+  };
+
   switch (field.type) {
-    case "heading":
-      return <h3 className="text-base font-semibold">{field.label}</h3>;
+    case "heading": {
+      const Tag = (field.heading_level ?? "h2") as keyof JSX.IntrinsicElements;
+      const defaultClass =
+        field.heading_level === "h1" ? "text-3xl font-bold"
+        : field.heading_level === "h3" ? "text-lg font-semibold"
+        : field.heading_level === "h4" ? "text-base font-semibold"
+        : field.heading_level === "h5" ? "text-sm font-semibold"
+        : field.heading_level === "h6" ? "text-xs font-semibold uppercase tracking-wider"
+        : "text-2xl font-bold"; // h2 default
+      return <Tag className={defaultClass} style={headingStyle}>{field.label}</Tag>;
+    }
     case "paragraph":
-      return <p className="text-sm opacity-80">{field.label}</p>;
+      return <p className="text-sm opacity-80" style={headingStyle}>{field.label}</p>;
     case "divider":
       return <hr className="border-t" />;
     case "image": {
