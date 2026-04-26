@@ -122,6 +122,20 @@ export const FIELD_DEFS: {
       image_width: 100,
     }),
   },
+  {
+    type: "logo",
+    label: "Logo",
+    icon: Stamp,
+    defaults: () => ({
+      type: "logo",
+      label: "Logo",
+      name: "logo",
+      image_url: "",
+      image_alt: "Logo",
+      image_align: "center",
+      image_width: 40,
+    }),
+  },
 ];
 
 export const newFieldId = () => `f-${Math.random().toString(36).slice(2, 10)}`;
