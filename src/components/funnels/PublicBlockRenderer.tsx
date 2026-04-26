@@ -71,10 +71,22 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
   switch (block.type) {
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
-      const sizes: Record<string, string> = { h1: "text-4xl md:text-5xl", h2: "text-3xl md:text-4xl", h3: "text-2xl md:text-3xl" };
+      const sizes: Record<string, string> = {
+        h1: "text-3xl sm:text-4xl md:text-5xl",
+        h2: "text-2xl sm:text-3xl md:text-4xl",
+        h3: "text-xl sm:text-2xl md:text-3xl",
+      };
       const rawText = isEffectivelyEmpty((p.text as string) || "") ? "Heading" : (p.text as string);
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
-      const useHtml = !isEffectivelyEmpty(resolvedText) && hasHtml(resolvedText);
+      // Strip block-level wrappers from rich-text output so the heading's
+      // own font-size / color cascade is not overridden by inner <p> elements.
+      const sanitizedText = !isEffectivelyEmpty(resolvedText)
+        ? resolvedText
+            .replace(/<\/(p|div|h[1-6])>\s*<(p|div|h[1-6])[^>]*>/gi, "<br/>")
+            .replace(/<(p|div|h[1-6])[^>]*>/gi, "")
+            .replace(/<\/(p|div|h[1-6])>/gi, "")
+        : resolvedText;
+      const useHtml = !isEffectivelyEmpty(sanitizedText) && hasHtml(sanitizedText);
       const headingWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
@@ -86,24 +98,22 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
       };
+      const headingClass = `${!p.fontSize ? sizes[p.level as string] || sizes.h2 : ""} leading-tight [&_*]:!text-[inherit] [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
       if (useHtml) {
         return (
           <div style={headingWrapStyle}>
             <Tag
-              className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
+              className={headingClass}
               style={baseStyle}
-              dangerouslySetInnerHTML={{ __html: resolvedText }}
+              dangerouslySetInnerHTML={{ __html: sanitizedText }}
             />
           </div>
         );
       }
       return (
         <div style={headingWrapStyle}>
-          <Tag
-            className={`${!p.fontSize ? sizes[p.level as string] || "text-3xl" : ""} leading-tight`}
-            style={baseStyle}
-          >
-            {resolvedText}
+          <Tag className={headingClass} style={baseStyle}>
+            {sanitizedText}
           </Tag>
         </div>
       );
