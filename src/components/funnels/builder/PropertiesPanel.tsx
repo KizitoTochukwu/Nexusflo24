@@ -202,10 +202,7 @@ function SectionProps({ p, update }: { p: Record<string, unknown>; update: (k: s
       </Field>
       <AlignField value={(p.alignment as string) || "center"} onChange={(v) => update("alignment", v)} />
       <Field label="Border Radius"><Input value={String(p.borderRadius ?? "0")} onChange={(e) => update("borderRadius", e.target.value)} className="h-8 text-xs" /></Field>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Border Width"><Input value={String(p.borderWidth ?? "0")} onChange={(e) => update("borderWidth", e.target.value)} className="h-8 text-xs" /></Field>
-        <ColorField label="Border Color" value={(p.borderColor as string) || "#e5e7eb"} onChange={(v) => update("borderColor", v)} />
-      </div>
+      <Field label="Border Width"><Input value={String(p.borderWidth ?? "0")} onChange={(e) => update("borderWidth", e.target.value)} className="h-8 text-xs" /></Field>
       <SwitchField label="Shadow" checked={!!p.shadow} onChange={(v) => update("shadow", v)} />
       {!!p.shadow && (
         <Field label="Shadow Intensity">
