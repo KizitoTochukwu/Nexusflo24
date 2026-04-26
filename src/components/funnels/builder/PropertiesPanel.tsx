@@ -280,6 +280,22 @@ function ColumnsProps({ p, update, type }: { p: Record<string, unknown>; update:
 
 /* ─── Heading ─── */
 function HeadingProps({ p, update }: { p: Record<string, unknown>; update: (k: string, v: unknown) => void }) {
+  // Per-level recommended font sizes (kept in sync with HEADING_FONT_PRESETS' "M"/"L"/"XL")
+  const LEVEL_DEFAULT_SIZE: Record<string, string> = { h1: "48px", h2: "36px", h3: "28px" };
+
+  const handleLevelChange = (newLevel: string) => {
+    const currentSize = (p.fontSize as string) || "";
+    const isAtLevelDefault = Object.values(LEVEL_DEFAULT_SIZE).includes(currentSize) || currentSize === "";
+    // If the user hasn't customized away from a default, snap font size to new level's default
+    if (isAtLevelDefault) {
+      update("level", newLevel);
+      // Defer the size update so React batches both prop changes
+      setTimeout(() => update("fontSize", LEVEL_DEFAULT_SIZE[newLevel] || "36px"), 0);
+    } else {
+      update("level", newLevel);
+    }
+  };
+
   return (
     <>
       <div>
@@ -294,7 +310,7 @@ function HeadingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
         </div>
       </div>
       <Field label="Level">
-        <Select value={(p.level as string) || "h2"} onValueChange={(v) => update("level", v)}>
+        <Select value={(p.level as string) || "h2"} onValueChange={handleLevelChange}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="h1">H1</SelectItem>
@@ -305,7 +321,15 @@ function HeadingProps({ p, update }: { p: Record<string, unknown>; update: (k: s
       </Field>
       <AlignField value={p.align as string} onChange={(v) => update("align", v)} />
       <ColorField label="Color" value={p.color as string} onChange={(v) => update("color", v)} />
-      <Field label="Font Size"><Input value={(p.fontSize as string) || ""} onChange={(e) => update("fontSize", e.target.value)} placeholder="e.g. 36px" /></Field>
+      <FontSizeField
+        value={(p.fontSize as string) || ""}
+        onChange={(v) => update("fontSize", v)}
+        presets={HEADING_FONT_PRESETS}
+        step={2}
+        min={12}
+        max={120}
+        fallbackPx={36}
+      />
       <Field label="Font Weight">
         <Select value={(p.fontWeight as string) || "bold"} onValueChange={(v) => update("fontWeight", v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
