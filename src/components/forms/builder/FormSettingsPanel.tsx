@@ -20,6 +20,17 @@ const PIPELINE_STAGES = [
   "new_lead", "contacted", "engaged", "qualified", "demo_booked", "proposal_sent", "negotiation", "closed_won",
 ];
 
+const COLOR_PALETTES: { name: string; bg: string; accent: string; text: string }[] = [
+  { name: "NexusFlo Navy", bg: "#FFFFFF", accent: "#0B1F3B", text: "#0B1F3B" },
+  { name: "Gold Luxe", bg: "#FFFFFF", accent: "#C9A227", text: "#1F2937" },
+  { name: "Midnight", bg: "#0F172A", accent: "#6366F1", text: "#F8FAFC" },
+  { name: "Ocean", bg: "#F0F9FF", accent: "#0284C7", text: "#0C4A6E" },
+  { name: "Forest", bg: "#F0FDF4", accent: "#16A34A", text: "#14532D" },
+  { name: "Sunset", bg: "#FFF7ED", accent: "#EA580C", text: "#7C2D12" },
+  { name: "Rose", bg: "#FFF1F2", accent: "#E11D48", text: "#881337" },
+  { name: "Mono", bg: "#FAFAFA", accent: "#111111", text: "#111111" },
+];
+
 export default function FormSettingsPanel({
   description, settings, theme, onChangeDescription, onChangeSettings, onChangeTheme,
 }: Props) {
@@ -155,6 +166,44 @@ export default function FormSettingsPanel({
 
       <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Branding</p>
+
+        <div>
+          <Label className="text-xs">Color palette</Label>
+          <div className="mt-1.5 grid grid-cols-2 gap-2">
+            {COLOR_PALETTES.map((p) => {
+              const active =
+                theme.bg_color.toLowerCase() === p.bg.toLowerCase() &&
+                theme.accent_color.toLowerCase() === p.accent.toLowerCase() &&
+                theme.text_color.toLowerCase() === p.text.toLowerCase();
+              return (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() =>
+                    onChangeTheme({
+                      ...theme,
+                      bg_color: p.bg,
+                      accent_color: p.accent,
+                      text_color: p.text,
+                    })
+                  }
+                  className={`group flex items-center gap-2 rounded-md border p-2 text-left transition hover:border-primary ${
+                    active ? "border-primary ring-2 ring-primary/30" : "border-border"
+                  }`}
+                  title={p.name}
+                >
+                  <div className="flex -space-x-1">
+                    <span className="h-5 w-5 rounded-full border border-background" style={{ background: p.bg }} />
+                    <span className="h-5 w-5 rounded-full border border-background" style={{ background: p.accent }} />
+                    <span className="h-5 w-5 rounded-full border border-background" style={{ background: p.text }} />
+                  </div>
+                  <span className="truncate text-xs">{p.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs">Background</Label>
