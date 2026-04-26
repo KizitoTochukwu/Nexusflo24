@@ -58,6 +58,12 @@ export interface FormField {
   rows?: number;
   resize?: "none" | "vertical" | "horizontal" | "both";
   show_counter?: boolean;
+  // heading / paragraph styling
+  heading_level?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+  letter_spacing?: number; // px (can be negative)
+  line_height?: number; // unitless multiplier
+  margin_top?: number; // px
+  margin_bottom?: number; // px
 }
 
 export interface FormStep {
