@@ -417,12 +417,25 @@ function FieldRenderer({
         </div>
       );
     case "short_text":
-    default:
+    default: {
+      const isShortText = field.type === "short_text";
       return (
         <div>
-          {labelEl}
-          <Input value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+          {isShortText ? styledLabel() : labelEl}
+          <Input
+            value={value ?? ""}
+            placeholder={field.placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            minLength={isShortText ? field.min_length : undefined}
+            maxLength={isShortText ? field.max_length : undefined}
+            pattern={isShortText ? field.pattern : undefined}
+            title={isShortText ? field.pattern_message : undefined}
+            autoComplete={isShortText ? field.autocomplete : undefined}
+            style={isShortText ? inputStyle : undefined}
+          />
+          {field.help_text && <p className="mt-1 text-xs opacity-60">{field.help_text}</p>}
         </div>
       );
+    }
   }
 }
