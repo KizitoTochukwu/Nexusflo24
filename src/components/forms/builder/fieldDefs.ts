@@ -105,6 +105,20 @@ export const FIELD_DEFS: {
     icon: Minus,
     defaults: () => ({ type: "divider", label: "", name: "divider" }),
   },
+  {
+    type: "image",
+    label: "Image",
+    icon: ImageIcon,
+    defaults: () => ({
+      type: "image",
+      label: "Image",
+      name: "image",
+      image_url: "",
+      image_alt: "",
+      image_align: "center",
+      image_width: 100,
+    }),
+  },
 ];
 
 export const newFieldId = () => `f-${Math.random().toString(36).slice(2, 10)}`;
