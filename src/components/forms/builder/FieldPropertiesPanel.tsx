@@ -55,8 +55,8 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
     }
   };
 
-  const isImage = field.type === "image";
-  const isDisplayOnly = ["heading", "paragraph", "divider", "image"].includes(field.type);
+  const isImage = field.type === "image" || field.type === "logo";
+  const isDisplayOnly = ["heading", "paragraph", "divider", "image", "logo"].includes(field.type);
 
   return (
     <div className="space-y-4">
