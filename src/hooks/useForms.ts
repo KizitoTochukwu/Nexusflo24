@@ -17,7 +17,8 @@ export type FormFieldType =
   | "date"
   | "divider"
   | "heading"
-  | "paragraph";
+  | "paragraph"
+  | "image";
 
 export interface FormField {
   id: string;
@@ -31,6 +32,11 @@ export interface FormField {
   options?: { label: string; value: string }[];
   // mapping target: "full_name" | "email" | "phone" | "notes" | "meta"
   map_to?: "full_name" | "email" | "phone" | "notes" | "meta";
+  // image field
+  image_url?: string;
+  image_alt?: string;
+  image_align?: "left" | "center" | "right";
+  image_width?: number; // % of container
 }
 
 export interface FormStep {
