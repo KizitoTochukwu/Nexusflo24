@@ -1,79 +1,47 @@
-# Forms Module — Drag-and-Drop Form Builder
+## Goal
 
-A new top-level "Forms" section in the dashboard for building reusable lead-capture forms. Forms are saved to the database, hosted on a public URL, embeddable on any site, and pipe submissions into the CRM through the existing `capture-lead` pipeline.
+Make the **Consent** checkbox in the public form renderer look premium — a polished, branded card-style block instead of a bare checkbox + label.
 
-## What you'll get
+## Design
 
-1. **Sidebar entry**: a new "Forms" item between **CRM (Leads)** and **Funnels**.
-2. **Forms list page** (`/dashboard/:workspaceId/forms`): grid of all saved forms with name, status (draft/active), submission count, last edited; actions to create, open, duplicate, delete, copy embed code, and copy hosted URL.
-3. **Form builder** (`/dashboard/:workspaceId/forms/:formId`):
-   - Three-column layout (mirrors funnel builder): **Field Library** | **Live Canvas** | **Properties Panel**
-   - Drag-and-drop reordering of fields
-   - Field types: short text, long text, email, phone, number, dropdown, checkboxes, radio, consent checkbox, hidden field, date, divider, heading, paragraph
-   - Per-field settings: label, placeholder, help text, required toggle, default value, options (for select/radio), validation
-   - Form-level settings: title, description, submit button text, success message, redirect URL, lead source, tags, default folder, default pipeline stage
-   - Branding: background color, accent color, font, border radius, logo image
-   - Multi-step support: split fields into pages with progress bar
-   - Save / autosave, status toggle (draft ↔ active), preview
-4. **Public hosted form** (`/forms/:slug`): clean public page that renders the saved form, submits to `capture-lead`, shows success message or redirects.
-5. **Embed dialog**: iframe snippet for any form, plus a copyable hosted-page link — same UX as the existing funnel embed dialog.
+Render the consent field as a subtle bordered card that uses the form's accent color, with:
 
-## How submissions flow
+- A soft tinted background (accent color at very low opacity) and a 1px border in the accent color at low opacity
+- Rounded corners matching the form's `border_radius`
+- A larger, more refined custom checkbox styled with the accent color (checked state filled with accent, white check)
+- A small **shield icon** (lucide `ShieldCheck`) in the accent color sitting next to the label to signal trust/privacy
+- Slightly improved typography: label in `text-sm leading-relaxed`, with the required asterisk in accent
+- Smooth hover state (border deepens slightly)
+- Focus-visible ring in the accent color for accessibility
+- Entire card is clickable to toggle (label wraps the checkbox area)
 
 ```text
-Public form page  ──►  capture-lead edge function  ──►  leads table
-                                                        + lead_activities ('form_submit' = +10 score)
-                                                        + lead_folder_leads (if default folder set)
-                                                        + automation triggers (folder/new_lead)
+┌────────────────────────────────────────────┐
+│  ☑  🛡  I agree to receive marketing       │
+│        emails. *                           │
+└────────────────────────────────────────────┘
 ```
 
-The form's `source` and `tags` settings are merged into the lead record so existing automations (`lead_added_to_folder`, `new_lead`) fire as expected.
+## Technical changes
 
-## Technical details
+**File:** `src/components/forms/PublicFormRenderer.tsx`
 
-**New DB tables (migration):**
+1. Update only the `case "consent"` branch (keep `case "checkbox"` as the existing minimal style — that's a generic checkbox field, not a consent block).
+2. Replace the markup with a card wrapper:
+   - `border` + `rounded-[var(--radius)]` using `theme.border_radius`
+   - Background: accent at ~6% opacity (use inline style with `${accent}10` hex alpha)
+   - Border: accent at ~25% opacity
+   - Padding `p-3 sm:p-4`, `flex items-start gap-3`
+   - Hover: border opacity bump via class + inline style transition
+3. Style the `Checkbox` to use the accent color when checked (pass `style={{ borderColor: accent }}` and a `data-[state=checked]:bg-[accent]` via inline style, or wrap with a span using accent).
+4. Add `ShieldCheck` icon (16–18px) in accent color before the label text.
+5. Label uses `text-sm leading-relaxed cursor-pointer`, required asterisk keeps existing accent styling.
+6. Add `transition-colors` for hover/focus polish.
 
-- `forms`
-  - `id uuid pk`, `workspace_id uuid`, `user_id uuid`, `name text`, `slug text unique` (auto-generated like funnels), `status text default 'draft'`, `description text`
-  - `schema jsonb` — array of field definitions and step grouping
-  - `settings jsonb` — submit text, success message, redirect URL, source, tags, default folder, default pipeline stage
-  - `theme jsonb` — colors, font, radius, logo URL
-  - `submission_count int default 0`, `created_at`, `updated_at`
-  - RLS: workspace-member CRUD + public SELECT where `status='active'` (mirrors `funnels`)
-  - Trigger: reuse the funnel slug-generator pattern for auto slugs
+No schema changes, no new dependencies, no other files touched. The change is purely presentational and scoped to the consent field render path.
 
-- `form_submissions`
-  - `id`, `form_id`, `workspace_id`, `lead_id` (nullable), `data jsonb`, `created_at`
-  - RLS: workspace members SELECT; service role + public INSERT (insert happens through edge function)
+## Out of scope
 
-**Frontend:**
-
-- `src/pages/dashboard/DashboardForms.tsx` — list page (cards grid, create button, search)
-- `src/pages/dashboard/FormBuilder.tsx` — builder shell with header (name, status, save, preview, embed)
-- `src/components/forms/builder/FieldLibrary.tsx` — draggable field palette
-- `src/components/forms/builder/FormCanvas.tsx` — live preview + drop targets, reorder via dnd-kit (already in project)
-- `src/components/forms/builder/FieldPropertiesPanel.tsx` — settings for selected field
-- `src/components/forms/builder/FormSettingsPanel.tsx` — global form/theme settings
-- `src/components/forms/PublicFormRenderer.tsx` — shared renderer used by both builder preview and public page
-- `src/pages/PublicForm.tsx` — route `/forms/:slug`
-- `src/components/forms/EmbedFormDialog.tsx` — iframe + URL snippets
-- Sidebar: add `Forms` item (icon: `FormInput` from lucide) in `DashboardLayout.tsx`
-- Routes added in `src/App.tsx`: `forms`, `forms/:formId`, and a top-level `/forms/:slug` public route
-
-**Backend:**
-
-- Extend the existing `capture-lead` edge function to accept `{ form_id, data }` payloads: validate the form is active, map `data` → lead fields using the form schema, increment `submission_count`, insert a `form_submissions` row, then run the existing lead-capture path. No new function needed.
-
-**Validation & security:**
-
-- Zod schema on form save (name length, slug format, field count limits)
-- Server-side re-validation of submitted data against the form schema in the edge function
-- Public route only renders forms with `status='active'`
-- No PII logged
-
-## Out of scope (can add later)
-
-- A/B testing of form variants
-- File-upload fields (needs storage policy)
-- Conditional logic between fields
-- Built-in spam/captcha (can add hCaptcha later)
+- The plain `checkbox` field type stays as-is (used for generic yes/no inputs).
+- The field library tile (left sidebar in builder) is unchanged.
+- No new properties added to `FieldPropertiesPanel` — the consent label/required toggle already cover what's needed.

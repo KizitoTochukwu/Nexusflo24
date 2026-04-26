@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 
 interface Props {
   form: FormRecord;
@@ -308,7 +308,41 @@ function FieldRenderer({
         </div>
       );
     }
-    case "consent":
+    case "consent": {
+      const checked = !!value;
+      return (
+        <label
+          htmlFor={field.id}
+          className="group flex cursor-pointer items-start gap-3 rounded-xl border p-3 sm:p-4 transition-all hover:shadow-sm"
+          style={{
+            backgroundColor: `${accent}0D`, // ~5% opacity
+            borderColor: checked ? accent : `${accent}40`, // 25% when unchecked, full when checked
+          }}
+        >
+          <Checkbox
+            id={field.id}
+            checked={checked}
+            onCheckedChange={(c) => onChange(!!c)}
+            className="mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 transition-colors data-[state=checked]:text-white"
+            style={{
+              borderColor: accent,
+              backgroundColor: checked ? accent : "transparent",
+            }}
+          />
+          <div className="flex min-w-0 flex-1 items-start gap-2">
+            <ShieldCheck
+              className="mt-0.5 h-4 w-4 shrink-0"
+              style={{ color: accent }}
+              aria-hidden="true"
+            />
+            <span className="text-sm leading-relaxed">
+              {field.label}
+              {field.required && <span style={{ color: accent }}>{" *"}</span>}
+            </span>
+          </div>
+        </label>
+      );
+    }
     case "checkbox":
       return (
         <div className="flex items-start gap-2">
