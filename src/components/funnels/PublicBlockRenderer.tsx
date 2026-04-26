@@ -127,9 +127,14 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       const rawText = (p.text as string) || "";
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
       const useHtml = !isEffectivelyEmpty(resolvedText) && hasHtml(resolvedText);
+      const textBorderWidth = Number(p.borderWidth ?? 0);
       const textWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
+        borderWidth: textBorderWidth > 0 ? `${textBorderWidth}px` : undefined,
+        borderColor: textBorderWidth > 0 ? ((p.borderColor as string) || "#e5e7eb") : undefined,
+        borderStyle: textBorderWidth > 0 ? "solid" : undefined,
+        padding: textBorderWidth > 0 ? "8px 12px" : undefined,
       };
       const textStyle: React.CSSProperties = {
         color: p.color as string,
