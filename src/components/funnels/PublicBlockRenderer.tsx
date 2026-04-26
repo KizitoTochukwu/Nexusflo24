@@ -72,9 +72,9 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
       const sizes: Record<string, string> = { h1: "text-4xl md:text-5xl", h2: "text-3xl md:text-4xl", h3: "text-2xl md:text-3xl" };
-      const rawText = (p.text as string) || "Heading";
+      const rawText = isEffectivelyEmpty((p.text as string) || "") ? "Heading" : (p.text as string);
       const resolvedText = Object.keys(leadData).length > 0 ? interpolate(rawText, leadData) : rawText;
-      const useHtml = hasHtml(resolvedText);
+      const useHtml = !isEffectivelyEmpty(resolvedText) && hasHtml(resolvedText);
       const headingWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
