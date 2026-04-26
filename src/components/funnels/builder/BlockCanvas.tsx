@@ -56,12 +56,26 @@ function renderBlockContent(block: Block) {
   switch (block.type) {
     case "heading": {
       const Tag = (p.level as string) === "h1" ? "h1" : (p.level as string) === "h3" ? "h3" : "h2";
-      const defaultSizes: Record<string, string> = { h1: "text-3xl", h2: "text-2xl", h3: "text-xl" };
+      // Responsive default sizes per level (used only when no custom fontSize is set)
+      const defaultSizes: Record<string, string> = {
+        h1: "text-3xl sm:text-4xl md:text-5xl",
+        h2: "text-2xl sm:text-3xl md:text-4xl",
+        h3: "text-xl sm:text-2xl md:text-3xl",
+      };
       let rawHeading = (p.text as string) || "";
       // Treat empty rich-text output (e.g. "<p><br></p>", "<br>", whitespace) as empty
       const stripped = rawHeading.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
       if (!stripped) rawHeading = "Heading";
-      const headingHasHtml = stripped ? /<[a-z][\s\S]*>/i.test(rawHeading) : false;
+      // Unwrap block-level tags emitted by the rich-text editor (<p>, <div>, <h1-h6>)
+      // so the heading's fontSize/color cascade isn't overridden by prose styles
+      // applied to those child elements.
+      const sanitizedHeading = stripped
+        ? rawHeading
+            .replace(/<\/(p|div|h[1-6])>\s*<(p|div|h[1-6])[^>]*>/gi, "<br/>")
+            .replace(/<(p|div|h[1-6])[^>]*>/gi, "")
+            .replace(/<\/(p|div|h[1-6])>/gi, "")
+        : rawHeading;
+      const headingHasHtml = stripped ? /<[a-z][\s\S]*>/i.test(sanitizedHeading) : false;
       const headingWrapStyle: React.CSSProperties = {
         maxWidth: (p.maxWidth as string) || undefined,
         margin: (p.maxWidth as string) ? (p.align === "center" ? "0 auto" : p.align === "right" ? "0 0 0 auto" : undefined) : undefined,
@@ -73,17 +87,17 @@ function renderBlockContent(block: Block) {
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
       };
-      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || "text-2xl" : ""} leading-tight`;
+      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!text-[inherit] [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
       if (headingHasHtml) {
         return (
           <div style={headingWrapStyle}>
-            <Tag className={headingClass} style={headingInnerStyle} dangerouslySetInnerHTML={{ __html: rawHeading }} />
+            <Tag className={headingClass} style={headingInnerStyle} dangerouslySetInnerHTML={{ __html: sanitizedHeading }} />
           </div>
         );
       }
       return (
         <div style={headingWrapStyle}>
-          <Tag className={headingClass} style={headingInnerStyle}>{rawHeading}</Tag>
+          <Tag className={headingClass} style={headingInnerStyle}>{sanitizedHeading}</Tag>
         </div>
       );
     }
