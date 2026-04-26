@@ -19,6 +19,7 @@ interface Props {
 
 const HAS_OPTIONS = new Set(["select", "radio", "checkbox_group"]);
 const HAS_PLACEHOLDER = new Set(["short_text", "long_text", "email", "phone", "number", "select"]);
+const HAS_EDITOR_STYLING = new Set(["short_text", "long_text"]);
 
 export default function FieldPropertiesPanel({ field, onChange }: Props) {
   const [uploading, setUploading] = useState(false);
