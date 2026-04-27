@@ -95,8 +95,10 @@ function renderBlockContent(block: Block) {
       };
       const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
       const headingScopeId = `bc-h-${block.id}`;
+      // Apply block color as a default only — do NOT override inline color
+      // spans created by the rich text editor.
       const headingColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${headingScopeId}"], [data-bc-scope="${headingScopeId}"] * { color: ${p.color} !important; }` }} />
+        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${headingScopeId}"] { color: ${p.color}; }` }} />
       ) : null;
       if (headingHasHtml) {
         return (
