@@ -1,43 +1,74 @@
-## Why the user saw "Form not found"
+# Meta Pixel Full Integration
 
-The form **Webinar – AI Sales System Masterclass** (`/forms/webinar-c16e15`) has its **Redirect URL** set to `www.nexusflo24.com` — without `https://`.
+Pixel ID: **4520045111651647**
 
-In `PublicFormRenderer.tsx`:
+## 1. Base pixel installation (`index.html`)
+
+- Add the Meta Pixel `<script>` block inside `<head>` (init + first PageView).
+- Add the `<noscript><img></noscript>` fallback at the **top of `<body>`** (HTML5 disallows `<noscript><img>` inside `<head>`).
+- Wrap the script so it respects consent: define `fbq` queue immediately, but only call `fbq('consent', 'grant')` after the user accepts marketing cookies. Default to `fbq('consent', 'revoke')` so no events fire until consent is granted.
+
+## 2. GDPR consent gating (`src/components/CookieConsentBanner.tsx`)
+
+The existing banner already has a `marketing` preference (default off). Hook into save flows:
+
+- On **Accept All** or when `marketing: true` is saved → call `window.fbq?.('consent', 'grant')`.
+- On **Reject** or `marketing: false` → call `window.fbq?.('consent', 'revoke')`.
+- On app boot, read `nexusflo_cookie_consent` from `localStorage`; if `marketing === true`, grant consent immediately (handled in a tiny inline script in `index.html` so it runs before React mounts).
+
+This keeps the pixel GDPR-compliant — it loads but only tracks after explicit marketing consent.
+
+## 3. SPA route tracking (`src/App.tsx`)
+
+Create `src/lib/analytics/metaPixel.ts` with thin typed helpers:
 ```ts
-if (settings.redirect_url) {
-  window.location.href = settings.redirect_url; // "www.nexusflo24.com"
-}
+export const fbqTrack = (event: string, params?: Record<string, any>) => {
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+    (window as any).fbq('track', event, params);
+  }
+};
 ```
 
-When `window.location.href` is assigned a string with no protocol, the browser treats it as a **relative path**. From `/forms/webinar-c16e15`, the user is sent to `/forms/www.nexusflo24.com`. That slug doesn't exist, so `PublicForm.tsx` renders the "Form not found" card.
+Add a `<MetaPixelRouteTracker />` component mounted inside the `<BrowserRouter>` that listens to `useLocation()` and fires `fbqTrack('PageView')` on every pathname change (skipping the very first render since the inline script already fired one).
 
-The submission itself succeeded — the lead was captured before the redirect happened. Only the post-submit navigation broke.
+## 4. Conversion events
 
-## Fix
+| Event | Trigger location | Meta event | Params |
+|---|---|---|---|
+| Signup | `src/pages/Register.tsx` after successful `supabase.auth.signUp` | `CompleteRegistration` | `{ method: 'email' \| 'google' }` |
+| Lead capture (public form) | `src/components/forms/PublicFormRenderer.tsx` after successful submission | `Lead` | `{ content_name: form.name }` |
+| Lead capture (funnel form) | `src/components/funnels/PublicBlockRenderer.tsx` (or wherever the funnel opt-in submits) | `Lead` | `{ content_name: funnel name }` |
+| Embed form lead | `src/pages/EmbedForm.tsx` after submit | `Lead` | `{ content_name: source }` |
+| Stripe checkout start | `src/pages/Pricing.tsx` (and `CreditPackCards.tsx`) right before redirecting to Checkout | `InitiateCheckout` | `{ value, currency: 'USD', content_name: planId }` |
+| Stripe purchase success | New post-checkout success page handler (or detect `?checkout=success` query param on dashboard redirect) | `Purchase` | `{ value, currency: 'USD', content_name: planId }` |
 
-Two layers so this can't recur:
+For the **Purchase** event: Stripe redirects back to a success URL. I'll inspect the existing checkout flow (`create-checkout-session` edge function and where it sends users) and add a one-shot fire when the success param is present, guarded by `sessionStorage` to avoid duplicates on refresh.
 
-**1. Runtime safety in `PublicFormRenderer.tsx`** — normalize the redirect URL before navigating:
-- If it starts with `http://` or `https://`, use as-is.
-- If it starts with `/`, treat as same-site path (allowed).
-- Otherwise, prepend `https://` (so `www.nexusflo24.com` becomes `https://www.nexusflo24.com`).
-- Wrap in `try/catch` with `new URL(...)` validation; on failure, fall back to showing the success screen instead of navigating.
+## 5. Files to edit / create
 
-**2. Editor validation in `FormSettingsPanel.tsx`** — when the user types a redirect URL:
-- Keep the `type="url"` input but add a small helper note: *"Include https:// — e.g. https://example.com/thanks"*.
-- On blur, auto-prepend `https://` if the value is non-empty, has no scheme, and isn't a relative path starting with `/`. This prevents future forms from being saved with a bare domain.
+- **edit** `index.html` — base pixel + noscript fallback + consent default
+- **create** `src/lib/analytics/metaPixel.ts` — typed helpers
+- **create** `src/components/analytics/MetaPixelRouteTracker.tsx` — SPA PageView tracker
+- **edit** `src/App.tsx` — mount route tracker inside Router
+- **edit** `src/components/CookieConsentBanner.tsx` — wire consent grant/revoke
+- **edit** `src/pages/Register.tsx` — fire `CompleteRegistration`
+- **edit** `src/components/forms/PublicFormRenderer.tsx` — fire `Lead`
+- **edit** `src/pages/EmbedForm.tsx` — fire `Lead`
+- **edit** `src/components/funnels/PublicBlockRenderer.tsx` — fire `Lead` on opt-in submit
+- **edit** `src/pages/Pricing.tsx` and `src/components/pricing/CreditPackCards.tsx` — fire `InitiateCheckout`
+- **edit** Stripe success landing handler — fire `Purchase` (location TBD after I read the post-checkout redirect)
 
-**3. Repair the existing record** — run a one-time update for the affected form so the redirect works immediately:
-```sql
-UPDATE forms
-SET settings = jsonb_set(settings, '{redirect_url}', '"https://www.nexusflo24.com"')
-WHERE id = 'e582fdad-eda4-47df-96f6-297be379f594';
-```
+## 6. Verification after deploy
 
-## Files touched
-- `src/components/forms/PublicFormRenderer.tsx` — normalize/validate `redirect_url` before assigning to `window.location.href`.
-- `src/components/forms/builder/FormSettingsPanel.tsx` — auto-prefix `https://` on blur and add helper text.
-- One DB migration to fix the saved value for the existing form.
+1. Install the **Meta Pixel Helper** Chrome extension and load `nexusflo24.com` — should show pixel `4520045111651647` with PageView (only after accepting marketing cookies).
+2. Submit a public form → confirm `Lead` event in Events Manager → Test Events.
+3. Sign up a new account → confirm `CompleteRegistration`.
+4. Click a Pricing plan → confirm `InitiateCheckout`; complete a test checkout → confirm `Purchase`.
 
-## Out of scope
-- No changes to the capture-lead pipeline, RLS, or form schema. Submissions were already saving correctly.
+## Notes
+
+- No secrets needed — Pixel ID is a public identifier, safe to commit.
+- No backend changes required; everything is client-side.
+- All `fbq` calls are guarded with `window.fbq?.` so they're no-ops if the script is blocked (ad blockers, no consent).
+
+Approve to proceed.
