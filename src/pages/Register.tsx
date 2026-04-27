@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Mail, Lock, User } from "lucide-react";
+import { fbqTrack } from "@/lib/analytics/metaPixel";
 
 const Register = () => {
   const [searchParams] = useSearchParams();
@@ -51,6 +52,7 @@ const Register = () => {
       return;
     }
     localStorage.setItem("nexusflo_new_signup", "true");
+    fbqTrack("CompleteRegistration", { method: "email", content_name: "signup" });
     // Track referral if ref code present
     if (refCode) {
       try {
@@ -70,6 +72,8 @@ const Register = () => {
 
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
+    // Fire pre-redirect since the OAuth flow leaves the SPA before we can confirm success.
+    fbqTrack("CompleteRegistration", { method: "google", content_name: "signup_initiated" });
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Navigate, useParams, useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import PurchaseTracker from "@/components/analytics/PurchaseTracker";
 
 const WorkspaceGuard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -52,7 +53,12 @@ const WorkspaceGuard = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <PurchaseTracker />
+      <Outlet />
+    </>
+  );
 };
 
 export default WorkspaceGuard;
