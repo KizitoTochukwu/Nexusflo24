@@ -107,7 +107,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       const headingClass = `${!p.fontSize ? sizes[p.level as string] || sizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
       const headingScopeId = `pr-h-${block.id}`;
       const headingColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${headingScopeId}"], [data-pr-scope="${headingScopeId}"] * { color: ${p.color} !important; }` }} />
+        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${headingScopeId}"] { color: ${p.color}; }` }} />
       ) : null;
       if (useHtml) {
         return (
@@ -153,7 +153,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       };
       const textScopeId = `pr-t-${block.id}`;
       const textColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${textScopeId}"], [data-pr-scope="${textScopeId}"] * { color: ${p.color} !important; }` }} />
+        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${textScopeId}"] { color: ${p.color}; }` }} />
       ) : null;
       if (useHtml) {
         return (

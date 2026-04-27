@@ -201,37 +201,70 @@ export default function FunnelTextEditor({
     onChange(html);
   }, [onChange]);
 
-  // Apply a color (text or background) to the current/saved selection.
-  // Falls back to wrapping all editor content when nothing is selected.
+  // Apply a color (text or background) by wrapping the selection in a styled
+  // <span>. We avoid execCommand("foreColor") because it can silently fail
+  // when the editor has lost focus to the popover, and because it produces
+  // inconsistent markup across browsers.
   const applyColor = useCallback(
     (kind: "fore" | "back", hex: string) => {
       const el = editorRef.current;
       if (!el) return;
       restoreSelection();
       const sel = window.getSelection();
-      try {
-        document.execCommand("styleWithCSS", false, "true");
-      } catch {}
-      const cmd = kind === "fore" ? "foreColor" : "hiliteColor";
-      let ok = document.execCommand(cmd, false, hex);
-      if (!ok && kind === "back") ok = document.execCommand("backColor", false, hex);
-      if (!ok && sel?.rangeCount) {
-        const range = sel.getRangeAt(0).cloneRange();
-        if (el.contains(range.commonAncestorContainer)) {
-          if (range.collapsed) range.selectNodeContents(el);
-          const span = document.createElement("span");
-          if (kind === "fore") span.style.color = hex;
-          else span.style.backgroundColor = hex;
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-          sel.removeAllRanges();
-          const nextRange = document.createRange();
-          nextRange.setStartAfter(span);
-          nextRange.collapse(true);
-          sel.addRange(nextRange);
-        }
+      if (!sel) return;
+
+      // Resolve target range: prefer the live selection, then the saved one,
+      // and if both are empty/collapsed wrap all editor content.
+      let range: Range | null = null;
+      if (sel.rangeCount > 0) {
+        const r = sel.getRangeAt(0);
+        if (el.contains(r.commonAncestorContainer)) range = r.cloneRange();
       }
+      if (!range && savedRangeRef.current) range = savedRangeRef.current.cloneRange();
+      if (!range || range.collapsed) {
+        range = document.createRange();
+        range.selectNodeContents(el);
+      }
+
+      const styleProp = kind === "fore" ? "color" : "backgroundColor";
+
+      // Walk the range and wrap each text node slice individually so that
+      // partial selections across nested elements get colored correctly.
+      const wrapTextNode = (node: Text, start: number, end: number) => {
+        if (start >= end) return;
+        const slice = node.splitText(start);
+        if (end - start < slice.length) slice.splitText(end - start);
+        const span = document.createElement("span");
+        span.style[styleProp as any] = hex;
+        slice.parentNode?.insertBefore(span, slice);
+        span.appendChild(slice);
+      };
+
+      const collectTextNodes = (root: Node, r: Range): Text[] => {
+        const out: Text[] = [];
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) => (r.intersectsNode(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+        });
+        let cur = walker.nextNode();
+        while (cur) {
+          out.push(cur as Text);
+          cur = walker.nextNode();
+        }
+        return out;
+      };
+
+      const textNodes = collectTextNodes(el, range);
+      for (const tn of textNodes) {
+        const len = tn.nodeValue?.length ?? 0;
+        const start = tn === range.startContainer ? range.startOffset : 0;
+        const end = tn === range.endContainer ? range.endOffset : len;
+        wrapTextNode(tn, start, end);
+      }
+
+      // Reset selection after the DOM mutation
+      sel.removeAllRanges();
       savedRangeRef.current = null;
+      el.focus();
       emitChange();
     },
     [restoreSelection, emitChange]

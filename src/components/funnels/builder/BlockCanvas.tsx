@@ -95,8 +95,10 @@ function renderBlockContent(block: Block) {
       };
       const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
       const headingScopeId = `bc-h-${block.id}`;
+      // Apply block color as a default only — do NOT override inline color
+      // spans created by the rich text editor.
       const headingColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${headingScopeId}"], [data-bc-scope="${headingScopeId}"] * { color: ${p.color} !important; }` }} />
+        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${headingScopeId}"] { color: ${p.color}; }` }} />
       ) : null;
       if (headingHasHtml) {
         return (
@@ -130,7 +132,7 @@ function renderBlockContent(block: Block) {
       const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
       const textScopeId = `bc-t-${block.id}`;
       const textColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${textScopeId}"], [data-bc-scope="${textScopeId}"] * { color: ${p.color} !important; }` }} />
+        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${textScopeId}"] { color: ${p.color}; }` }} />
       ) : null;
       if (textHasHtml) {
         const htmlContent = rawText.replace(/\n/g, "<br/>");
