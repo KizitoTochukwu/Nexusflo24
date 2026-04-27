@@ -132,7 +132,7 @@ function renderBlockContent(block: Block) {
       const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
       const textScopeId = `bc-t-${block.id}`;
       const textColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${textScopeId}"], [data-bc-scope="${textScopeId}"] * { color: ${p.color} !important; }` }} />
+        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${textScopeId}"] { color: ${p.color}; }` }} />
       ) : null;
       if (textHasHtml) {
         const htmlContent = rawText.replace(/\n/g, "<br/>");
