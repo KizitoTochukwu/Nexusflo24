@@ -1,27 +1,22 @@
-## Goal
-Make the cookie consent banner more compact on mobile so it doesn't dominate the screen, while keeping it fully compliant with GDPR/UK/CCPA requirements.
+The previous patch improved selection preservation, but it still relies primarily on `document.execCommand`. That API can report success without actually producing the expected inline style in this contentEditable + popover setup. Also, the canvas/public renderer currently applies the block-level `p.color` as an `!important` override to every child, which can hide inline per-word colors even when the editor did save them.
 
-## Why keep the banner
-The cookie banner is legally required under GDPR (EU), PECR (UK), and CCPA (California) before storing non-essential cookies (analytics, marketing). Removing it would expose NexusFlo24 to fines and contradict the existing Cookie Policy, Privacy Policy, and GDPR Rights pages. It only shows once per visitor — after Accept/Reject, it disappears permanently for that user.
+Plan:
 
-## Mobile compactness changes
-File: `src/components/CookieConsentBanner.tsx`
+1. Replace the text color application path in `FunnelTextEditor.tsx`
+   - Stop relying on `execCommand('foreColor')` as the main path for text color.
+   - Apply text color by directly wrapping the selected range in a `<span style="color: ...">...</span>`.
+   - Apply highlight similarly with `<span style="background-color: ...">...</span>`.
+   - Keep selection restoration, but make it robust for both selected text and collapsed cursor cases.
 
-1. **Container padding** — Reduce from `py-4` to `py-2` on mobile (`sm:py-4` keeps desktop unchanged), and add tighter `px-3` horizontal padding.
-2. **Message text** — Reduce from `text-sm` to `text-xs` on mobile (`sm:text-sm` desktop).
-3. **Button labels** — Shorten on every screen for clarity:
-   - "Reject Non-Essential" → "Reject"
-   - "Manage Preferences" → "Manage"
-   - "Accept All" stays
-4. **Button sizing** — On mobile: `h-8`, `text-xs`, `flex-1` so the three buttons share one row evenly. On desktop (`sm:`): restore `h-9`, `text-sm`, natural width.
-5. **Gap spacing** — Tighter `gap-1.5` between buttons on mobile, `sm:gap-2` on desktop.
+2. Make the toolbar trigger fire reliably
+   - Prevent the color button/popover from stealing focus before the range is saved.
+   - Save the selected range on mouse, keyboard, and selection changes inside the editor.
+   - Ensure custom color input changes use the same direct wrapping logic as palette swatches.
 
-## What stays the same
-- Banner position (fixed bottom), backdrop blur, border, shadow.
-- "Manage Preferences" detailed view (categories: Necessary / Functional / Analytics / Marketing).
-- localStorage persistence under `nexusflo_cookie_consent`.
-- Link to the Cookie Policy page.
-- Full desktop layout — only mobile is tightened.
+3. Fix renderer override conflicts
+   - Update `BlockCanvas.tsx` and `PublicBlockRenderer.tsx` so block-level color still applies as the default, but does not overwrite inline rich-text colors.
+   - Remove or narrow the current `* { color: ... !important; }` override that masks spans created by the rich text color tool.
 
-## Result
-On a 384px-wide phone, the banner shrinks to roughly half its current height, sits unobtrusively at the bottom, and the three buttons fit on one tidy row instead of stacking and pushing the screen.
+4. Validate
+   - Run TypeScript/build checks.
+   - Confirm the intended behavior: selecting text in a funnel heading/text block, clicking Text color, and choosing a swatch visibly changes that selected text and persists into the canvas/public render.
