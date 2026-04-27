@@ -1,55 +1,74 @@
-## Custom Head Code — Admin Setting (Site-Wide)
+# Meta Pixel Full Integration
 
-Add an admin-only **Custom Code** tab in Settings where you can paste raw HTML/JS (Meta Pixel, GA4, Hotjar, GTM, etc.). The snippet is injected into the document `<head>` on **every page** of the site (marketing pages, dashboard, public funnels, hosted forms, booking pages).
+Pixel ID: **4520045111651647**
 
-This replaces the need to ever edit `index.html` again for tracking pixels.
+## 1. Base pixel installation (`index.html`)
 
----
+- Add the Meta Pixel `<script>` block inside `<head>` (init + first PageView).
+- Add the `<noscript><img></noscript>` fallback at the **top of `<body>`** (HTML5 disallows `<noscript><img>` inside `<head>`).
+- Wrap the script so it respects consent: define `fbq` queue immediately, but only call `fbq('consent', 'grant')` after the user accepts marketing cookies. Default to `fbq('consent', 'revoke')` so no events fire until consent is granted.
 
-### What you get
+## 2. GDPR consent gating (`src/components/CookieConsentBanner.tsx`)
 
-- **Settings → Custom Code** tab (visible only to admins via existing `useIsAdmin` gate).
-- Two textareas:
-  1. **Head Code** — injected into `<head>` (for Meta Pixel, GA, GTM, etc.)
-  2. **Body End Code** — injected just before `</body>` (for chat widgets, late-loading scripts) — optional, included since it's free to add.
-- **Enabled** toggle per slot so you can pause tracking without deleting the code.
-- A "Last updated" timestamp and a syntax hint ("Paste the full `<script>...</script>` block from the provider").
-- Live preview note: changes apply on next page load (no rebuild needed).
+The existing banner already has a `marketing` preference (default off). Hook into save flows:
 
-### How it works
+- On **Accept All** or when `marketing: true` is saved → call `window.fbq?.('consent', 'grant')`.
+- On **Reject** or `marketing: false` → call `window.fbq?.('consent', 'revoke')`.
+- On app boot, read `nexusflo_cookie_consent` from `localStorage`; if `marketing === true`, grant consent immediately (handled in a tiny inline script in `index.html` so it runs before React mounts).
 
-- New singleton DB table `site_custom_code` (one row, id = `'global'`) holding `head_code`, `body_code`, `head_enabled`, `body_enabled`, `updated_at`, `updated_by`.
-- **Public read** RLS (so the snippet loads for anonymous visitors on marketing pages too); **write only by admins** (`has_role(auth.uid(),'admin')`).
-- A new `<SiteCustomCodeInjector />` component mounted once in `App.tsx`:
-  - Fetches the row on mount + subscribes to realtime updates.
-  - Parses pasted HTML, extracts `<script>` and `<noscript>` tags, and re-creates them as real DOM nodes (you can't just `innerHTML` scripts — they won't execute). Inline scripts run, external `src` scripts load with `async`.
-  - Head nodes go into `document.head`; body nodes go just before `</body>`.
-  - Tags injected by the system are marked with `data-nf24-custom="head|body"` so re-renders cleanly remove the previous batch before re-injecting.
-- The existing hard-coded Meta Pixel block in `index.html` stays put (no need to migrate it). The new system is additive — paste anything else you want, or eventually move the pixel into the DB slot and remove it from `index.html`.
+This keeps the pixel GDPR-compliant — it loads but only tracks after explicit marketing consent.
 
-### Files
+## 3. SPA route tracking (`src/App.tsx`)
 
-**New**
-- `supabase/migrations/<ts>_create_site_custom_code.sql` — table + RLS + seed empty row
-- `src/components/analytics/SiteCustomCodeInjector.tsx` — fetches + injects nodes
-- `src/components/settings/CustomCodeTab.tsx` — admin UI (textareas, switches, save)
+Create `src/lib/analytics/metaPixel.ts` with thin typed helpers:
+```ts
+export const fbqTrack = (event: string, params?: Record<string, any>) => {
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+    (window as any).fbq('track', event, params);
+  }
+};
+```
 
-**Edited**
-- `src/App.tsx` — mount `<SiteCustomCodeInjector />` once at app root
-- `src/pages/dashboard/DashboardSettings.tsx` — add `Custom Code` tab (admin-only, next to `Integrations`), wire `<TabsTrigger>` + `<TabsContent>`
+Add a `<MetaPixelRouteTracker />` component mounted inside the `<BrowserRouter>` that listens to `useLocation()` and fires `fbqTrack('PageView')` on every pathname change (skipping the very first render since the inline script already fired one).
 
-### Technical notes
+## 4. Conversion events
 
-- Snippet length cap: 20,000 chars per slot (textarea `maxLength`) to avoid runaway pastes.
-- HTML parsing uses `DOMParser` + a manual `<script>` re-creation loop — standard, safe, and works for the exact Meta Pixel snippet you already have.
-- No sanitization beyond DOMParser — this is **admin-only** by design (only you/your team with the admin role can write). Documented in the UI: "This code runs on every page. Only paste trusted snippets."
-- Realtime subscription means once you save, all open tabs (yours + visitors') pick up the change on next navigation; existing tabs reflect changes via the realtime listener without reload.
+| Event | Trigger location | Meta event | Params |
+|---|---|---|---|
+| Signup | `src/pages/Register.tsx` after successful `supabase.auth.signUp` | `CompleteRegistration` | `{ method: 'email' \| 'google' }` |
+| Lead capture (public form) | `src/components/forms/PublicFormRenderer.tsx` after successful submission | `Lead` | `{ content_name: form.name }` |
+| Lead capture (funnel form) | `src/components/funnels/PublicBlockRenderer.tsx` (or wherever the funnel opt-in submits) | `Lead` | `{ content_name: funnel name }` |
+| Embed form lead | `src/pages/EmbedForm.tsx` after submit | `Lead` | `{ content_name: source }` |
+| Stripe checkout start | `src/pages/Pricing.tsx` (and `CreditPackCards.tsx`) right before redirecting to Checkout | `InitiateCheckout` | `{ value, currency: 'USD', content_name: planId }` |
+| Stripe purchase success | New post-checkout success page handler (or detect `?checkout=success` query param on dashboard redirect) | `Purchase` | `{ value, currency: 'USD', content_name: planId }` |
 
-### Out of scope
+For the **Purchase** event: Stripe redirects back to a success URL. I'll inspect the existing checkout flow (`create-checkout-session` edge function and where it sends users) and add a one-shot fire when the success param is present, guarded by `sessionStorage` to avoid duplicates on refresh.
 
-- Per-workspace custom code (you chose Global only).
-- A visual "test fire" button — you can verify with Meta Events Manager's Test Events tool as usual.
+## 5. Files to edit / create
 
----
+- **edit** `index.html` — base pixel + noscript fallback + consent default
+- **create** `src/lib/analytics/metaPixel.ts` — typed helpers
+- **create** `src/components/analytics/MetaPixelRouteTracker.tsx` — SPA PageView tracker
+- **edit** `src/App.tsx` — mount route tracker inside Router
+- **edit** `src/components/CookieConsentBanner.tsx` — wire consent grant/revoke
+- **edit** `src/pages/Register.tsx` — fire `CompleteRegistration`
+- **edit** `src/components/forms/PublicFormRenderer.tsx` — fire `Lead`
+- **edit** `src/pages/EmbedForm.tsx` — fire `Lead`
+- **edit** `src/components/funnels/PublicBlockRenderer.tsx` — fire `Lead` on opt-in submit
+- **edit** `src/pages/Pricing.tsx` and `src/components/pricing/CreditPackCards.tsx` — fire `InitiateCheckout`
+- **edit** Stripe success landing handler — fire `Purchase` (location TBD after I read the post-checkout redirect)
 
-Approve to implement.
+## 6. Verification after deploy
+
+1. Install the **Meta Pixel Helper** Chrome extension and load `nexusflo24.com` — should show pixel `4520045111651647` with PageView (only after accepting marketing cookies).
+2. Submit a public form → confirm `Lead` event in Events Manager → Test Events.
+3. Sign up a new account → confirm `CompleteRegistration`.
+4. Click a Pricing plan → confirm `InitiateCheckout`; complete a test checkout → confirm `Purchase`.
+
+## Notes
+
+- No secrets needed — Pixel ID is a public identifier, safe to commit.
+- No backend changes required; everything is client-side.
+- All `fbq` calls are guarded with `window.fbq?.` so they're no-ops if the script is blocked (ad blockers, no consent).
+
+Approve to proceed.

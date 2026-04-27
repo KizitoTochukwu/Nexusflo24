@@ -64,7 +64,6 @@ import DashboardWorkflows from "./pages/dashboard/DashboardWorkflows";
 import WorkflowEditor from "./pages/dashboard/WorkflowEditor";
 import Unsubscribe from "./pages/Unsubscribe";
 import MetaPixelRouteTracker from "./components/analytics/MetaPixelRouteTracker";
-import SiteCustomCodeInjector from "./components/analytics/SiteCustomCodeInjector";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -76,7 +75,6 @@ const App = () => (
         <AuthProvider>
           <WorkspaceProvider>
             <MetaPixelRouteTracker />
-            <SiteCustomCodeInjector />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/features" element={<Features />} />
