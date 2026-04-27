@@ -122,10 +122,59 @@ export default function FunnelTextEditor({
   minHeight = "200px",
 }: FunnelTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [preview, setPreview] = useState(false);
   const [buttonDialogOpen, setButtonDialogOpen] = useState(false);
   const lastEmittedValue = useRef<string>(value);
   const hasInitializedEditor = useRef(false);
+
+  // Save the current selection if it lives inside the editor.
+  const saveSelection = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (el.contains(range.commonAncestorContainer)) {
+      savedRangeRef.current = range.cloneRange();
+    }
+  }, []);
+
+  // Restore selection. If none was saved, select all editor content.
+  const restoreSelection = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    if (savedRangeRef.current) {
+      sel.addRange(savedRangeRef.current);
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.addRange(range);
+    }
+  }, []);
+
+  // Apply a color (text or background) to the current/saved selection.
+  // Falls back to wrapping all editor content when nothing is selected.
+  const applyColor = useCallback(
+    (kind: "fore" | "back", hex: string) => {
+      restoreSelection();
+      try {
+        document.execCommand("styleWithCSS", false, "true");
+      } catch {}
+      const cmd = kind === "fore" ? "foreColor" : "hiliteColor";
+      const ok = document.execCommand(cmd, false, hex);
+      if (!ok && kind === "back") {
+        document.execCommand("backColor", false, hex);
+      }
+      savedRangeRef.current = null;
+      emitChange();
+    },
+    [restoreSelection]
+  );
 
   // Sync value prop → editor only when it differs from what the user last typed.
   // This prevents the caret from being destroyed when a parent normalizes HTML
