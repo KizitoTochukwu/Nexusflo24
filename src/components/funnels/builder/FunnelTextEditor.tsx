@@ -67,7 +67,10 @@ function ColorPicker({ colors, onSelect, onOpen, label, icon: Icon }: {
               size="icon"
               className="h-7 w-7"
               // Capture selection BEFORE focus moves to the popover trigger.
-              onMouseDown={() => onOpen?.()}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onOpen?.();
+              }}
             >
               <Icon className="h-3.5 w-3.5" />
             </Button>
@@ -202,14 +205,31 @@ export default function FunnelTextEditor({
   // Falls back to wrapping all editor content when nothing is selected.
   const applyColor = useCallback(
     (kind: "fore" | "back", hex: string) => {
+      const el = editorRef.current;
+      if (!el) return;
       restoreSelection();
+      const sel = window.getSelection();
       try {
         document.execCommand("styleWithCSS", false, "true");
       } catch {}
       const cmd = kind === "fore" ? "foreColor" : "hiliteColor";
-      const ok = document.execCommand(cmd, false, hex);
-      if (!ok && kind === "back") {
-        document.execCommand("backColor", false, hex);
+      let ok = document.execCommand(cmd, false, hex);
+      if (!ok && kind === "back") ok = document.execCommand("backColor", false, hex);
+      if (!ok && sel?.rangeCount) {
+        const range = sel.getRangeAt(0).cloneRange();
+        if (el.contains(range.commonAncestorContainer)) {
+          if (range.collapsed) range.selectNodeContents(el);
+          const span = document.createElement("span");
+          if (kind === "fore") span.style.color = hex;
+          else span.style.backgroundColor = hex;
+          span.appendChild(range.extractContents());
+          range.insertNode(span);
+          sel.removeAllRanges();
+          const nextRange = document.createRange();
+          nextRange.setStartAfter(span);
+          nextRange.collapse(true);
+          sel.addRange(nextRange);
+        }
       }
       savedRangeRef.current = null;
       emitChange();
@@ -369,6 +389,8 @@ export default function FunnelTextEditor({
                 placeholder:text-muted-foreground"
               style={{ minHeight }}
               onInput={emitChange}
+              onMouseUp={saveSelection}
+              onKeyUp={saveSelection}
               onBlur={emitChange}
               data-placeholder={placeholder}
             />
