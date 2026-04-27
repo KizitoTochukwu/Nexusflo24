@@ -42,36 +42,73 @@ function ToolbarBtn({ icon: Icon, label, onClick }: {
   );
 }
 
-function ColorPicker({ colors, onSelect, label, icon: Icon }: {
-  colors: string[]; onSelect: (hex: string) => void; label: string; icon: React.ElementType;
+function ColorPicker({ colors, onSelect, onOpen, label, icon: Icon }: {
+  colors: string[];
+  onSelect: (hex: string) => void;
+  onOpen?: () => void;
+  label: string;
+  icon: React.ElementType;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        if (o) onOpen?.();
+        setOpen(o);
+      }}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              // Capture selection BEFORE focus moves to the popover trigger.
+              onMouseDown={() => onOpen?.()}
+            >
               <Icon className="h-3.5 w-3.5" />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-auto p-3" align="start" sideOffset={8}>
+      <PopoverContent
+        className="w-auto p-3"
+        align="start"
+        sideOffset={8}
+        // Prevent the popover from stealing focus / clobbering the saved selection.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="grid grid-cols-6 gap-1.5 mb-2">
           {colors.map((hex) => (
-            <button key={hex} type="button"
+            <button
+              key={hex}
+              type="button"
               className="h-5 w-5 rounded border border-border hover:scale-125 transition-transform"
               style={{ backgroundColor: hex }}
-              onClick={() => { onSelect(hex); setOpen(false); }}
+              // Use mousedown so we apply BEFORE the editor blur fully resolves.
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelect(hex);
+                setOpen(false);
+              }}
             />
           ))}
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
           Custom
-          <input type="color" className="h-5 w-5 rounded border-none cursor-pointer p-0"
-            onChange={(e) => { onSelect(e.target.value); setOpen(false); }} />
+          <input
+            type="color"
+            className="h-5 w-5 rounded border-none cursor-pointer p-0"
+            onChange={(e) => {
+              onSelect(e.target.value);
+              setOpen(false);
+            }}
+          />
         </label>
       </PopoverContent>
     </Popover>
