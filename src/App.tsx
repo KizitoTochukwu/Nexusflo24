@@ -75,6 +75,7 @@ const App = () => (
         <AuthProvider>
           <WorkspaceProvider>
             <MetaPixelRouteTracker />
+            <SiteCustomCodeInjector />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/features" element={<Features />} />
