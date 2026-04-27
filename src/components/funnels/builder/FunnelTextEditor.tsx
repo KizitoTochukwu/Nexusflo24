@@ -327,10 +327,20 @@ export default function FunnelTextEditor({
               <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
               {/* Group: color */}
               <div className="flex items-center gap-0.5">
-                <ColorPicker icon={Type} label="Text color" colors={COLOR_PRESETS}
-                  onSelect={(hex) => exec("foreColor", hex)} />
-                <ColorPicker icon={Paintbrush} label="Highlight" colors={COLOR_PRESETS}
-                  onSelect={(hex) => exec("hiliteColor", hex)} />
+                <ColorPicker
+                  icon={Type}
+                  label="Text color"
+                  colors={COLOR_PRESETS}
+                  onOpen={saveSelection}
+                  onSelect={(hex) => applyColor("fore", hex)}
+                />
+                <ColorPicker
+                  icon={Paintbrush}
+                  label="Highlight"
+                  colors={COLOR_PRESETS}
+                  onOpen={saveSelection}
+                  onSelect={(hex) => applyColor("back", hex)}
+                />
               </div>
             </div>
           )}
