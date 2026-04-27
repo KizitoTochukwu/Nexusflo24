@@ -64,17 +64,16 @@ function renderBlockContent(block: Block) {
         h3: "text-xl sm:text-2xl md:text-3xl",
       };
       let rawHeading = (p.text as string) || "";
-      // Treat empty rich-text output (e.g. "<p><br></p>", "<br>", whitespace) as empty
       const stripped = rawHeading.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
       if (!stripped) rawHeading = "Heading";
-      // Unwrap block-level tags emitted by the rich-text editor (<p>, <div>, <h1-h6>)
-      // so the heading's fontSize/color cascade isn't overridden by prose styles
-      // applied to those child elements.
+      // Unwrap block-level tags + strip inline font-size / line-height that
+      // would make parts of the heading shrink or render inconsistently.
       const sanitizedHeading = stripped
         ? rawHeading
             .replace(/<\/(p|div|h[1-6])>\s*<(p|div|h[1-6])[^>]*>/gi, "<br/>")
             .replace(/<(p|div|h[1-6])[^>]*>/gi, "")
             .replace(/<\/(p|div|h[1-6])>/gi, "")
+            .replace(/(font-size|line-height|font-weight|font-family)\s*:\s*[^;"']+;?/gi, "")
         : rawHeading;
       const headingHasHtml = stripped ? /<[a-z][\s\S]*>/i.test(sanitizedHeading) : false;
       const headingBorderWidth = Number(p.borderWidth ?? 0);
@@ -93,25 +92,20 @@ function renderBlockContent(block: Block) {
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
       };
-      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
-      const headingScopeId = `bc-h-${block.id}`;
-      // Apply block color as a default only — do NOT override inline color
-      // spans created by the rich text editor.
-      const headingColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${headingScopeId}"] { color: ${p.color}; }` }} />
-      ) : null;
+      // Force inline children to inherit font/size/weight so the heading
+      // renders consistently across all spans, while letting inline color
+      // spans (from the rich-text editor) keep their own color.
+      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!text-[length:inherit] [&_*]:!leading-[inherit]`;
       if (headingHasHtml) {
         return (
           <div style={headingWrapStyle}>
-            {headingColorOverride}
-            <Tag data-bc-scope={headingScopeId} className={headingClass} style={headingInnerStyle} dangerouslySetInnerHTML={{ __html: sanitizedHeading }} />
+            <Tag className={headingClass} style={headingInnerStyle} dangerouslySetInnerHTML={{ __html: sanitizedHeading }} />
           </div>
         );
       }
       return (
         <div style={headingWrapStyle}>
-          {headingColorOverride}
-          <Tag data-bc-scope={headingScopeId} className={headingClass} style={headingInnerStyle}>{sanitizedHeading}</Tag>
+          <Tag className={headingClass} style={headingInnerStyle}>{sanitizedHeading}</Tag>
         </div>
       );
     }
@@ -130,23 +124,17 @@ function renderBlockContent(block: Block) {
         padding: textBorderWidth > 0 ? "8px 12px" : undefined,
       };
       const textInnerStyle: React.CSSProperties = { color: p.color as string, textAlign: p.align as any, fontSize: (p.fontSize as string) || undefined, fontWeight: (p.fontWeight as string) || undefined, lineHeight: (p.lineHeight as string) || undefined };
-      const textScopeId = `bc-t-${block.id}`;
-      const textColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-bc-scope="${textScopeId}"] { color: ${p.color}; }` }} />
-      ) : null;
       if (textHasHtml) {
         const htmlContent = rawText.replace(/\n/g, "<br/>");
         return (
           <div style={textWrapStyle}>
-            {textColorOverride}
-            <div data-bc-scope={textScopeId} className="text-sm leading-relaxed" style={textInnerStyle} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+            <div className="text-sm leading-relaxed" style={textInnerStyle} dangerouslySetInnerHTML={{ __html: htmlContent }} />
           </div>
         );
       }
       return (
         <div style={textWrapStyle}>
-          {textColorOverride}
-          <p data-bc-scope={textScopeId} className="text-sm leading-relaxed" style={{ ...textInnerStyle, whiteSpace: "pre-wrap" }}>
+          <p className="text-sm leading-relaxed" style={{ ...textInnerStyle, whiteSpace: "pre-wrap" }}>
             {rawText}
           </p>
         </div>

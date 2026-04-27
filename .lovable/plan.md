@@ -1,22 +1,30 @@
-The previous patch improved selection preservation, but it still relies primarily on `document.execCommand`. That API can report success without actually producing the expected inline style in this contentEditable + popover setup. Also, the canvas/public renderer currently applies the block-level `p.color` as an `!important` override to every child, which can hide inline per-word colors even when the editor did save them.
+The inconsistency is coming from the funnel builder using two different display paths for the same headline:
 
-Plan:
+1. The right-side headline field is a generic rich-text editor. It shows the stored text in a small editor style, not the actual funnel headline style.
+2. The canvas renders the same saved text as a heading block, applying the block’s font size, weight, alignment, line height, and color.
+3. The selected canvas element also contains an injected `<style>` tag for color scoping, which is why the design inspector sees CSS text mixed with the headline text.
+4. Inline rich-text spans inside the headline can still carry their own font/formatting, so part of the headline can render differently from the rest even when the block-level headline settings look correct.
 
-1. Replace the text color application path in `FunnelTextEditor.tsx`
-   - Stop relying on `execCommand('foreColor')` as the main path for text color.
-   - Apply text color by directly wrapping the selected range in a `<span style="color: ...">...</span>`.
-   - Apply highlight similarly with `<span style="background-color: ...">...</span>`.
-   - Keep selection restoration, but make it robust for both selected text and collapsed cursor cases.
+Plan to fix it:
 
-2. Make the toolbar trigger fire reliably
-   - Prevent the color button/popover from stealing focus before the range is saved.
-   - Save the selected range on mouse, keyboard, and selection changes inside the editor.
-   - Ensure custom color input changes use the same direct wrapping logic as palette swatches.
+1. Normalize heading rendering
+   - Update the heading renderer so all child inline elements inherit the heading’s font size, font weight, line height, and default color unless the user intentionally set an inline text color/highlight.
+   - Keep rich text color spans working, but prevent accidental inline sizing from making part of the headline smaller.
 
-3. Fix renderer override conflicts
-   - Update `BlockCanvas.tsx` and `PublicBlockRenderer.tsx` so block-level color still applies as the default, but does not overwrite inline rich-text colors.
-   - Remove or narrow the current `* { color: ... !important; }` override that masks spans created by the rich text color tool.
+2. Move scoped style injection out of visible text flow
+   - Replace the inline `<style>` element inside each heading/text block with a safer rendering approach that does not appear in the element’s `textContent`.
+   - This will stop the inspector/selection text from showing CSS like `[data-bc-scope=...] { color: ... }` as part of the headline content.
 
-4. Validate
-   - Run TypeScript/build checks.
-   - Confirm the intended behavior: selecting text in a funnel heading/text block, clicking Text color, and choosing a swatch visibly changes that selected text and persists into the canvas/public render.
+3. Make the headline field better match the canvas
+   - Pass heading-specific styling into `FunnelTextEditor` when editing a heading block.
+   - The right-side headline field will preview the same font size, weight, line height, alignment, and color defaults used by the canvas, so editing feels consistent.
+
+4. Preserve intended inline formatting
+   - Keep text color and highlight tools functional.
+   - Strip or neutralize unintended inline font-size/line-height differences in heading content so selected words do not unexpectedly shrink or behave differently.
+
+5. Validate the funnel editor flow
+   - Check that editing the headline updates the canvas consistently.
+   - Check that block-level color still works.
+   - Check that selected text color/highlight still applies and persists.
+   - Check that public funnel rendering matches the editor canvas.
