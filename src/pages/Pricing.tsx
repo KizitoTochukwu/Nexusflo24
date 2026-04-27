@@ -20,6 +20,7 @@ import {
 import { PLAN_CREDITS } from "@/lib/stripe/creditPacks";
 import CreditPackCards from "@/components/pricing/CreditPackCards";
 import { toast } from "sonner";
+import { fbqTrack } from "@/lib/analytics/metaPixel";
 
 interface PlanFeatureGroup {
   title: string;
@@ -179,6 +180,19 @@ const Pricing = () => {
     const plan = PLANS[planKey];
     const priceId =
       billingCycle === "yearly" ? plan.yearlyPriceId : plan.monthlyPriceId;
+    const value =
+      billingCycle === "yearly"
+        ? getYearlyTotal(plan.monthlyPrice)
+        : plan.monthlyPrice;
+
+    fbqTrack("InitiateCheckout", {
+      content_name: planKey,
+      content_category: "subscription",
+      content_ids: [priceId],
+      value,
+      currency: "USD",
+      num_items: 1,
+    });
 
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {

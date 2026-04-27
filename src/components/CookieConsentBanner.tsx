@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { fbqSetConsent, fbqTrack } from "@/lib/analytics/metaPixel";
 
 type CookiePreferences = {
   necessary: true;
@@ -39,6 +40,12 @@ const CookieConsentBanner = () => {
 
   const save = (preferences: CookiePreferences) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+    // Sync Meta Pixel consent with the marketing preference.
+    fbqSetConsent(preferences.marketing);
+    if (preferences.marketing) {
+      // Fire a deferred PageView now that consent is granted for the first time.
+      fbqTrack("PageView");
+    }
     setVisible(false);
     setShowManage(false);
   };

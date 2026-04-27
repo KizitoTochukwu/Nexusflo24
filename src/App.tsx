@@ -63,6 +63,7 @@ import HowConvert from "./pages/HowConvert";
 import DashboardWorkflows from "./pages/dashboard/DashboardWorkflows";
 import WorkflowEditor from "./pages/dashboard/WorkflowEditor";
 import Unsubscribe from "./pages/Unsubscribe";
+import MetaPixelRouteTracker from "./components/analytics/MetaPixelRouteTracker";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -73,6 +74,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <WorkspaceProvider>
+            <MetaPixelRouteTracker />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/features" element={<Features />} />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fbqTrack } from "@/lib/analytics/metaPixel";
 
 /**
  * Lightweight embeddable form page.
@@ -87,6 +88,7 @@ export default function EmbedForm() {
       if (fnError) throw fnError;
 
       setSuccess(true);
+      fbqTrack("Lead", { content_name: source, content_category: "embed_form" });
 
       // Notify parent
       window.parent?.postMessage({ type: "nexusflo-embed-success", email: values.email }, "*");

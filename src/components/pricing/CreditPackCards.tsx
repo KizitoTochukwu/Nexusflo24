@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CREDIT_PACKS, type CreditChannel } from "@/lib/stripe/creditPacks";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { fbqTrack } from "@/lib/analytics/metaPixel";
 
 const channels: CreditChannel[] = ["email", "sms", "whatsapp"];
 
@@ -44,6 +45,15 @@ export default function CreditPackCards() {
         .single();
 
       if (wsErr || !membership) throw new Error("No workspace found. Please complete onboarding first.");
+
+      const pack = CREDIT_PACKS[ch];
+      fbqTrack("InitiateCheckout", {
+        content_name: `${ch}_credit_pack`,
+        content_category: "credit_pack",
+        value: pack.price * quantities[ch],
+        currency: "USD",
+        num_items: quantities[ch],
+      });
 
       const { data, error } = await supabase.functions.invoke("create-credit-purchase", {
         body: { channel: ch, workspaceId: membership.workspace_id, quantity: quantities[ch] },
