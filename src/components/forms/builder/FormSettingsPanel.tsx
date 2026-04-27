@@ -20,6 +20,23 @@ const PIPELINE_STAGES = [
   "new_lead", "contacted", "engaged", "qualified", "demo_booked", "proposal_sent", "negotiation", "closed_won",
 ];
 
+const LEAD_SOURCES = [
+  "Form",
+  "Landing Page",
+  "Funnel",
+  "Webinar",
+  "Email Campaign",
+  "WhatsApp",
+  "SMS",
+  "Facebook Ad",
+  "Instagram Ad",
+  "Google Ad",
+  "LinkedIn",
+  "Referral",
+  "Organic",
+  "Other",
+];
+
 const COLOR_PALETTES: { name: string; bg: string; accent: string; text: string }[] = [
   { name: "NexusFlo Navy", bg: "#FFFFFF", accent: "#0B1F3B", text: "#0B1F3B" },
   { name: "Gold Luxe", bg: "#FFFFFF", accent: "#C9A227", text: "#1F2937" },
@@ -76,7 +93,17 @@ export default function FormSettingsPanel({
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CRM mapping</p>
         <div>
           <Label className="text-xs">Lead source</Label>
-          <Input value={settings.source} onChange={(e) => setS("source", e.target.value)} />
+          <Select
+            value={LEAD_SOURCES.includes(settings.source) ? settings.source : "Other"}
+            onValueChange={(v) => setS("source", v)}
+          >
+            <SelectTrigger><SelectValue placeholder="Select a source" /></SelectTrigger>
+            <SelectContent>
+              {LEAD_SOURCES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label className="text-xs">Tags (comma-separated)</Label>
