@@ -104,7 +104,10 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
       )}
 
       {isImage && (
-        <>
+        <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {field.type === "logo" ? "Logo" : "Image"}
+          </p>
           <div>
             <Label className="text-xs">{field.type === "logo" ? "Logo URL" : "Image URL"}</Label>
             <Input
@@ -149,33 +152,35 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
               onChange={(e) => update("image_alt", e.target.value)}
             />
           </div>
-          <div>
-            <Label className="text-xs">Alignment</Label>
-            <Select
-              value={field.image_align ?? "center"}
-              onValueChange={(v) => update("image_align", v as "left" | "center" | "right")}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">Left</SelectItem>
-                <SelectItem value="center">Center</SelectItem>
-                <SelectItem value="right">Right</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Alignment</Label>
+              <Select
+                value={field.image_align ?? "center"}
+                onValueChange={(v) => update("image_align", v as "left" | "center" | "right")}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Width ({field.image_width ?? 100}%)</Label>
+              <input
+                type="range"
+                min={20}
+                max={100}
+                step={5}
+                value={field.image_width ?? 100}
+                onChange={(e) => update("image_width", Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
           </div>
-          <div>
-            <Label className="text-xs">Width ({field.image_width ?? 100}%)</Label>
-            <input
-              type="range"
-              min={20}
-              max={100}
-              step={5}
-              value={field.image_width ?? 100}
-              onChange={(e) => update("image_width", Number(e.target.value))}
-              className="w-full"
-            />
-          </div>
-        </>
+        </div>
       )}
 
       {!isDisplayOnly && field.type !== "hidden" && (
