@@ -145,16 +145,10 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         fontWeight: (p.fontWeight as string) || undefined,
         lineHeight: (p.lineHeight as string) || undefined,
       };
-      const textScopeId = `pr-t-${block.id}`;
-      const textColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${textScopeId}"] { color: ${p.color}; }` }} />
-      ) : null;
       if (useHtml) {
         return (
           <div style={textWrapStyle}>
-            {textColorOverride}
             <div
-              data-pr-scope={textScopeId}
               className="text-base md:text-lg leading-relaxed"
               style={textStyle}
               dangerouslySetInnerHTML={{ __html: resolvedText }}
@@ -164,8 +158,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       }
       return (
         <div style={textWrapStyle}>
-          {textColorOverride}
-          <p data-pr-scope={textScopeId} className="text-base md:text-lg leading-relaxed" style={{ ...textStyle, whiteSpace: "pre-wrap" }}>
+          <p className="text-base md:text-lg leading-relaxed" style={{ ...textStyle, whiteSpace: "pre-wrap" }}>
             {resolvedText}
           </p>
         </div>
