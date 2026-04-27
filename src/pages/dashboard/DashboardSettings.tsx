@@ -29,6 +29,7 @@ import ChannelSettingsTab from "@/components/settings/ChannelSettingsTab";
 import UsageCreditsTab from "@/components/settings/UsageCreditsTab";
 import BrandingTab from "@/components/settings/BrandingTab";
 import TeamTab from "@/components/settings/TeamTab";
+import CustomCodeTab from "@/components/settings/CustomCodeTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -699,7 +700,7 @@ function NotificationsTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales"] as const;
+const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "custom-code"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
@@ -748,6 +749,9 @@ const DashboardSettings = () => {
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
             <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
             <TabsTrigger value="ai-sales" className="gap-1.5"><Bot className="h-3.5 w-3.5" />AI Sales</TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="custom-code" className="gap-1.5"><Globe className="h-3.5 w-3.5" />Custom Code</TabsTrigger>
+            )}
           </TabsList>
 
           <div className="mt-6 max-w-3xl">
@@ -765,6 +769,7 @@ const DashboardSettings = () => {
             <TabsContent value="notifications"><NotificationsTab /></TabsContent>
             <TabsContent value="security"><SecurityTab /></TabsContent>
             <TabsContent value="ai-sales"><SalesCloserSettingsTab workspaceId={workspaceId} /></TabsContent>
+            <TabsContent value="custom-code">{isAdmin ? <CustomCodeTab /> : <AccessDeniedCard />}</TabsContent>
           </div>
         </Tabs>
       )}

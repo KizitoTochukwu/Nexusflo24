@@ -1849,6 +1849,36 @@ export type Database = {
           },
         ]
       }
+      site_custom_code: {
+        Row: {
+          body_code: string
+          body_enabled: boolean
+          head_code: string
+          head_enabled: boolean
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body_code?: string
+          body_enabled?: boolean
+          head_code?: string
+          head_enabled?: boolean
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body_code?: string
+          body_enabled?: boolean
+          head_code?: string
+          head_enabled?: boolean
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       smart_lists: {
         Row: {
           created_at: string
