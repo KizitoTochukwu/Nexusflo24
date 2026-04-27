@@ -85,7 +85,17 @@ export default function FormSettingsPanel({
             placeholder="https://example.com/thank-you"
             value={settings.redirect_url}
             onChange={(e) => setS("redirect_url", e.target.value)}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (!v) return;
+              if (v.startsWith("/")) return;
+              if (/^https?:\/\//i.test(v)) return;
+              setS("redirect_url", `https://${v}`);
+            }}
           />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Must include https:// (e.g. https://www.example.com/thanks). We'll add it automatically if you forget.
+          </p>
         </div>
       </div>
 
