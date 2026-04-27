@@ -153,7 +153,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       };
       const textScopeId = `pr-t-${block.id}`;
       const textColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${textScopeId}"], [data-pr-scope="${textScopeId}"] * { color: ${p.color} !important; }` }} />
+        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${textScopeId}"] { color: ${p.color}; }` }} />
       ) : null;
       if (useHtml) {
         return (
