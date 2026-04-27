@@ -266,6 +266,10 @@ export default function FormSettingsPanel({
             </SelectContent>
           </Select>
         </div>
+        <div>
+          <Label className="text-xs">Logo URL (optional)</Label>
+          <Input value={theme.logo_url} onChange={(e) => setT("logo_url", e.target.value)} placeholder="https://…" />
+        </div>
       </div>
     </div>
   );
