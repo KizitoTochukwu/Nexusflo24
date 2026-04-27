@@ -118,8 +118,9 @@ export default function PublicFormRenderer({ form, preview }: Props) {
         console.warn("notify-form-submission failed:", notifyErr);
       }
 
-      if (settings.redirect_url) {
-        window.location.href = settings.redirect_url;
+      const safeRedirect = normalizeRedirectUrl(settings.redirect_url);
+      if (safeRedirect) {
+        window.location.href = safeRedirect;
         return;
       }
       setDone(true);
