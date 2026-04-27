@@ -198,6 +198,25 @@ export default function FunnelTextEditor({
     onChange(html);
   }, [onChange]);
 
+  // Apply a color (text or background) to the current/saved selection.
+  // Falls back to wrapping all editor content when nothing is selected.
+  const applyColor = useCallback(
+    (kind: "fore" | "back", hex: string) => {
+      restoreSelection();
+      try {
+        document.execCommand("styleWithCSS", false, "true");
+      } catch {}
+      const cmd = kind === "fore" ? "foreColor" : "hiliteColor";
+      const ok = document.execCommand(cmd, false, hex);
+      if (!ok && kind === "back") {
+        document.execCommand("backColor", false, hex);
+      }
+      savedRangeRef.current = null;
+      emitChange();
+    },
+    [restoreSelection, emitChange]
+  );
+
   const exec = useCallback((cmd: string, val?: string) => {
     editorRef.current?.focus();
     document.execCommand(cmd, false, val);
