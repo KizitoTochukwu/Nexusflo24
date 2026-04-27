@@ -13,6 +13,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 
+/**
+ * Normalize a user-provided redirect URL so we never accidentally navigate
+ * to a relative path (e.g. typing "www.example.com" without a protocol would
+ * otherwise resolve against the current `/forms/<slug>` URL and 404).
+ */
+function normalizeRedirectUrl(raw?: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  // Same-site relative path is allowed.
+  if (trimmed.startsWith("/")) return trimmed;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(withProtocol).toString();
+  } catch {
+    return null;
+  }
+}
+
 interface Props {
   form: FormRecord;
   /** When true, the renderer simulates submit instead of calling capture-lead. */
