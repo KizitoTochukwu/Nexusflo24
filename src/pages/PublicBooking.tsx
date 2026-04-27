@@ -11,6 +11,8 @@ import { CalendarDays, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { BookingPage } from "@/hooks/useBookings";
+import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
+import { wsTrack } from "@/lib/analytics/workspacePixels";
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
@@ -81,6 +83,8 @@ export default function PublicBooking() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Booking failed");
+      wsTrack("Schedule", { content_name: page.name, content_category: "booking" });
+      wsTrack("Lead", { content_name: page.name, content_category: "booking" });
       setConfirmed(true);
     } catch (err: any) {
       setError(err.message);
@@ -128,6 +132,7 @@ export default function PublicBooking() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
+      <WorkspacePixelLoader workspaceId={page.workspace_id} />
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="mb-6 text-center">

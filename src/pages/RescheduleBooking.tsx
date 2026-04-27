@@ -7,6 +7,7 @@ import { CalendarDays, Clock, CheckCircle2, Loader2, ArrowRight } from "lucide-r
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { BookingPage, Booking } from "@/hooks/useBookings";
+import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 
 export default function RescheduleBooking() {
   const { token } = useParams<{ token: string }>();
@@ -151,6 +152,7 @@ export default function RescheduleBooking() {
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
+      <WorkspacePixelLoader workspaceId={page.workspace_id} />
       <div className="mx-auto max-w-3xl">
         {/* Header */}
         <div className="mb-6 text-center">

@@ -1,74 +1,127 @@
-# Meta Pixel Full Integration
+# Workspace-Level Tracking Pixels (Meta + Google)
 
-Pixel ID: **4520045111651647**
+Let each subscriber paste their own tracking IDs **once** in their workspace settings. Those pixels will then auto-fire on every public page that workspace owns: **funnels** (`/f/:slug`), **forms** (`/forms/:slug`), and **booking pages** (`/book/:slug`).
 
-## 1. Base pixel installation (`index.html`)
+## What the user gets
 
-- Add the Meta Pixel `<script>` block inside `<head>` (init + first PageView).
-- Add the `<noscript><img></noscript>` fallback at the **top of `<body>`** (HTML5 disallows `<noscript><img>` inside `<head>`).
-- Wrap the script so it respects consent: define `fbq` queue immediately, but only call `fbq('consent', 'grant')` after the user accepts marketing cookies. Default to `fbq('consent', 'revoke')` so no events fire until consent is granted.
+A new **"Tracking & Pixels"** card inside Dashboard → Settings → Channels (or its own tab — see Technical), with three fields:
 
-## 2. GDPR consent gating (`src/components/CookieConsentBanner.tsx`)
+1. **Meta Pixel ID** — e.g. `4520045111651647`
+2. **Google Analytics 4 Measurement ID** — e.g. `G-XXXXXXXXXX` (bonus, since the same plumbing covers it)
+3. **Google Tag Manager ID** — e.g. `GTM-XXXXXX` (bonus)
 
-The existing banner already has a `marketing` preference (default off). Hook into save flows:
+Each field has:
+- A toggle to enable/disable
+- A "Test" button that fires a `PageView` and shows confirmation
+- Help text linking to where to find the ID
 
-- On **Accept All** or when `marketing: true` is saved → call `window.fbq?.('consent', 'grant')`.
-- On **Reject** or `marketing: false` → call `window.fbq?.('consent', 'revoke')`.
-- On app boot, read `nexusflo_cookie_consent` from `localStorage`; if `marketing === true`, grant consent immediately (handled in a tiny inline script in `index.html` so it runs before React mounts).
+When saved, those pixels load automatically on every public-facing page the workspace owns and fire:
+- `PageView` on every page load / route change
+- `Lead` on form/funnel/booking submission
+- `Schedule` on booking confirmation
 
-This keeps the pixel GDPR-compliant — it loads but only tracks after explicit marketing consent.
+## Scope
 
-## 3. SPA route tracking (`src/App.tsx`)
+| Surface | Pixel fires? |
+|---|---|
+| Public funnel `/f/:slug` + `/f/:slug/:stepPath` | ✅ |
+| Public hosted form `/forms/:slug` | ✅ |
+| Embedded form `/embed/form` | ✅ |
+| Public booking `/book/:slug` | ✅ |
+| Reschedule `/reschedule/:token` | ✅ (PageView only) |
+| Marketing site (`/`, `/pricing`, dashboard, etc.) | ❌ — those stay on the platform's own NexusFlo24 pixel |
 
-Create `src/lib/analytics/metaPixel.ts` with thin typed helpers:
-```ts
-export const fbqTrack = (event: string, params?: Record<string, any>) => {
-  if (typeof window !== 'undefined' && (window as any).fbq) {
-    (window as any).fbq('track', event, params);
-  }
-};
+## Technical Plan
+
+### 1. Database
+
+New table `workspace_tracking_pixels` (one row per workspace):
+
+```text
+- workspace_id        uuid PK, FK workspaces
+- meta_pixel_id       text
+- meta_enabled        boolean default true
+- ga4_measurement_id  text
+- ga4_enabled         boolean default true
+- gtm_id              text
+- gtm_enabled         boolean default true
+- updated_at          timestamptz
 ```
 
-Add a `<MetaPixelRouteTracker />` component mounted inside the `<BrowserRouter>` that listens to `useLocation()` and fires `fbqTrack('PageView')` on every pathname change (skipping the very first render since the inline script already fired one).
+**RLS:**
+- `SELECT` — public (so unauthenticated visitors on `/f/:slug` etc. can read the pixel IDs to load)
+- `INSERT/UPDATE/DELETE` — workspace admins only via `is_workspace_admin(auth.uid(), workspace_id)`
 
-## 4. Conversion events
+Pixel IDs are not secrets — they're embedded on the public page anyway, so public read is correct.
 
-| Event | Trigger location | Meta event | Params |
-|---|---|---|---|
-| Signup | `src/pages/Register.tsx` after successful `supabase.auth.signUp` | `CompleteRegistration` | `{ method: 'email' \| 'google' }` |
-| Lead capture (public form) | `src/components/forms/PublicFormRenderer.tsx` after successful submission | `Lead` | `{ content_name: form.name }` |
-| Lead capture (funnel form) | `src/components/funnels/PublicBlockRenderer.tsx` (or wherever the funnel opt-in submits) | `Lead` | `{ content_name: funnel name }` |
-| Embed form lead | `src/pages/EmbedForm.tsx` after submit | `Lead` | `{ content_name: source }` |
-| Stripe checkout start | `src/pages/Pricing.tsx` (and `CreditPackCards.tsx`) right before redirecting to Checkout | `InitiateCheckout` | `{ value, currency: 'USD', content_name: planId }` |
-| Stripe purchase success | New post-checkout success page handler (or detect `?checkout=success` query param on dashboard redirect) | `Purchase` | `{ value, currency: 'USD', content_name: planId }` |
+### 2. New helper: `src/lib/analytics/workspacePixels.ts`
 
-For the **Purchase** event: Stripe redirects back to a success URL. I'll inspect the existing checkout flow (`create-checkout-session` edge function and where it sends users) and add a one-shot fire when the success param is present, guarded by `sessionStorage` to avoid duplicates on refresh.
+- `loadWorkspacePixels(workspaceId)` — fetches the row, returns config
+- `injectMetaPixel(id)` — appends Meta Pixel script + fires PageView, idempotent (skips if already loaded)
+- `injectGA4(id)` — appends gtag.js, idempotent
+- `injectGTM(id)` — appends GTM, idempotent
+- `wsTrack(event, params)` — calls `fbq('track', ...)` and `gtag('event', ...)` if loaded
+- All calls are no-ops when IDs missing or disabled
 
-## 5. Files to edit / create
+### 3. New component: `src/components/analytics/WorkspacePixelLoader.tsx`
 
-- **edit** `index.html` — base pixel + noscript fallback + consent default
-- **create** `src/lib/analytics/metaPixel.ts` — typed helpers
-- **create** `src/components/analytics/MetaPixelRouteTracker.tsx` — SPA PageView tracker
-- **edit** `src/App.tsx` — mount route tracker inside Router
-- **edit** `src/components/CookieConsentBanner.tsx` — wire consent grant/revoke
-- **edit** `src/pages/Register.tsx` — fire `CompleteRegistration`
-- **edit** `src/components/forms/PublicFormRenderer.tsx` — fire `Lead`
-- **edit** `src/pages/EmbedForm.tsx` — fire `Lead`
-- **edit** `src/components/funnels/PublicBlockRenderer.tsx` — fire `Lead` on opt-in submit
-- **edit** `src/pages/Pricing.tsx` and `src/components/pricing/CreditPackCards.tsx` — fire `InitiateCheckout`
-- **edit** Stripe success landing handler — fire `Purchase` (location TBD after I read the post-checkout redirect)
+Mounts inside each public page wrapper. Takes a `workspaceId` prop, loads pixels on mount, fires `PageView` on route change. Multiple workspaces never collide because we tag injected scripts with `data-nf24-ws-pixel="<workspaceId>"` and remove them on unmount/workspace change.
 
-## 6. Verification after deploy
+Wired into:
+- `src/pages/PublicFunnel.tsx` — uses funnel's `workspace_id`
+- `src/pages/PublicForm.tsx` — uses form's `workspace_id`
+- `src/pages/EmbedForm.tsx` — uses form's `workspace_id`
+- `src/pages/PublicBooking.tsx` — uses booking page's `workspace_id`
+- `src/pages/RescheduleBooking.tsx` — uses booking's `workspace_id`
 
-1. Install the **Meta Pixel Helper** Chrome extension and load `nexusflo24.com` — should show pixel `4520045111651647` with PageView (only after accepting marketing cookies).
-2. Submit a public form → confirm `Lead` event in Events Manager → Test Events.
-3. Sign up a new account → confirm `CompleteRegistration`.
-4. Click a Pricing plan → confirm `InitiateCheckout`; complete a test checkout → confirm `Purchase`.
+### 4. Conversion event wiring
 
-## Notes
+- `PublicFormRenderer` & funnel `FormBlock` (`PublicBlockRenderer.tsx`): after successful submit, call `wsTrack('Lead')` in addition to the existing platform `fbqTrack('Lead')`.
+- `PublicBooking` after successful `book-appointment`: `wsTrack('Schedule')` and `wsTrack('Lead')`.
 
-- No secrets needed — Pixel ID is a public identifier, safe to commit.
-- No backend changes required; everything is client-side.
-- All `fbq` calls are guarded with `window.fbq?.` so they're no-ops if the script is blocked (ad blockers, no consent).
+### 5. Settings UI
 
-Approve to proceed.
+New file `src/components/settings/TrackingPixelsTab.tsx`:
+- Three sections (Meta / GA4 / GTM), each with input + enable switch + Test button
+- Save → upsert into `workspace_tracking_pixels`
+- Visible to workspace admins only (uses existing `useWorkspaceRole` / `is_workspace_admin` pattern)
+
+Add a new tab **"Tracking & Pixels"** to `src/pages/dashboard/DashboardSettings.tsx` between "Channels" and "Branding".
+
+### 6. Validation
+
+- Meta Pixel ID: 15–16 digit numeric
+- GA4 ID: matches `^G-[A-Z0-9]+$`
+- GTM ID: matches `^GTM-[A-Z0-9]+$`
+
+Show inline errors; "Test" button is disabled until format is valid and saved.
+
+### 7. Documentation
+
+Add a small "Where do I find my Pixel ID?" inline help drawer with a link to Meta Events Manager.
+
+## Files to create
+
+- `src/components/settings/TrackingPixelsTab.tsx`
+- `src/components/analytics/WorkspacePixelLoader.tsx`
+- `src/lib/analytics/workspacePixels.ts`
+- One DB migration (table + RLS)
+
+## Files to edit
+
+- `src/pages/dashboard/DashboardSettings.tsx` (add tab)
+- `src/pages/PublicFunnel.tsx`
+- `src/pages/PublicForm.tsx`
+- `src/pages/EmbedForm.tsx`
+- `src/pages/PublicBooking.tsx`
+- `src/pages/RescheduleBooking.tsx`
+- `src/components/forms/PublicFormRenderer.tsx` (add `wsTrack('Lead')`)
+- `src/components/funnels/PublicBlockRenderer.tsx` (add `wsTrack('Lead')` on form submit)
+
+## Out of scope (can add later)
+
+- Per-funnel / per-form pixel overrides
+- Server-side Conversions API (CAPI) for Meta — would need an edge function and access tokens
+- TikTok / LinkedIn / X pixels (same pattern, easy to extend once the workspace_tracking_pixels table exists)
+
+Approve and I'll build it.

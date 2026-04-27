@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PublicFormRenderer from "@/components/forms/PublicFormRenderer";
 import type { FormRecord } from "@/hooks/useForms";
+import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 
 export default function PublicForm() {
   const { slug } = useParams();
@@ -56,6 +57,7 @@ export default function PublicForm() {
       className="flex min-h-screen items-center justify-center p-4 sm:p-8"
       style={{ background: form.theme.bg_color || "#f8fafc" }}
     >
+      <WorkspacePixelLoader workspaceId={form.workspace_id} />
       <div className="w-full max-w-xl">
         <PublicFormRenderer form={form} />
         <p className="mt-3 text-center text-xs text-muted-foreground">

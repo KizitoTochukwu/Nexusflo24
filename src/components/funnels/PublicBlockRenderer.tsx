@@ -3,6 +3,7 @@ import type { Block } from "@/components/funnels/builder/blockTypes";
 import { parseVideoUrl, buildEmbedParams } from "@/components/funnels/builder/videoUtils";
 import CountdownBlock, { getCountdownPropsFromBlock } from "@/components/funnels/builder/CountdownBlock";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
+import { wsTrack } from "@/lib/analytics/workspacePixels";
 
 interface Props {
   blocks: Block[];
@@ -414,6 +415,7 @@ function FormBlock({ props: p, onSubmit, submitting }: { props: Record<string, u
     if (!values.email) return;
     await onSubmit?.(values);
     fbqTrack("Lead", { content_name: (p.formName as string) || "funnel_form", content_category: "funnel" });
+    wsTrack("Lead", { content_name: (p.formName as string) || "funnel_form", content_category: "funnel" });
     setSubmitted(true);
   };
 

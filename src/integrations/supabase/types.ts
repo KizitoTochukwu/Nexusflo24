@@ -2928,6 +2928,50 @@ export type Database = {
           },
         ]
       }
+      workspace_tracking_pixels: {
+        Row: {
+          created_at: string
+          ga4_enabled: boolean
+          ga4_measurement_id: string | null
+          gtm_enabled: boolean
+          gtm_id: string | null
+          meta_enabled: boolean
+          meta_pixel_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          ga4_enabled?: boolean
+          ga4_measurement_id?: string | null
+          gtm_enabled?: boolean
+          gtm_id?: string | null
+          meta_enabled?: boolean
+          meta_pixel_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          ga4_enabled?: boolean
+          ga4_measurement_id?: string | null
+          gtm_enabled?: boolean
+          gtm_id?: string | null
+          meta_enabled?: boolean
+          meta_pixel_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_tracking_pixels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspaces: {
         Row: {
           created_at: string
