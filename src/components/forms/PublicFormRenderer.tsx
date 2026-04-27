@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
+import { wsTrack } from "@/lib/analytics/workspacePixels";
 
 /**
  * Normalize a user-provided redirect URL so we never accidentally navigate
@@ -139,6 +140,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       }
 
       fbqTrack("Lead", { content_name: form.name, content_category: "public_form" });
+      wsTrack("Lead", { content_name: form.name, content_category: "public_form" });
 
       const safeRedirect = normalizeRedirectUrl(settings.redirect_url);
       if (safeRedirect) {
