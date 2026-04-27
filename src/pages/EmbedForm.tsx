@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
+import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
+import { wsTrack } from "@/lib/analytics/workspacePixels";
 
 /**
  * Lightweight embeddable form page.
@@ -89,6 +91,7 @@ export default function EmbedForm() {
 
       setSuccess(true);
       fbqTrack("Lead", { content_name: source, content_category: "embed_form" });
+      wsTrack("Lead", { content_name: source, content_category: "embed_form" });
 
       // Notify parent
       window.parent?.postMessage({ type: "nexusflo-embed-success", email: values.email }, "*");
@@ -125,6 +128,7 @@ export default function EmbedForm() {
   if (success) {
     return (
       <div style={pageWrapperStyle}>
+        <WorkspacePixelLoader workspaceId={workspaceId} />
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>✓</div>
           <p style={{ fontSize: 18, fontWeight: 600, color: "#16a34a" }}>Thank you!</p>
@@ -136,6 +140,7 @@ export default function EmbedForm() {
 
   return (
     <div style={pageWrapperStyle}>
+      <WorkspacePixelLoader workspaceId={workspaceId} />
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 480 }}>
         {fields.map((f) => {
           const isTextarea = f === "message";

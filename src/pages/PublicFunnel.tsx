@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PublicBlockRenderer from "@/components/funnels/PublicBlockRenderer";
 import type { Block } from "@/components/funnels/builder/blockTypes";
+import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
+import { wsTrack } from "@/lib/analytics/workspacePixels";
 
 interface FunnelData {
   id: string;
@@ -133,6 +135,8 @@ export default function PublicFunnel() {
         device_type: /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop",
       } as any);
 
+      wsTrack("Lead", { content_name: funnel.name, content_category: "funnel" });
+
       if (nextStep) {
         window.location.href = `/f/${slug}/${nextStep.step_type}`;
       }
@@ -185,6 +189,7 @@ export default function PublicFunnel() {
 
   return (
     <div className="min-h-screen bg-white">
+      <WorkspacePixelLoader workspaceId={funnel.workspace_id} />
       <PublicBlockRenderer blocks={blocks} onFormSubmit={handleFormSubmit} formSubmitting={formSubmitting} leadData={leadData} />
     </div>
   );
