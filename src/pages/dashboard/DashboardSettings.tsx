@@ -18,7 +18,7 @@ import {
   User, Users, Shield, Bell, CreditCard, Loader2, Save, Upload, Key,
   Mail, MessageCircle, Smartphone, Webhook, Settings2, Clock,
   Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor,
-  CheckCircle2, XCircle, ShieldAlert, Palette
+  CheckCircle2, XCircle, ShieldAlert, Palette, Code2
 } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
@@ -29,6 +29,7 @@ import ChannelSettingsTab from "@/components/settings/ChannelSettingsTab";
 import UsageCreditsTab from "@/components/settings/UsageCreditsTab";
 import BrandingTab from "@/components/settings/BrandingTab";
 import TeamTab from "@/components/settings/TeamTab";
+import CustomCodeTab from "@/components/settings/CustomCodeTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -743,6 +744,9 @@ const DashboardSettings = () => {
             {isAdmin && (
               <TabsTrigger value="integrations" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" />Integrations</TabsTrigger>
             )}
+            {isAdmin && (
+              <TabsTrigger value="custom-code" className="gap-1.5"><Code2 className="h-3.5 w-3.5" />Custom Code</TabsTrigger>
+            )}
             <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" />Webhooks</TabsTrigger>
             <TabsTrigger value="automations" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Automation</TabsTrigger>
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
@@ -759,6 +763,9 @@ const DashboardSettings = () => {
             <TabsContent value="team"><TeamTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="integrations">
               {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
+            </TabsContent>
+            <TabsContent value="custom-code">
+              {isAdmin ? <CustomCodeTab /> : <AccessDeniedCard />}
             </TabsContent>
             <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
             <TabsContent value="automations"><AutomationPrefsTab /></TabsContent>
