@@ -95,7 +95,7 @@ function renderBlockContent(block: Block) {
       // Force inline children to inherit font/size/weight so the heading
       // renders consistently across all spans, while letting inline color
       // spans (from the rich-text editor) keep their own color.
-      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!text-[length:inherit] [&_*]:!leading-[inherit] [&_*]:!font-weight-[inherit]`;
+      const headingClass = `${!p.fontSize ? defaultSizes[p.level as string] || defaultSizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!text-[length:inherit] [&_*]:!leading-[inherit] [&_*]:!font-bold`;
       if (headingHasHtml) {
         return (
           <div style={headingWrapStyle}>
