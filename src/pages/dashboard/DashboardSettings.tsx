@@ -699,7 +699,7 @@ function NotificationsTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales"] as const;
+const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "custom-code"] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();

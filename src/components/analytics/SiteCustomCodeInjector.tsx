@@ -17,9 +17,10 @@ function injectHtml(html: string, target: HTMLElement, mark: string) {
       const el = node as HTMLElement;
       // re-create scripts so they execute
       if (el.tagName === "SCRIPT") {
+        const src = el.getAttribute("src");
         const s = document.createElement("script");
         for (const attr of Array.from(el.attributes)) s.setAttribute(attr.name, attr.value);
-        if (el.src && !s.hasAttribute("async") && !s.hasAttribute("defer")) s.async = true;
+        if (src && !s.hasAttribute("async") && !s.hasAttribute("defer")) s.async = true;
         s.text = el.textContent || "";
         s.setAttribute(mark, "1");
         target.appendChild(s);
