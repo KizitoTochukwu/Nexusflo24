@@ -24,7 +24,7 @@ type Row = {
 
 export default function CustomCodeTab() {
   const { user } = useAuth();
-  const { isAdmin, loading: roleLoading } = useIsAdmin();
+  const { data: isAdmin, isLoading: roleLoading } = useIsAdmin();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [row, setRow] = useState<Row>({
