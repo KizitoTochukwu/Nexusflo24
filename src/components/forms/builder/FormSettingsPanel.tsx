@@ -20,6 +20,23 @@ const PIPELINE_STAGES = [
   "new_lead", "contacted", "engaged", "qualified", "demo_booked", "proposal_sent", "negotiation", "closed_won",
 ];
 
+const LEAD_SOURCES = [
+  "Form",
+  "Landing Page",
+  "Funnel",
+  "Webinar",
+  "Email Campaign",
+  "WhatsApp",
+  "SMS",
+  "Facebook Ad",
+  "Instagram Ad",
+  "Google Ad",
+  "LinkedIn",
+  "Referral",
+  "Organic",
+  "Other",
+];
+
 const COLOR_PALETTES: { name: string; bg: string; accent: string; text: string }[] = [
   { name: "NexusFlo Navy", bg: "#FFFFFF", accent: "#0B1F3B", text: "#0B1F3B" },
   { name: "Gold Luxe", bg: "#FFFFFF", accent: "#C9A227", text: "#1F2937" },
