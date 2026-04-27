@@ -173,7 +173,7 @@ export default function FunnelTextEditor({
       savedRangeRef.current = null;
       emitChange();
     },
-    [restoreSelection]
+    [restoreSelection, emitChange]
   );
 
   // Sync value prop → editor only when it differs from what the user last typed.
