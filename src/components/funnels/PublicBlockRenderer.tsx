@@ -86,6 +86,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
             .replace(/<\/(p|div|h[1-6])>\s*<(p|div|h[1-6])[^>]*>/gi, "<br/>")
             .replace(/<(p|div|h[1-6])[^>]*>/gi, "")
             .replace(/<\/(p|div|h[1-6])>/gi, "")
+            .replace(/(font-size|line-height|font-weight|font-family)\s*:\s*[^;"']+;?/gi, "")
         : resolvedText;
       const useHtml = !isEffectivelyEmpty(sanitizedText) && hasHtml(sanitizedText);
       const headingBorderWidth = Number(p.borderWidth ?? 0);
@@ -104,17 +105,11 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
         fontWeight: (p.fontWeight as string) || "bold",
         lineHeight: (p.lineHeight as string) || undefined,
       };
-      const headingClass = `${!p.fontSize ? sizes[p.level as string] || sizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!leading-[inherit]`;
-      const headingScopeId = `pr-h-${block.id}`;
-      const headingColorOverride = p.color ? (
-        <style dangerouslySetInnerHTML={{ __html: `[data-pr-scope="${headingScopeId}"] { color: ${p.color}; }` }} />
-      ) : null;
+      const headingClass = `${!p.fontSize ? sizes[p.level as string] || sizes.h2 : ""} leading-tight [&_*]:!font-[inherit] [&_*]:!text-[length:inherit] [&_*]:!leading-[inherit]`;
       if (useHtml) {
         return (
           <div style={headingWrapStyle}>
-            {headingColorOverride}
             <Tag
-              data-pr-scope={headingScopeId}
               className={headingClass}
               style={baseStyle}
               dangerouslySetInnerHTML={{ __html: sanitizedText }}
@@ -124,8 +119,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
       }
       return (
         <div style={headingWrapStyle}>
-          {headingColorOverride}
-          <Tag data-pr-scope={headingScopeId} className={headingClass} style={baseStyle}>
+          <Tag className={headingClass} style={baseStyle}>
             {sanitizedText}
           </Tag>
         </div>
