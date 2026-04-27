@@ -20,8 +20,7 @@ const GA4_RE = /^G-[A-Z0-9]{4,15}$/i;
 const GTM_RE = /^GTM-[A-Z0-9]{4,10}$/i;
 
 export default function TrackingPixelsTab({ workspaceId }: Props) {
-  const { role, loading: roleLoading } = useWorkspaceRole(workspaceId);
-  const isAdmin = role === "owner" || role === "admin";
+  const { isAdmin } = useWorkspaceRole();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -104,7 +103,7 @@ export default function TrackingPixelsTab({ workspaceId }: Props) {
     toast.success("GTM container loaded. Use GTM Preview to verify tags.");
   };
 
-  if (roleLoading || loading) {
+  if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
