@@ -42,36 +42,73 @@ function ToolbarBtn({ icon: Icon, label, onClick }: {
   );
 }
 
-function ColorPicker({ colors, onSelect, label, icon: Icon }: {
-  colors: string[]; onSelect: (hex: string) => void; label: string; icon: React.ElementType;
+function ColorPicker({ colors, onSelect, onOpen, label, icon: Icon }: {
+  colors: string[];
+  onSelect: (hex: string) => void;
+  onOpen?: () => void;
+  label: string;
+  icon: React.ElementType;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        if (o) onOpen?.();
+        setOpen(o);
+      }}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              // Capture selection BEFORE focus moves to the popover trigger.
+              onMouseDown={() => onOpen?.()}
+            >
               <Icon className="h-3.5 w-3.5" />
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-auto p-3" align="start" sideOffset={8}>
+      <PopoverContent
+        className="w-auto p-3"
+        align="start"
+        sideOffset={8}
+        // Prevent the popover from stealing focus / clobbering the saved selection.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="grid grid-cols-6 gap-1.5 mb-2">
           {colors.map((hex) => (
-            <button key={hex} type="button"
+            <button
+              key={hex}
+              type="button"
               className="h-5 w-5 rounded border border-border hover:scale-125 transition-transform"
               style={{ backgroundColor: hex }}
-              onClick={() => { onSelect(hex); setOpen(false); }}
+              // Use mousedown so we apply BEFORE the editor blur fully resolves.
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSelect(hex);
+                setOpen(false);
+              }}
             />
           ))}
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
           Custom
-          <input type="color" className="h-5 w-5 rounded border-none cursor-pointer p-0"
-            onChange={(e) => { onSelect(e.target.value); setOpen(false); }} />
+          <input
+            type="color"
+            className="h-5 w-5 rounded border-none cursor-pointer p-0"
+            onChange={(e) => {
+              onSelect(e.target.value);
+              setOpen(false);
+            }}
+          />
         </label>
       </PopoverContent>
     </Popover>
@@ -85,10 +122,42 @@ export default function FunnelTextEditor({
   minHeight = "200px",
 }: FunnelTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [preview, setPreview] = useState(false);
   const [buttonDialogOpen, setButtonDialogOpen] = useState(false);
   const lastEmittedValue = useRef<string>(value);
   const hasInitializedEditor = useRef(false);
+
+  // Save the current selection if it lives inside the editor.
+  const saveSelection = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (el.contains(range.commonAncestorContainer)) {
+      savedRangeRef.current = range.cloneRange();
+    }
+  }, []);
+
+  // Restore selection. If none was saved, select all editor content.
+  const restoreSelection = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    if (savedRangeRef.current) {
+      sel.addRange(savedRangeRef.current);
+    } else {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.addRange(range);
+    }
+  }, []);
+
+
 
   // Sync value prop → editor only when it differs from what the user last typed.
   // This prevents the caret from being destroyed when a parent normalizes HTML
@@ -128,6 +197,25 @@ export default function FunnelTextEditor({
     lastEmittedValue.current = html;
     onChange(html);
   }, [onChange]);
+
+  // Apply a color (text or background) to the current/saved selection.
+  // Falls back to wrapping all editor content when nothing is selected.
+  const applyColor = useCallback(
+    (kind: "fore" | "back", hex: string) => {
+      restoreSelection();
+      try {
+        document.execCommand("styleWithCSS", false, "true");
+      } catch {}
+      const cmd = kind === "fore" ? "foreColor" : "hiliteColor";
+      const ok = document.execCommand(cmd, false, hex);
+      if (!ok && kind === "back") {
+        document.execCommand("backColor", false, hex);
+      }
+      savedRangeRef.current = null;
+      emitChange();
+    },
+    [restoreSelection, emitChange]
+  );
 
   const exec = useCallback((cmd: string, val?: string) => {
     editorRef.current?.focus();
@@ -239,10 +327,20 @@ export default function FunnelTextEditor({
               <div className="w-px h-4 bg-border mx-0.5 hidden sm:block" />
               {/* Group: color */}
               <div className="flex items-center gap-0.5">
-                <ColorPicker icon={Type} label="Text color" colors={COLOR_PRESETS}
-                  onSelect={(hex) => exec("foreColor", hex)} />
-                <ColorPicker icon={Paintbrush} label="Highlight" colors={COLOR_PRESETS}
-                  onSelect={(hex) => exec("hiliteColor", hex)} />
+                <ColorPicker
+                  icon={Type}
+                  label="Text color"
+                  colors={COLOR_PRESETS}
+                  onOpen={saveSelection}
+                  onSelect={(hex) => applyColor("fore", hex)}
+                />
+                <ColorPicker
+                  icon={Paintbrush}
+                  label="Highlight"
+                  colors={COLOR_PRESETS}
+                  onOpen={saveSelection}
+                  onSelect={(hex) => applyColor("back", hex)}
+                />
               </div>
             </div>
           )}
