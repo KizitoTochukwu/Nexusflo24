@@ -93,7 +93,17 @@ export default function FormSettingsPanel({
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CRM mapping</p>
         <div>
           <Label className="text-xs">Lead source</Label>
-          <Input value={settings.source} onChange={(e) => setS("source", e.target.value)} />
+          <Select
+            value={LEAD_SOURCES.includes(settings.source) ? settings.source : "Other"}
+            onValueChange={(v) => setS("source", v)}
+          >
+            <SelectTrigger><SelectValue placeholder="Select a source" /></SelectTrigger>
+            <SelectContent>
+              {LEAD_SOURCES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label className="text-xs">Tags (comma-separated)</Label>
