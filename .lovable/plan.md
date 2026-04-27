@@ -1,30 +1,43 @@
-The inconsistency is coming from the funnel builder using two different display paths for the same headline:
+## Why the user saw "Form not found"
 
-1. The right-side headline field is a generic rich-text editor. It shows the stored text in a small editor style, not the actual funnel headline style.
-2. The canvas renders the same saved text as a heading block, applying the block’s font size, weight, alignment, line height, and color.
-3. The selected canvas element also contains an injected `<style>` tag for color scoping, which is why the design inspector sees CSS text mixed with the headline text.
-4. Inline rich-text spans inside the headline can still carry their own font/formatting, so part of the headline can render differently from the rest even when the block-level headline settings look correct.
+The form **Webinar – AI Sales System Masterclass** (`/forms/webinar-c16e15`) has its **Redirect URL** set to `www.nexusflo24.com` — without `https://`.
 
-Plan to fix it:
+In `PublicFormRenderer.tsx`:
+```ts
+if (settings.redirect_url) {
+  window.location.href = settings.redirect_url; // "www.nexusflo24.com"
+}
+```
 
-1. Normalize heading rendering
-   - Update the heading renderer so all child inline elements inherit the heading’s font size, font weight, line height, and default color unless the user intentionally set an inline text color/highlight.
-   - Keep rich text color spans working, but prevent accidental inline sizing from making part of the headline smaller.
+When `window.location.href` is assigned a string with no protocol, the browser treats it as a **relative path**. From `/forms/webinar-c16e15`, the user is sent to `/forms/www.nexusflo24.com`. That slug doesn't exist, so `PublicForm.tsx` renders the "Form not found" card.
 
-2. Move scoped style injection out of visible text flow
-   - Replace the inline `<style>` element inside each heading/text block with a safer rendering approach that does not appear in the element’s `textContent`.
-   - This will stop the inspector/selection text from showing CSS like `[data-bc-scope=...] { color: ... }` as part of the headline content.
+The submission itself succeeded — the lead was captured before the redirect happened. Only the post-submit navigation broke.
 
-3. Make the headline field better match the canvas
-   - Pass heading-specific styling into `FunnelTextEditor` when editing a heading block.
-   - The right-side headline field will preview the same font size, weight, line height, alignment, and color defaults used by the canvas, so editing feels consistent.
+## Fix
 
-4. Preserve intended inline formatting
-   - Keep text color and highlight tools functional.
-   - Strip or neutralize unintended inline font-size/line-height differences in heading content so selected words do not unexpectedly shrink or behave differently.
+Two layers so this can't recur:
 
-5. Validate the funnel editor flow
-   - Check that editing the headline updates the canvas consistently.
-   - Check that block-level color still works.
-   - Check that selected text color/highlight still applies and persists.
-   - Check that public funnel rendering matches the editor canvas.
+**1. Runtime safety in `PublicFormRenderer.tsx`** — normalize the redirect URL before navigating:
+- If it starts with `http://` or `https://`, use as-is.
+- If it starts with `/`, treat as same-site path (allowed).
+- Otherwise, prepend `https://` (so `www.nexusflo24.com` becomes `https://www.nexusflo24.com`).
+- Wrap in `try/catch` with `new URL(...)` validation; on failure, fall back to showing the success screen instead of navigating.
+
+**2. Editor validation in `FormSettingsPanel.tsx`** — when the user types a redirect URL:
+- Keep the `type="url"` input but add a small helper note: *"Include https:// — e.g. https://example.com/thanks"*.
+- On blur, auto-prepend `https://` if the value is non-empty, has no scheme, and isn't a relative path starting with `/`. This prevents future forms from being saved with a bare domain.
+
+**3. Repair the existing record** — run a one-time update for the affected form so the redirect works immediately:
+```sql
+UPDATE forms
+SET settings = jsonb_set(settings, '{redirect_url}', '"https://www.nexusflo24.com"')
+WHERE id = 'e582fdad-eda4-47df-96f6-297be379f594';
+```
+
+## Files touched
+- `src/components/forms/PublicFormRenderer.tsx` — normalize/validate `redirect_url` before assigning to `window.location.href`.
+- `src/components/forms/builder/FormSettingsPanel.tsx` — auto-prefix `https://` on blur and add helper text.
+- One DB migration to fix the saved value for the existing form.
+
+## Out of scope
+- No changes to the capture-lead pipeline, RLS, or form schema. Submissions were already saving correctly.
