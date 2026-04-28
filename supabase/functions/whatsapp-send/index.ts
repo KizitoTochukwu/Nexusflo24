@@ -203,17 +203,65 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Auto-detect if we need to use a template message
-    // If no template was explicitly provided and the 24h window is closed, auto-fallback to hello_world template
+    // 24h re-engagement window check.
+    // WhatsApp Cloud API ONLY allows free-form text when the recipient has
+    // messaged your business in the last 24h. Outside that window the only
+    // way to reach them is an APPROVED template (not free text, not the
+    // generic Meta `hello_world` placeholder which would deliver "Hello
+    // World" instead of the user's content — confusing recipients and
+    // hiding delivery failures from the sender).
+    //
+    // Behavior:
+    //   • caller provided a template          → send the template
+    //   • free-form msg + window OPEN         → send the text
+    //   • free-form msg + window CLOSED       → fail fast with a structured
+    //                                           `fallback:true` signal so
+    //                                           callers (campaign /
+    //                                           automation / inbox) can
+    //                                           switch to SMS / Email /
+    //                                           prompt the user to pick an
+    //                                           approved template.
     let effectiveTemplate = template;
-    let autoTemplated = false;
+    const autoTemplated = false; // legacy field kept in response for back-compat
 
     if (!template && msgBody) {
       const windowOpen = await isWindowOpen(adminClient, workspaceId, normalizedTo);
       if (!windowOpen) {
-        console.log("24h window closed for", normalizedTo, "— auto-falling back to hello_world template");
-        effectiveTemplate = { name: "hello_world", language: "en_US" };
-        autoTemplated = true;
+        const errMsg = "WhatsApp 24h window closed — recipient has not messaged you in 24h. Send an approved template, switch channels, or wait for a reply.";
+        console.warn("WA window closed", { workspaceId, to: normalizedTo });
+
+        await adminClient.from("whatsapp_messages").insert({
+          workspace_id: workspaceId,
+          direction: "outbound",
+          phone_number: normalizedTo,
+          message_type: "text",
+          body: msgBody,
+          status: "failed",
+          error: errMsg,
+          ...(leadId ? { lead_id: leadId } : {}),
+        });
+
+        if (campaignId && leadId) {
+          await adminClient.from("campaign_messages")
+            .update({ delivery_status: "failed", error: errMsg })
+            .eq("campaign_id", campaignId)
+            .eq("lead_id", leadId)
+            .eq("channel", "whatsapp")
+            .eq("delivery_status", "pending");
+        }
+
+        // HTTP 200 + structured payload so the caller's `error` branch in
+        // supabase.functions.invoke is NOT triggered — the caller reads
+        // `success === false && fallback === true` and routes to fallback.
+        return new Response(JSON.stringify({
+          success: false,
+          fallback: true,
+          reason: "window_closed",
+          error: errMsg,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
