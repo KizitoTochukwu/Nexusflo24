@@ -186,6 +186,22 @@ export default function CampaignDetailsDrawer({
 }) {
   const { data: campaign } = useCampaignById(campaignId);
   const { data: messages } = useCampaignMessages(campaignId);
+  const { data: pendingFallbacks } = useQuery({
+    queryKey: ["campaign-fallbacks", campaignId],
+    enabled: !!campaignId,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      if (!campaignId) return [];
+      const { data } = await supabase
+        .from("scheduled_jobs")
+        .select("id, run_at, status, payload, lead_id, error")
+        .eq("automation_id", campaignId)
+        .in("status", ["pending", "running"])
+        .order("run_at", { ascending: true })
+        .limit(50);
+      return (data ?? []).filter((j: any) => j?.payload?.type === "campaign_fallback");
+    },
+  });
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const qc = useQueryClient();
