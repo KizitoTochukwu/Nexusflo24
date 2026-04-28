@@ -91,6 +91,60 @@ export default function CreateCampaignDialog() {
     [folders, selectedFolderId],
   );
 
+  // Required contact field per channel
+  const requiredField = useMemo<"email" | "phone" | null>(() => {
+    if (type === "email") return "email";
+    if (type === "sms" || type === "whatsapp") return "phone";
+    return null; // multi-channel: counted as having either
+  }, [type]);
+
+  // Eligibility preview: count leads in current audience that have the required contact field
+  const { data: eligibility, isFetching: eligibilityLoading } = useQuery({
+    queryKey: [
+      "campaign-eligibility",
+      workspaceId,
+      type,
+      audienceMode,
+      audienceMode === "folder" ? folderLeadIds : null,
+      audienceMode === "filter" ? { audienceStatuses, audienceTags, audienceMinScore, audienceMaxScore } : null,
+    ],
+    enabled:
+      !!workspaceId &&
+      step === 5 &&
+      campaignMode === "broadcast" &&
+      (audienceMode === "folder" || audienceMode === "filter"),
+    queryFn: async () => {
+      let query = supabase
+        .from("leads")
+        .select("id, email, phone", { count: "exact" })
+        .eq("workspace_id", workspaceId);
+
+      if (audienceMode === "folder") {
+        if (!folderLeadIds.length) return { total: 0, eligible: 0 };
+        query = query.in("id", folderLeadIds);
+      } else {
+        if (audienceStatuses.length > 0) query = query.in("status", audienceStatuses);
+        if (audienceMinScore) query = query.gte("score", parseInt(audienceMinScore));
+        if (audienceMaxScore) query = query.lte("score", parseInt(audienceMaxScore));
+        const tagList = audienceTags.split(",").map((t) => t.trim()).filter(Boolean);
+        if (tagList.length > 0) query = query.overlaps("tags", tagList);
+      }
+
+      const { data, count, error } = await query.limit(10000);
+      if (error) throw error;
+      const rows = data ?? [];
+      const total = count ?? rows.length;
+      let eligible = 0;
+      for (const r of rows) {
+        if (type === "email") { if (r.email) eligible++; }
+        else if (type === "sms" || type === "whatsapp") { if (r.phone) eligible++; }
+        else { if (r.email || r.phone) eligible++; }
+      }
+      return { total, eligible };
+    },
+  });
+
+
   // Integration status
   const [integrationStatus, setIntegrationStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
   const [integrationLoading, setIntegrationLoading] = useState(false);
