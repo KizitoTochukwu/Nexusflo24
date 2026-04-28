@@ -70,6 +70,22 @@ export default function CreateCampaignDialog() {
   const [aiVariants, setAiVariants] = useState<Array<{ subject: string; body: string; cta: string }>>([]);
   const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(DEFAULT_TEMPLATE_SETTINGS);
 
+  // Step 3 (WhatsApp only) - Optional approved template for re-engagement (24h window closed)
+  const [waTemplateId, setWaTemplateId] = useState<string>("none");
+  const { data: waTemplates = [] } = useQuery({
+    queryKey: ["whatsapp-templates", workspaceId],
+    enabled: !!workspaceId && (type === "whatsapp" || type === "multi-channel"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("whatsapp_templates")
+        .select("id, name, language, category, body_preview, variable_count")
+        .eq("workspace_id", workspaceId!)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Step 4 - Fallback
   const [fallbackEnabled, setFallbackEnabled] = useState(false);
   const [fallbackChannel, setFallbackChannel] = useState("sms");
@@ -262,7 +278,17 @@ export default function CreateCampaignDialog() {
       objective,
       campaign_mode: campaignMode,
       status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: { subject: finalSubject, body, templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined } as any,
+      message_content: {
+        subject: finalSubject,
+        body,
+        templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
+        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && waTemplateId !== "none"
+          ? (() => {
+              const t = waTemplates.find((x: any) => x.id === waTemplateId);
+              return t ? { name: t.name, language: t.language } : undefined;
+            })()
+          : undefined,
+      } as any,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
