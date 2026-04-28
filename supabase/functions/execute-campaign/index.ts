@@ -185,7 +185,14 @@ Deno.serve(async (req) => {
           });
           const data = await res.json();
           deliveryStatus = data.success ? "delivered" : "failed";
-          if (!data.success) sendError = data.error;
+          if (!data.success) {
+            // window_closed / fallback signal flows through the same failed
+            // branch below — the configured fallback channel will fire
+            // immediately because deliveryStatus === "failed".
+            sendError = data.error || (data.reason === "window_closed"
+              ? "WhatsApp 24h window closed"
+              : "WhatsApp send failed");
+          }
         } else if (effectiveChannel === "sms" && lead.phone) {
           const res = await fetch(`${supabaseUrl}/functions/v1/sms-send`, {
             method: "POST",
