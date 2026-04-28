@@ -250,6 +250,11 @@ export default function CreateCampaignDialog() {
   };
 
   const handleCreate = async () => {
+    // Auto-fill subject for email/multi-channel if blank, so the email leg
+    // never fails on a missing subject.
+    const finalSubject = ((type === "email" || type === "multi-channel") && !subject.trim())
+      ? (name || "Message from NexusFlo24")
+      : subject;
     const campaign = await createCampaign.mutateAsync({
       workspace_id: workspaceId,
       name,
@@ -257,7 +262,7 @@ export default function CreateCampaignDialog() {
       objective,
       campaign_mode: campaignMode,
       status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: { subject, body, templateSettings: type === "email" ? templateSettings : undefined } as any,
+      message_content: { subject: finalSubject, body, templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined } as any,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
