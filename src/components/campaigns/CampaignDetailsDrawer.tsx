@@ -49,7 +49,7 @@ function SequenceTimeline({
   messages,
   fallback,
 }: {
-  messages: Array<{ id: string; channel: string; delivery_status: string; opened: boolean; clicked: boolean; replied: boolean; created_at: string; lead_id: string | null }>;
+  messages: Array<{ id: string; channel: string; delivery_status: string; opened: boolean; clicked: boolean; replied: boolean; created_at: string; lead_id: string | null; error?: string | null }>;
   fallback: { enabled?: boolean; channel?: string; delay_minutes?: number; condition?: string } | null;
 }) {
   if (!messages || messages.length === 0) {
