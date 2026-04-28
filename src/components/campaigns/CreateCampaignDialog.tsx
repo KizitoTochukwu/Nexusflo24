@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import LeadPicker from "@/components/campaigns/LeadPicker";
+import { useLeadFolders, useFolderLeadIds } from "@/hooks/useLeadFolders";
+import { Folder as FolderIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +79,16 @@ export default function CreateCampaignDialog() {
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
-  const [useLeadPicker, setUseLeadPicker] = useState(false);
+  const [audienceMode, setAudienceMode] = useState<"filter" | "folder" | "picker">("filter");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  // Folders for "Pick Folder/Group" mode
+  const { data: folders = [], isLoading: foldersLoading } = useLeadFolders(workspaceId);
+  const { data: folderLeadIds = [] } = useFolderLeadIds(selectedFolderId, workspaceId);
+  const selectedFolder = useMemo(
+    () => folders.find((f) => f.id === selectedFolderId) || null,
+    [folders, selectedFolderId],
+  );
 
   // Integration status
   const [integrationStatus, setIntegrationStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
@@ -107,7 +118,7 @@ export default function CreateCampaignDialog() {
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
     setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
     setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
-    setSelectedLeadIds([]); setUseLeadPicker(false);
+    setSelectedLeadIds([]); setAudienceMode("filter"); setSelectedFolderId(null);
   };
 
   const handleGenerateAI = async () => {
@@ -157,11 +168,16 @@ export default function CreateCampaignDialog() {
         delay_minutes: parseInt(fallbackDelay), condition: fallbackCondition,
       } as any : {} as any,
       audience_filter: {
-        ...(useLeadPicker && selectedLeadIds.length > 0 ? { lead_ids: selectedLeadIds } : {}),
-        ...(audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
-        ...(audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
-        ...(audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
-        ...(audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
+        ...(audienceMode === "picker" && selectedLeadIds.length > 0
+          ? { lead_ids: selectedLeadIds }
+          : {}),
+        ...(audienceMode === "folder" && selectedFolderId && folderLeadIds.length > 0
+          ? { folder_id: selectedFolderId, lead_ids: folderLeadIds }
+          : {}),
+        ...(audienceMode === "filter" && audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
+        ...(audienceMode === "filter" && audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
+        ...(audienceMode === "filter" && audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
+        ...(audienceMode === "filter" && audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
       } as any,
     });
 
@@ -511,25 +527,66 @@ export default function CreateCampaignDialog() {
             {/* Audience Selection */}
             {campaignMode === "broadcast" && (
               <div className="space-y-3">
-                {/* Toggle between filter and picker */}
-                <div className="flex gap-2">
-                  <button onClick={() => setUseLeadPicker(false)}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                      !useLeadPicker ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
-                    }`}>Filter by Criteria</button>
-                  <button onClick={() => setUseLeadPicker(true)}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                      useLeadPicker ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
-                    }`}>Pick Specific Leads</button>
+                {/* Toggle between filter, folder, and picker */}
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: "filter", label: "Filter by Criteria" },
+                    { value: "folder", label: "Pick Folder/Group" },
+                    { value: "picker", label: "Pick Specific Leads" },
+                  ] as const).map((m) => (
+                    <button key={m.value} onClick={() => setAudienceMode(m.value)}
+                      className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
+                        audienceMode === m.value ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
+                      }`}>{m.label}</button>
+                  ))}
                 </div>
 
-                {useLeadPicker ? (
+                {audienceMode === "picker" && (
                   <LeadPicker
                     channel={type}
                     selectedLeadIds={selectedLeadIds}
                     onSelectionChange={setSelectedLeadIds}
                   />
-                ) : (
+                )}
+
+                {audienceMode === "folder" && (
+                  <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                    <Label className="text-xs flex items-center gap-1.5">
+                      <FolderIcon className="h-3.5 w-3.5" /> Choose a folder/group
+                    </Label>
+                    {foldersLoading ? (
+                      <p className="text-xs text-muted-foreground py-1">Loading folders…</p>
+                    ) : folders.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-1">
+                        No folders yet. Create folders from the Leads page to group your audience.
+                      </p>
+                    ) : (
+                      <>
+                        <Select value={selectedFolderId ?? ""} onValueChange={(v) => setSelectedFolderId(v || null)}>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Select a folder…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {folders.map((f) => (
+                              <SelectItem key={f.id} value={f.id} className="text-xs">
+                                {f.name} ({f.lead_count ?? 0})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedFolder && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {folderLeadIds.length === 0
+                              ? "This folder has no leads."
+                              : `${folderLeadIds.length} lead${folderLeadIds.length === 1 ? "" : "s"} will receive this campaign (channel-eligible only).`}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {audienceMode === "filter" && (
                   <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
                     <p className="text-xs font-semibold text-foreground">Audience Filter (optional)</p>
                     <div>
@@ -584,6 +641,20 @@ export default function CreateCampaignDialog() {
                     <span className="font-medium text-foreground capitalize">{fallbackChannel} after {fallbackDelay}m ({fallbackCondition})</span>
                   </>
                 )}
+                {campaignMode === "broadcast" && (
+                  <>
+                    <span className="text-muted-foreground">Audience</span>
+                    <span className="font-medium text-foreground">
+                      {audienceMode === "folder" && selectedFolder
+                        ? `Folder "${selectedFolder.name}" (${folderLeadIds.length})`
+                        : audienceMode === "folder"
+                          ? "No folder selected"
+                          : audienceMode === "picker"
+                            ? `${selectedLeadIds.length} selected lead${selectedLeadIds.length === 1 ? "" : "s"}`
+                            : "Filter by criteria"}
+                    </span>
+                  </>
+                )}
                 <span className="text-muted-foreground">Delivery</span>
                 <span className="font-medium text-foreground">
                   {campaignMode === "triggered" ? "Auto (on trigger)" : scheduleNow ? "Immediate" : scheduledAt || "Not set"}
@@ -620,7 +691,14 @@ export default function CreateCampaignDialog() {
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={handleCreate} disabled={createCampaign.isPending} className="flex-1">
+              <Button
+                onClick={handleCreate}
+                disabled={
+                  createCampaign.isPending ||
+                  (campaignMode === "broadcast" && audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))
+                }
+                className="flex-1"
+              >
                 {createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
               </Button>
             </div>
