@@ -40,6 +40,11 @@ const TOTAL_STEPS = 5;
 
 export default function CreateCampaignDialog() {
   const workspaceId = useWorkspaceId();
+  const navigate = useNavigate();
+  const goToLeads = (params?: string) => {
+    setOpen(false);
+    navigate(`/dashboard/${workspaceId}/leads${params ?? ""}`);
+  };
   const createCampaign = useCreateCampaign();
   const generateCopy = useGenerateCampaignCopy();
   const [open, setOpen] = useState(false);
