@@ -20,6 +20,7 @@ import { parseBlocksFromMessage, blocksToHtml } from "./email-blocks/emailBlockS
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { supabase } from "@/integrations/supabase/client";
+import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { toast } from "sonner";
 
 interface AutomationEmailEditorProps {
@@ -165,26 +166,32 @@ export default function AutomationEmailEditor({
 
     setTestSending(true);
     try {
+      // Test sends use sample values for {{first_name}}, {{email}}, etc.
+      // so the recipient sees rendered values, not literal placeholders.
+      const sample = previewVars(user?.email ? { email: user.email } : {});
+      const renderedSubject = interpolateText(subject, sample);
+      const renderedMessage = interpolateText(message, sample);
+
       if (resolvedChannel === "email") {
         const { error } = await supabase.functions.invoke("email-send", {
           body: {
             workspaceId,
             to: testRecipient,
-            subject,
-            html: message,
+            subject: renderedSubject,
+            html: renderedMessage,
             templateSettings: { ...(templateSettings ?? {}), preview: true },
           },
         });
         if (error) throw error;
       } else if (resolvedChannel === "sms") {
         const { data, error } = await supabase.functions.invoke("sms-send", {
-          body: { workspaceId, to: testRecipient, message, preview: true },
+          body: { workspaceId, to: testRecipient, message: renderedMessage, preview: true },
         });
         if (error) throw error;
         if (data && (data as any).success === false) throw new Error((data as any).error || "SMS test failed");
       } else {
         const { data, error } = await supabase.functions.invoke("whatsapp-send", {
-          body: { workspaceId, to: testRecipient, body: message, preview: true },
+          body: { workspaceId, to: testRecipient, body: renderedMessage, preview: true },
         });
         if (error) throw error;
         if (data && (data as any).success === false) throw new Error((data as any).error || "WhatsApp test failed");
@@ -198,7 +205,7 @@ export default function AutomationEmailEditor({
     } finally {
       setTestSending(false);
     }
-  }, [resolvedChannel, subject, message, testRecipient, workspaceId, templateSettings]);
+  }, [resolvedChannel, subject, message, testRecipient, workspaceId, templateSettings, user?.email]);
 
   const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
 

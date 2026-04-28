@@ -105,6 +105,8 @@ Deno.serve(async (req) => {
     // from the rich-text editor (legacy automation/campaign steps store
     // contentEditable innerHTML).
     let message = htmlToPlainText(requestBody.message);
+    // Strip any unresolved {{token}} so recipients never see literal placeholders.
+    message = message ? message.replace(/\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*(?:\|[^}]*)?\s*\}\}/g, "") : message;
     if (isPreview && message) message = `[TEST] ${message}`;
     requestBody.message = message;
 

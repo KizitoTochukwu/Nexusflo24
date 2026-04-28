@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { blocksToHtml, parseBlocksFromMessage, interpolateBlocks } from "../_shared/email-blocks.ts";
+import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,13 +10,7 @@ const corsHeaders = {
 };
 
 function interpolate(template: string, lead: Record<string, any>): string {
-  return template
-    .replace(/\{\{first_name\}\}/gi, lead.full_name?.split(" ")[0] || "there")
-    .replace(/\{\{full_name\}\}/gi, lead.full_name || "")
-    .replace(/\{\{email\}\}/gi, lead.email || "")
-    .replace(/\{\{phone\}\}/gi, lead.phone || "")
-    .replace(/\{\{source\}\}/gi, lead.source || "")
-    .replace(/\{\{status\}\}/gi, lead.status || "");
+  return interpolateText(template, buildLeadVars(lead as any));
 }
 
 function parseDelayFromConfig(config: Record<string, any>): number {

@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import {
   Mail, Smartphone, MessageCircle, Loader2, Save, ChevronDown,
   CheckCircle2, XCircle, Unplug, Send, Globe, Copy, RefreshCw,
@@ -620,8 +621,11 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
     if (!waTestTo || !waTestMsg) { toast.error("Enter phone and message"); return; }
     setWaTestSending(true);
     try {
+      // Render any {{first_name}}, {{company}}, etc. with sample values so the
+      // test recipient sees real text instead of literal placeholders.
+      const renderedBody = interpolateText(waTestMsg, previewVars());
       const { data, error } = await supabase.functions.invoke("whatsapp-send", {
-        body: { workspaceId, to: waTestTo, type: "text", body: waTestMsg },
+        body: { workspaceId, to: waTestTo, type: "text", body: renderedBody, preview: true },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

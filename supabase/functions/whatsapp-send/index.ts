@@ -142,6 +142,8 @@ Deno.serve(async (req) => {
     // leaked in from the rich-text editor (legacy automation/campaign steps
     // store contentEditable innerHTML which renders literally on WhatsApp).
     let msgBody = htmlToPlainText(body?.body);
+    // Strip any unresolved {{token}} so recipients never see literal placeholders.
+    msgBody = msgBody ? msgBody.replace(/\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*(?:\|[^}]*)?\s*\}\}/g, "") : msgBody;
     if (isPreview && msgBody) msgBody = `[TEST] ${msgBody}`;
 
     if (!workspaceId || !to || (!msgBody && !template)) {
