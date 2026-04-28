@@ -226,9 +226,12 @@ Deno.serve(async (req) => {
 
       results.push({ lead_id: lead.id, status: deliveryStatus, error: sendError });
 
-      // Schedule fallback if enabled and primary failed/pending
+      // Schedule fallback if enabled and primary failed/pending.
+      // When the PRIMARY send fails outright (no delivery happened),
+      // run the fallback immediately instead of waiting the configured
+      // "unread" delay — there's nothing to wait for.
       if (fallback?.enabled && deliveryStatus === "failed" && fallback.channel) {
-        const runAt = new Date(Date.now() + (fallback.delay_minutes || 30) * 60 * 1000).toISOString();
+        const runAt = new Date().toISOString();
         await supabase.from("scheduled_jobs").insert({
           workspace_id: workspaceId,
           automation_id: campaign_id, // reuse field for campaign reference
@@ -239,6 +242,7 @@ Deno.serve(async (req) => {
             type: "campaign_fallback",
             campaign_id, lead_id: lead.id, workspace_id: workspaceId,
             channel: fallback.channel, subject: messageSubject, body: messageBody,
+            reason: "primary_send_failed",
           },
         });
       }
