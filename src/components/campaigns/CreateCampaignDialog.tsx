@@ -70,6 +70,22 @@ export default function CreateCampaignDialog() {
   const [aiVariants, setAiVariants] = useState<Array<{ subject: string; body: string; cta: string }>>([]);
   const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(DEFAULT_TEMPLATE_SETTINGS);
 
+  // Step 3 (WhatsApp only) - Optional approved template for re-engagement (24h window closed)
+  const [waTemplateId, setWaTemplateId] = useState<string>("none");
+  const { data: waTemplates = [] } = useQuery({
+    queryKey: ["whatsapp-templates", workspaceId],
+    enabled: !!workspaceId && (type === "whatsapp" || type === "multi-channel"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("whatsapp_templates")
+        .select("id, name, language, category, body_preview, variable_count")
+        .eq("workspace_id", workspaceId!)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Step 4 - Fallback
   const [fallbackEnabled, setFallbackEnabled] = useState(false);
   const [fallbackChannel, setFallbackChannel] = useState("sms");
@@ -262,7 +278,17 @@ export default function CreateCampaignDialog() {
       objective,
       campaign_mode: campaignMode,
       status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: { subject: finalSubject, body, templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined } as any,
+      message_content: {
+        subject: finalSubject,
+        body,
+        templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
+        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && waTemplateId !== "none"
+          ? (() => {
+              const t = waTemplates.find((x: any) => x.id === waTemplateId);
+              return t ? { name: t.name, language: t.language } : undefined;
+            })()
+          : undefined,
+      } as any,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
@@ -524,6 +550,38 @@ export default function CreateCampaignDialog() {
                 </div>
               )}
             </div>
+
+            {(type === "whatsapp" || type === "multi-channel") && (
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">WhatsApp re-engagement template</Label>
+                  <a
+                    href={workspaceId ? `/dashboard/${workspaceId}/settings?tab=wa-templates` : "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-accent hover:underline"
+                  >
+                    Manage templates →
+                  </a>
+                </div>
+                <Select value={waTemplateId} onValueChange={setWaTemplateId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="None — text only (24h window required)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None — send free-text only</SelectItem>
+                    {waTemplates.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name} ({t.language})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Pick an approved template to reach leads outside the 24h window. Without one, sends fall back to your configured channel (or fail) when the window is closed.
+                </p>
+              </div>
+            )}
 
             <AutomationEmailEditor
               isEmail={type === "email" || type === "multi-channel"}

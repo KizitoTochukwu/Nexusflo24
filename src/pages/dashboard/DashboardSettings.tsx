@@ -31,6 +31,7 @@ import BrandingTab from "@/components/settings/BrandingTab";
 import TeamTab from "@/components/settings/TeamTab";
 import CustomCodeTab from "@/components/settings/CustomCodeTab";
 import TrackingPixelsTab from "@/components/settings/TrackingPixelsTab";
+import WhatsAppTemplatesTab from "@/components/settings/WhatsAppTemplatesTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -740,6 +741,7 @@ const DashboardSettings = () => {
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
             <TabsTrigger value="usage" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Usage</TabsTrigger>
             <TabsTrigger value="channels" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Channels</TabsTrigger>
+            <TabsTrigger value="wa-templates" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" />WA Templates</TabsTrigger>
             <TabsTrigger value="tracking" className="gap-1.5"><Globe className="h-3.5 w-3.5" />Tracking & Pixels</TabsTrigger>
             <TabsTrigger value="branding" className="gap-1.5"><Palette className="h-3.5 w-3.5" />Branding</TabsTrigger>
             <TabsTrigger value="team" className="gap-1.5"><Users className="h-3.5 w-3.5" />Team</TabsTrigger>
@@ -761,6 +763,7 @@ const DashboardSettings = () => {
             <TabsContent value="billing"><BillingTab /></TabsContent>
             <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
+            <TabsContent value="wa-templates"><WhatsAppTemplatesTab /></TabsContent>
             <TabsContent value="tracking"><TrackingPixelsTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="branding"><BrandingTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="team"><TeamTab workspaceId={workspaceId} /></TabsContent>
