@@ -633,8 +633,16 @@ export default function CreateCampaignDialog() {
                           <p className="text-[11px] text-muted-foreground">
                             {folderLeadIds.length === 0
                               ? "This folder has no leads."
-                              : `${folderLeadIds.length} lead${folderLeadIds.length === 1 ? "" : "s"} will receive this campaign (channel-eligible only).`}
+                              : `${folderLeadIds.length} lead${folderLeadIds.length === 1 ? "" : "s"} in folder.`}
                           </p>
+                        )}
+                        {selectedFolder && folderLeadIds.length > 0 && (
+                          <ChannelEligibilityBadge
+                            channel={type}
+                            loading={eligibilityLoading}
+                            total={eligibility?.total ?? folderLeadIds.length}
+                            eligible={eligibility?.eligible ?? 0}
+                          />
                         )}
                       </>
                     )}
