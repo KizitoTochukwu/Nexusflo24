@@ -147,7 +147,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const finalSubject = isPreview ? `[TEST] ${subject}` : subject;
+    // Strip any unresolved {{token}} from subject + body so recipients never see literals.
+    const stripTokens = (s: string) => s.replace(/\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*(?:\|[^}]*)?\s*\}\}/g, "");
+    const cleanSubject = stripTokens(subject);
+    trackedHtml = stripTokens(trackedHtml);
+    const finalSubject = isPreview ? `[TEST] ${cleanSubject}` : cleanSubject;
     const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
     const result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
 
@@ -157,7 +161,7 @@ Deno.serve(async (req) => {
         workspace_id: workspaceId,
         to_email: to,
         from_email: fromEmail,
-        subject: isPreview ? `[TEST] ${subject}` : subject,
+        subject: isPreview ? `[TEST] ${cleanSubject}` : cleanSubject,
         direction: "outbound",
         status: "sent",
         provider_message_id: result.messageId,
