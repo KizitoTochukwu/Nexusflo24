@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
+import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
