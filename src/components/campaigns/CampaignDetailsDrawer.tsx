@@ -326,6 +326,22 @@ export default function CampaignDetailsDrawer({
             </div>
           )}
 
+          {/* Pending fallback queue */}
+          {pendingFallbacks && pendingFallbacks.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+              <p className="text-xs font-semibold text-amber-800 flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Fallback queued ({pendingFallbacks.length})
+              </p>
+              <div className="mt-1 space-y-1">
+                {pendingFallbacks.slice(0, 5).map((j: any) => (
+                  <p key={j.id} className="text-xs text-amber-900">
+                    {String(j.payload?.channel || "sms").toUpperCase()} → runs {format(new Date(j.run_at), "MMM d, HH:mm")} {j.status === "running" ? " (sending now)" : ""}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Sequence Timeline */}
           <div>
             <h3 className="mb-3 text-sm font-semibold text-foreground flex items-center gap-1.5">
