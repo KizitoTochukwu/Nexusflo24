@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import LeadPicker from "@/components/campaigns/LeadPicker";
+import { useLeadFolders, useFolderLeadIds } from "@/hooks/useLeadFolders";
+import { Folder as FolderIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +79,16 @@ export default function CreateCampaignDialog() {
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
-  const [useLeadPicker, setUseLeadPicker] = useState(false);
+  const [audienceMode, setAudienceMode] = useState<"filter" | "folder" | "picker">("filter");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  // Folders for "Pick Folder/Group" mode
+  const { data: folders = [], isLoading: foldersLoading } = useLeadFolders(workspaceId);
+  const { data: folderLeadIds = [] } = useFolderLeadIds(selectedFolderId, workspaceId);
+  const selectedFolder = useMemo(
+    () => folders.find((f) => f.id === selectedFolderId) || null,
+    [folders, selectedFolderId],
+  );
 
   // Integration status
   const [integrationStatus, setIntegrationStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
