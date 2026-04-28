@@ -551,6 +551,38 @@ export default function CreateCampaignDialog() {
               )}
             </div>
 
+            {(type === "whatsapp" || type === "multi-channel") && (
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">WhatsApp re-engagement template</Label>
+                  <a
+                    href={workspaceId ? `/dashboard/${workspaceId}/settings?tab=wa-templates` : "#"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-accent hover:underline"
+                  >
+                    Manage templates →
+                  </a>
+                </div>
+                <Select value={waTemplateId} onValueChange={setWaTemplateId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="None — text only (24h window required)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None — send free-text only</SelectItem>
+                    {waTemplates.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name} ({t.language})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Pick an approved template to reach leads outside the 24h window. Without one, sends fall back to your configured channel (or fail) when the window is closed.
+                </p>
+              </div>
+            )}
+
             <AutomationEmailEditor
               isEmail={type === "email" || type === "multi-channel"}
               channel={type === "email" || type === "multi-channel" ? "email" : type === "whatsapp" ? "whatsapp" : "sms"}
