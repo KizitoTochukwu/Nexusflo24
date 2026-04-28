@@ -153,9 +153,33 @@ Deno.serve(async (req) => {
     trackedHtml = stripTokens(trackedHtml);
     const finalSubject = isPreview ? `[TEST] ${cleanSubject}` : cleanSubject;
     const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
-    const result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
 
-    // Log outbound email
+    let result: { messageId: string };
+    try {
+      result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
+    } catch (sendErr: any) {
+      const errorMessage = sendErr?.message || "Failed to send email";
+      console.error("email-send Resend error:", errorMessage);
+      // Log the FAILED send so it appears in email_logs / dashboards
+      try {
+        await adminClient.from("email_logs").insert({
+          workspace_id: workspaceId,
+          to_email: to,
+          from_email: fromEmail,
+          subject: isPreview ? `[TEST] ${cleanSubject}` : cleanSubject,
+          direction: "outbound",
+          status: "failed",
+          error: errorMessage,
+          lead_id: leadId || null,
+        });
+      } catch (_) { /* ignore logging errors */ }
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Log outbound email (success)
     try {
       await adminClient.from("email_logs").insert({
         workspace_id: workspaceId,
