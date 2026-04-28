@@ -777,3 +777,48 @@ export default function CreateCampaignDialog() {
     </Dialog>
   );
 }
+
+function ChannelEligibilityBadge({
+  channel, loading, total, eligible,
+}: { channel: string; loading: boolean; total: number; eligible: number }) {
+  const channelLabel =
+    channel === "email" ? "email address"
+    : channel === "sms" ? "phone number"
+    : channel === "whatsapp" ? "WhatsApp-capable phone"
+    : "email or phone";
+  const missing = Math.max(0, total - eligible);
+  const allEligible = total > 0 && eligible === total;
+  const noneEligible = total > 0 && eligible === 0;
+
+  return (
+    <div
+      className={`mt-1 rounded-md border p-2 text-[11px] flex items-start gap-2 ${
+        noneEligible
+          ? "border-destructive/40 bg-destructive/5 text-destructive"
+          : allEligible
+            ? "border-green-500/30 bg-green-500/5 text-green-700 dark:text-green-400"
+            : "border-accent/40 bg-accent/5 text-foreground"
+      }`}
+    >
+      <Users className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <div className="leading-snug">
+        {loading ? (
+          <span className="text-muted-foreground">Checking eligibility…</span>
+        ) : total === 0 ? (
+          <span className="text-muted-foreground">No leads match this audience.</span>
+        ) : (
+          <>
+            <span className="font-semibold">{eligible}</span> of{" "}
+            <span className="font-semibold">{total}</span> lead{total === 1 ? "" : "s"} can receive this {channel} campaign
+            <span className="text-muted-foreground"> (have a {channelLabel})</span>
+            {missing > 0 && (
+              <span className="text-muted-foreground"> · {missing} will be skipped</span>
+            )}
+            .
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
