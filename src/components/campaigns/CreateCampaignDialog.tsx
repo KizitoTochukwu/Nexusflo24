@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import LeadPicker from "@/components/campaigns/LeadPicker";
 import { useLeadFolders, useFolderLeadIds } from "@/hooks/useLeadFolders";
-import { Folder as FolderIcon } from "lucide-react";
+import { Folder as FolderIcon, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +90,60 @@ export default function CreateCampaignDialog() {
     () => folders.find((f) => f.id === selectedFolderId) || null,
     [folders, selectedFolderId],
   );
+
+  // Required contact field per channel
+  const requiredField = useMemo<"email" | "phone" | null>(() => {
+    if (type === "email") return "email";
+    if (type === "sms" || type === "whatsapp") return "phone";
+    return null; // multi-channel: counted as having either
+  }, [type]);
+
+  // Eligibility preview: count leads in current audience that have the required contact field
+  const { data: eligibility, isFetching: eligibilityLoading } = useQuery({
+    queryKey: [
+      "campaign-eligibility",
+      workspaceId,
+      type,
+      audienceMode,
+      audienceMode === "folder" ? folderLeadIds : null,
+      audienceMode === "filter" ? { audienceStatuses, audienceTags, audienceMinScore, audienceMaxScore } : null,
+    ],
+    enabled:
+      !!workspaceId &&
+      step === 5 &&
+      campaignMode === "broadcast" &&
+      (audienceMode === "folder" || audienceMode === "filter"),
+    queryFn: async () => {
+      let query = supabase
+        .from("leads")
+        .select("id, email, phone", { count: "exact" })
+        .eq("workspace_id", workspaceId);
+
+      if (audienceMode === "folder") {
+        if (!folderLeadIds.length) return { total: 0, eligible: 0 };
+        query = query.in("id", folderLeadIds);
+      } else {
+        if (audienceStatuses.length > 0) query = query.in("status", audienceStatuses);
+        if (audienceMinScore) query = query.gte("score", parseInt(audienceMinScore));
+        if (audienceMaxScore) query = query.lte("score", parseInt(audienceMaxScore));
+        const tagList = audienceTags.split(",").map((t) => t.trim()).filter(Boolean);
+        if (tagList.length > 0) query = query.overlaps("tags", tagList);
+      }
+
+      const { data, count, error } = await query.limit(10000);
+      if (error) throw error;
+      const rows = data ?? [];
+      const total = count ?? rows.length;
+      let eligible = 0;
+      for (const r of rows) {
+        if (type === "email") { if (r.email) eligible++; }
+        else if (type === "sms" || type === "whatsapp") { if (r.phone) eligible++; }
+        else { if (r.email || r.phone) eligible++; }
+      }
+      return { total, eligible };
+    },
+  });
+
 
   // Integration status
   const [integrationStatus, setIntegrationStatus] = useState<{ resend: boolean; twilio: boolean; whatsapp: boolean } | null>(null);
@@ -578,8 +633,16 @@ export default function CreateCampaignDialog() {
                           <p className="text-[11px] text-muted-foreground">
                             {folderLeadIds.length === 0
                               ? "This folder has no leads."
-                              : `${folderLeadIds.length} lead${folderLeadIds.length === 1 ? "" : "s"} will receive this campaign (channel-eligible only).`}
+                              : `${folderLeadIds.length} lead${folderLeadIds.length === 1 ? "" : "s"} in folder.`}
                           </p>
+                        )}
+                        {selectedFolder && folderLeadIds.length > 0 && (
+                          <ChannelEligibilityBadge
+                            channel={type}
+                            loading={eligibilityLoading}
+                            total={eligibility?.total ?? folderLeadIds.length}
+                            eligible={eligibility?.eligible ?? 0}
+                          />
                         )}
                       </>
                     )}
@@ -617,6 +680,12 @@ export default function CreateCampaignDialog() {
                           placeholder="100" className="h-8 text-xs" />
                       </div>
                     </div>
+                    <ChannelEligibilityBadge
+                      channel={type}
+                      loading={eligibilityLoading}
+                      total={eligibility?.total ?? 0}
+                      eligible={eligibility?.eligible ?? 0}
+                    />
                   </div>
                 )}
               </div>
@@ -708,3 +777,48 @@ export default function CreateCampaignDialog() {
     </Dialog>
   );
 }
+
+function ChannelEligibilityBadge({
+  channel, loading, total, eligible,
+}: { channel: string; loading: boolean; total: number; eligible: number }) {
+  const channelLabel =
+    channel === "email" ? "email address"
+    : channel === "sms" ? "phone number"
+    : channel === "whatsapp" ? "WhatsApp-capable phone"
+    : "email or phone";
+  const missing = Math.max(0, total - eligible);
+  const allEligible = total > 0 && eligible === total;
+  const noneEligible = total > 0 && eligible === 0;
+
+  return (
+    <div
+      className={`mt-1 rounded-md border p-2 text-[11px] flex items-start gap-2 ${
+        noneEligible
+          ? "border-destructive/40 bg-destructive/5 text-destructive"
+          : allEligible
+            ? "border-green-500/30 bg-green-500/5 text-green-700 dark:text-green-400"
+            : "border-accent/40 bg-accent/5 text-foreground"
+      }`}
+    >
+      <Users className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+      <div className="leading-snug">
+        {loading ? (
+          <span className="text-muted-foreground">Checking eligibility…</span>
+        ) : total === 0 ? (
+          <span className="text-muted-foreground">No leads match this audience.</span>
+        ) : (
+          <>
+            <span className="font-semibold">{eligible}</span> of{" "}
+            <span className="font-semibold">{total}</span> lead{total === 1 ? "" : "s"} can receive this {channel} campaign
+            <span className="text-muted-foreground"> (have a {channelLabel})</span>
+            {missing > 0 && (
+              <span className="text-muted-foreground"> · {missing} will be skipped</span>
+            )}
+            .
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
