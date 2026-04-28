@@ -36,12 +36,34 @@ export function previewVars(overrides: Partial<Record<string, string>> = {}): Re
  * Replace every {{token}} (case-insensitive, tolerant of whitespace and
  * `{{token | fallback}}` syntax). Unknown / empty tokens render as "".
  */
+function normalizeVarKey(raw: string): string {
+  const snake = String(raw).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+  const ALIASES: Record<string, string> = {
+    firstname: "first_name",
+    lastname: "last_name",
+    fullname: "full_name",
+    leadscore: "lead_score",
+    leadstatus: "lead_status",
+    lastactivitydate: "last_activity_date",
+    assignedrep: "assigned_rep",
+    bookinglink: "booking_link",
+    funnellink: "funnel_link",
+    offerpagelink: "offer_page_link",
+    webinarlink: "webinar_link",
+    checkoutlink: "checkout_link",
+    nextsteplink: "next_step_link",
+    externalurl: "external_url",
+    unsubscribelink: "unsubscribe_link",
+  };
+  return ALIASES[snake] || snake;
+}
+
 export function interpolateText(template: string | null | undefined, vars: Record<string, string>): string {
   if (!template) return "";
   return String(template).replace(
     /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/g,
     (_m, rawKey: string, rawFallback?: string) => {
-      const key = String(rawKey).toLowerCase();
+      const key = normalizeVarKey(rawKey);
       const fallback = (rawFallback ?? "").trim();
       const val = vars[key];
       if (val !== undefined && val !== null && String(val).trim() !== "") return String(val);
