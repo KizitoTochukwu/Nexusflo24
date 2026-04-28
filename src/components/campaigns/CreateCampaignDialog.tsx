@@ -640,6 +640,19 @@ export default function CreateCampaignDialog() {
                     <span className="text-muted-foreground">Fallback</span>
                     <span className="font-medium text-foreground capitalize">{fallbackChannel} after {fallbackDelay}m ({fallbackCondition})</span>
                   </>
+                {campaignMode === "broadcast" && (
+                  <>
+                    <span className="text-muted-foreground">Audience</span>
+                    <span className="font-medium text-foreground">
+                      {audienceMode === "folder" && selectedFolder
+                        ? `Folder "${selectedFolder.name}" (${folderLeadIds.length})`
+                        : audienceMode === "folder"
+                          ? "No folder selected"
+                          : audienceMode === "picker"
+                            ? `${selectedLeadIds.length} selected lead${selectedLeadIds.length === 1 ? "" : "s"}`
+                            : "Filter by criteria"}
+                    </span>
+                  </>
                 )}
                 <span className="text-muted-foreground">Delivery</span>
                 <span className="font-medium text-foreground">
