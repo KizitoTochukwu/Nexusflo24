@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isAdminUser } from "../_shared/credit-guard.ts";
+import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -138,9 +139,9 @@ Deno.serve(async (req) => {
 
       // Throttle: wait 550ms between requests to stay under 2 req/s
       if (i > 0) await sleep(550);
-      const leadName = (lead.full_name || "").split(" ")[0] || "there";
-      const messageSubject = (content.subject || "").replace(/\{\{first_name\}\}/g, leadName).replace(/\{\{full_name\}\}/g, lead.full_name || "");
-      const messageBody = (content.body || "").replace(/\{\{first_name\}\}/g, leadName).replace(/\{\{full_name\}\}/g, lead.full_name || "");
+      const vars = buildLeadVars(lead);
+      const messageSubject = interpolateText(content.subject || "", vars);
+      const messageBody = interpolateText(content.body || "", vars);
 
       let deliveryStatus = "pending";
       let sendError: string | undefined;
