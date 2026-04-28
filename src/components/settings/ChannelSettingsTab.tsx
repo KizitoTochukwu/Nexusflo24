@@ -892,6 +892,13 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                     )}
                   </div>
                   <Separator />
+                  <div className="rounded-md border border-amber-300/60 bg-amber-50 p-2.5 text-xs text-amber-900">
+                    <strong>Heads up — WhatsApp 24h window:</strong> Free-form text messages
+                    only deliver if the recipient has messaged your business in the last 24 hours.
+                    Outside that window you must send an approved template, otherwise the send
+                    will fail with <em>"24h window closed"</em>. Use the test below with a number
+                    that has recently messaged you to verify your setup.
+                  </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Input value={waTestTo} onChange={(e) => setWaTestTo(e.target.value)} placeholder="+447517327597" maxLength={20} />
                     <Input value={waTestMsg} onChange={(e) => setWaTestMsg(e.target.value)} placeholder="Hello from NexusFlo24!" maxLength={500} />
