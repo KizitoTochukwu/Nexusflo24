@@ -45,7 +45,12 @@ Deno.serve(async (req) => {
     if (ownerIsAdmin) console.log("[execute-campaign] Admin workspace — credits exempt");
 
     const channel = campaign.type;
-    const content = (campaign.message_content || {}) as { subject?: string; body?: string; templateSettings?: Record<string, any> };
+    const content = (campaign.message_content || {}) as {
+      subject?: string;
+      body?: string;
+      templateSettings?: Record<string, any>;
+      whatsappTemplate?: { name: string; language: string; components?: any[] };
+    };
     const audienceFilter = (campaign.audience_filter || {}) as {
       statuses?: string[];
       tags?: string[];
@@ -180,6 +185,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               workspaceId, to: lead.phone, body: messageBody,
               leadId: lead.id, campaignId: campaign_id,
+              ...(content.whatsappTemplate ? { template: content.whatsappTemplate } : {}),
               ...(ownerIsAdmin ? { skipCredits: true } : {}),
             }),
           });
