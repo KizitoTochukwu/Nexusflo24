@@ -691,7 +691,14 @@ export default function CreateCampaignDialog() {
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={handleCreate} disabled={createCampaign.isPending} className="flex-1">
+              <Button
+                onClick={handleCreate}
+                disabled={
+                  createCampaign.isPending ||
+                  (campaignMode === "broadcast" && audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))
+                }
+                className="flex-1"
+              >
                 {createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
               </Button>
             </div>
