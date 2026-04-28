@@ -195,16 +195,23 @@ export default function CreateCampaignDialog() {
     }
   }, [step]);
 
-  const reset = () => {
+  const reset = (opts: { keepAudience?: boolean } = { keepAudience: true }) => {
     setStep(1); setName(""); setType("email"); setObjective("broadcast");
     setCampaignMode("broadcast"); setTriggerType("new_lead"); setTriggerValue("");
     setTriggerActions(["send_message"]); setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
     setTemplateSettings(DEFAULT_TEMPLATE_SETTINGS);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
-    setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
-    setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
-    setSelectedLeadIds([]); setAudienceMode("filter"); setSelectedFolderId(null);
+    setFallbackCondition("unread");
+    setScheduleNow(true); setScheduledAt("");
+    if (!opts.keepAudience) {
+      setAudienceStatuses([]); setAudienceTags("");
+      setAudienceMinScore(""); setAudienceMaxScore("");
+      setSelectedLeadIds([]); setAudienceMode("filter"); setSelectedFolderId(null);
+      if (audiencePrefsKey) {
+        try { localStorage.removeItem(audiencePrefsKey); } catch { /* ignore */ }
+      }
+    }
   };
 
   const handleGenerateAI = async () => {
