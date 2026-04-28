@@ -521,14 +521,14 @@ export default function CreateCampaignDialog() {
             </div>
 
             <AutomationEmailEditor
-              isEmail={type === "email"}
-              channel={type === "email" ? "email" : type === "whatsapp" ? "whatsapp" : "sms"}
+              isEmail={type === "email" || type === "multi-channel"}
+              channel={type === "email" || type === "multi-channel" ? "email" : type === "whatsapp" ? "whatsapp" : "sms"}
               subject={subject}
               onSubjectChange={setSubject}
               message={body}
               onMessageChange={setBody}
               templateSettings={templateSettings}
-              onTemplateSettingsChange={type === "email" ? setTemplateSettings : undefined}
+              onTemplateSettingsChange={(type === "email" || type === "multi-channel") ? setTemplateSettings : undefined}
             />
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
