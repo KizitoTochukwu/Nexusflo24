@@ -140,7 +140,10 @@ Deno.serve(async (req) => {
       // Throttle: wait 550ms between requests to stay under 2 req/s
       if (i > 0) await sleep(550);
       const vars = buildLeadVars(lead);
-      const messageSubject = interpolateText(content.subject || "", vars);
+      const rawSubject = interpolateText(content.subject || "", vars).trim();
+      // Auto-fill subject from campaign name when missing so multi-channel
+      // campaigns don't fail on the email leg.
+      const messageSubject = rawSubject || (campaign.name || "Message from NexusFlo24");
       const messageBody = interpolateText(content.body || "", vars);
 
       let deliveryStatus = "pending";
