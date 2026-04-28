@@ -527,25 +527,66 @@ export default function CreateCampaignDialog() {
             {/* Audience Selection */}
             {campaignMode === "broadcast" && (
               <div className="space-y-3">
-                {/* Toggle between filter and picker */}
-                <div className="flex gap-2">
-                  <button onClick={() => setUseLeadPicker(false)}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                      !useLeadPicker ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
-                    }`}>Filter by Criteria</button>
-                  <button onClick={() => setUseLeadPicker(true)}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                      useLeadPicker ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
-                    }`}>Pick Specific Leads</button>
+                {/* Toggle between filter, folder, and picker */}
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: "filter", label: "Filter by Criteria" },
+                    { value: "folder", label: "Pick Folder/Group" },
+                    { value: "picker", label: "Pick Specific Leads" },
+                  ] as const).map((m) => (
+                    <button key={m.value} onClick={() => setAudienceMode(m.value)}
+                      className={`rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
+                        audienceMode === m.value ? "border-accent bg-accent/10 text-accent-foreground" : "border-border text-muted-foreground"
+                      }`}>{m.label}</button>
+                  ))}
                 </div>
 
-                {useLeadPicker ? (
+                {audienceMode === "picker" && (
                   <LeadPicker
                     channel={type}
                     selectedLeadIds={selectedLeadIds}
                     onSelectionChange={setSelectedLeadIds}
                   />
-                ) : (
+                )}
+
+                {audienceMode === "folder" && (
+                  <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                    <Label className="text-xs flex items-center gap-1.5">
+                      <FolderIcon className="h-3.5 w-3.5" /> Choose a folder/group
+                    </Label>
+                    {foldersLoading ? (
+                      <p className="text-xs text-muted-foreground py-1">Loading folders…</p>
+                    ) : folders.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-1">
+                        No folders yet. Create folders from the Leads page to group your audience.
+                      </p>
+                    ) : (
+                      <>
+                        <Select value={selectedFolderId ?? ""} onValueChange={(v) => setSelectedFolderId(v || null)}>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Select a folder…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {folders.map((f) => (
+                              <SelectItem key={f.id} value={f.id} className="text-xs">
+                                {f.name} ({f.lead_count ?? 0})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedFolder && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {folderLeadIds.length === 0
+                              ? "This folder has no leads."
+                              : `${folderLeadIds.length} lead${folderLeadIds.length === 1 ? "" : "s"} will receive this campaign (channel-eligible only).`}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {audienceMode === "filter" && (
                   <div className="rounded-lg border bg-muted/20 p-3 space-y-3">
                     <p className="text-xs font-semibold text-foreground">Audience Filter (optional)</p>
                     <div>
