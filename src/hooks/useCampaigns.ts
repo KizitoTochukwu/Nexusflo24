@@ -37,6 +37,7 @@ export type CampaignMessage = {
   clicked: boolean;
   replied: boolean;
   created_at: string;
+  error?: string | null;
 };
 
 export const CAMPAIGN_TYPES = ["email", "whatsapp", "sms", "multi-channel"] as const;

@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_messages ADD COLUMN IF NOT EXISTS error TEXT;

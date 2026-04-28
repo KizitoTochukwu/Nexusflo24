@@ -438,6 +438,7 @@ export type Database = {
           clicked: boolean
           created_at: string
           delivery_status: string
+          error: string | null
           id: string
           lead_id: string | null
           opened: boolean
@@ -450,6 +451,7 @@ export type Database = {
           clicked?: boolean
           created_at?: string
           delivery_status?: string
+          error?: string | null
           id?: string
           lead_id?: string | null
           opened?: boolean
@@ -462,6 +464,7 @@ export type Database = {
           clicked?: boolean
           created_at?: string
           delivery_status?: string
+          error?: string | null
           id?: string
           lead_id?: string | null
           opened?: boolean

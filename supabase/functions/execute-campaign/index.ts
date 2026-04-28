@@ -207,11 +207,12 @@ Deno.serve(async (req) => {
         sendError = err?.message || "Send error";
       }
 
-      // Insert campaign_message row
+      // Insert campaign_message row (with error text on failure)
       await supabase.from("campaign_messages").insert({
         campaign_id, workspace_id: workspaceId, lead_id: lead.id,
         channel: channel === "multi-channel" ? "email" : channel,
         delivery_status: deliveryStatus,
+        error: deliveryStatus === "failed" ? (sendError || "Unknown send error") : null,
       });
 
       if (deliveryStatus === "delivered") {
