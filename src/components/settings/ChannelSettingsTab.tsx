@@ -628,8 +628,19 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         body: { workspaceId, to: waTestTo, type: "text", body: renderedBody, preview: true },
       });
       if (error) throw error;
+      // Surface structured failures (window_closed, credential errors, etc.)
+      // so workspace admins immediately see WHY a send didn't reach the
+      // recipient instead of a generic "delivered" toast.
+      if (data?.success === false) {
+        if (data.reason === "window_closed") {
+          toast.error("24h window closed — recipient must message you first, or send an approved template. Test number unaffected.", { duration: 10000 });
+        } else {
+          toast.error(data.error || "WhatsApp send failed");
+        }
+        return;
+      }
       if (data?.error) throw new Error(data.error);
-      toast.success("Test WhatsApp sent!");
+      toast.success(`Test WhatsApp sent! ${data?.credentialSource === "workspace" ? "(your credentials)" : "(platform credentials)"}`);
     } catch (err: any) { toast.error(err.message || "Failed"); }
     finally { setWaTestSending(false); }
   };
