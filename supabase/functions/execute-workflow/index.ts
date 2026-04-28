@@ -3,6 +3,7 @@
 // it schedules a row in scheduled_jobs and exits.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { deductCredit } from "../_shared/credit-guard.ts";
+import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,15 +15,10 @@ const THROTTLE_MS = 350;
 
 function interpolate(template: string, lead: Record<string, any>): string {
   if (!template) return "";
-  return template.replace(/\{\{\s*([a-z_]+)\s*(?:\|\s*([^}]*))?\}\}/gi, (_m, key, fb) => {
-    const k = String(key).toLowerCase();
-    let v: any = "";
-    if (k === "first_name") v = (lead.full_name?.split(" ")[0]) || "";
-    else if (k === "owner_name") v = lead.owner_name || "";
-    else v = lead[k] ?? "";
-    if (v === null || v === undefined || String(v).trim() === "") return (fb ?? "").trim();
-    return String(v);
+  const vars = buildLeadVars(lead as any, {
+    assignedRepName: lead.owner_name || undefined,
   });
+  return interpolateText(template, vars);
 }
 
 async function evaluateCondition(
