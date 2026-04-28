@@ -250,6 +250,11 @@ export default function CreateCampaignDialog() {
   };
 
   const handleCreate = async () => {
+    // Auto-fill subject for email/multi-channel if blank, so the email leg
+    // never fails on a missing subject.
+    const finalSubject = ((type === "email" || type === "multi-channel") && !subject.trim())
+      ? (name || "Message from NexusFlo24")
+      : subject;
     const campaign = await createCampaign.mutateAsync({
       workspace_id: workspaceId,
       name,
@@ -257,7 +262,7 @@ export default function CreateCampaignDialog() {
       objective,
       campaign_mode: campaignMode,
       status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: { subject, body, templateSettings: type === "email" ? templateSettings : undefined } as any,
+      message_content: { subject: finalSubject, body, templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined } as any,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
@@ -521,14 +526,14 @@ export default function CreateCampaignDialog() {
             </div>
 
             <AutomationEmailEditor
-              isEmail={type === "email"}
-              channel={type === "email" ? "email" : type === "whatsapp" ? "whatsapp" : "sms"}
+              isEmail={type === "email" || type === "multi-channel"}
+              channel={type === "email" || type === "multi-channel" ? "email" : type === "whatsapp" ? "whatsapp" : "sms"}
               subject={subject}
               onSubjectChange={setSubject}
               message={body}
               onMessageChange={setBody}
               templateSettings={templateSettings}
-              onTemplateSettingsChange={type === "email" ? setTemplateSettings : undefined}
+              onTemplateSettingsChange={(type === "email" || type === "multi-channel") ? setTemplateSettings : undefined}
             />
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>

@@ -6,7 +6,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useCampaignById, useCampaignMessages, TRIGGER_TYPES } from "@/hooks/useCampaigns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket } from "lucide-react";
 import { format } from "date-fns";
 
@@ -186,6 +186,22 @@ export default function CampaignDetailsDrawer({
 }) {
   const { data: campaign } = useCampaignById(campaignId);
   const { data: messages } = useCampaignMessages(campaignId);
+  const { data: pendingFallbacks } = useQuery({
+    queryKey: ["campaign-fallbacks", campaignId],
+    enabled: !!campaignId,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      if (!campaignId) return [];
+      const { data } = await supabase
+        .from("scheduled_jobs")
+        .select("id, run_at, status, payload, lead_id, error")
+        .eq("automation_id", campaignId)
+        .in("status", ["pending", "running"])
+        .order("run_at", { ascending: true })
+        .limit(50);
+      return (data ?? []).filter((j: any) => j?.payload?.type === "campaign_fallback");
+    },
+  });
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const qc = useQueryClient();
@@ -307,6 +323,22 @@ export default function CampaignDetailsDrawer({
               <p className="mt-1 text-sm text-foreground">
                 Send <span className="font-medium uppercase">{fallback.channel}</span> after {fallback.delay_minutes}min if {fallback.condition}
               </p>
+            </div>
+          )}
+
+          {/* Pending fallback queue */}
+          {pendingFallbacks && pendingFallbacks.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+              <p className="text-xs font-semibold text-amber-800 flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Fallback queued ({pendingFallbacks.length})
+              </p>
+              <div className="mt-1 space-y-1">
+                {pendingFallbacks.slice(0, 5).map((j: any) => (
+                  <p key={j.id} className="text-xs text-amber-900">
+                    {String(j.payload?.channel || "sms").toUpperCase()} → runs {format(new Date(j.run_at), "MMM d, HH:mm")} {j.status === "running" ? " (sending now)" : ""}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
 

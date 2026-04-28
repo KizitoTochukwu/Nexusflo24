@@ -153,12 +153,39 @@ export function previewVars(overrides: Partial<Record<string, string>> = {}): Re
  *  - Known token, empty value, no fallback → "" (no raw {{...}} ever sent)
  *  - Unknown token → "" (also no raw {{...}} sent)
  */
+/** Normalize a variable name to snake_case lowercase so all aliases match.
+ *  Examples: "FirstName" → "first_name", "firstName" → "first_name",
+ *  "firstname" → "firstname" (no change → caught by alias map below). */
+function normalizeVarKey(raw: string): string {
+  // Insert underscore between lower→Upper boundaries, then lowercase.
+  const snake = String(raw).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+  // Common single-word aliases without separators
+  const ALIASES: Record<string, string> = {
+    firstname: "first_name",
+    lastname: "last_name",
+    fullname: "full_name",
+    leadscore: "lead_score",
+    leadstatus: "lead_status",
+    lastactivitydate: "last_activity_date",
+    assignedrep: "assigned_rep",
+    bookinglink: "booking_link",
+    funnellink: "funnel_link",
+    offerpagelink: "offer_page_link",
+    webinarlink: "webinar_link",
+    checkoutlink: "checkout_link",
+    nextsteplink: "next_step_link",
+    externalurl: "external_url",
+    unsubscribelink: "unsubscribe_link",
+  };
+  return ALIASES[snake] || snake;
+}
+
 export function interpolateText(template: string | null | undefined, vars: Record<string, string>): string {
   if (!template) return "";
   return String(template).replace(
     /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/g,
     (_match, rawKey: string, rawFallback?: string) => {
-      const key = String(rawKey).toLowerCase();
+      const key = normalizeVarKey(rawKey);
       const fallback = (rawFallback ?? "").trim();
       const val = vars[key];
       if (val !== undefined && val !== null && String(val).trim() !== "") return String(val);

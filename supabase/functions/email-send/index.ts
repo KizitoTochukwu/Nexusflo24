@@ -34,10 +34,15 @@ Deno.serve(async (req) => {
     const isServiceRole = token === serviceRoleKey;
 
     const body = await req.json();
-    const { workspaceId, to, subject, html, templateSettings } = body;
+    const { workspaceId, to, html, templateSettings } = body;
+    // Subject is optional now — auto-fill so multi-channel campaigns and
+    // legacy automations don't fail just because the user left it blank.
+    const subject: string = (body.subject && String(body.subject).trim())
+      ? String(body.subject)
+      : "Message from NexusFlo24";
 
-    if (!workspaceId || !to || !subject || !html) {
-      return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, subject, html" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!workspaceId || !to || !html) {
+      return new Response(JSON.stringify({ error: "Missing required fields: workspaceId, to, html" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);

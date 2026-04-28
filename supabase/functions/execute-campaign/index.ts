@@ -140,7 +140,10 @@ Deno.serve(async (req) => {
       // Throttle: wait 550ms between requests to stay under 2 req/s
       if (i > 0) await sleep(550);
       const vars = buildLeadVars(lead);
-      const messageSubject = interpolateText(content.subject || "", vars);
+      const rawSubject = interpolateText(content.subject || "", vars).trim();
+      // Auto-fill subject from campaign name when missing so multi-channel
+      // campaigns don't fail on the email leg.
+      const messageSubject = rawSubject || (campaign.name || "Message from NexusFlo24");
       const messageBody = interpolateText(content.body || "", vars);
 
       let deliveryStatus = "pending";
@@ -223,9 +226,12 @@ Deno.serve(async (req) => {
 
       results.push({ lead_id: lead.id, status: deliveryStatus, error: sendError });
 
-      // Schedule fallback if enabled and primary failed/pending
+      // Schedule fallback if enabled and primary failed/pending.
+      // When the PRIMARY send fails outright (no delivery happened),
+      // run the fallback immediately instead of waiting the configured
+      // "unread" delay — there's nothing to wait for.
       if (fallback?.enabled && deliveryStatus === "failed" && fallback.channel) {
-        const runAt = new Date(Date.now() + (fallback.delay_minutes || 30) * 60 * 1000).toISOString();
+        const runAt = new Date().toISOString();
         await supabase.from("scheduled_jobs").insert({
           workspace_id: workspaceId,
           automation_id: campaign_id, // reuse field for campaign reference
@@ -236,6 +242,7 @@ Deno.serve(async (req) => {
             type: "campaign_fallback",
             campaign_id, lead_id: lead.id, workspace_id: workspaceId,
             channel: fallback.channel, subject: messageSubject, body: messageBody,
+            reason: "primary_send_failed",
           },
         });
       }
