@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import LeadPicker from "@/components/campaigns/LeadPicker";
 import { useLeadFolders, useFolderLeadIds } from "@/hooks/useLeadFolders";
-import { Folder as FolderIcon, Users } from "lucide-react";
+import { Folder as FolderIcon, Users, FolderPlus, Upload, ArrowUpRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,11 @@ const TOTAL_STEPS = 5;
 
 export default function CreateCampaignDialog() {
   const workspaceId = useWorkspaceId();
+  const navigate = useNavigate();
+  const goToLeads = (params?: string) => {
+    setOpen(false);
+    navigate(`/dashboard/${workspaceId}/leads${params ?? ""}`);
+  };
   const createCampaign = useCreateCampaign();
   const generateCopy = useGenerateCampaignCopy();
   const [open, setOpen] = useState(false);
@@ -650,9 +656,32 @@ export default function CreateCampaignDialog() {
                     {foldersLoading ? (
                       <p className="text-xs text-muted-foreground py-1">Loading folders…</p>
                     ) : folders.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-1">
-                        No folders yet. Create folders from the Leads page to group your audience.
-                      </p>
+                      <div className="rounded-md border border-dashed bg-background/50 p-3 text-center space-y-2">
+                        <FolderIcon className="h-5 w-5 text-muted-foreground mx-auto" />
+                        <p className="text-xs text-muted-foreground">
+                          You don't have any folders yet. Folders help group leads (e.g. "Webinar Attendees", "VIP Clients") so you can target them in one click.
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => goToLeads("?newFolder=1")}
+                          >
+                            <FolderPlus className="h-3.5 w-3.5" /> Create folder
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => goToLeads("?import=1")}
+                          >
+                            <Upload className="h-3.5 w-3.5" /> Import leads
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <>
                         <Select value={selectedFolderId ?? ""} onValueChange={(v) => setSelectedFolderId(v || null)}>
@@ -667,11 +696,36 @@ export default function CreateCampaignDialog() {
                             ))}
                           </SelectContent>
                         </Select>
-                        {selectedFolder && (
+                        {selectedFolder && folderLeadIds.length === 0 && (
+                          <div className="rounded-md border border-dashed border-destructive/30 bg-destructive/5 p-2.5 space-y-2">
+                            <p className="text-[11px] text-destructive">
+                              Folder <span className="font-semibold">"{selectedFolder.name}"</span> has no leads yet.
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[11px] gap-1"
+                                onClick={() => goToLeads(`?folder=${selectedFolder.id}`)}
+                              >
+                                <ArrowUpRight className="h-3 w-3" /> Add leads to folder
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-[11px] gap-1"
+                                onClick={() => goToLeads(`?import=1&folder=${selectedFolder.id}`)}
+                              >
+                                <Upload className="h-3 w-3" /> Import to folder
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        {selectedFolder && folderLeadIds.length > 0 && (
                           <p className="text-[11px] text-muted-foreground">
-                            {folderLeadIds.length === 0
-                              ? "This folder has no leads."
-                              : `${folderLeadIds.length} lead${folderLeadIds.length === 1 ? "" : "s"} in folder.`}
+                            {folderLeadIds.length} lead{folderLeadIds.length === 1 ? "" : "s"} in folder.
                           </p>
                         )}
                         {selectedFolder && folderLeadIds.length > 0 && (
