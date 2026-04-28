@@ -70,18 +70,49 @@ export default function CreateCampaignDialog() {
   const [fallbackDelay, setFallbackDelay] = useState("30");
   const [fallbackCondition, setFallbackCondition] = useState("unread");
 
-  // Step 4.5 - Audience Filter
-  const [audienceStatuses, setAudienceStatuses] = useState<string[]>([]);
-  const [audienceTags, setAudienceTags] = useState("");
-  const [audienceMinScore, setAudienceMinScore] = useState("");
-  const [audienceMaxScore, setAudienceMaxScore] = useState("");
+  // Step 4.5 - Audience Filter (persisted per workspace)
+  const audiencePrefsKey = workspaceId ? `nf24:campaign-audience:${workspaceId}` : null;
+  const persisted = useMemo(() => {
+    if (!audiencePrefsKey) return null;
+    try {
+      const raw = localStorage.getItem(audiencePrefsKey);
+      return raw ? (JSON.parse(raw) as {
+        audienceMode?: "filter" | "folder" | "picker";
+        selectedFolderId?: string | null;
+        selectedLeadIds?: string[];
+        audienceStatuses?: string[];
+        audienceTags?: string;
+        audienceMinScore?: string;
+        audienceMaxScore?: string;
+      }) : null;
+    } catch { return null; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audiencePrefsKey]);
+
+  const [audienceStatuses, setAudienceStatuses] = useState<string[]>(persisted?.audienceStatuses ?? []);
+  const [audienceTags, setAudienceTags] = useState(persisted?.audienceTags ?? "");
+  const [audienceMinScore, setAudienceMinScore] = useState(persisted?.audienceMinScore ?? "");
+  const [audienceMaxScore, setAudienceMaxScore] = useState(persisted?.audienceMaxScore ?? "");
 
   // Step 5 - Schedule & Lead Selection
   const [scheduleNow, setScheduleNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
-  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
-  const [audienceMode, setAudienceMode] = useState<"filter" | "folder" | "picker">("filter");
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>(persisted?.selectedLeadIds ?? []);
+  const [audienceMode, setAudienceMode] = useState<"filter" | "folder" | "picker">(persisted?.audienceMode ?? "filter");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(persisted?.selectedFolderId ?? null);
+
+  // Persist audience prefs whenever they change
+  useEffect(() => {
+    if (!audiencePrefsKey) return;
+    try {
+      localStorage.setItem(audiencePrefsKey, JSON.stringify({
+        audienceMode, selectedFolderId, selectedLeadIds,
+        audienceStatuses, audienceTags, audienceMinScore, audienceMaxScore,
+      }));
+    } catch { /* quota / private mode — ignore */ }
+  }, [audiencePrefsKey, audienceMode, selectedFolderId, selectedLeadIds,
+      audienceStatuses, audienceTags, audienceMinScore, audienceMaxScore]);
+
 
   // Folders for "Pick Folder/Group" mode
   const { data: folders = [], isLoading: foldersLoading } = useLeadFolders(workspaceId);
@@ -164,16 +195,23 @@ export default function CreateCampaignDialog() {
     }
   }, [step]);
 
-  const reset = () => {
+  const reset = (opts: { keepAudience?: boolean } = { keepAudience: true }) => {
     setStep(1); setName(""); setType("email"); setObjective("broadcast");
     setCampaignMode("broadcast"); setTriggerType("new_lead"); setTriggerValue("");
     setTriggerActions(["send_message"]); setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
     setTemplateSettings(DEFAULT_TEMPLATE_SETTINGS);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
-    setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
-    setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
-    setSelectedLeadIds([]); setAudienceMode("filter"); setSelectedFolderId(null);
+    setFallbackCondition("unread");
+    setScheduleNow(true); setScheduledAt("");
+    if (!opts.keepAudience) {
+      setAudienceStatuses([]); setAudienceTags("");
+      setAudienceMinScore(""); setAudienceMaxScore("");
+      setSelectedLeadIds([]); setAudienceMode("filter"); setSelectedFolderId(null);
+      if (audiencePrefsKey) {
+        try { localStorage.removeItem(audiencePrefsKey); } catch { /* ignore */ }
+      }
+    }
   };
 
   const handleGenerateAI = async () => {
@@ -257,7 +295,7 @@ export default function CreateCampaignDialog() {
     }
 
     setOpen(false);
-    reset();
+    reset({ keepAudience: false });
   };
 
   // Determine actual step to show (skip triggers step in broadcast mode)
