@@ -2303,6 +2303,51 @@ export type Database = {
           },
         ]
       }
+      whatsapp_templates: {
+        Row: {
+          body_preview: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          language: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          variable_count: number
+          workspace_id: string
+        }
+        Insert: {
+          body_preview?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          language?: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          variable_count?: number
+          workspace_id: string
+        }
+        Update: {
+          body_preview?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          language?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          variable_count?: number
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       workflow_enrollments: {
         Row: {
           branch_path: Json
