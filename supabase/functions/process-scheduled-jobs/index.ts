@@ -77,8 +77,79 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Branch by payload type: workflows vs legacy automations
+        // Branch by payload type: campaign_fallback vs workflows vs legacy automations
         const payload = job.payload as Record<string, any> || {};
+
+        // ---- Campaign fallback (SMS/WhatsApp/Email after primary failed) ----
+        if (payload.type === "campaign_fallback") {
+          const fbChannel = (payload.channel || "sms") as "sms" | "whatsapp" | "email";
+          const fbWorkspaceId = payload.workspace_id || job.workspace_id;
+          const fbLeadId = payload.lead_id || job.lead_id;
+          const fbCampaignId = payload.campaign_id;
+
+          // Re-fetch lead to get current phone/email
+          const { data: lead } = await supabase
+            .from("leads")
+            .select("email, phone, full_name")
+            .eq("id", fbLeadId)
+            .maybeSingle();
+
+          const to = fbChannel === "email" ? lead?.email : lead?.phone;
+          if (!to) {
+            const errMsg = `No ${fbChannel} contact info on lead`;
+            await supabase.from("scheduled_jobs")
+              .update({ status: "failed", error: errMsg, updated_at: new Date().toISOString() })
+              .eq("id", job.id);
+            await supabase.from("campaign_messages").insert({
+              campaign_id: fbCampaignId, workspace_id: fbWorkspaceId, lead_id: fbLeadId,
+              channel: fbChannel, delivery_status: "failed", error: errMsg,
+            });
+            results.push({ job_id: job.id, status: "failed", error: errMsg });
+            continue;
+          }
+
+          const fbUrl =
+            fbChannel === "sms"      ? `${supabaseUrl}/functions/v1/sms-send` :
+            fbChannel === "whatsapp" ? `${supabaseUrl}/functions/v1/whatsapp-send` :
+                                        `${supabaseUrl}/functions/v1/email-send`;
+
+          const fbBody: Record<string, any> = fbChannel === "email"
+            ? { workspaceId: fbWorkspaceId, to, subject: payload.subject || "", html: payload.body || "",
+                leadId: fbLeadId, campaignId: fbCampaignId }
+            : fbChannel === "whatsapp"
+              ? { workspaceId: fbWorkspaceId, to, body: payload.body || "",
+                  leadId: fbLeadId, campaignId: fbCampaignId }
+              : { workspaceId: fbWorkspaceId, to, message: payload.body || "" };
+
+          const fbRes = await fetch(fbUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+            body: JSON.stringify(fbBody),
+          });
+          const fbData = await fbRes.json().catch(() => ({}));
+          const fbOk = fbRes.ok && fbData?.success !== false;
+          const fbErr = fbOk ? null : (fbData?.error || `HTTP ${fbRes.status}`);
+
+          await supabase.from("campaign_messages").insert({
+            campaign_id: fbCampaignId, workspace_id: fbWorkspaceId, lead_id: fbLeadId,
+            channel: fbChannel,
+            delivery_status: fbOk ? "delivered" : "failed",
+            error: fbErr,
+          });
+
+          await supabase.from("scheduled_jobs")
+            .update({
+              status: fbOk ? "completed" : "failed",
+              error: fbErr,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", job.id);
+
+          results.push({ job_id: job.id, status: fbOk ? "completed" : "failed", error: fbErr });
+          continue;
+        }
+
+        // ---- Workflow / legacy automation execution ----
         const isWorkflow = !!(payload.workflow_id && payload.enrollment_id);
         const targetUrl = isWorkflow
           ? `${supabaseUrl}/functions/v1/execute-workflow`
