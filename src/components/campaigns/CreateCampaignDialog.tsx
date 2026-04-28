@@ -640,6 +640,7 @@ export default function CreateCampaignDialog() {
                     <span className="text-muted-foreground">Fallback</span>
                     <span className="font-medium text-foreground capitalize">{fallbackChannel} after {fallbackDelay}m ({fallbackCondition})</span>
                   </>
+                )}
                 {campaignMode === "broadcast" && (
                   <>
                     <span className="text-muted-foreground">Audience</span>
