@@ -295,7 +295,7 @@ export default function CreateCampaignDialog() {
     }
 
     setOpen(false);
-    reset();
+    reset({ keepAudience: false });
   };
 
   // Determine actual step to show (skip triggers step in broadcast mode)
