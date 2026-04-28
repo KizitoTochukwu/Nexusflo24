@@ -628,8 +628,19 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         body: { workspaceId, to: waTestTo, type: "text", body: renderedBody, preview: true },
       });
       if (error) throw error;
+      // Surface structured failures (window_closed, credential errors, etc.)
+      // so workspace admins immediately see WHY a send didn't reach the
+      // recipient instead of a generic "delivered" toast.
+      if (data?.success === false) {
+        if (data.reason === "window_closed") {
+          toast.error("24h window closed — recipient must message you first, or send an approved template. Test number unaffected.", { duration: 10000 });
+        } else {
+          toast.error(data.error || "WhatsApp send failed");
+        }
+        return;
+      }
       if (data?.error) throw new Error(data.error);
-      toast.success("Test WhatsApp sent!");
+      toast.success(`Test WhatsApp sent! ${data?.credentialSource === "workspace" ? "(your credentials)" : "(platform credentials)"}`);
     } catch (err: any) { toast.error(err.message || "Failed"); }
     finally { setWaTestSending(false); }
   };
@@ -881,6 +892,13 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                     )}
                   </div>
                   <Separator />
+                  <div className="rounded-md border border-amber-300/60 bg-amber-50 p-2.5 text-xs text-amber-900">
+                    <strong>Heads up — WhatsApp 24h window:</strong> Free-form text messages
+                    only deliver if the recipient has messaged your business in the last 24 hours.
+                    Outside that window you must send an approved template, otherwise the send
+                    will fail with <em>"24h window closed"</em>. Use the test below with a number
+                    that has recently messaged you to verify your setup.
+                  </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Input value={waTestTo} onChange={(e) => setWaTestTo(e.target.value)} placeholder="+447517327597" maxLength={20} />
                     <Input value={waTestMsg} onChange={(e) => setWaTestMsg(e.target.value)} placeholder="Hello from NexusFlo24!" maxLength={500} />

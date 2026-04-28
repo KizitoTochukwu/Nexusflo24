@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
+import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,10 +89,11 @@ Deno.serve(async (req) => {
           const fbLeadId = payload.lead_id || job.lead_id;
           const fbCampaignId = payload.campaign_id;
 
-          // Re-fetch lead to get current phone/email
+          // Re-fetch lead to get current phone/email (and to interpolate
+          // {{vars}} in case the queued payload predates the normalizer).
           const { data: lead } = await supabase
             .from("leads")
-            .select("email, phone, full_name")
+            .select("id, email, phone, full_name, first_name, last_name, company, source, status, score, tags")
             .eq("id", fbLeadId)
             .maybeSingle();
 
@@ -108,18 +111,31 @@ Deno.serve(async (req) => {
             continue;
           }
 
+          // Defense-in-depth: re-sanitize legacy payloads. Older queued
+          // jobs may contain raw HTML from the rich-text editor and/or
+          // unresolved {{tokens}} from before the interpolation normalizer
+          // was added. Apply both transforms here so the recipient never
+          // sees raw markup or literal placeholders.
+          const vars = lead ? buildLeadVars(lead as any) : {};
+          const rawBody = String(payload.body || "");
+          const plainBody = fbChannel === "email"
+            ? rawBody // email-send accepts HTML
+            : htmlToPlainText(rawBody);
+          const finalBody = interpolateText(plainBody, vars);
+          const finalSubject = interpolateText(String(payload.subject || ""), vars);
+
           const fbUrl =
             fbChannel === "sms"      ? `${supabaseUrl}/functions/v1/sms-send` :
             fbChannel === "whatsapp" ? `${supabaseUrl}/functions/v1/whatsapp-send` :
                                         `${supabaseUrl}/functions/v1/email-send`;
 
           const fbBody: Record<string, any> = fbChannel === "email"
-            ? { workspaceId: fbWorkspaceId, to, subject: payload.subject || "", html: payload.body || "",
+            ? { workspaceId: fbWorkspaceId, to, subject: finalSubject || "Message from NexusFlo24", html: finalBody,
                 leadId: fbLeadId, campaignId: fbCampaignId }
             : fbChannel === "whatsapp"
-              ? { workspaceId: fbWorkspaceId, to, body: payload.body || "",
+              ? { workspaceId: fbWorkspaceId, to, body: finalBody,
                   leadId: fbLeadId, campaignId: fbCampaignId }
-              : { workspaceId: fbWorkspaceId, to, message: payload.body || "" };
+              : { workspaceId: fbWorkspaceId, to, message: finalBody };
 
           const fbRes = await fetch(fbUrl, {
             method: "POST",
