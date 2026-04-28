@@ -680,6 +680,12 @@ export default function CreateCampaignDialog() {
                           placeholder="100" className="h-8 text-xs" />
                       </div>
                     </div>
+                    <ChannelEligibilityBadge
+                      channel={type}
+                      loading={eligibilityLoading}
+                      total={eligibility?.total ?? 0}
+                      eligible={eligibility?.eligible ?? 0}
+                    />
                   </div>
                 )}
               </div>
