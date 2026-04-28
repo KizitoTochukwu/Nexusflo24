@@ -118,7 +118,7 @@ export default function CreateCampaignDialog() {
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
     setFallbackCondition("unread"); setAudienceStatuses([]); setAudienceTags("");
     setAudienceMinScore(""); setAudienceMaxScore(""); setScheduleNow(true); setScheduledAt("");
-    setSelectedLeadIds([]); setUseLeadPicker(false);
+    setSelectedLeadIds([]); setAudienceMode("filter"); setSelectedFolderId(null);
   };
 
   const handleGenerateAI = async () => {
@@ -168,11 +168,16 @@ export default function CreateCampaignDialog() {
         delay_minutes: parseInt(fallbackDelay), condition: fallbackCondition,
       } as any : {} as any,
       audience_filter: {
-        ...(useLeadPicker && selectedLeadIds.length > 0 ? { lead_ids: selectedLeadIds } : {}),
-        ...(audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
-        ...(audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
-        ...(audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
-        ...(audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
+        ...(audienceMode === "picker" && selectedLeadIds.length > 0
+          ? { lead_ids: selectedLeadIds }
+          : {}),
+        ...(audienceMode === "folder" && selectedFolderId && folderLeadIds.length > 0
+          ? { folder_id: selectedFolderId, lead_ids: folderLeadIds }
+          : {}),
+        ...(audienceMode === "filter" && audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
+        ...(audienceMode === "filter" && audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
+        ...(audienceMode === "filter" && audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
+        ...(audienceMode === "filter" && audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
       } as any,
     });
 
