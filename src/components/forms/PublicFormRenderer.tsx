@@ -107,6 +107,8 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           workspace_id: form.workspace_id,
           source: settings.source,
           tags: settings.tags,
+          form_id: form.id,
+          form_data: values,
           lead_destination: {
             apply_tags: settings.tags,
             source: settings.source,
@@ -117,12 +119,9 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       });
       if (error) throw error;
 
-      // Log submission (best-effort, public insert allowed for active forms)
-      await supabase.from("form_submissions").insert({
-        form_id: form.id,
-        workspace_id: form.workspace_id,
-        data: values,
-      });
+      // Note: form_submissions insert + submission_count increment are now handled
+      // server-side inside capture-lead (via DB trigger). Client no longer inserts
+      // here to avoid double-counting.
 
       // Fire-and-forget: notify workspace users with full submission details
       try {
