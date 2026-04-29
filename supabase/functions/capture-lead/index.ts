@@ -148,30 +148,33 @@ Deno.serve(async (req) => {
     }
     const normalizedEmail = email.toLowerCase();
 
-    // Deduplicate by email first, then by phone if no email match
-    let existing: { id: string; tags: string[] | null } | null = null;
+    // Deduplicate by email first, then by phone if no email match.
+    // Phone lookup is workspace-wide (not user-scoped) to avoid colliding
+    // with the (user_id, phone) unique constraint on a lead owned by another rep.
+    let existing: { id: string; tags: string[] | null; user_id?: string } | null = null;
 
     const { data: emailMatch } = await supabase
       .from("leads")
-      .select("id, tags")
+      .select("id, tags, user_id")
       .eq("workspace_id", workspaceId)
-      .eq("user_id", ownerId)
       .ilike("email", normalizedEmail)
       .maybeSingle();
 
     existing = emailMatch;
+    if (existing?.user_id) ownerId = existing.user_id;
 
-    // If no email match but phone is provided, check for phone match
     if (!existing && phone) {
       const { data: phoneMatch } = await supabase
         .from("leads")
-        .select("id, tags")
+        .select("id, tags, user_id")
         .eq("workspace_id", workspaceId)
-        .eq("user_id", ownerId)
         .eq("phone", phone)
         .maybeSingle();
 
-      existing = phoneMatch;
+      if (phoneMatch) {
+        existing = phoneMatch;
+        ownerId = phoneMatch.user_id ?? ownerId;
+      }
     }
 
     let leadId: string;
@@ -210,6 +213,8 @@ Deno.serve(async (req) => {
           ...(notes ? { notes } : {}),
           ...(campaignName ? { campaign_name: campaignName } : {}),
           ...(funnelName ? { funnel_name: funnelName } : {}),
+          // Backfill email if the existing lead had none
+          ...(normalizedEmail ? { email: normalizedEmail } : {}),
         })
         .eq("id", existing.id);
       if (error) throw error;
@@ -236,8 +241,38 @@ Deno.serve(async (req) => {
         })
         .select("id")
         .single();
-      if (error) throw error;
-      leadId = newLead.id;
+
+      if (error) {
+        // Race-condition recovery: if (user_id, phone) collided, merge into existing lead.
+        if ((error as any).code === "23505" && phone) {
+          const { data: collidedLead } = await supabase
+            .from("leads")
+            .select("id, tags")
+            .eq("workspace_id", workspaceId)
+            .eq("phone", phone)
+            .maybeSingle();
+          if (!collidedLead) throw error;
+          const mergedTags = Array.from(new Set([...(collidedLead.tags || []), ...newTags]));
+          await supabase
+            .from("leads")
+            .update({
+              updated_at: now,
+              last_activity_at: now,
+              tags: mergedTags,
+              ...(full_name ? { full_name } : {}),
+              ...(notes ? { notes } : {}),
+              ...(campaignName ? { campaign_name: campaignName } : {}),
+              ...(funnelName ? { funnel_name: funnelName } : {}),
+              ...(normalizedEmail ? { email: normalizedEmail } : {}),
+            })
+            .eq("id", collidedLead.id);
+          leadId = collidedLead.id;
+        } else {
+          throw error;
+        }
+      } else {
+        leadId = newLead.id;
+      }
     }
 
     // Log activity

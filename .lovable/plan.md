@@ -1,57 +1,33 @@
-# Forms Pipeline — Cleanup & Verification
+# Fix: capture-lead Unique-Constraint Violation on Form Submit
 
-## Part A — Backfill (one-time data fix)
+## Root cause
 
-**Scope identified:** 3 leads have duplicate `form_submit` activities (5 extra rows total) created before the `capture-lead` patch.
+Form submission failed with HTTP 500 from `capture-lead`:
+```
+duplicate key value violates unique constraint "leads_user_phone_unique"
+Key (user_id, phone)=(afd12255…, +447517327597) already exists.
+```
 
-| Lead ID | Duplicate rows to delete |
-|---|---|
-| 6e4d7d9a-ea15-48f0-b27a-34ad632c21ff (Adedayo) | 1 |
-| 675df493-7c16-41d0-933d-29fa62bd2720 (Kizito) | 2 |
-| 50c0906e-da85-4fa6-a15a-01e0403fcfd0 | 2 |
+The phone `+447517327597` already exists on lead `50c0906e…` (Kizito, no email). When a new submission arrives with **a different email** but **the same phone**, the dedup logic:
 
-**Steps (executed via insert/data tool):**
+1. Looks up by email → no match (new email).
+2. Looks up by phone → currently filters by `workspace_id + user_id + phone`. Should match, but does not in some races (e.g. `ownerId` resolution path).
+3. Falls through to INSERT → hits the `(user_id, phone)` unique constraint → 500.
 
-1. **Dedupe activities** — keep the earliest row per `(lead_id, second-bucket)` and delete duplicates:
-   ```sql
-   DELETE FROM lead_activities
-   WHERE id IN (
-     SELECT id FROM (
-       SELECT id, ROW_NUMBER() OVER (
-         PARTITION BY lead_id, type, date_trunc('second', created_at)
-         ORDER BY created_at
-       ) AS rn
-       FROM lead_activities
-       WHERE type = 'form_submit'
-     ) t WHERE rn > 1
-   );
-   ```
+The phone-match branch is too restrictive and assumes `ownerId` is always identical to the existing lead's `user_id`.
 
-2. **Recalculate scores** for the 3 affected leads from scratch using the same delta table the trigger uses (form_submit=10, email_open=5, link_click=10, lead_magnet_download=20, website_visit=5, pricing_page_visit=25, webinar_registration=30, call_booking=50, email_unsubscribe=-50). Update `score` and re-derive `status` (Hot ≥81, Warm ≥21, else New).
+## Fix
 
-3. **Verify** post-backfill: query the same three leads to confirm one `form_submit` per submission and corrected scores.
+Edit `supabase/functions/capture-lead/index.ts` (one block, lines 164–175):
 
-## Part B — Live end-to-end test
+1. **Broaden phone lookup** — drop the `user_id` filter; match on `workspace_id + phone` only. Phone is workspace-unique in practice (the constraint is `(user_id, phone)`, but workspace ownership rarely splits a contact across users).
+2. **Re-align `ownerId`** to the matched lead's `user_id` before falling through to the UPDATE path — guarantees the subsequent update never violates `(user_id, phone)`.
+3. **Belt-and-suspenders:** wrap the INSERT in a try/catch for Postgres error code `23505`; on conflict, re-query by `(workspace_id, phone)` and merge into the existing lead instead of failing.
 
-After backfill, submit a real entry through the public form to confirm the patched function writes exactly one activity:
+## Deployment
 
-1. Open `https://nexusflo24.com/forms/webinar-c16e15` in a new tab
-2. Fill with a test entry (e.g., name "QA Test", unique email like `qa+{timestamp}@nexusflo24.com`, phone)
-3. Submit
-4. I'll then query and confirm:
-   - 1 new row in `form_submissions`
-   - 1 new lead (or merged into existing by email)
-   - **Exactly 1** `form_submit` activity for that lead
-   - Score increment of exactly **+10** from the form submission
-   - Tag, source, and pipeline_stage applied per form settings
-   - `notify-form-submission` invoked successfully
+Re-deploy `capture-lead` immediately after the patch.
 
-## Technical notes
+## Verification
 
-- All operations are non-destructive to lead records themselves (only duplicate activity rows removed; scores recomputed from authoritative activity history).
-- No schema changes — pure data backfill via the data tool.
-- The `update_lead_score_on_activity` trigger will not re-fire on DELETE, so manual UPDATE of `score`/`status` is required.
-
-## Deliverable
-
-A short report after Part B with the 4 verification checks above marked ✅/❌, confirming the duplicate-activity bug is fully closed.
+After deploy, retry the form submission shown in the screenshot (Kizito Tochukwu, `kizioostore@gmail.com`, `+447517327597`). Expected: HTTP 200, the existing lead `50c0906e…` is updated with the new email, exactly one new `form_submit` activity, score +10.
