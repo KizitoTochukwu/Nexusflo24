@@ -12,6 +12,12 @@ import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+const SOCIAL_TRIGGERS = ["instagram_comment", "instagram_dm", "facebook_comment", "facebook_dm"] as const;
+type SocialTrigger = typeof SOCIAL_TRIGGERS[number];
+const isSocialTrigger = (t: string): t is SocialTrigger => (SOCIAL_TRIGGERS as readonly string[]).includes(t);
 
 export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
@@ -29,6 +35,11 @@ export default function CreateAutomationDialog() {
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>(() => getDefaultExitCriteria("new_lead"));
 
+  // Social trigger config
+  const [socialKeyword, setSocialKeyword] = useState("");
+  const [socialMatchMode, setSocialMatchMode] = useState<"contains" | "exact" | "starts_with">("contains");
+  const [socialPostId, setSocialPostId] = useState("");
+
   const reset = () => {
     setName("");
     setDescription("");
@@ -38,6 +49,9 @@ export default function CreateAutomationDialog() {
     setTagValue("");
     setSteps([]);
     setExitCriteria(getDefaultExitCriteria("new_lead"));
+    setSocialKeyword("");
+    setSocialMatchMode("contains");
+    setSocialPostId("");
   };
 
   // When the user picks a different trigger type, refresh suggested defaults
