@@ -430,6 +430,33 @@ Deno.serve(async (req) => {
       console.error("Routing error:", routeErr);
     }
 
+    // --- Record form submission (so forms.submission_count trigger fires) ---
+    const formId = sanitizeString(body.form_id, 64);
+    if (formId) {
+      try {
+        const submissionData =
+          typeof body.form_data === "object" && body.form_data !== null
+            ? body.form_data
+            : {
+                full_name,
+                email: normalizedEmail,
+                phone,
+                ...(typeof body.fields === "object" && body.fields !== null ? body.fields : {}),
+              };
+        const { error: submissionErr } = await supabase.from("form_submissions").insert({
+          form_id: formId,
+          workspace_id: workspaceId,
+          lead_id: leadId,
+          data: submissionData,
+        });
+        if (submissionErr) {
+          console.error("[capture-lead] form_submissions insert failed:", submissionErr);
+        }
+      } catch (submissionExc) {
+        console.error("[capture-lead] form_submissions insert exception:", submissionExc);
+      }
+    }
+
     // --- New lead notification (only for brand-new leads, only to assigned rep) ---
     if (!existing) {
       const leadName = full_name || normalizedEmail;
