@@ -249,15 +249,6 @@ Deno.serve(async (req) => {
       meta: meta,
     });
 
-    // Log activity
-    await supabase.from("lead_activities").insert({
-      lead_id: leadId,
-      user_id: ownerId,
-      workspace_id: workspaceId,
-      type: "form_submit",
-      meta: meta,
-    });
-
     // --- Auto-route to folders based on routing rules ---
     let routedToAnyFolder = false;
     try {
