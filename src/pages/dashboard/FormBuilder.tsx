@@ -212,6 +212,7 @@ export default function FormBuilder() {
                 description={description}
                 settings={settings}
                 theme={theme}
+                workspaceId={workspaceId}
                 onChangeDescription={setDescription}
                 onChangeSettings={setSettings}
                 onChangeTheme={setTheme}
