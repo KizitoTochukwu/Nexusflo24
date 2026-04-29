@@ -1,52 +1,40 @@
-## Problem
+## Fix truncated folder name in Folders sidebar
 
-The form's "X submissions" counter on the Forms list never increments. Two root causes:
+**Problem**: Long folder names like "Webinar – AI Sales System Masterclass" are cut off in the Leads → Folders panel because the label uses `truncate` (single-line ellipsis) inside a narrow sidebar column.
 
-1. **`capture-lead` edge function never writes to `form_submissions`.** When a public form posts to `capture-lead` with a `form_id`, the function creates/updates the lead but never inserts a corresponding row in the `form_submissions` table.
-2. **Nothing increments `forms.submission_count`.** A codebase search confirms no edge function, hook, or DB trigger updates that column.
+**File**: `src/components/leads/FolderPanel.tsx` (line 107 area, inside the `folders.map(...)` button)
 
-Net result: even successful submissions (CRM-mapped lead created, folder routed) leave the counter stuck at 0.
+### Changes
 
-## Fix
+1. Replace the single-line `truncate` span with a wrapping label that breaks long words across up to 2 lines, so the full folder name is always readable without expanding the sidebar:
+   - Swap `truncate` for `break-words leading-snug` and add `line-clamp-2` so very long names cap at 2 lines instead of pushing layout.
+   - Add a native `title={f.name}` tooltip so the complete name shows on hover even if clamped.
+2. Make the row align to the top (`items-start` on the inner button) so the icon/count stay aligned when the name wraps.
+3. Keep the trailing meta cluster (lock icon, route icon, lead count) on its own non-shrinking flex group with `shrink-0` so it never gets pushed off or squeezed.
 
-### 1. Update `capture-lead` edge function
-After the lead is created/updated, if the payload includes a `form_id`:
-- Insert a row into `form_submissions` (`form_id`, `workspace_id`, `lead_id`, `data` = the original submitted field values).
-- Use service role (already in use) so it bypasses RLS.
+### Technical detail
 
-### 2. Add a DB trigger to keep the counter in sync
-Create a trigger on `form_submissions` that increments `forms.submission_count` on INSERT and decrements it on DELETE. This makes the counter authoritative and self-healing regardless of which code path inserts the submission.
-
-```sql
-create or replace function public.bump_form_submission_count()
-returns trigger language plpgsql security definer set search_path=public as $$
-begin
-  if tg_op = 'INSERT' then
-    update public.forms set submission_count = submission_count + 1, updated_at = now()
-    where id = NEW.form_id;
-  elsif tg_op = 'DELETE' then
-    update public.forms set submission_count = greatest(0, submission_count - 1), updated_at = now()
-    where id = OLD.form_id;
-  end if;
-  return null;
-end $$;
-
-create trigger trg_form_submissions_count
-after insert or delete on public.form_submissions
-for each row execute function public.bump_form_submission_count();
+```tsx
+<button
+  onClick={() => onSelectFolder(f.id)}
+  className={`flex flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${...}`}
+>
+  <FolderOpen className="h-4 w-4 mt-0.5 shrink-0" style={{ color: f.color || undefined }} />
+  <span
+    className="flex-1 text-left break-words leading-snug line-clamp-2"
+    title={f.name}
+  >
+    {f.name}
+  </span>
+  <div className="flex items-center gap-1 shrink-0 mt-0.5">
+    {/* lock / route / count unchanged */}
+  </div>
+</button>
 ```
 
-### 3. Backfill existing counts
-One-time `UPDATE forms SET submission_count = (SELECT count(*) FROM form_submissions WHERE form_id = forms.id)` to reconcile any historical leads.
+No other files need changes. No data, RLS, or edge-function changes required.
 
-### 4. Verify
-Submit the live `ddd` form once via the public URL and confirm:
-- a row appears in `form_submissions`
-- `forms.submission_count` becomes 1
-- the Forms list UI shows "1 submissions"
-
-## Files / changes
-
-- `supabase/functions/capture-lead/index.ts` — insert into `form_submissions` when `form_id` is present
-- New migration — trigger + backfill
-- Redeploy `capture-lead`
+### Result
+- "Webinar – AI Sales System Masterclass" displays on two lines fully visible inside the sidebar.
+- Lead count and rule/lock icons remain right-aligned and never clipped.
+- Hovering still reveals the full name as a tooltip for any edge cases.
