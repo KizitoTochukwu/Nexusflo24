@@ -101,11 +101,16 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
           <div key={f.id} className="group flex items-center">
             <button
               onClick={() => onSelectFolder(f.id)}
-              className={`flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${activeFolderId === f.id ? "bg-accent/10 text-accent font-medium" : "hover:bg-muted"}`}
+              className={`flex flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${activeFolderId === f.id ? "bg-accent/10 text-accent font-medium" : "hover:bg-muted"}`}
             >
-              <FolderOpen className="h-4 w-4" style={{ color: f.color || undefined }} />
-              <span className="flex-1 text-left truncate">{f.name}</span>
-              <div className="flex items-center gap-1">
+              <FolderOpen className="h-4 w-4 mt-0.5 shrink-0" style={{ color: f.color || undefined }} />
+              <span
+                className="flex-1 text-left break-words leading-snug line-clamp-2"
+                title={f.name}
+              >
+                {f.name}
+              </span>
+              <div className="flex items-center gap-1 shrink-0 mt-0.5">
                 {protectedFolder && <Lock className="h-3 w-3 text-muted-foreground" />}
                 {folderRules(f.id).length > 0 && (
                   <Route className="h-3 w-3 text-accent" />
