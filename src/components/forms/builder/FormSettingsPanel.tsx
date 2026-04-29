@@ -148,12 +148,110 @@ export default function FormSettingsPanel({
           />
         </div>
         <div>
-          <Label className="text-xs">Folder name (optional)</Label>
-          <Input
-            value={settings.folder_name}
-            onChange={(e) => setS("folder_name", e.target.value)}
-            placeholder="Will route lead to this folder"
-          />
+          <Label className="text-xs">Folder (optional)</Label>
+          {creatingFolder ? (
+            <div className="flex gap-1.5">
+              <Input
+                autoFocus
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="New folder name"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const name = newFolderName.trim();
+                    if (!name || !workspaceId) return;
+                    createFolder.mutate(
+                      { name, workspace_id: workspaceId, color: "#0B1F3B" },
+                      {
+                        onSuccess: () => {
+                          setS("folder_name", name);
+                          setCreatingFolder(false);
+                          setNewFolderName("");
+                        },
+                      },
+                    );
+                  } else if (e.key === "Escape") {
+                    setCreatingFolder(false);
+                    setNewFolderName("");
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const name = newFolderName.trim();
+                  if (!name || !workspaceId) return;
+                  createFolder.mutate(
+                    { name, workspace_id: workspaceId, color: "#0B1F3B" },
+                    {
+                      onSuccess: () => {
+                        setS("folder_name", name);
+                        setCreatingFolder(false);
+                        setNewFolderName("");
+                      },
+                    },
+                  );
+                }}
+                disabled={!newFolderName.trim() || createFolder.isPending}
+              >
+                Add
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setCreatingFolder(false);
+                  setNewFolderName("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Select
+              value={folderSelectValue}
+              onValueChange={(v) => {
+                if (v === NEW_VALUE) {
+                  setCreatingFolder(true);
+                  return;
+                }
+                if (v === NONE_VALUE) {
+                  setS("folder_name", "");
+                  return;
+                }
+                setS("folder_name", v);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="No folder — leads land in Uncategorized" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_VALUE}>No folder (Uncategorized)</SelectItem>
+                {folders.map((f) => (
+                  <SelectItem key={f.id} value={f.name}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+                {/* Show legacy free-form value if it doesn't match any existing folder */}
+                {settings.folder_name && !matchedFolder && (
+                  <SelectItem value={settings.folder_name}>
+                    {settings.folder_name} (will be created)
+                  </SelectItem>
+                )}
+                <SelectItem value={NEW_VALUE}>
+                  <span className="flex items-center gap-1.5">
+                    <Plus className="h-3.5 w-3.5" /> Create new folder…
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">
+            Leads from this form will be routed into the chosen folder.
+          </p>
         </div>
         <div>
           <Label className="text-xs">Initial pipeline stage</Label>
