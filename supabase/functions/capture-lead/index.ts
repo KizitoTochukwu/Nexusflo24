@@ -333,14 +333,35 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Also route by folder_name from lead destination
+      // Also route by folder_name from lead destination.
+      // If the folder doesn't exist yet, auto-create it so the form's CRM mapping
+      // is truly self-serve (lead lands in the configured folder, never falls
+      // through to "Uncategorized" just because the user hasn't pre-created it).
       if (destFolderName) {
-        const { data: folder } = await supabase
+        let { data: folder } = await supabase
           .from("lead_folders")
           .select("id")
           .eq("workspace_id", workspaceId)
           .ilike("name", destFolderName)
           .maybeSingle();
+
+        if (!folder) {
+          const { data: created, error: createErr } = await supabase
+            .from("lead_folders")
+            .insert({
+              workspace_id: workspaceId,
+              user_id: ownerId,
+              name: destFolderName,
+              color: "#0B1F3B",
+            })
+            .select("id")
+            .maybeSingle();
+          if (createErr) {
+            console.error("[capture-lead] failed to auto-create folder:", createErr);
+          } else {
+            folder = created;
+          }
+        }
 
         if (folder) {
           const { data: existingLink } = await supabase
