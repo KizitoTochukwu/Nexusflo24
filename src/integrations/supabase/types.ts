@@ -1421,6 +1421,7 @@ export type Database = {
           phone: string | null
           pipeline_stage: string
           score: number | null
+          social_handles: Json | null
           source: string | null
           status: string | null
           tags: string[] | null
@@ -1442,6 +1443,7 @@ export type Database = {
           phone?: string | null
           pipeline_stage?: string
           score?: number | null
+          social_handles?: Json | null
           source?: string | null
           status?: string | null
           tags?: string[] | null
@@ -1463,6 +1465,7 @@ export type Database = {
           phone?: string | null
           pipeline_stage?: string
           score?: number | null
+          social_handles?: Json | null
           source?: string | null
           status?: string | null
           tags?: string[] | null
@@ -1523,6 +1526,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      meta_settings: {
+        Row: {
+          app_id: string | null
+          app_secret_encrypted: string | null
+          connection_method: string
+          created_at: string
+          fb_user_id: string | null
+          fb_user_name: string | null
+          id: string
+          ig_user_id: string | null
+          ig_username: string | null
+          is_active: boolean
+          page_access_token_encrypted: string | null
+          page_id: string | null
+          page_name: string | null
+          token_expires_at: string | null
+          updated_at: string
+          verify_token_encrypted: string | null
+          workspace_id: string
+        }
+        Insert: {
+          app_id?: string | null
+          app_secret_encrypted?: string | null
+          connection_method?: string
+          created_at?: string
+          fb_user_id?: string | null
+          fb_user_name?: string | null
+          id?: string
+          ig_user_id?: string | null
+          ig_username?: string | null
+          is_active?: boolean
+          page_access_token_encrypted?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          verify_token_encrypted?: string | null
+          workspace_id: string
+        }
+        Update: {
+          app_id?: string | null
+          app_secret_encrypted?: string | null
+          connection_method?: string
+          created_at?: string
+          fb_user_id?: string | null
+          fb_user_name?: string | null
+          id?: string
+          ig_user_id?: string | null
+          ig_username?: string | null
+          is_active?: boolean
+          page_access_token_encrypted?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          verify_token_encrypted?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -2019,6 +2082,102 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      social_keyword_triggers: {
+        Row: {
+          automation_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          keyword: string
+          match_mode: string
+          platform: string
+          post_id: string | null
+          trigger_source: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          automation_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword: string
+          match_mode?: string
+          platform: string
+          post_id?: string | null
+          trigger_source: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          automation_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keyword?: string
+          match_mode?: string
+          platform?: string
+          post_id?: string | null
+          trigger_source?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      social_messages: {
+        Row: {
+          body: string | null
+          channel_type: string
+          created_at: string
+          direction: string
+          error: string | null
+          external_id: string | null
+          id: string
+          lead_id: string | null
+          parent_comment_id: string | null
+          platform: string
+          post_id: string | null
+          sender_id: string | null
+          sender_username: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          channel_type: string
+          created_at?: string
+          direction: string
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          parent_comment_id?: string | null
+          platform: string
+          post_id?: string | null
+          sender_id?: string | null
+          sender_username?: string | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          channel_type?: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          lead_id?: string | null
+          parent_comment_id?: string | null
+          platform?: string
+          post_id?: string | null
+          sender_id?: string | null
+          sender_username?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: []
       }
       social_share_log: {
         Row: {
