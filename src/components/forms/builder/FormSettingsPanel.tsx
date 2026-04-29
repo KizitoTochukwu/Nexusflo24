@@ -54,12 +54,30 @@ const COLOR_PALETTES: { name: string; bg: string; accent: string; text: string }
 ];
 
 export default function FormSettingsPanel({
-  description, settings, theme, onChangeDescription, onChangeSettings, onChangeTheme,
+  description, settings, theme, workspaceId, onChangeDescription, onChangeSettings, onChangeTheme,
 }: Props) {
   const setS = <K extends keyof FormSettings>(k: K, v: FormSettings[K]) =>
     onChangeSettings({ ...settings, [k]: v });
   const setT = <K extends keyof FormTheme>(k: K, v: FormTheme[K]) =>
     onChangeTheme({ ...theme, [k]: v });
+
+  const { data: folders = [] } = useLeadFolders(workspaceId ?? "");
+  const createFolder = useCreateFolder();
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const NONE_VALUE = "__none__";
+  const NEW_VALUE = "__new__";
+  // Folder name in settings may be a free-form string from older forms; treat
+  // it as "selected" if it matches an existing folder name (case-insensitive).
+  const matchedFolder = folders.find(
+    (f) => f.name.toLowerCase() === (settings.folder_name || "").toLowerCase(),
+  );
+  const folderSelectValue = !settings.folder_name
+    ? NONE_VALUE
+    : matchedFolder
+      ? matchedFolder.name
+      : settings.folder_name; // legacy free-form value
 
   return (
     <div className="space-y-5">
