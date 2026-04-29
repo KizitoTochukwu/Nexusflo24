@@ -1,16 +1,21 @@
+import { useState } from "react";
 import type { FormSettings, FormTheme } from "@/hooks/useForms";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useLeadFolders, useCreateFolder } from "@/hooks/useLeadFolders";
+import { Plus } from "lucide-react";
 
 interface Props {
   description: string;
   settings: FormSettings;
   theme: FormTheme;
+  workspaceId?: string;
   onChangeDescription: (v: string) => void;
   onChangeSettings: (s: FormSettings) => void;
   onChangeTheme: (t: FormTheme) => void;
