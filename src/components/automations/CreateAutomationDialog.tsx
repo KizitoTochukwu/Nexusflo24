@@ -196,6 +196,41 @@ export default function CreateAutomationDialog() {
             </div>
           )}
 
+          {showSocialConfig && (
+            <div className="rounded-md border bg-muted/30 p-3 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Fires when a {triggerType.startsWith("instagram") ? "Instagram" : "Facebook"} {triggerType.endsWith("_dm") ? "DM" : "comment"} matches your keyword.
+                Make sure you've connected your Meta account in <strong>Settings → Instagram & Facebook</strong>.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Keyword</label>
+                  <Input placeholder="e.g. START" value={socialKeyword} onChange={(e) => setSocialKeyword(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Match mode</label>
+                  <Select value={socialMatchMode} onValueChange={(v) => setSocialMatchMode(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="contains">Contains keyword</SelectItem>
+                      <SelectItem value="exact">Exact match</SelectItem>
+                      <SelectItem value="starts_with">Starts with keyword</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {triggerType.endsWith("_comment") && (
+                <div>
+                  <label className="text-sm font-medium text-foreground">Specific post ID (optional)</label>
+                  <Input placeholder="Leave blank to match any post" value={socialPostId} onChange={(e) => setSocialPostId(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Get the post ID from the post URL or via Meta Graph API. Leave blank to fire on comments to any of your posts.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {showFunnelScope && (
             <div>
               <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
