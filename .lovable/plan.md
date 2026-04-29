@@ -1,52 +1,52 @@
-## CRM Mapping audit — what's wired vs. what's broken
+## Problem
 
-I traced every CRM Mapping field from the Form Builder UI → saved form record → public form submission → `capture-lead` edge function → `leads` / `lead_folder_leads` / pipeline, and verified against your live data.
+The form's "X submissions" counter on the Forms list never increments. Two root causes:
 
-### ✅ Working correctly
+1. **`capture-lead` edge function never writes to `form_submissions`.** When a public form posts to `capture-lead` with a `form_id`, the function creates/updates the lead but never inserts a corresponding row in the `form_submissions` table.
+2. **Nothing increments `forms.submission_count`.** A codebase search confirms no edge function, hook, or DB trigger updates that column.
 
-| Field | Status | Verified by |
-|---|---|---|
-| **Lead source** | ✅ Wired | Recent submission `d.faseesin@gmail.com` saved with `source=Webinar` |
-| **Tags** | ✅ Wired & merged with existing tags | Same lead has tag `Webinar – AI Sales System Masterclass` |
-| **Initial pipeline stage** | ✅ Wired (new leads only — existing leads keep their stage, which is the right behavior) | Lead saved with `pipeline_stage=new_lead` |
+Net result: even successful submissions (CRM-mapped lead created, folder routed) leave the counter stuck at 0.
 
-### ❌ One bug — Folder name
+## Fix
 
-The "Folder name" field is sent to the edge function, but if a folder with that name **doesn't already exist in the workspace**, the lead silently falls into **"Uncategorized"** instead.
+### 1. Update `capture-lead` edge function
+After the lead is created/updated, if the payload includes a `form_id`:
+- Insert a row into `form_submissions` (`form_id`, `workspace_id`, `lead_id`, `data` = the original submitted field values).
+- Use service role (already in use) so it bypasses RLS.
 
-**Evidence from your DB:** Your webinar form is configured with folder `Webinar – AI Sales System Masterclass`. The most recent submission (`d.faseesin@gmail.com`, 29 Apr) ended up in folder `Uncategorized` because no folder with that exact name exists in workspace `95bc7e99…`. (Only `Webinar – AI Sales Blueprint` exists.)
+### 2. Add a DB trigger to keep the counter in sync
+Create a trigger on `form_submissions` that increments `forms.submission_count` on INSERT and decrements it on DELETE. This makes the counter authoritative and self-healing regardless of which code path inserts the submission.
 
-**Root cause:** In `supabase/functions/capture-lead/index.ts` (~line 337-363), the `destFolderName` lookup uses `.ilike()` on `lead_folders` and only inserts the lead-to-folder link if a match is found. There's no auto-create.
+```sql
+create or replace function public.bump_form_submission_count()
+returns trigger language plpgsql security definer set search_path=public as $$
+begin
+  if tg_op = 'INSERT' then
+    update public.forms set submission_count = submission_count + 1, updated_at = now()
+    where id = NEW.form_id;
+  elsif tg_op = 'DELETE' then
+    update public.forms set submission_count = greatest(0, submission_count - 1), updated_at = now()
+    where id = OLD.form_id;
+  end if;
+  return null;
+end $$;
 
----
-
-### Fix — auto-create the configured folder if missing
-
-Update `capture-lead/index.ts` so that when `lead_destination.folder_name` is provided but no matching folder exists, the function creates the folder, then links the lead to it (instead of falling through to "Uncategorized").
-
-```text
-if (destFolderName) {
-  let folder = <lookup by ilike name in workspace>
-  if (!folder) {
-    folder = <insert lead_folders { workspace_id, user_id: ownerId,
-                                    name: destFolderName, color: '#0B1F3B' }>
-  }
-  <link lead → folder, fire folder automations>
-  routedToAnyFolder = true
-}
+create trigger trg_form_submissions_count
+after insert or delete on public.form_submissions
+for each row execute function public.bump_form_submission_count();
 ```
 
-This makes the Form Builder's "Folder name" field truly self-serve: typing any name into the field guarantees the lead lands there, regardless of whether the user has pre-created the folder in CRM.
+### 3. Backfill existing counts
+One-time `UPDATE forms SET submission_count = (SELECT count(*) FROM form_submissions WHERE form_id = forms.id)` to reconcile any historical leads.
 
-### Optional UX polish (not blocking)
+### 4. Verify
+Submit the live `ddd` form once via the public URL and confirm:
+- a row appears in `form_submissions`
+- `forms.submission_count` becomes 1
+- the Forms list UI shows "1 submissions"
 
-The form builder field is a freeform text input. To prevent typos that create near-duplicate folders (e.g. `Webinar – AI Sales System Masterclass` vs. `Webinar - AI Sales System Masterclass` with a hyphen), I'd recommend a future enhancement to convert it to a combobox that lists existing folders + allows creating new ones. Not part of this fix unless you want it.
+## Files / changes
 
-### Verification after fix
-
-1. Re-submit the webinar form with a fresh test email.
-2. Confirm the new lead appears in folder `Webinar – AI Sales System Masterclass` (auto-created) and not in `Uncategorized`.
-3. Confirm any folder-trigger automations on that folder fire.
-
-### Files touched
-- `supabase/functions/capture-lead/index.ts` — add auto-create branch in the `destFolderName` block
+- `supabase/functions/capture-lead/index.ts` — insert into `form_submissions` when `form_id` is present
+- New migration — trigger + backfill
+- Redeploy `capture-lead`
