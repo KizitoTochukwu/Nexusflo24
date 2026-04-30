@@ -103,15 +103,23 @@ const AdminBlogManager = () => {
     },
   });
 
-  const shareToLinkedIn = async (post: { title: string; slug: string; excerpt: string; image_url: string | null }) => {
+  const shareToLinkedIn = async (postId: string, opts: { reshare?: boolean } = {}) => {
     try {
-      const publicUrl = `${window.location.origin}/blog/${post.slug}`;
+      if (opts.reshare) {
+        await supabase
+          .from("blog_posts")
+          .update({ linkedin_shared_at: null, linkedin_post_id: null, linkedin_share_error: null })
+          .eq("id", postId);
+      }
       const { data, error } = await supabase.functions.invoke("share-to-linkedin", {
-        body: { title: post.title, excerpt: post.excerpt, url: publicUrl, image_url: post.image_url },
+        body: { post_id: postId },
       });
       if (error) throw error;
       if (data?.success) {
         toast({ title: "Shared to LinkedIn ✓" });
+        queryClient.invalidateQueries({ queryKey: ["admin-blog-posts"] });
+      } else if (data?.skipped) {
+        toast({ title: "Already shared", description: "Use Re-share to post again." });
       } else {
         toast({ title: "LinkedIn share failed", description: data?.error || "Unknown error", variant: "destructive" });
       }
@@ -138,11 +146,6 @@ const AdminBlogManager = () => {
         updated_at: new Date().toISOString(),
       };
 
-      // Check if this is a new publish (not already published)
-      const isNewPublish = post.status === "published" && (
-        !editingId || posts.find((p) => p.id === editingId)?.status !== "published"
-      );
-
       if (editingId) {
         const { error } = await supabase.from("blog_posts").update(payload).eq("id", editingId);
         if (error) throw error;
@@ -150,18 +153,10 @@ const AdminBlogManager = () => {
         const { error } = await supabase.from("blog_posts").insert(payload);
         if (error) throw error;
       }
-
-      return { isNewPublish, title: post.title, slug: post.slug, excerpt: post.excerpt, image_url: post.image_url };
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-blog-posts"] });
-      toast({ title: editingId ? "Post updated" : "Post created" });
-
-      // Auto-share to LinkedIn on first publish
-      if (result?.isNewPublish) {
-        shareToLinkedIn({ title: result.title, slug: result.slug, excerpt: result.excerpt, image_url: result.image_url });
-      }
-
+      toast({ title: editingId ? "Post updated" : "Post created", description: "Newly published posts auto-share to LinkedIn." });
       resetForm();
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
