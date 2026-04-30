@@ -33,6 +33,9 @@ type BlogPost = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  linkedin_shared_at: string | null;
+  linkedin_post_id: string | null;
+  linkedin_share_error: string | null;
 };
 
 const emptyPost = {
