@@ -400,6 +400,7 @@ export default function BlogContentEditor({ value, onChange }: BlogContentEditor
             [&_hr]:my-6 [&_hr]:border-border"
           style={{ lineHeight: 1.7 }}
           onInput={emitChange}
+          onPaste={handlePaste}
           onBlur={emitChange}
           dangerouslySetInnerHTML={{ __html: value }}
           data-placeholder="Start writing your article content here..."
