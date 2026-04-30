@@ -112,7 +112,7 @@ const AdminBlogManager = () => {
           .eq("id", postId);
       }
       const { data, error } = await supabase.functions.invoke("share-to-linkedin", {
-        body: { post_id: postId },
+        body: { post_id: postId, reshare: !!opts.reshare },
       });
       if (error) throw error;
       if (data?.success) {
