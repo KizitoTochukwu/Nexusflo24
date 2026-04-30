@@ -242,6 +242,9 @@ export type Database = {
           featured: boolean
           id: string
           image_url: string | null
+          linkedin_post_id: string | null
+          linkedin_share_error: string | null
+          linkedin_shared_at: string | null
           published_at: string | null
           read_time: string
           slug: string
@@ -258,6 +261,9 @@ export type Database = {
           featured?: boolean
           id?: string
           image_url?: string | null
+          linkedin_post_id?: string | null
+          linkedin_share_error?: string | null
+          linkedin_shared_at?: string | null
           published_at?: string | null
           read_time?: string
           slug: string
@@ -274,6 +280,9 @@ export type Database = {
           featured?: boolean
           id?: string
           image_url?: string | null
+          linkedin_post_id?: string | null
+          linkedin_share_error?: string | null
+          linkedin_shared_at?: string | null
           published_at?: string | null
           read_time?: string
           slug?: string

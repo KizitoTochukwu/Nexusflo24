@@ -1,40 +1,79 @@
-## Fix truncated folder name in Folders sidebar
+# Auto-share new blog posts to LinkedIn
 
-**Problem**: Long folder names like "Webinar – AI Sales System Masterclass" are cut off in the Leads → Folders panel because the label uses `truncate` (single-line ellipsis) inside a narrow sidebar column.
+## Current state (already built)
 
-**File**: `src/components/leads/FolderPanel.tsx` (line 107 area, inside the `folders.map(...)` button)
+`AdminBlogManager.tsx` already calls the `share-to-linkedin` edge function automatically the first time a post transitions to `status = 'published'`. The edge function uses `LINKEDIN_ACCESS_TOKEN` + `LINKEDIN_PERSON_URN` secrets (already configured) and posts via LinkedIn's `/rest/posts` API with the article URL, title, excerpt, and cover image.
 
-### Changes
+So the basic workflow exists. What's missing is **reliability, visibility, and control**.
 
-1. Replace the single-line `truncate` span with a wrapping label that breaks long words across up to 2 lines, so the full folder name is always readable without expanding the sidebar:
-   - Swap `truncate` for `break-words leading-snug` and add `line-clamp-2` so very long names cap at 2 lines instead of pushing layout.
-   - Add a native `title={f.name}` tooltip so the complete name shows on hover even if clamped.
-2. Make the row align to the top (`items-start` on the inner button) so the icon/count stay aligned when the name wraps.
-3. Keep the trailing meta cluster (lock icon, route icon, lead count) on its own non-shrinking flex group with `shrink-0` so it never gets pushed off or squeezed.
+## What this plan adds
 
-### Technical detail
+### 1. Reliability — DB trigger as fallback
+The current share only fires from the admin UI. If a post is published via SQL, API, or scheduled publish later, it won't share. Add a Postgres trigger on `blog_posts` that calls `share-to-linkedin` via `pg_net` when `status` changes to `published` and `linkedin_shared_at` is null.
 
-```tsx
-<button
-  onClick={() => onSelectFolder(f.id)}
-  className={`flex flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${...}`}
->
-  <FolderOpen className="h-4 w-4 mt-0.5 shrink-0" style={{ color: f.color || undefined }} />
-  <span
-    className="flex-1 text-left break-words leading-snug line-clamp-2"
-    title={f.name}
-  >
-    {f.name}
-  </span>
-  <div className="flex items-center gap-1 shrink-0 mt-0.5">
-    {/* lock / route / count unchanged */}
-  </div>
-</button>
+### 2. Visibility — share log
+Add columns to `blog_posts`:
+- `linkedin_shared_at timestamptz`
+- `linkedin_post_id text`
+- `linkedin_share_error text`
+
+Edge function writes back success/failure to these columns (using service role) so admins can see status.
+
+### 3. Control — UI affordances in Blog Manager
+- Show a "Shared to LinkedIn ✓" badge (with timestamp) on rows where `linkedin_shared_at` is set.
+- Add a "Share to LinkedIn" / "Re-share" action in the row menu for manual trigger or retry on failure.
+- Show error tooltip if `linkedin_share_error` exists.
+
+### 4. Safety
+- Trigger uses `linkedin_shared_at IS NULL` guard so it never double-posts.
+- Manual re-share clears `linkedin_shared_at` first, then calls the function.
+- Edge function continues to require an authenticated admin for manual calls; the DB trigger uses the service role via `pg_net`.
+
+## Technical details
+
+**Migration**
+```sql
+ALTER TABLE public.blog_posts
+  ADD COLUMN linkedin_shared_at timestamptz,
+  ADD COLUMN linkedin_post_id text,
+  ADD COLUMN linkedin_share_error text;
+
+CREATE OR REPLACE FUNCTION public.dispatch_blog_linkedin_share()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NEW.status = 'published'
+     AND (OLD.status IS DISTINCT FROM 'published')
+     AND NEW.linkedin_shared_at IS NULL THEN
+    PERFORM net.http_post(
+      url := 'https://stuaikfyuwcjmchcvfie.supabase.co/functions/v1/share-to-linkedin',
+      headers := jsonb_build_object(
+        'Content-Type','application/json',
+        'Authorization','Bearer <SERVICE_ROLE>'
+      ),
+      body := jsonb_build_object('post_id', NEW.id)
+    );
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_blog_linkedin_share
+AFTER INSERT OR UPDATE OF status ON public.blog_posts
+FOR EACH ROW EXECUTE FUNCTION public.dispatch_blog_linkedin_share();
 ```
 
-No other files need changes. No data, RLS, or edge-function changes required.
+**Edge function changes (`share-to-linkedin`)**
+- Accept either `{ title, excerpt, url, image_url }` (current admin UI) **or** `{ post_id }` (DB trigger). When `post_id` is provided, load the row with the service role and build the payload server-side.
+- Switch auth: allow either an authenticated admin user OR a service-role caller (for the DB trigger).
+- After a successful LinkedIn POST, update `blog_posts` with `linkedin_shared_at`, `linkedin_post_id`, and clear `linkedin_share_error`.
+- On failure, write `linkedin_share_error` and return the existing error response.
 
-### Result
-- "Webinar – AI Sales System Masterclass" displays on two lines fully visible inside the sidebar.
-- Lead count and rule/lock icons remain right-aligned and never clipped.
-- Hovering still reveals the full name as a tooltip for any edge cases.
+**UI changes (`AdminBlogManager.tsx`)**
+- Select the new columns in the posts query.
+- Add a small "LinkedIn ✓ {date}" badge next to the status badge when shared.
+- Add a "Share to LinkedIn" menu/button per row that calls the function with `{ post_id }` (and clears prior `linkedin_shared_at` for re-share).
+- Surface `linkedin_share_error` via tooltip on a warning icon if present.
+
+## Out of scope (ask if you want any of these)
+- Posting to a LinkedIn **Company Page** instead of personal profile (requires `LINKEDIN_PERSON_URN` to be the org URN like `urn:li:organization:123` and the access token to have `w_organization_social` scope).
+- Scheduling shares for a specific time of day.
+- Cross-posting to Facebook / Instagram / X.
