@@ -376,19 +376,21 @@ const AdminBlogManager = () => {
                       </TableCell>
                       <TableCell className="text-right space-x-1">
                         {post.status === "published" && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-[#0A66C2]"
-                                onClick={() => shareToLinkedIn(post.id, { reshare: !!post.linkedin_shared_at })}
-                              >
-                                <Linkedin className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>{post.linkedin_shared_at ? "Re-share to LinkedIn" : "Share to LinkedIn"}</TooltipContent>
-                          </Tooltip>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-[#0A66C2]"
+                                  onClick={() => shareToLinkedIn(post.id, { reshare: !!post.linkedin_shared_at })}
+                                >
+                                  <Linkedin className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{post.linkedin_shared_at ? "Re-share to LinkedIn" : "Share to LinkedIn"}</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                         <Button variant="ghost" size="icon" onClick={() => openEdit(post)}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(post.id)}><Trash2 className="h-4 w-4" /></Button>
