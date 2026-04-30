@@ -103,9 +103,12 @@ serve(async (req) => {
       });
     }
 
+    const isReshare = !isInternal && body.reshare === true;
+    const uniqueSuffix = isReshare ? `\n\n#${new Date().toISOString().slice(0, 10).replace(/-/g, "")}` : "";
+
     const postBody: Record<string, unknown> = {
       author: authorUrn,
-      commentary: `${title}\n\n${excerpt || ""}\n\nRead more: ${url}`.trim(),
+      commentary: `${title}\n\n${excerpt || ""}\n\nRead more: ${url}${uniqueSuffix}`.trim(),
       visibility: "PUBLIC",
       distribution: {
         feedDistribution: "MAIN_FEED",
@@ -139,6 +142,27 @@ serve(async (req) => {
     if (!linkedinRes.ok) {
       const errBody = await linkedinRes.text();
       console.error("LinkedIn API error:", linkedinRes.status, errBody);
+
+      const isDuplicate = linkedinRes.status === 422 && /DUPLICATE_POST|duplicate/i.test(errBody);
+      if (isDuplicate) {
+        const dupMatch = errBody.match(/urn:li:share:\d+/);
+        const dupId = dupMatch ? dupMatch[0] : "duplicate";
+        if (postId) {
+          await adminClient
+            .from("blog_posts")
+            .update({
+              linkedin_shared_at: new Date().toISOString(),
+              linkedin_post_id: dupId,
+              linkedin_share_error: null,
+            })
+            .eq("id", postId);
+        }
+        return new Response(
+          JSON.stringify({ success: true, linkedin_post_id: dupId, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const errMsg = `LinkedIn API error [${linkedinRes.status}]: ${errBody.slice(0, 500)}`;
       if (postId) {
         await adminClient.from("blog_posts").update({ linkedin_share_error: errMsg }).eq("id", postId);
