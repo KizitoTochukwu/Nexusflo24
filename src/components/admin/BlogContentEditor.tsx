@@ -135,46 +135,6 @@ export default function BlogContentEditor({ value, onChange }: BlogContentEditor
     }
   }, [value]);
 
-  // Paste handler: convert plain text to semantic HTML (paragraphs + bullet lists)
-  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
-    const text = e.clipboardData.getData("text/plain");
-    const html = e.clipboardData.getData("text/html");
-    // If rich HTML is pasted, strip inline color/bg/font styles to keep theme consistent
-    if (html && html.trim().length > 0) {
-      e.preventDefault();
-      const cleaned = html
-        .replace(/\sstyle="[^"]*"/gi, (m) => {
-          // keep alignment & lists but drop colors/fonts
-          const safe = m.replace(/(color|background|background-color|font-family|font-size)\s*:\s*[^;"]+;?/gi, "");
-          return safe.length > 8 ? safe : "";
-        })
-        .replace(/<\/?(font|span)([^>]*)>/gi, (m, tag, attrs) => {
-          if (!attrs || attrs.trim() === "") return `<${m.startsWith("</") ? "/" : ""}${tag}>`;
-          return m;
-        });
-      document.execCommand("insertHTML", false, cleaned);
-      emitChange();
-      return;
-    }
-    if (!text) return;
-    e.preventDefault();
-    const blocks = text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
-    const out = blocks.map((block) => {
-      const lines = block.split(/\n/).map((l) => l.trim());
-      const isBulletBlock = lines.every((l) => /^[-•*]\s+/.test(l));
-      if (isBulletBlock) {
-        return `<ul>${lines.map((l) => `<li>${l.replace(/^[-•*]\s+/, "")}</li>`).join("")}</ul>`;
-      }
-      const isNumberedBlock = lines.every((l) => /^\d+[\.\)]\s+/.test(l));
-      if (isNumberedBlock) {
-        return `<ol>${lines.map((l) => `<li>${l.replace(/^\d+[\.\)]\s+/, "")}</li>`).join("")}</ol>`;
-      }
-      return `<p>${lines.join("<br/>")}</p>`;
-    }).join("");
-    document.execCommand("insertHTML", false, out);
-    emitChange();
-  }, [emitChange]);
-
   const emitChange = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -185,6 +145,36 @@ export default function BlogContentEditor({ value, onChange }: BlogContentEditor
   const exec = useCallback((cmd: string, val?: string) => {
     editorRef.current?.focus();
     document.execCommand(cmd, false, val);
+    emitChange();
+  }, [emitChange]);
+
+  // Paste handler: convert plain text to semantic HTML and strip color/font from rich HTML
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const text = e.clipboardData.getData("text/plain");
+    const html = e.clipboardData.getData("text/html");
+    if (html && html.trim().length > 0) {
+      e.preventDefault();
+      const cleaned = html
+        .replace(/\sstyle="[^"]*"/gi, (m) => {
+          const safe = m.replace(/(color|background|background-color|font-family|font-size)\s*:\s*[^;"]+;?/gi, "");
+          return safe.length > 8 ? safe : "";
+        });
+      document.execCommand("insertHTML", false, cleaned);
+      emitChange();
+      return;
+    }
+    if (!text) return;
+    e.preventDefault();
+    const blocks = text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+    const out = blocks.map((block) => {
+      const lines = block.split(/\n/).map((l) => l.trim());
+      const isBullet = lines.every((l) => /^[-•*]\s+/.test(l));
+      if (isBullet) return `<ul>${lines.map((l) => `<li>${l.replace(/^[-•*]\s+/, "")}</li>`).join("")}</ul>`;
+      const isNumbered = lines.every((l) => /^\d+[\.\)]\s+/.test(l));
+      if (isNumbered) return `<ol>${lines.map((l) => `<li>${l.replace(/^\d+[\.\)]\s+/, "")}</li>`).join("")}</ol>`;
+      return `<p>${lines.join("<br/>")}</p>`;
+    }).join("");
+    document.execCommand("insertHTML", false, out);
     emitChange();
   }, [emitChange]);
 
