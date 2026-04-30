@@ -80,8 +80,19 @@ const BlogArticle = () => {
 
         {/* Content */}
         <div
-          className="prose prose-slate max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-accent hover:prose-a:text-accent/80"
-          dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br />') }}
+          className="article-body prose prose-slate prose-lg max-w-none
+            prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-24
+            prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
+            prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
+            prose-p:text-foreground/85 prose-p:leading-relaxed prose-p:my-4
+            prose-strong:text-foreground prose-strong:font-semibold
+            prose-ul:my-4 prose-ol:my-4 prose-li:my-1
+            prose-a:text-accent hover:prose-a:text-accent/80
+            prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:bg-accent/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-md prose-blockquote:not-italic
+            prose-img:rounded-lg prose-img:shadow-md
+            [&_div]:my-2 [&_br+br]:hidden
+            [&_*]:!text-inherit [&_a]:!text-accent [&_strong]:!text-foreground [&_h1]:!text-foreground [&_h2]:!text-foreground [&_h3]:!text-foreground [&_h4]:!text-foreground"
+          dangerouslySetInnerHTML={{ __html: article.content }}
         />
 
         {/* Share */}

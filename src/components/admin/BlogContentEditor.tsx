@@ -117,6 +117,11 @@ export default function BlogContentEditor({ value, onChange }: BlogContentEditor
   const [uploading, setUploading] = useState(false);
   const isInternalUpdate = useRef(false);
 
+  // Force <p> as the default paragraph separator (instead of <div>)
+  useEffect(() => {
+    try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch {}
+  }, []);
+
   // Sync value prop → editor only when value changes externally
   useEffect(() => {
     const el = editorRef.current;
@@ -140,6 +145,36 @@ export default function BlogContentEditor({ value, onChange }: BlogContentEditor
   const exec = useCallback((cmd: string, val?: string) => {
     editorRef.current?.focus();
     document.execCommand(cmd, false, val);
+    emitChange();
+  }, [emitChange]);
+
+  // Paste handler: convert plain text to semantic HTML and strip color/font from rich HTML
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const text = e.clipboardData.getData("text/plain");
+    const html = e.clipboardData.getData("text/html");
+    if (html && html.trim().length > 0) {
+      e.preventDefault();
+      const cleaned = html
+        .replace(/\sstyle="[^"]*"/gi, (m) => {
+          const safe = m.replace(/(color|background|background-color|font-family|font-size)\s*:\s*[^;"]+;?/gi, "");
+          return safe.length > 8 ? safe : "";
+        });
+      document.execCommand("insertHTML", false, cleaned);
+      emitChange();
+      return;
+    }
+    if (!text) return;
+    e.preventDefault();
+    const blocks = text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+    const out = blocks.map((block) => {
+      const lines = block.split(/\n/).map((l) => l.trim());
+      const isBullet = lines.every((l) => /^[-•*]\s+/.test(l));
+      if (isBullet) return `<ul>${lines.map((l) => `<li>${l.replace(/^[-•*]\s+/, "")}</li>`).join("")}</ul>`;
+      const isNumbered = lines.every((l) => /^\d+[\.\)]\s+/.test(l));
+      if (isNumbered) return `<ol>${lines.map((l) => `<li>${l.replace(/^\d+[\.\)]\s+/, "")}</li>`).join("")}</ol>`;
+      return `<p>${lines.join("<br/>")}</p>`;
+    }).join("");
+    document.execCommand("insertHTML", false, out);
     emitChange();
   }, [emitChange]);
 
@@ -365,6 +400,7 @@ export default function BlogContentEditor({ value, onChange }: BlogContentEditor
             [&_hr]:my-6 [&_hr]:border-border"
           style={{ lineHeight: 1.7 }}
           onInput={emitChange}
+          onPaste={handlePaste}
           onBlur={emitChange}
           dangerouslySetInnerHTML={{ __html: value }}
           data-placeholder="Start writing your article content here..."
