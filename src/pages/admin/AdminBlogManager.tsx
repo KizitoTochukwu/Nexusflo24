@@ -326,6 +326,7 @@ const AdminBlogManager = () => {
                     <TableHead>Title</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>LinkedIn</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -343,10 +344,52 @@ const AdminBlogManager = () => {
                           {post.status}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          {post.linkedin_shared_at ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge className="bg-[#0A66C2]/10 text-[#0A66C2] border-[#0A66C2]/30 gap-1">
+                                  <Linkedin className="h-3 w-3" /> Shared
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>Shared {format(new Date(post.linkedin_shared_at), "MMM d, yyyy h:mm a")}</TooltipContent>
+                            </Tooltip>
+                          ) : post.linkedin_share_error ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="destructive" className="gap-1">
+                                  <AlertCircle className="h-3 w-3" /> Failed
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">{post.linkedin_share_error}</TooltipContent>
+                            </Tooltip>
+                          ) : post.status === "published" ? (
+                            <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TooltipProvider>
+                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(post.created_at), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="text-right space-x-1">
+                        {post.status === "published" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-[#0A66C2]"
+                                onClick={() => shareToLinkedIn(post.id, { reshare: !!post.linkedin_shared_at })}
+                              >
+                                <Linkedin className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{post.linkedin_shared_at ? "Re-share to LinkedIn" : "Share to LinkedIn"}</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => openEdit(post)}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMutation.mutate(post.id)}><Trash2 className="h-4 w-4" /></Button>
                       </TableCell>
