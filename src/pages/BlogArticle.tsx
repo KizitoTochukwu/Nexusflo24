@@ -199,10 +199,10 @@ const BlogArticle = () => {
 
         {/* Share row */}
         <div className="mt-16 pt-8 border-t border-border">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mx-0 my-0 px-0 py-0 bg-primary">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-md bg-primary px-4 py-3">
             <div className="flex items-center gap-2">
               <Share2 className="h-4 w-4 text-accent" />
-              <span className="text-sm font-semibold text-foreground">
+              <span className="text-sm font-semibold text-primary-foreground">
                 Share this article
               </span>
             </div>
@@ -211,26 +211,27 @@ const BlogArticle = () => {
                 <Button
                   key={label}
                   variant="outline"
-                  size="sm"
+                  size="icon"
                   onClick={onClick}
-                  className="gap-1.5 hover:border-accent hover:text-accent transition-colors"
+                  aria-label={`Share on ${label}`}
+                  title={`Share on ${label}`}
+                  className="h-9 w-9 rounded-full border-primary-foreground/20 bg-transparent text-primary-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-colors"
                 >
                   <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{label}</span>
                 </Button>
               ))}
               <Button
                 variant="outline"
-                size="sm"
+                size="icon"
                 onClick={() => {
                   navigator.clipboard.writeText(shareUrl);
                   toast({ title: "Link copied", description: "Article URL copied to clipboard." });
                 }}
-                className="gap-1.5 hover:border-accent hover:text-accent transition-colors"
                 aria-label="Copy link"
+                title="Copy link"
+                className="h-9 w-9 rounded-full border-primary-foreground/20 bg-transparent text-primary-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-colors"
               >
                 <Link2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Copy link</span>
               </Button>
             </div>
           </div>
