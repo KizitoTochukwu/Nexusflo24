@@ -2,15 +2,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
-  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen
 } from "lucide-react";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
 import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
+import ExitCriteriaEditor from "./ExitCriteriaEditor";
+import type { ExitCriterion } from "@/lib/automations/exitCriteria";
 
 export type StepData = {
   step_type: "trigger" | "condition" | "action" | "delay";
