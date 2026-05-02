@@ -135,7 +135,7 @@ const BlogArticle = () => {
             <img
               src={article.image_url}
               alt={article.title}
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-contain"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-hero via-hero/70 to-hero/30" />
           </>
