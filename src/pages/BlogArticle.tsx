@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { wsTrack } from "@/lib/analytics/workspacePixels";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,49 +81,69 @@ const BlogArticle = () => {
       })
     : "";
 
+  const trackShare = (network: string) => {
+    wsTrack("blog_share_click", {
+      network,
+      post_slug: article.slug,
+      post_title: article.title,
+      url: shareUrl,
+    });
+  };
+
   const shareButtons = [
     {
       label: "Facebook",
       Icon: Facebook,
-      onClick: () =>
+      onClick: () => {
+        trackShare("facebook");
         window.open(
           `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "Twitter",
       Icon: Twitter,
-      onClick: () =>
+      onClick: () => {
+        trackShare("twitter");
         window.open(
           `https://twitter.com/intent/tweet?url=${encodeURIComponent(
             shareUrl
           )}&text=${encodeURIComponent(article.title)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "LinkedIn",
       Icon: Linkedin,
-      onClick: () =>
+      onClick: () => {
+        trackShare("linkedin");
         window.open(
           `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "WhatsApp",
       Icon: MessageCircle,
-      onClick: () =>
+      onClick: () => {
+        trackShare("whatsapp");
         window.open(
           `https://wa.me/?text=${encodeURIComponent(`${article.title} ${shareUrl}`)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "Instagram",
       Icon: Instagram,
-      onClick: () => window.open(`https://www.instagram.com/`, "_blank"),
+      onClick: () => {
+        trackShare("instagram");
+        window.open(`https://www.instagram.com/`, "_blank");
+      },
     },
   ];
 
@@ -225,6 +246,7 @@ const BlogArticle = () => {
                 size="icon"
                 onClick={() => {
                   navigator.clipboard.writeText(shareUrl);
+                  trackShare("copy_link");
                   toast({ title: "Link copied", description: "Article URL copied to clipboard." });
                 }}
                 aria-label="Copy link"
