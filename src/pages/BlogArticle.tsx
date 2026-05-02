@@ -128,55 +128,17 @@ const BlogArticle = () => {
 
   return (
     <Layout>
-      {/* Hero with overlaid title */}
-      <header className="relative isolate overflow-hidden bg-hero pt-20">
+      {/* Hero image */}
+      <header className="relative bg-hero pt-20">
         {article.image_url ? (
-          <>
-            <img
-              src={article.image_url}
-              alt={article.title}
-              className="absolute inset-0 h-full w-full object-contain"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-hero via-hero/70 to-hero/30" />
-          </>
+          <img
+            src={article.image_url}
+            alt={article.title}
+            className="block w-full h-auto max-h-[520px] object-contain mx-auto"
+          />
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--accent)/0.18),transparent_60%)]" />
+          <div className="h-24" />
         )}
-
-        <div className="relative container max-w-4xl px-4 py-16 md:py-24">
-          <Link
-            to="/blog"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-foreground/80 hover:text-accent transition-colors mb-6"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to Blog
-          </Link>
-
-          <Badge className="bg-accent text-accent-foreground hover:bg-accent border-0 mb-5 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
-            {article.category}
-          </Badge>
-
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-[1.15] tracking-tight max-w-3xl">
-            {article.title}
-          </h1>
-
-          {article.excerpt && (
-            <p className="mt-5 text-base md:text-lg text-primary-foreground/80 max-w-2xl leading-relaxed">
-              {article.excerpt}
-            </p>
-          )}
-
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
-            <span className="flex items-center gap-1.5">
-              <User className="h-4 w-4 text-accent" /> {article.author}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-accent" /> {dateStr}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-accent" /> {article.read_time}
-            </span>
-          </div>
-        </div>
       </header>
 
       {/* Article body */}
