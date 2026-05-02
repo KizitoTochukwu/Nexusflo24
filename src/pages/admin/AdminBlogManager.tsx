@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, FileText, Upload, Loader2, Linkedin, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, FileText, Upload, Loader2, Linkedin, AlertCircle, Facebook, Instagram } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import BlogContentEditor from "@/components/admin/BlogContentEditor";
 import { format } from "date-fns";
@@ -36,6 +36,12 @@ type BlogPost = {
   linkedin_shared_at: string | null;
   linkedin_post_id: string | null;
   linkedin_share_error: string | null;
+  facebook_shared_at: string | null;
+  facebook_post_id: string | null;
+  facebook_share_error: string | null;
+  instagram_shared_at: string | null;
+  instagram_post_id: string | null;
+  instagram_share_error: string | null;
 };
 
 const emptyPost = {
@@ -129,6 +135,30 @@ const AdminBlogManager = () => {
     }
   };
 
+  const shareToMeta = async (postId: string, opts: { reshare?: boolean; channels?: string[] } = {}) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("share-to-meta", {
+        body: { post_id: postId, reshare: !!opts.reshare, channels: opts.channels },
+      });
+      if (error) throw error;
+      const fb = data?.facebook;
+      const ig = data?.instagram;
+      const parts: string[] = [];
+      if (fb) parts.push(`Facebook: ${fb.success ? "✓" : "✗"}`);
+      if (ig) parts.push(`Instagram: ${ig.success ? "✓" : "✗"}`);
+      const anyFail = (fb && !fb.success) || (ig && !ig.success);
+      toast({
+        title: anyFail ? "Meta share completed with errors" : "Shared to Meta ✓",
+        description: parts.join(" · ") || "Done",
+        variant: anyFail ? "destructive" : "default",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-blog-posts"] });
+    } catch (err: any) {
+      console.error("Meta share error:", err);
+      toast({ title: "Meta share failed", description: err.message, variant: "destructive" });
+    }
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (post: typeof form & { id?: string }) => {
       const payload = {
@@ -156,7 +186,7 @@ const AdminBlogManager = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-blog-posts"] });
-      toast({ title: editingId ? "Post updated" : "Post created", description: "Newly published posts auto-share to LinkedIn." });
+      toast({ title: editingId ? "Post updated" : "Post created", description: "Newly published posts auto-share to LinkedIn, Facebook & Instagram." });
       resetForm();
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -326,7 +356,7 @@ const AdminBlogManager = () => {
                     <TableHead>Title</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>LinkedIn</TableHead>
+                    <TableHead>Social</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -346,29 +376,37 @@ const AdminBlogManager = () => {
                       </TableCell>
                       <TableCell>
                         <TooltipProvider>
-                          {post.linkedin_shared_at ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge className="bg-[#0A66C2]/10 text-[#0A66C2] border-[#0A66C2]/30 gap-1">
-                                  <Linkedin className="h-3 w-3" /> Shared
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>Shared {format(new Date(post.linkedin_shared_at), "MMM d, yyyy h:mm a")}</TooltipContent>
-                            </Tooltip>
-                          ) : post.linkedin_share_error ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="destructive" className="gap-1">
-                                  <AlertCircle className="h-3 w-3" /> Failed
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">{post.linkedin_share_error}</TooltipContent>
-                            </Tooltip>
-                          ) : post.status === "published" ? (
-                            <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {([
+                              { key: "linkedin", icon: Linkedin, label: "LinkedIn", color: "#0A66C2", at: post.linkedin_shared_at, err: post.linkedin_share_error },
+                              { key: "facebook", icon: Facebook, label: "Facebook", color: "#1877F2", at: post.facebook_shared_at, err: post.facebook_share_error },
+                              { key: "instagram", icon: Instagram, label: "Instagram", color: "#E4405F", at: post.instagram_shared_at, err: post.instagram_share_error },
+                            ] as const).map(({ key, icon: Icon, label, color, at, err }) => {
+                              const status = at ? "shared" : err ? "failed" : post.status === "published" ? "pending" : "idle";
+                              const tip =
+                                status === "shared" ? `${label}: shared ${format(new Date(at!), "MMM d, h:mm a")}` :
+                                status === "failed" ? `${label}: ${err}` :
+                                status === "pending" ? `${label}: pending` : `${label}: not published`;
+                              return (
+                                <Tooltip key={key}>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border"
+                                      style={{
+                                        color: status === "shared" ? color : status === "failed" ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))",
+                                        borderColor: status === "shared" ? `${color}55` : "hsl(var(--border))",
+                                        background: status === "shared" ? `${color}11` : "transparent",
+                                        opacity: status === "idle" ? 0.4 : 1,
+                                      }}
+                                    >
+                                      <Icon className="h-3 w-3" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">{tip}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
                         </TooltipProvider>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -389,6 +427,32 @@ const AdminBlogManager = () => {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>{post.linkedin_shared_at ? "Re-share to LinkedIn" : "Share to LinkedIn"}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-[#1877F2]"
+                                  onClick={() => shareToMeta(post.id, { reshare: !!post.facebook_shared_at, channels: ["facebook"] })}
+                                >
+                                  <Facebook className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{post.facebook_shared_at ? "Re-share to Facebook" : "Share to Facebook"}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-[#E4405F]"
+                                  onClick={() => shareToMeta(post.id, { reshare: !!post.instagram_shared_at, channels: ["instagram"] })}
+                                >
+                                  <Instagram className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{post.instagram_shared_at ? "Re-share to Instagram" : "Share to Instagram"}</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         )}

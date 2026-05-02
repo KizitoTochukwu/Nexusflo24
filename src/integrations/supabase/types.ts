@@ -239,9 +239,15 @@ export type Database = {
           content: string
           created_at: string
           excerpt: string
+          facebook_post_id: string | null
+          facebook_share_error: string | null
+          facebook_shared_at: string | null
           featured: boolean
           id: string
           image_url: string | null
+          instagram_post_id: string | null
+          instagram_share_error: string | null
+          instagram_shared_at: string | null
           linkedin_post_id: string | null
           linkedin_share_error: string | null
           linkedin_shared_at: string | null
@@ -258,9 +264,15 @@ export type Database = {
           content?: string
           created_at?: string
           excerpt?: string
+          facebook_post_id?: string | null
+          facebook_share_error?: string | null
+          facebook_shared_at?: string | null
           featured?: boolean
           id?: string
           image_url?: string | null
+          instagram_post_id?: string | null
+          instagram_share_error?: string | null
+          instagram_shared_at?: string | null
           linkedin_post_id?: string | null
           linkedin_share_error?: string | null
           linkedin_shared_at?: string | null
@@ -277,9 +289,15 @@ export type Database = {
           content?: string
           created_at?: string
           excerpt?: string
+          facebook_post_id?: string | null
+          facebook_share_error?: string | null
+          facebook_shared_at?: string | null
           featured?: boolean
           id?: string
           image_url?: string | null
+          instagram_post_id?: string | null
+          instagram_share_error?: string | null
+          instagram_shared_at?: string | null
           linkedin_post_id?: string | null
           linkedin_share_error?: string | null
           linkedin_shared_at?: string | null
