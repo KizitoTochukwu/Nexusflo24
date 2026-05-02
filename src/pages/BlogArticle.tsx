@@ -143,6 +143,39 @@ const BlogArticle = () => {
 
       {/* Article body */}
       <article className="container max-w-3xl px-4 py-12 md:py-20 bg-secondary rounded-md">
+        <Link
+          to="/blog"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-accent transition-colors mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Blog
+        </Link>
+
+        <Badge className="bg-accent text-accent-foreground hover:bg-accent border-0 mb-4 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
+          {article.category}
+        </Badge>
+
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground leading-[1.15] tracking-tight mb-5">
+          {article.title}
+        </h1>
+
+        {article.excerpt && (
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-6">
+            {article.excerpt}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-10 pb-6 border-b border-border">
+          <span className="flex items-center gap-1.5">
+            <User className="h-4 w-4 text-accent" /> {article.author}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Calendar className="h-4 w-4 text-accent" /> {dateStr}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Clock className="h-4 w-4 text-accent" /> {article.read_time}
+          </span>
+        </div>
+
         <div
           className="article-body prose prose-slate prose-lg max-w-none
             prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-24 prose-headings:tracking-tight
