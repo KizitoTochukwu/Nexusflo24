@@ -134,7 +134,7 @@ const BlogArticle = () => {
           <img
             src={article.image_url}
             alt={article.title}
-            className="block w-full h-auto max-h-[520px] object-contain mx-auto"
+            className="block w-full h-auto max-h-[520px] mx-auto object-fill"
           />
         ) : (
           <div className="h-24" />
