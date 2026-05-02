@@ -68,7 +68,7 @@ const Blog = () => {
         </div>
       </section>
 
-      <section className="py-12 md:py-20">
+      <section className="py-12 md:py-20 bg-primary">
         <div className="container max-w-6xl">
           {isLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
