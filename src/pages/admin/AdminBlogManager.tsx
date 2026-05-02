@@ -376,29 +376,37 @@ const AdminBlogManager = () => {
                       </TableCell>
                       <TableCell>
                         <TooltipProvider>
-                          {post.linkedin_shared_at ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge className="bg-[#0A66C2]/10 text-[#0A66C2] border-[#0A66C2]/30 gap-1">
-                                  <Linkedin className="h-3 w-3" /> Shared
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>Shared {format(new Date(post.linkedin_shared_at), "MMM d, yyyy h:mm a")}</TooltipContent>
-                            </Tooltip>
-                          ) : post.linkedin_share_error ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="destructive" className="gap-1">
-                                  <AlertCircle className="h-3 w-3" /> Failed
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">{post.linkedin_share_error}</TooltipContent>
-                            </Tooltip>
-                          ) : post.status === "published" ? (
-                            <Badge variant="outline" className="text-muted-foreground">Pending</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {([
+                              { key: "linkedin", icon: Linkedin, label: "LinkedIn", color: "#0A66C2", at: post.linkedin_shared_at, err: post.linkedin_share_error },
+                              { key: "facebook", icon: Facebook, label: "Facebook", color: "#1877F2", at: post.facebook_shared_at, err: post.facebook_share_error },
+                              { key: "instagram", icon: Instagram, label: "Instagram", color: "#E4405F", at: post.instagram_shared_at, err: post.instagram_share_error },
+                            ] as const).map(({ key, icon: Icon, label, color, at, err }) => {
+                              const status = at ? "shared" : err ? "failed" : post.status === "published" ? "pending" : "idle";
+                              const tip =
+                                status === "shared" ? `${label}: shared ${format(new Date(at!), "MMM d, h:mm a")}` :
+                                status === "failed" ? `${label}: ${err}` :
+                                status === "pending" ? `${label}: pending` : `${label}: not published`;
+                              return (
+                                <Tooltip key={key}>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border"
+                                      style={{
+                                        color: status === "shared" ? color : status === "failed" ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))",
+                                        borderColor: status === "shared" ? `${color}55` : "hsl(var(--border))",
+                                        background: status === "shared" ? `${color}11` : "transparent",
+                                        opacity: status === "idle" ? 0.4 : 1,
+                                      }}
+                                    >
+                                      <Icon className="h-3 w-3" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">{tip}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
+                          </div>
                         </TooltipProvider>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -419,6 +427,32 @@ const AdminBlogManager = () => {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>{post.linkedin_shared_at ? "Re-share to LinkedIn" : "Share to LinkedIn"}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-[#1877F2]"
+                                  onClick={() => shareToMeta(post.id, { reshare: !!post.facebook_shared_at, channels: ["facebook"] })}
+                                >
+                                  <Facebook className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{post.facebook_shared_at ? "Re-share to Facebook" : "Share to Facebook"}</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-[#E4405F]"
+                                  onClick={() => shareToMeta(post.id, { reshare: !!post.instagram_shared_at, channels: ["instagram"] })}
+                                >
+                                  <Instagram className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{post.instagram_shared_at ? "Re-share to Instagram" : "Share to Instagram"}</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         )}
