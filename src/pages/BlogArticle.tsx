@@ -5,10 +5,25 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, ArrowLeft, Share2, User } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Calendar,
+  Clock,
+  ArrowLeft,
+  Share2,
+  User,
+  Facebook,
+  Instagram,
+  Twitter,
+  Linkedin,
+  MessageCircle,
+  Link2,
+  ArrowRight,
+} from "lucide-react";
 
 const BlogArticle = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { toast } = useToast();
 
   const { data: article, isLoading } = useQuery({
     queryKey: ["blog-post", slug],
@@ -28,7 +43,7 @@ const BlogArticle = () => {
   if (isLoading) {
     return (
       <Layout>
-        <Skeleton className="w-full h-64 md:h-96" />
+        <Skeleton className="w-full h-72 md:h-[420px]" />
         <div className="container max-w-3xl py-10 space-y-4">
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
@@ -41,78 +56,224 @@ const BlogArticle = () => {
   if (!article) {
     return (
       <Layout>
-        <div className="container py-20 text-center">
+        <div className="container py-32 text-center">
           <h1 className="text-2xl font-bold mb-4">Article Not Found</h1>
-          <p className="text-muted-foreground mb-6">The article you're looking for doesn't exist yet.</p>
-          <Button asChild><Link to="/blog"><ArrowLeft className="h-4 w-4 mr-1" /> Back to Blog</Link></Button>
+          <p className="text-muted-foreground mb-6">
+            The article you're looking for doesn't exist yet.
+          </p>
+          <Button asChild>
+            <Link to="/blog">
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back to Blog
+            </Link>
+          </Button>
         </div>
       </Layout>
     );
   }
 
-  const shareUrl = window.location.href;
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const dateStr = article.published_at
-    ? new Date(article.published_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? new Date(article.published_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
     : "";
+
+  const shareButtons = [
+    {
+      label: "Facebook",
+      Icon: Facebook,
+      onClick: () =>
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+          "_blank"
+        ),
+    },
+    {
+      label: "Twitter",
+      Icon: Twitter,
+      onClick: () =>
+        window.open(
+          `https://twitter.com/intent/tweet?url=${encodeURIComponent(
+            shareUrl
+          )}&text=${encodeURIComponent(article.title)}`,
+          "_blank"
+        ),
+    },
+    {
+      label: "LinkedIn",
+      Icon: Linkedin,
+      onClick: () =>
+        window.open(
+          `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+          "_blank"
+        ),
+    },
+    {
+      label: "WhatsApp",
+      Icon: MessageCircle,
+      onClick: () =>
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(`${article.title} ${shareUrl}`)}`,
+          "_blank"
+        ),
+    },
+    {
+      label: "Instagram",
+      Icon: Instagram,
+      onClick: () => window.open(`https://www.instagram.com/`, "_blank"),
+    },
+  ];
 
   return (
     <Layout>
-      {/* Hero Image */}
-      {article.image_url && (
-        <div className="w-full h-64 md:h-96 overflow-hidden">
-          <img src={article.image_url} alt={article.title} className="w-full h-full object-cover" />
+      {/* Hero with overlaid title */}
+      <header className="relative isolate overflow-hidden bg-hero pt-20">
+        {article.image_url ? (
+          <>
+            <img
+              src={article.image_url}
+              alt={article.title}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-hero via-hero/70 to-hero/30" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--accent)/0.18),transparent_60%)]" />
+        )}
+
+        <div className="relative container max-w-4xl px-4 py-16 md:py-24">
+          <Link
+            to="/blog"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-foreground/80 hover:text-accent transition-colors mb-6"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Blog
+          </Link>
+
+          <Badge className="bg-accent text-accent-foreground hover:bg-accent border-0 mb-5 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
+            {article.category}
+          </Badge>
+
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-primary-foreground leading-[1.15] tracking-tight max-w-3xl">
+            {article.title}
+          </h1>
+
+          {article.excerpt && (
+            <p className="mt-5 text-base md:text-lg text-primary-foreground/80 max-w-2xl leading-relaxed">
+              {article.excerpt}
+            </p>
+          )}
+
+          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
+            <span className="flex items-center gap-1.5">
+              <User className="h-4 w-4 text-accent" /> {article.author}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-accent" /> {dateStr}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-accent" /> {article.read_time}
+            </span>
+          </div>
         </div>
-      )}
+      </header>
 
-      <article className="container max-w-3xl py-10 md:py-16">
-        <Link to="/blog" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-accent mb-6">
-          <ArrowLeft className="h-4 w-4" /> Back to Blog
-        </Link>
-
-        <Badge className="bg-accent/10 text-accent border-accent/30 mb-4">{article.category}</Badge>
-        <h1 className="text-2xl md:text-4xl font-extrabold mb-4">{article.title}</h1>
-
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8">
-          <span className="flex items-center gap-1"><User className="h-4 w-4" /> {article.author}</span>
-          <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> {dateStr}</span>
-          <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {article.read_time}</span>
-        </div>
-
-        {/* Content */}
+      {/* Article body */}
+      <article className="container max-w-3xl px-4 py-12 md:py-20">
         <div
           className="article-body prose prose-slate prose-lg max-w-none
-            prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-24
-            prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
-            prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
-            prose-p:text-foreground/85 prose-p:leading-relaxed prose-p:my-4
+            prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-24 prose-headings:tracking-tight
+            prose-h2:text-2xl md:prose-h2:text-3xl prose-h2:mt-14 prose-h2:mb-5 prose-h2:pb-2 prose-h2:border-b prose-h2:border-accent/20
+            prose-h3:text-xl md:prose-h3:text-2xl prose-h3:mt-10 prose-h3:mb-4 prose-h3:text-primary
+            prose-h4:text-lg prose-h4:mt-8 prose-h4:mb-3
+            prose-p:text-foreground/90 prose-p:leading-[1.85] prose-p:my-5 prose-p:text-[1.0625rem]
             prose-strong:text-foreground prose-strong:font-semibold
-            prose-ul:my-4 prose-ol:my-4 prose-li:my-1
-            prose-a:text-accent hover:prose-a:text-accent/80
-            prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:bg-accent/5 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r-md prose-blockquote:not-italic
-            prose-img:rounded-lg prose-img:shadow-md
-            [&_div]:my-2 [&_br+br]:hidden
-            [&_*]:!text-inherit [&_a]:!text-accent [&_strong]:!text-foreground [&_h1]:!text-foreground [&_h2]:!text-foreground [&_h3]:!text-foreground [&_h4]:!text-foreground"
+            prose-ul:list-disc prose-ul:pl-6 prose-ul:my-5 prose-ul:space-y-2
+            prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-5 prose-ol:space-y-2
+            prose-li:text-foreground/90 prose-li:leading-relaxed prose-li:marker:text-accent
+            prose-a:text-accent prose-a:font-medium prose-a:no-underline hover:prose-a:underline
+            prose-blockquote:border-l-4 prose-blockquote:border-accent prose-blockquote:bg-accent/5 prose-blockquote:py-3 prose-blockquote:px-5 prose-blockquote:rounded-r-md prose-blockquote:not-italic prose-blockquote:my-6
+            prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8
+            prose-hr:my-10 prose-hr:border-border
+            prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
+            [&_*]:!text-inherit [&_a]:!text-accent [&_strong]:!text-foreground
+            [&_h1]:!text-foreground [&_h2]:!text-foreground [&_h3]:!text-primary [&_h4]:!text-foreground"
           dangerouslySetInnerHTML={{ __html: article.content }}
         />
 
-        {/* Share */}
-        <div className="border-t mt-12 pt-6 flex items-center gap-3">
-          <span className="text-sm font-medium">Share:</span>
-          <Button variant="outline" size="sm" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, "_blank")}>Facebook</Button>
-          <Button variant="outline" size="sm" onClick={() => window.open(`https://www.instagram.com/`, "_blank")}>Instagram</Button>
-          <Button variant="outline" size="sm" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(article.title)}`, "_blank")}>Twitter</Button>
-          <Button variant="outline" size="sm" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, "_blank")}>LinkedIn</Button>
-          <Button variant="outline" size="sm" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`${article.title} ${shareUrl}`)}`, "_blank")}>WhatsApp</Button>
-          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(shareUrl); }}><Share2 className="h-4 w-4" /></Button>
+        {/* Share row */}
+        <div className="mt-16 pt-8 border-t border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Share2 className="h-4 w-4 text-accent" />
+              <span className="text-sm font-semibold text-foreground">
+                Share this article
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {shareButtons.map(({ label, Icon, onClick }) => (
+                <Button
+                  key={label}
+                  variant="outline"
+                  size="sm"
+                  onClick={onClick}
+                  className="gap-1.5 hover:border-accent hover:text-accent transition-colors"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{label}</span>
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl);
+                  toast({ title: "Link copied", description: "Article URL copied to clipboard." });
+                }}
+                className="gap-1.5 hover:border-accent hover:text-accent transition-colors"
+                aria-label="Copy link"
+              >
+                <Link2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Copy link</span>
+              </Button>
+            </div>
+          </div>
         </div>
       </article>
 
       {/* CTA */}
-      <section className="bg-hero py-12 text-center">
-        <div className="container max-w-lg">
-          <h2 className="text-xl md:text-2xl font-bold text-primary-foreground mb-3">Want More Insights?</h2>
-          <p className="text-primary-foreground/80 mb-6 text-sm">Explore NexusFlo24 and automate your marketing today.</p>
-          <Button asChild className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"><Link to="/register">Get Started Free</Link></Button>
+      <section className="relative overflow-hidden bg-hero py-16 md:py-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,hsl(var(--accent)/0.15),transparent_60%)]" />
+        <div className="relative container max-w-3xl px-4 text-center">
+          <span className="text-xs font-semibold uppercase tracking-widest text-accent">
+            Ready to grow?
+          </span>
+          <h2 className="mt-3 text-3xl md:text-4xl font-bold text-primary-foreground">
+            Turn insights into <span className="text-gradient-gold">automated growth</span>
+          </h2>
+          <p className="mt-4 text-base md:text-lg text-primary-foreground/80 max-w-xl mx-auto">
+            Join thousands of creators and businesses automating their marketing with NexusFlo24.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
+            >
+              <Link to="/register">
+                Start Free Trial <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            >
+              <Link to="/features">Explore Features</Link>
+            </Button>
+          </div>
         </div>
       </section>
     </Layout>
