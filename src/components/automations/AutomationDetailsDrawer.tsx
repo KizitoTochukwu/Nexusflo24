@@ -250,15 +250,15 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                   </div>
                 </Alert>
               ) : (
-                <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
+                <AutomationStepEditor
+                  steps={steps}
+                  onChange={setSteps}
+                  triggerType={triggerType}
+                  exitCriteria={exitCriteria}
+                  onExitCriteriaChange={setExitCriteria}
+                />
               )}
             </div>
-
-            <ExitCriteriaEditor
-              value={exitCriteria}
-              onChange={setExitCriteria}
-              triggerType={triggerType}
-            />
 
           </TabsContent>
 
