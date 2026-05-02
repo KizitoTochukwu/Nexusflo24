@@ -246,6 +246,7 @@ const BlogArticle = () => {
                 size="icon"
                 onClick={() => {
                   navigator.clipboard.writeText(shareUrl);
+                  trackShare("copy_link");
                   toast({ title: "Link copied", description: "Article URL copied to clipboard." });
                 }}
                 aria-label="Copy link"
