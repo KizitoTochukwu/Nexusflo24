@@ -199,7 +199,7 @@ const BlogArticle = () => {
 
         {/* Share row */}
         <div className="mt-16 pt-8 border-t border-border">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-primary">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-2">
               <Share2 className="h-4 w-4 text-accent" />
               <span className="text-sm font-semibold text-foreground">
