@@ -43,9 +43,11 @@ interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
   triggerType: string;
+  exitCriteria?: ExitCriterion[];
+  onExitCriteriaChange?: (criteria: ExitCriterion[]) => void;
 }
 
-export default function AutomationStepEditor({ steps, onChange, triggerType }: Props) {
+export default function AutomationStepEditor({ steps, onChange, triggerType, exitCriteria, onExitCriteriaChange }: Props) {
   const workspaceId = useWorkspaceId();
   const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
 
