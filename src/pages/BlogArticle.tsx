@@ -81,49 +81,69 @@ const BlogArticle = () => {
       })
     : "";
 
+  const trackShare = (network: string) => {
+    wsTrack("blog_share_click", {
+      network,
+      post_slug: article.slug,
+      post_title: article.title,
+      url: shareUrl,
+    });
+  };
+
   const shareButtons = [
     {
       label: "Facebook",
       Icon: Facebook,
-      onClick: () =>
+      onClick: () => {
+        trackShare("facebook");
         window.open(
           `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "Twitter",
       Icon: Twitter,
-      onClick: () =>
+      onClick: () => {
+        trackShare("twitter");
         window.open(
           `https://twitter.com/intent/tweet?url=${encodeURIComponent(
             shareUrl
           )}&text=${encodeURIComponent(article.title)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "LinkedIn",
       Icon: Linkedin,
-      onClick: () =>
+      onClick: () => {
+        trackShare("linkedin");
         window.open(
           `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "WhatsApp",
       Icon: MessageCircle,
-      onClick: () =>
+      onClick: () => {
+        trackShare("whatsapp");
         window.open(
           `https://wa.me/?text=${encodeURIComponent(`${article.title} ${shareUrl}`)}`,
           "_blank"
-        ),
+        );
+      },
     },
     {
       label: "Instagram",
       Icon: Instagram,
-      onClick: () => window.open(`https://www.instagram.com/`, "_blank"),
+      onClick: () => {
+        trackShare("instagram");
+        window.open(`https://www.instagram.com/`, "_blank");
+      },
     },
   ];
 
