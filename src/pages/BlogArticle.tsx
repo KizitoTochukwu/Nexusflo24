@@ -180,7 +180,7 @@ const BlogArticle = () => {
       </header>
 
       {/* Article body */}
-      <article className="container max-w-3xl px-4 py-12 md:py-20 bg-primary">
+      <article className="container max-w-3xl px-4 py-12 md:py-20 bg-secondary">
         <div
           className="article-body prose prose-slate prose-lg max-w-none
             prose-headings:text-foreground prose-headings:font-bold prose-headings:scroll-mt-24 prose-headings:tracking-tight
