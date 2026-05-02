@@ -356,7 +356,7 @@ const AdminBlogManager = () => {
                     <TableHead>Title</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>LinkedIn</TableHead>
+                    <TableHead>Social</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
