@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   EmailBlock, TextBlockProps, ImageBlockProps, ButtonBlockProps,
   DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
-  BLOCK_META,
+  BLOCK_META, GradientProps,
 } from "./emailBlockTypes";
 import InsertDropdown from "../InsertDropdown";
 
@@ -81,6 +81,60 @@ function ColorOpacityField({
   );
 }
 
+const DEFAULT_GRADIENT: GradientProps = {
+  enabled: false,
+  from: "#0B1F3B",
+  fromOpacity: 1,
+  to: "#C9A227",
+  toOpacity: 1,
+  angle: 135,
+};
+
+function GradientField({
+  value, onChange,
+}: {
+  value: GradientProps | undefined;
+  onChange: (g: GradientProps) => void;
+}) {
+  const g = value ?? DEFAULT_GRADIENT;
+  const update = (patch: Partial<GradientProps>) => onChange({ ...g, ...patch });
+  const previewFrom = `rgba(${parseInt(g.from.slice(1, 3), 16)},${parseInt(g.from.slice(3, 5), 16)},${parseInt(g.from.slice(5, 7), 16)},${g.fromOpacity})`;
+  const previewTo = `rgba(${parseInt(g.to.slice(1, 3), 16)},${parseInt(g.to.slice(3, 5), 16)},${parseInt(g.to.slice(5, 7), 16)},${g.toOpacity})`;
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-background/60 p-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-medium">Background Gradient</Label>
+        <Switch checked={g.enabled} onCheckedChange={(v) => update({ enabled: v })} />
+      </div>
+      {g.enabled && (
+        <>
+          <div
+            className="h-6 w-full rounded border border-border"
+            style={{ backgroundImage: `linear-gradient(${g.angle}deg, ${previewFrom}, ${previewTo})` }}
+          />
+          <ColorOpacityField
+            label="From"
+            color={g.from}
+            opacity={g.fromOpacity}
+            onColorChange={(v) => update({ from: v })}
+            onOpacityChange={(v) => update({ fromOpacity: v })}
+          />
+          <ColorOpacityField
+            label="To"
+            color={g.to}
+            opacity={g.toOpacity}
+            onColorChange={(v) => update({ to: v })}
+            onOpacityChange={(v) => update({ toOpacity: v })}
+          />
+          <Field label={`Angle (${g.angle}°)`}>
+            <Slider value={[g.angle]} min={0} max={360} step={5} onValueChange={([v]) => update({ angle: v })} />
+          </Field>
+        </>
+      )}
+    </div>
+  );
+}
+
 function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextBlockProps) => void }) {
   const p = block.props as TextBlockProps;
   return (
@@ -132,6 +186,10 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
           opacity={p.colorOpacity ?? 1}
           onColorChange={(v) => onChange({ ...p, color: v })}
           onOpacityChange={(v) => onChange({ ...p, colorOpacity: v })}
+        />
+        <GradientField
+          value={p.bgGradient}
+          onChange={(g) => onChange({ ...p, bgGradient: g })}
         />
       </Section>
       <Section title="Spacing">
@@ -267,6 +325,10 @@ function ButtonProps({ block, onChange }: { block: EmailBlock; onChange: (p: But
           opacity={p.textOpacity ?? 1}
           onColorChange={(v) => onChange({ ...p, textColor: v })}
           onOpacityChange={(v) => onChange({ ...p, textOpacity: v })}
+        />
+        <GradientField
+          value={p.bgGradient}
+          onChange={(g) => onChange({ ...p, bgGradient: g })}
         />
       </Section>
       <Section title="Spacing & Shape">
