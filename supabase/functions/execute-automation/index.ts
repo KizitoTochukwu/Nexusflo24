@@ -629,7 +629,15 @@ Deno.serve(async (req) => {
                   lead_id,
                   step_index: nextStepIndex,
                   run_at: runAt,
-                  payload: { automation_id, lead_id, workspace_id },
+                  payload: {
+                    automation_id,
+                    lead_id,
+                    workspace_id,
+                    branch_context: {
+                      branch_stack: branchStack,
+                      last_condition_passed: lastConditionPassed,
+                    },
+                  },
                   status: "pending",
                 });
                 details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
