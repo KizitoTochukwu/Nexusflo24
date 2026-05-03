@@ -78,6 +78,20 @@ const DashboardAutomations = () => {
     return <Badge variant="outline" className={colors[status] || colors.draft}>{status}</Badge>;
   };
 
+  const hasNurtureTemplate = useMemo(
+    () => !!automations?.some((a) => a.name === NURTURE_TEMPLATE_NAME),
+    [automations],
+  );
+
+  const seedNurture = () => {
+    createAutomation.mutate(
+      { workspace_id: workspaceId, ...SUBSCRIBER_NURTURE_DEFINITION },
+      {
+        onSuccess: () => toast.success("Subscriber Nurture template created as draft — review & activate."),
+      },
+    );
+  };
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between">
@@ -85,7 +99,15 @@ const DashboardAutomations = () => {
           <h1 className="text-2xl font-bold">Automations</h1>
           <p className="mt-1 text-sm text-muted-foreground">Build trigger-based multi-step workflows.</p>
         </div>
-        <CreateAutomationDialog />
+        <div className="flex items-center gap-2">
+          {!hasNurtureTemplate && (
+            <Button variant="outline" onClick={seedNurture} disabled={createAutomation.isPending} className="gap-1.5">
+              <Wand2 className="h-4 w-4" />
+              {createAutomation.isPending ? "Building…" : "Seed: Subscriber Nurture"}
+            </Button>
+          )}
+          <CreateAutomationDialog />
+        </div>
       </div>
 
       {/* Backfill banner — surfaces legacy nurture automations missing exit criteria */}
