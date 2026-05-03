@@ -228,11 +228,61 @@ Deno.serve(async (req) => {
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     let lastSendTime = 0;
 
+    // ---------- BRANCHING STATE ----------
+    // Conditions can be followed by `branch_yes_start` / `branch_no_start` markers.
+    // Steps inside an inactive branch are skipped. Branch state is preserved
+    // across delay-resumes via scheduled_jobs.payload.branch_context.
+    type BranchFrame = { kind: "yes" | "no"; skip: boolean };
+    let lastConditionPassed: boolean | null = null;
+    let branchStack: BranchFrame[] = [];
+
+    // Restore branch context if resuming from a scheduled job
+    const incomingPayload = (typeof start_from_step === "number")
+      ? ((await req.clone().json().catch(() => ({}))) as any)
+      : null;
+    if (incomingPayload?.branch_context) {
+      try {
+        const ctx = incomingPayload.branch_context;
+        if (Array.isArray(ctx.branch_stack)) branchStack = ctx.branch_stack;
+        if (typeof ctx.last_condition_passed === "boolean" || ctx.last_condition_passed === null) {
+          lastConditionPassed = ctx.last_condition_passed;
+        }
+      } catch (_e) { /* noop */ }
+    }
+
+    const isInInactiveBranch = () => branchStack.some((f) => f.skip);
+
     for (let i = startIndex; i < (steps || []).length; i++) {
       const step = steps![i];
 
+      // Branch markers — handled before skip checks so end-markers can pop frames
+      if (step.step_type === "branch_yes_start" || step.step_type === "branch_no_start") {
+        const kind: "yes" | "no" = step.step_type === "branch_yes_start" ? "yes" : "no";
+        const shouldSkip = lastConditionPassed === null
+          ? false // no preceding condition → run by default
+          : (kind === "yes" ? lastConditionPassed === false : lastConditionPassed === true);
+        // Nested skip: inherit parent skip too
+        branchStack.push({ kind, skip: shouldSkip || isInInactiveBranch() });
+        results.push({ step_id: step.id, step_type: step.step_type, status: shouldSkip ? "branch_skipped" : "branch_entered", details: { kind } });
+        continue;
+      }
+      if (step.step_type === "branch_yes_end" || step.step_type === "branch_no_end") {
+        const kind: "yes" | "no" = step.step_type === "branch_yes_end" ? "yes" : "no";
+        // Pop the most recent frame of matching kind
+        for (let k = branchStack.length - 1; k >= 0; k--) {
+          if (branchStack[k].kind === kind) { branchStack.splice(k, 1); break; }
+        }
+        results.push({ step_id: step.id, step_type: step.step_type, status: "branch_exited", details: { kind } });
+        continue;
+      }
+
       if (skipRemaining) {
         results.push({ step_id: step.id, step_type: step.step_type, status: "skipped", details: "Skipped due to condition or delay" });
+        continue;
+      }
+
+      if (isInInactiveBranch()) {
+        results.push({ step_id: step.id, step_type: step.step_type, status: "branch_skipped", details: "Inside inactive YES/NO branch" });
         continue;
       }
 
