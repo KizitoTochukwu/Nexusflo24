@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Upload, Loader2, Bold, Italic, Underline as UnderlineIcon,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Minus, Plus, Type as TypeIcon,
+  Link2, Image as ImageIcon, MousePointerClick,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
