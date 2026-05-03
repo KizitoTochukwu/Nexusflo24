@@ -5,6 +5,15 @@ import {
 
 export type EmailBlockType = "text" | "image" | "button" | "divider" | "spacer" | "social" | "columns";
 
+export interface GradientProps {
+  enabled: boolean;
+  from: string;
+  fromOpacity: number;
+  to: string;
+  toOpacity: number;
+  angle: number; // degrees
+}
+
 export interface TextBlockProps {
   content: string;
   fontSize: number;
@@ -13,6 +22,7 @@ export interface TextBlockProps {
   alignment: "left" | "center" | "right" | "justify";
   fontWeight: "normal" | "bold";
   lineHeight: number;
+  bgGradient?: GradientProps;
 }
 
 export interface ImageBlockProps {
@@ -35,6 +45,7 @@ export interface ButtonBlockProps {
   alignment: "left" | "center" | "right";
   fullWidth: boolean;
   fontSize: number;
+  bgGradient?: GradientProps;
 }
 
 export interface DividerBlockProps {
