@@ -1,6 +1,7 @@
 import {
   EmailBlock, TextBlockProps, ImageBlockProps, ButtonBlockProps,
   DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
+  GradientProps,
 } from "./emailBlockTypes";
 
 function escapeHtml(s: string): string {
