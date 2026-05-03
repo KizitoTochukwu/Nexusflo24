@@ -150,14 +150,14 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       </div>
 
       {/* Content */}
-      <div className="w-full px-[24px] py-[24px]">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs defaultValue="builder">
           <TabsList className="grid w-full max-w-xs grid-cols-2">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="builder" className="space-y-5 mt-5">
+          <TabsContent value="builder" className="space-y-5 mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground">Name</label>
