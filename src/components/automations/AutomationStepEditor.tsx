@@ -330,7 +330,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                     {(step.config.action as string) === "adjust_score" && (() => {
                       const delta = Number(step.config.score_delta ?? 5);
                       const setDelta = (n: number) => updateStep(i, { score_delta: Math.max(-100, Math.min(100, n)) });
-                      const presets = [-10, -5, 5, 10, 20, 30];
+                      const presets = [-10, -5, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
                       return (
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <div className="flex items-center rounded-md border border-border bg-background h-8">
