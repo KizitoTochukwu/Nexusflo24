@@ -129,7 +129,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   return (
     <div className="fixed inset-0 z-[60] bg-background overflow-y-auto">
       {/* Top bar */}
-      <div className="sticky top-0 z-[61] bg-background border-b border-border px-4 sm:px-6 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-[61] bg-background border-b border-border px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -150,14 +150,14 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       </div>
 
       {/* Content */}
-      <div className="w-full px-[24px] py-[24px]">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs defaultValue="builder">
           <TabsList className="grid w-full max-w-xs grid-cols-2">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="builder" className="space-y-5 mt-5">
+          <TabsContent value="builder" className="space-y-5 mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground">Name</label>
