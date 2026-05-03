@@ -51,6 +51,7 @@ export default function CreateAutomationDialog() {
     setSelectedFunnelId("all");
     setSelectedFolderId("any");
     setTagValue("");
+    setSelectedFormId("any");
     setSteps([]);
     setExitCriteria(getDefaultExitCriteria("new_lead"));
     setSocialKeyword("");
