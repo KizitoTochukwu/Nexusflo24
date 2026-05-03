@@ -507,6 +507,14 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         </SelectContent>
                       </Select>
                     )}
+                    {(step.config.action as string) === "end_automation" && (
+                      <Input
+                        value={(step.config.reason as string) || ""}
+                        onChange={(e) => updateStep(i, { reason: e.target.value })}
+                        placeholder="Optional reason (e.g. Lead converted)"
+                        className="w-[280px] bg-background"
+                      />
+                    )}
                     {(step.config.action as string) === "update_status" && (
                       <Select
                         value={(step.config.new_status as string) || ""}
