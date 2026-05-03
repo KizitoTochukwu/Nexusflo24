@@ -546,6 +546,30 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         </Select>
                       );
                     })()}
+                    {(step.config.action as string) === "enroll_in_automation" && (() => {
+                      const targetId = (step.config.target_automation_id as string) || "";
+                      const options = (allAutomations || []).filter((a) => a.status === "active");
+                      return (
+                        <Select
+                          value={targetId}
+                          onValueChange={(v) => updateStep(i, { target_automation_id: v })}
+                        >
+                          <SelectTrigger className="w-[260px] bg-background">
+                            <SelectValue placeholder="Select automation to enroll in" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.length === 0 && (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                No active automations available
+                              </div>
+                            )}
+                            {options.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
                   </div>
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
                     <AutomationEmailEditor
