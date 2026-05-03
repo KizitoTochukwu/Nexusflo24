@@ -264,8 +264,41 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
 
           </TabsContent>
 
+          <TabsContent value="timeline" className="mt-5 space-y-3">
+            {logsLoading ? (
+              <div className="rounded-lg border bg-card p-4 space-y-3" aria-busy="true">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : logsError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Couldn't load timeline</AlertTitle>
+                <AlertDescription className="mt-1">
+                  {(logsErrObj as Error)?.message || "Failed to load execution timeline."}
+                </AlertDescription>
+                <div className="mt-3">
+                  <Button size="sm" variant="outline" onClick={() => refetchLogs()} disabled={logsFetching}>
+                    <RotateCcw className={`mr-2 h-3.5 w-3.5 ${logsFetching ? "animate-spin" : ""}`} />
+                    {logsFetching ? "Retrying…" : "Retry"}
+                  </Button>
+                </div>
+              </Alert>
+            ) : (
+              <ExecutionTimeline
+                logs={logs ?? []}
+                leadLabelFor={(leadId) => {
+                  if (!leadId) return "Unknown lead";
+                  const lead = leads?.find((l) => l.id === leadId);
+                  if (!lead) return `Lead ${leadId.slice(0, 8)}`;
+                  return lead.full_name || lead.email || lead.phone || `Lead ${leadId.slice(0, 8)}`;
+                }}
+              />
+            )}
+          </TabsContent>
+
           <TabsContent value="logs" className="mt-5 space-y-3">
-            {/* Filter chips */}
             <div className="flex items-center gap-2 flex-wrap">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Filter:</span>
