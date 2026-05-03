@@ -79,6 +79,9 @@ export default function CreateAutomationDialog() {
       if (selectedFolderId !== "any") triggerConfig.folder_id = selectedFolderId;
     } else if (triggerType === "lead_tagged") {
       if (tagValue.trim()) triggerConfig.tag = tagValue.trim();
+    } else if (triggerType === "form_submitted") {
+      if (selectedFormId !== "any") triggerConfig.form_id = selectedFormId;
+      if (selectedFunnelId !== "all") triggerConfig.funnel_id = selectedFunnelId;
     } else if (isSocialTrigger(triggerType)) {
       if (!socialKeyword.trim()) {
         toast.error("Please enter a keyword (e.g. START)");
