@@ -235,22 +235,74 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
   const setFontSize = (n: number) => onChange({ ...p, fontSize: Math.max(8, Math.min(96, n)) });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const insertVariable = (v: string) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkText, setLinkText] = useState("");
+  const [linkUrl, setLinkUrl] = useState("https://");
+  const [btnOpen, setBtnOpen] = useState(false);
+
+  const insertAtCursor = (snippet: string) => {
     const ta = textareaRef.current;
     const content = p.content ?? "";
     if (!ta) {
-      onChange({ ...p, content: content + v });
+      onChange({ ...p, content: content + snippet });
       return;
     }
     const start = ta.selectionStart ?? content.length;
     const end = ta.selectionEnd ?? content.length;
-    const next = content.slice(0, start) + v + content.slice(end);
+    const next = content.slice(0, start) + snippet + content.slice(end);
     onChange({ ...p, content: next });
     requestAnimationFrame(() => {
       ta.focus();
-      const pos = start + v.length;
+      const pos = start + snippet.length;
       ta.setSelectionRange(pos, pos);
     });
+  };
+
+  const insertVariable = (v: string) => insertAtCursor(v);
+
+  const openLinkDialog = () => {
+    const ta = textareaRef.current;
+    const content = p.content ?? "";
+    const start = ta?.selectionStart ?? content.length;
+    const end = ta?.selectionEnd ?? content.length;
+    setLinkText(content.slice(start, end) || "Link text");
+    setLinkUrl("https://");
+    setLinkOpen(true);
+  };
+
+  const confirmLink = () => {
+    insertAtCursor(`<a href="${linkUrl}" style="color:#0B1F3B;text-decoration:underline">${linkText || linkUrl}</a>`);
+    setLinkOpen(false);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Please upload a PNG, JPEG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB.");
+      return;
+    }
+    setUploadingImg(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `images/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("email-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("email-assets").getPublicUrl(path);
+      insertAtCursor(`<img src="${data.publicUrl}" alt="${file.name.replace(/\.[^.]+$/, "")}" style="max-width:100%;height:auto;display:block;margin:8px 0" />`);
+      toast.success("Image uploaded!");
+    } catch (err: any) {
+      toast.error(err?.message || "Upload failed");
+    } finally {
+      setUploadingImg(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
