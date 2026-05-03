@@ -16,7 +16,15 @@ import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import type { ExitCriterion } from "@/lib/automations/exitCriteria";
 
 export type StepData = {
-  step_type: "trigger" | "condition" | "action" | "delay";
+  step_type:
+    | "trigger"
+    | "condition"
+    | "action"
+    | "delay"
+    | "branch_yes_start"
+    | "branch_yes_end"
+    | "branch_no_start"
+    | "branch_no_end";
   config: Record<string, unknown>;
 };
 
