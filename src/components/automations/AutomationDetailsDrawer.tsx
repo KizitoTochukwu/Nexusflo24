@@ -20,6 +20,7 @@ import {
   useSimulateAutomation,
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
+import ExecutionTimeline from "./ExecutionTimeline";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import {
   getDefaultExitCriteria,
