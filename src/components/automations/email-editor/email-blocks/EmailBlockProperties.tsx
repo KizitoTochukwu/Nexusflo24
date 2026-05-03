@@ -406,8 +406,8 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
           </div>
         </div>
 
-        {/* Row 3: Alignment + line-height */}
-        <div className="flex items-center gap-1">
+        {/* Row 3: Alignment + line-height + insert tools */}
+        <div className="flex items-center gap-1 flex-wrap">
           <ToggleGroup
             type="single"
             value={p.alignment}
