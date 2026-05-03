@@ -9,6 +9,7 @@ export interface TextBlockProps {
   content: string;
   fontSize: number;
   color: string;
+  colorOpacity?: number;
   alignment: "left" | "center" | "right" | "justify";
   fontWeight: "normal" | "bold";
   lineHeight: number;
@@ -27,7 +28,9 @@ export interface ButtonBlockProps {
   label: string;
   url: string;
   bgColor: string;
+  bgOpacity?: number;
   textColor: string;
+  textOpacity?: number;
   borderRadius: number;
   alignment: "left" | "center" | "right";
   fullWidth: boolean;
