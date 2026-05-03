@@ -277,6 +277,7 @@ export const ACTION_OPTIONS = [
   { value: "update_status", label: "Update Lead Status", icon: "RefreshCw" },
   { value: "adjust_score", label: "Adjust Lead Score", icon: "TrendingUp" },
   { value: "notify_sales", label: "Notify Sales", icon: "Bell" },
+  { value: "assign_owner", label: "Assign Owner", icon: "UserPlus" },
   { value: "enroll_in_automation", label: "Enroll in Automation", icon: "Zap" },
   { value: "delay", label: "Wait / Delay", icon: "Clock" },
 ] as const;
