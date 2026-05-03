@@ -187,24 +187,60 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
       </div>
 
       {steps.map((step, i) => {
-        // Render branch markers as visual separators (read-only — created by template seeders)
+        const branchKind = branchStackPerIndex[i];
+        const inBranchClass = branchKind === "yes"
+          ? "border-l-2 border-emerald-300 bg-emerald-50/30 pl-3 ml-2"
+          : branchKind === "no"
+          ? "border-l-2 border-rose-300 bg-rose-50/30 pl-3 ml-2"
+          : "";
+
+        // Branch start marker — visual + remove control
         if (step.step_type === "branch_yes_start" || step.step_type === "branch_no_start") {
           const isYes = step.step_type === "branch_yes_start";
           const label = (step.config as any)?.label as string | undefined;
           return (
-            <div key={i} className="flex justify-center py-2">
+            <div key={i} className={cn("flex justify-center items-center gap-2 py-2", inBranchClass)}>
               <Badge variant="outline" className={isYes ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"}>
                 {isYes ? "▼ If YES" : "▼ If NO"}{label ? ` — ${label}` : ""}
               </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                onClick={() => removeBranch(i)}
+                title="Remove branch (keeps steps inside)"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             </div>
           );
         }
         if (step.step_type === "branch_yes_end" || step.step_type === "branch_no_end") {
-          return <div key={i} className="border-t border-dashed border-muted-foreground/30 mx-8 my-1" />;
+          const isYes = step.step_type === "branch_yes_end";
+          return (
+            <div key={i} className={cn("py-1", inBranchClass)}>
+              <div className="flex flex-wrap gap-1.5 justify-center pb-1">
+                <Button variant="outline" size="sm" className="h-6 text-[11px] gap-1 bg-background/70" onClick={() => insertStepInsideBranch(i, "action")}>
+                  <Plus className="h-3 w-3" /> Action in branch
+                </Button>
+                <Button variant="outline" size="sm" className="h-6 text-[11px] gap-1 bg-background/70" onClick={() => insertStepInsideBranch(i, "delay")}>
+                  <Plus className="h-3 w-3" /> Delay in branch
+                </Button>
+              </div>
+              <div className={cn(
+                "border-t border-dashed mx-8",
+                isYes ? "border-emerald-300" : "border-rose-300",
+              )} />
+              <div className="text-center text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
+                end {isYes ? "YES" : "NO"} branch
+              </div>
+            </div>
+          );
         }
         const meta = STEP_TYPE_META[step.step_type] || STEP_TYPE_META.action;
+        const condBranchInfo = step.step_type === "condition" ? branchInfoForCondition(i) : null;
         return (
-          <div key={i}>
+          <div key={i} className={inBranchClass}>
             <div className="flex justify-center py-1">
               <ArrowDown className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -221,6 +257,35 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              {condBranchInfo && (!condBranchInfo.hasYes || !condBranchInfo.hasNo) && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  <span className="text-[11px] font-medium text-muted-foreground inline-flex items-center gap-1">
+                    <GitBranch className="h-3 w-3" /> Fork:
+                  </span>
+                  {!condBranchInfo.hasYes && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                      onClick={() => addBranch(i, "yes")}
+                    >
+                      <Plus className="h-3 w-3" /> If YES branch
+                    </Button>
+                  )}
+                  {!condBranchInfo.hasNo && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] gap-1 bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                      onClick={() => addBranch(i, "no")}
+                    >
+                      <Plus className="h-3 w-3" /> If NO branch
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {step.step_type === "condition" && (() => {
                 const currentValue = (step.config.condition as string) || "";
