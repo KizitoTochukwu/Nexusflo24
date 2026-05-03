@@ -275,6 +275,7 @@ export const ACTION_OPTIONS = [
   { value: "add_tag", label: "Add Tag", icon: "Tag" },
   { value: "remove_tag", label: "Remove Tag", icon: "XCircle" },
   { value: "update_status", label: "Update Lead Status", icon: "RefreshCw" },
+  { value: "adjust_score", label: "Adjust Lead Score", icon: "TrendingUp" },
   { value: "notify_sales", label: "Notify Sales", icon: "Bell" },
   { value: "delay", label: "Wait / Delay", icon: "Clock" },
 ] as const;
