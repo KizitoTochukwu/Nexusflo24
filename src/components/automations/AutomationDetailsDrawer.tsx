@@ -153,8 +153,9 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       {/* Content */}
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs defaultValue="builder">
-          <TabsList className="grid w-full max-w-xs grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
 
