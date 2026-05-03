@@ -47,6 +47,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   update_status: <RefreshCw className="h-4 w-4" />,
   adjust_score: <TrendingUp className="h-4 w-4" />,
   notify_sales: <Bell className="h-4 w-4" />,
+  assign_owner: <UserPlus className="h-4 w-4" />,
   enroll_in_automation: <Zap className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
 };
