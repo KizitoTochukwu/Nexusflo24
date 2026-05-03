@@ -1,65 +1,69 @@
 ## Goal
 
-Create a ready-to-activate **draft** automation in your current workspace called **"New Subscriber Nurture (Email + WhatsApp + SMS)"** with all steps, copy, conditions, delays and lead-score actions pre-filled. You only need to open it, review the copy, and click Activate.
+Add true YES/NO branching to the automation engine so conditions act as forks (not gates), then re-seed the "New Subscriber Nurture" template using the new branch structure so it matches the diagram exactly.
 
-## What gets created
+## Approach
 
-A single record in `automations` (status = `draft`) plus its `automation_steps` rows, scoped to your active workspace (`95bc7e99-798e-49ef-a5c3-ab68bbc08950`).
+Keep the current flat `automation_steps` list (no schema migration). Introduce a lightweight "branch group" pattern using two new step types that the engine already iterates over:
 
-### Trigger
-- **Lead added to folder** (any folder) — also fires on new leads imported via CSV / captured by forms once routed.
+- `branch_yes_start` / `branch_yes_end`
+- `branch_no_start` / `branch_no_end`
 
-### Pre-filled steps
+A `condition` step's `passed` result decides which group runs; the other group is skipped. After both groups end, the main flow resumes. This is fully backwards compatible — existing automations (no branch markers) behave exactly as today.
 
 ```text
-1.  ACTION  Adjust Lead Score  +5            (welcome bump)
-2.  ACTION  Send Email         "Welcome to Nexusflo24 — let's automate your growth"
-3.  ACTION  Send WhatsApp      "Hey {{first_name}}, welcome to Nexusflo24 👋 ..."
-4.  DELAY   1 day
-5.  COND    Email opened? (last 1 day)
-              ├─ YES → ACTION Adjust Score +10, ACTION Add tag "engaged"
-              └─ NO  → ACTION Send SMS  "Hi {{first_name}}, did our welcome email land? ..."
-6.  DELAY   2 days
-7.  ACTION  Send Email         "3 ways creators use Nexusflo24 to 2× conversions"
-8.  DELAY   2 days
-9.  COND    Link clicked? (last 4 days, booking link)
-              ├─ YES → ACTION Adjust Score +30, ACTION Notify Sales,
-              │        ACTION Update Status → "Hot",
-              │        ACTION Add tag "ai-closer-handoff"
-              └─ NO  → continue
-10. DELAY   2 days
-11. ACTION  Send Email         "Limited offer: 20% off your first month"
-12. DELAY   2 days
-13. ACTION  Send WhatsApp      "Quick nudge {{first_name}} — offer ends soon ..."
-14. DELAY   2 days
-15. COND    Lead score > 40
-              ├─ YES → ACTION Notify Sales "Warm lead worth a call"
-              └─ NO  → ACTION Send Email "Should we say goodbye?" (break-up),
-                       ACTION Adjust Score -10,
-                       ACTION Add tag "cold"
+[condition: link_clicked]
+  ├─ branch_yes_start
+  │    score +30, status=Hot, notify sales
+  │  branch_yes_end
+  └─ branch_no_start
+       send_sms fallback, delay 2d, send_email tips
+     branch_no_end
+[continue main flow…]
 ```
 
-### Exit criteria (auto-applied)
-- Lead unsubscribes
-- Lead purchases / marked Won
-- Lead tagged `do-not-contact`
+## Engine changes (`supabase/functions/execute-automation/index.ts`)
 
-## Technical details
+1. Add a runtime `branchSkip` stack alongside the existing `skipRemaining` flag.
+2. When a `condition` step runs, record its `passed` result on a stack frame for the next branch markers.
+3. On `branch_yes_start` → push frame; if last condition passed, execute inside; else skip until matching `branch_yes_end`.
+4. On `branch_no_start` → mirror logic (execute when condition failed).
+5. `branch_*_end` pops the frame and clears the local skip.
+6. Delays inside a branch must remember which branch they're in: extend `scheduled_jobs.payload` with `branch_context` (the active branch frame) so resumes from a delay continue inside the right group. On resume, the engine rebuilds the frame from `payload.branch_context`.
+7. Conditions remain non-halting by default (existing behavior preserved); branching only activates when the next step is a `branch_*_start` marker.
 
-- Insert via `useCreateAutomation` programmatically from a one-off seed call, OR (preferred) add a small **"Seed: Subscriber Nurture"** button to `DashboardAutomations.tsx` header that runs the insert once. I'll go with the seed-button approach so it's reproducible and you can re-seed for other workspaces.
-- Step `config` shapes match what `execute-automation/index.ts` already understands:
-  - actions: `{ action: "send_email"|"send_whatsapp"|"send_sms"|"add_tag"|"adjust_score"|"update_status"|"notify_sales", subject, body/message, tag, score_delta, new_status }`
-  - delays: `{ duration, unit: "days" }`
-  - conditions: `{ condition: "email_opened"|"link_clicked"|"score_gt", operator, value, time_window_days, yes_action_index, no_action_index }`
-- Status set to `draft` so nothing fires until you click Activate.
-- Exit criteria written to `automations.exit_criteria` using existing `getDefaultExitCriteria` helpers + the three rules above.
+## Template seeder changes (`src/lib/automations/seedNurtureTemplate.ts`)
 
-## Files to touch
-- `src/pages/dashboard/DashboardAutomations.tsx` — add a "Seed Nurture Template" button (visible only when no automation named "New Subscriber Nurture" exists).
-- `src/lib/automations/seedNurtureTemplate.ts` *(new)* — exports the full step array + copy + the seeding function (calls `useCreateAutomation`).
+Re-author `SUBSCRIBER_NURTURE_STEPS` to use the new markers so the diagram is reproduced 1:1:
 
-No DB schema changes, no edge function changes — uses the existing automation engine.
+- After "email_opened" condition → YES: score+10, add tag `engaged`. NO: send SMS "did our welcome email land?".
+- After "link_clicked" condition → YES: score+30, status=Hot, tag `ai-closer-handoff`, notify_sales. NO: continue to educational email path.
+- After final "score_gt 40" condition → YES: notify_sales "warm lead worth a call". NO: send break-up email, score-10, add tag `cold`.
 
-## After approval
+Update `SeedStep` type to allow the new `step_type` values and add brief `branch_label` config for log clarity.
 
-I'll implement the seed file + button, you click it once, then open the new draft automation in the drawer to review copy and hit **Activate**.
+## Editor surface (`src/components/automations/AutomationStepEditor.tsx`)
+
+Minimal UI update so seeded branches are readable (not yet drag/drop authoring):
+
+- Render `branch_yes_start` / `branch_no_start` as a labeled separator ("If YES" / "If NO") with indentation on contained steps until the matching `_end` marker.
+- Hide raw `_end` markers (render as a thin closing line).
+- No new authoring controls in this pass — users review/activate the seeded template; manual branch creation can come later.
+
+## Re-seed flow (`src/pages/dashboard/DashboardAutomations.tsx`)
+
+- Keep the "Seed: Subscriber Nurture" button.
+- Detect old (pre-branch) seeded template by name; offer a one-click "Replace with branched version" that archives the old draft and inserts the new branched one.
+
+## Out of scope (this pass)
+
+- No drag-and-drop branch authoring in the editor (read-only render only).
+- No changes to `workflows` / React Flow canvas (that's a separate richer system).
+- No DB schema migration.
+
+## Acceptance
+
+- Seeded template reproduces the diagram exactly: YES path runs only when the condition is met, NO path runs only when it isn't.
+- Existing non-branched automations continue to behave identically.
+- Delays inside a branch resume into the correct branch.
+- Logs show `branch:yes` / `branch:no` for clarity.
