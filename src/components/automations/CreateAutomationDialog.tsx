@@ -27,6 +27,7 @@ export default function CreateAutomationDialog() {
   const createAutomation = useCreateAutomation();
   const { data: funnels } = useFunnels(workspaceId);
   const { data: folders } = useLeadFolders(workspaceId);
+  const { data: forms } = useForms(workspaceId);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
