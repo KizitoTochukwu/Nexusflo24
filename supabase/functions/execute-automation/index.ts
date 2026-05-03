@@ -481,6 +481,54 @@ Deno.serve(async (req) => {
                 reason: `Automation adjusted score by ${delta > 0 ? "+" : ""}${delta}`,
               });
               details = { delta, previous, newScore };
+            } else if (actionType === "enroll_in_automation") {
+              const targetId = String(config.target_automation_id || config.automation_id || "").trim();
+              if (!targetId) {
+                status = "skipped";
+                details = { message: "No target automation selected" };
+                break;
+              }
+              if (targetId === automation_id) {
+                status = "skipped";
+                details = { message: "Cannot enroll lead in the same automation (would loop)" };
+                break;
+              }
+              // Verify target exists and belongs to same workspace
+              const { data: target } = await supabase
+                .from("automations")
+                .select("id, status, workspace_id")
+                .eq("id", targetId)
+                .eq("workspace_id", workspace_id)
+                .maybeSingle();
+              if (!target) {
+                status = "error";
+                details = { error: "Target automation not found in this workspace" };
+                break;
+              }
+              if (target.status !== "active") {
+                status = "skipped";
+                details = { message: "Target automation is not active", target_id: targetId };
+                break;
+              }
+              // Fire-and-forget enrollment
+              try {
+                await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/execute-automation`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  },
+                  body: JSON.stringify({
+                    automation_id: targetId,
+                    lead_id,
+                    workspace_id,
+                  }),
+                });
+                details = { enrolled_in: targetId };
+              } catch (e: any) {
+                status = "error";
+                details = { error: e?.message || "Enrollment dispatch failed" };
+              }
             } else {
               details = { message: `Unknown action type: ${actionType}` };
               status = "skipped";
