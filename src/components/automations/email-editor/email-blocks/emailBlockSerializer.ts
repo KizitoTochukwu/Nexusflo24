@@ -32,7 +32,12 @@ function renderText(p: TextBlockProps): string {
   const content = p.content.replace(/\n/g, "<br />");
   const color = withOpacity(p.color, p.colorOpacity);
   const grad = gradientCss(p.bgGradient);
-  const bg = grad ? `background-image:${grad};padding:16px;border-radius:8px;` : "";
+  const bgColor = p.bgColor ? withOpacity(p.bgColor, p.bgOpacity) : "";
+  const bgParts: string[] = [];
+  if (bgColor) bgParts.push(`background-color:${bgColor};`);
+  if (grad) bgParts.push(`background-image:${grad};`);
+  if (bgParts.length) bgParts.push("padding:16px;border-radius:8px;");
+  const bg = bgParts.join("");
   const family = p.fontFamily ? `font-family:${p.fontFamily};` : "";
   const fStyle = p.italic ? "font-style:italic;" : "";
   const fDecoration = p.underline ? "text-decoration:underline;" : "";

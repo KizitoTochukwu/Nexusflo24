@@ -393,6 +393,22 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
         />
       </Section>
 
+      <Section title="Colors">
+        <ColorOpacityField
+          label="Text color"
+          color={p.color}
+          opacity={p.colorOpacity ?? 1}
+          onColorChange={(v) => onChange({ ...p, color: v })}
+          onOpacityChange={(v) => onChange({ ...p, colorOpacity: v })}
+        />
+        <ColorOpacityField
+          label="Background color"
+          color={p.bgColor ?? "#FFFFFF"}
+          opacity={p.bgOpacity ?? 1}
+          onColorChange={(v) => onChange({ ...p, bgColor: v })}
+          onOpacityChange={(v) => onChange({ ...p, bgOpacity: v })}
+        />
+      </Section>
     </>
   );
 }
