@@ -22,6 +22,7 @@ import {
   BLOCK_META, GradientProps,
 } from "./emailBlockTypes";
 import InsertDropdown from "../InsertDropdown";
+import ButtonInsertDialog from "../ButtonInsertDialog";
 
 interface EmailBlockPropertiesProps {
   block: EmailBlock | null;
