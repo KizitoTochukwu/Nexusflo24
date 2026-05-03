@@ -8,6 +8,7 @@ import {
   type ExitCriterion,
   getDefaultExitCriteria,
 } from "@/lib/automations/exitCriteria";
+import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 
 const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Lost"];
 
