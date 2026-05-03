@@ -6,7 +6,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Upload, Loader2 } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Toggle } from "@/components/ui/toggle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Upload, Loader2, Bold, Italic, Underline as UnderlineIcon,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Minus, Plus, Type as TypeIcon,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -135,70 +141,263 @@ function GradientField({
   );
 }
 
+const FONT_FAMILIES = [
+  { label: "Inter", value: "Inter, system-ui, sans-serif" },
+  { label: "Helvetica", value: "Helvetica, Arial, sans-serif" },
+  { label: "Georgia", value: "Georgia, serif" },
+  { label: "Playfair", value: "'Playfair Display', Georgia, serif" },
+  { label: "Times New Roman", value: "'Times New Roman', serif" },
+  { label: "Courier", value: "'Courier New', monospace" },
+];
+
+const TEXT_PRESETS = [
+  { label: "Title", fontSize: 28, fontWeight: "bold" as const },
+  { label: "Subtitle", fontSize: 20, fontWeight: "bold" as const },
+  { label: "Heading", fontSize: 17, fontWeight: "bold" as const },
+  { label: "Body", fontSize: 15, fontWeight: "normal" as const },
+  { label: "Caption", fontSize: 12, fontWeight: "normal" as const },
+];
+
+const SWATCHES = [
+  "#0B1F3B", "#111827", "#374151", "#6B7280", "#9CA3AF", "#FFFFFF",
+  "#C9A227", "#D4AF37", "#EF4444", "#F97316", "#10B981", "#3B82F6",
+];
+
+function ColorSwatchPopover({
+  value, opacity, onColorChange, onOpacityChange, icon, ariaLabel,
+}: {
+  value: string;
+  opacity: number;
+  onColorChange: (v: string) => void;
+  onOpacityChange: (v: number) => void;
+  icon: React.ReactNode;
+  ariaLabel: string;
+}) {
+  const pct = Math.round(opacity * 100);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={ariaLabel}
+          className="relative flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition"
+        >
+          {icon}
+          <span
+            className="absolute bottom-1 left-1 right-1 h-1 rounded-sm border border-border/40"
+            style={{ backgroundColor: value, opacity }}
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-3 space-y-3">
+        <div className="grid grid-cols-6 gap-1.5">
+          {SWATCHES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => onColorChange(c)}
+              className="h-6 w-6 rounded border border-border ring-offset-background hover:ring-2 hover:ring-ring"
+              style={{ backgroundColor: c }}
+              aria-label={c}
+            />
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onColorChange(e.target.value)}
+            className="h-7 w-7 rounded border cursor-pointer p-0"
+          />
+          <Input value={value} onChange={(e) => onColorChange(e.target.value)} className="h-7 text-xs flex-1" />
+        </div>
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>Opacity</span>
+            <span>{pct}%</span>
+          </div>
+          <Slider value={[pct]} min={0} max={100} step={1} onValueChange={([v]) => onOpacityChange(v / 100)} />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextBlockProps) => void }) {
   const p = block.props as TextBlockProps;
+  const currentPreset =
+    TEXT_PRESETS.find((t) => t.fontSize === p.fontSize && t.fontWeight === p.fontWeight)?.label ?? "Custom";
+  const currentFamily = p.fontFamily ?? FONT_FAMILIES[0].value;
+  const fontFamilyLabel = FONT_FAMILIES.find((f) => f.value === currentFamily)?.label ?? "Custom";
+
+  const setFontSize = (n: number) => onChange({ ...p, fontSize: Math.max(8, Math.min(96, n)) });
+
   return (
     <>
+      {/* HubSpot-style toolbar */}
+      <div className="rounded-lg border border-border bg-muted/40 p-1.5 space-y-1.5">
+        {/* Row 1: Style preset + font family */}
+        <div className="flex items-center gap-1">
+          <Select
+            value={currentPreset === "Custom" ? "" : currentPreset}
+            onValueChange={(label) => {
+              const preset = TEXT_PRESETS.find((t) => t.label === label);
+              if (preset) onChange({ ...p, fontSize: preset.fontSize, fontWeight: preset.fontWeight });
+            }}
+          >
+            <SelectTrigger className="h-8 text-xs flex-1 bg-background">
+              <SelectValue placeholder={currentPreset} />
+            </SelectTrigger>
+            <SelectContent>
+              {TEXT_PRESETS.map((t) => (
+                <SelectItem key={t.label} value={t.label} className="text-xs">{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={currentFamily} onValueChange={(v) => onChange({ ...p, fontFamily: v })}>
+            <SelectTrigger className="h-8 text-xs flex-1 bg-background">
+              <SelectValue>{fontFamilyLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {FONT_FAMILIES.map((f) => (
+                <SelectItem key={f.value} value={f.value} className="text-xs" style={{ fontFamily: f.value }}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Row 2: Font size stepper + B I U + color/highlight */}
+        <div className="flex items-center gap-1">
+          <div className="flex items-center rounded-md border border-border bg-background h-8">
+            <button
+              type="button"
+              aria-label="Decrease font size"
+              className="px-1.5 h-full text-muted-foreground hover:text-foreground"
+              onClick={() => setFontSize(p.fontSize - 1)}
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <input
+              type="number"
+              value={p.fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value) || p.fontSize)}
+              className="w-9 h-full bg-transparent text-center text-xs font-medium outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <button
+              type="button"
+              aria-label="Increase font size"
+              className="px-1.5 h-full text-muted-foreground hover:text-foreground"
+              onClick={() => setFontSize(p.fontSize + 1)}
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="flex items-center rounded-md border border-border bg-background h-8 px-0.5">
+            <Toggle
+              size="sm"
+              pressed={p.fontWeight === "bold"}
+              onPressedChange={(v) => onChange({ ...p, fontWeight: v ? "bold" : "normal" })}
+              aria-label="Bold"
+              className="h-7 w-7 p-0 data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+            >
+              <Bold className="h-3.5 w-3.5" />
+            </Toggle>
+            <Toggle
+              size="sm"
+              pressed={!!p.italic}
+              onPressedChange={(v) => onChange({ ...p, italic: v })}
+              aria-label="Italic"
+              className="h-7 w-7 p-0 data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+            >
+              <Italic className="h-3.5 w-3.5" />
+            </Toggle>
+            <Toggle
+              size="sm"
+              pressed={!!p.underline}
+              onPressedChange={(v) => onChange({ ...p, underline: v })}
+              aria-label="Underline"
+              className="h-7 w-7 p-0 data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+            >
+              <UnderlineIcon className="h-3.5 w-3.5" />
+            </Toggle>
+            <ColorSwatchPopover
+              value={p.color}
+              opacity={p.colorOpacity ?? 1}
+              onColorChange={(v) => onChange({ ...p, color: v })}
+              onOpacityChange={(v) => onChange({ ...p, colorOpacity: v })}
+              ariaLabel="Text color"
+              icon={<span className="text-[13px] font-semibold leading-none">A</span>}
+            />
+          </div>
+        </div>
+
+        {/* Row 3: Alignment + line-height */}
+        <div className="flex items-center gap-1">
+          <ToggleGroup
+            type="single"
+            value={p.alignment}
+            onValueChange={(v) => v && onChange({ ...p, alignment: v as TextBlockProps["alignment"] })}
+            className="h-8 rounded-md border border-border bg-background p-0.5"
+          >
+            <ToggleGroupItem value="left" aria-label="Align left" className="h-7 w-7 p-0 data-[state=on]:bg-primary/10 data-[state=on]:text-primary">
+              <AlignLeft className="h-3.5 w-3.5" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="center" aria-label="Align center" className="h-7 w-7 p-0 data-[state=on]:bg-primary/10 data-[state=on]:text-primary">
+              <AlignCenter className="h-3.5 w-3.5" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="right" aria-label="Align right" className="h-7 w-7 p-0 data-[state=on]:bg-primary/10 data-[state=on]:text-primary">
+              <AlignRight className="h-3.5 w-3.5" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="justify" aria-label="Justify" className="h-7 w-7 p-0 data-[state=on]:bg-primary/10 data-[state=on]:text-primary">
+              <AlignJustify className="h-3.5 w-3.5" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <div className="flex items-center gap-1.5 flex-1 rounded-md border border-border bg-background h-8 px-2">
+            <TypeIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+            <Slider
+              value={[p.lineHeight * 10]}
+              min={10}
+              max={25}
+              step={1}
+              onValueChange={([v]) => onChange({ ...p, lineHeight: v / 10 })}
+              className="flex-1"
+            />
+            <span className="text-[10px] text-muted-foreground tabular-nums w-6 text-right">{p.lineHeight.toFixed(1)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
       <Section title="Content">
         <div className="flex items-center justify-between">
           <Label className="text-xs text-muted-foreground">Text</Label>
           <InsertDropdown onInsert={(v) => onChange({ ...p, content: p.content + v })} />
         </div>
         <Textarea
-          className="min-h-[120px] text-sm font-mono"
+          className="min-h-[140px] text-sm"
+          style={{
+            fontFamily: currentFamily,
+            fontSize: `${p.fontSize}px`,
+            fontWeight: p.fontWeight,
+            fontStyle: p.italic ? "italic" : "normal",
+            textDecoration: p.underline ? "underline" : "none",
+            textAlign: p.alignment,
+            lineHeight: p.lineHeight,
+            color: p.color,
+          }}
           value={p.content}
           onChange={(e) => onChange({ ...p, content: e.target.value })}
           placeholder="Use {{first_name}} for variables..."
         />
       </Section>
-      <Section title="Typography">
-        <Field label="Font Size">
-          <div className="flex items-center gap-2">
-            <Slider value={[p.fontSize]} min={10} max={36} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
-            <span className="text-xs text-muted-foreground w-8 text-right">{p.fontSize}px</span>
-          </div>
-        </Field>
-        <Field label="Font Weight">
-          <Select value={p.fontWeight} onValueChange={(v) => onChange({ ...p, fontWeight: v as "normal" | "bold" })}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="bold">Bold</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Alignment">
-          <Select value={p.alignment} onValueChange={(v) => onChange({ ...p, alignment: v as TextBlockProps["alignment"] })}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="left">Left</SelectItem>
-              <SelectItem value="center">Center</SelectItem>
-              <SelectItem value="right">Right</SelectItem>
-              <SelectItem value="justify">Justify</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-      </Section>
-      <Section title="Color">
-        <ColorOpacityField
-          label="Text Color"
-          color={p.color}
-          opacity={p.colorOpacity ?? 1}
-          onColorChange={(v) => onChange({ ...p, color: v })}
-          onOpacityChange={(v) => onChange({ ...p, colorOpacity: v })}
-        />
+
+      <Section title="Background">
         <GradientField
           value={p.bgGradient}
           onChange={(g) => onChange({ ...p, bgGradient: g })}
         />
-      </Section>
-      <Section title="Spacing">
-        <Field label="Line Height">
-          <div className="flex items-center gap-2">
-            <Slider value={[p.lineHeight * 10]} min={10} max={25} step={1} onValueChange={([v]) => onChange({ ...p, lineHeight: v / 10 })} className="flex-1" />
-            <span className="text-xs text-muted-foreground w-8 text-right">{p.lineHeight}</span>
-          </div>
-        </Field>
       </Section>
     </>
   );

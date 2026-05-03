@@ -16,11 +16,14 @@ export interface GradientProps {
 
 export interface TextBlockProps {
   content: string;
+  fontFamily?: string;
   fontSize: number;
   color: string;
   colorOpacity?: number;
   alignment: "left" | "center" | "right" | "justify";
   fontWeight: "normal" | "bold";
+  italic?: boolean;
+  underline?: boolean;
   lineHeight: number;
   bgGradient?: GradientProps;
 }
