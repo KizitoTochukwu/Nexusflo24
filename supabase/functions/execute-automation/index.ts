@@ -578,6 +578,9 @@ Deno.serve(async (req) => {
                 meta: { assigned_to: assignedUserId, mode, automation_id },
               });
               details = { assigned_to: assignedUserId, mode };
+            } else if (actionType === "end_automation") {
+              skipRemaining = true;
+              details = { message: "Automation ended by End Automation action", reason: config.reason || null };
             } else {
               details = { message: `Unknown action type: ${actionType}` };
               status = "skipped";

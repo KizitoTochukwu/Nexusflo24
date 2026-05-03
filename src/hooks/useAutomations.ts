@@ -281,6 +281,7 @@ export const ACTION_OPTIONS = [
   { value: "assign_owner", label: "Assign Owner", icon: "UserPlus" },
   { value: "enroll_in_automation", label: "Enroll in Automation", icon: "Zap" },
   { value: "delay", label: "Wait / Delay", icon: "Clock" },
+  { value: "end_automation", label: "End Automation (stop here)", icon: "DoorOpen" },
 ] as const;
 
 export function useAutomations(workspaceId: string) {

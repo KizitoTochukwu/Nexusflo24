@@ -51,6 +51,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   assign_owner: <UserPlus className="h-4 w-4" />,
   enroll_in_automation: <Zap className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
+  end_automation: <DoorOpen className="h-4 w-4" />,
 };
 
 const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Customer", "Lost"];
@@ -505,6 +506,14 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                           ))}
                         </SelectContent>
                       </Select>
+                    )}
+                    {(step.config.action as string) === "end_automation" && (
+                      <Input
+                        value={(step.config.reason as string) || ""}
+                        onChange={(e) => updateStep(i, { reason: e.target.value })}
+                        placeholder="Optional reason (e.g. Lead converted)"
+                        className="w-[280px] bg-background"
+                      />
                     )}
                     {(step.config.action as string) === "update_status" && (
                       <Select
