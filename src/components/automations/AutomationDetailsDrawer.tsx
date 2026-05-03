@@ -157,7 +157,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="builder" className="space-y-5 mt-6">
+          <TabsContent value="builder" className="ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 space-y-5 mt-6 ml-[48px] mr-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground">Name</label>
