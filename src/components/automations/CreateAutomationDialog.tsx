@@ -135,7 +135,8 @@ export default function CreateAutomationDialog() {
   const showFolderPicker = triggerType === "lead_added_to_folder";
   const showTagInput = triggerType === "lead_tagged";
   const showSocialConfig = isSocialTrigger(triggerType);
-  const showFunnelScope = !showFolderPicker && !showTagInput && !showSocialConfig;
+  const showFormPicker = triggerType === "form_submitted";
+  const showFunnelScope = !showFolderPicker && !showTagInput && !showSocialConfig && !showFormPicker;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
