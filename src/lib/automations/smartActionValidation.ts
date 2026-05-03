@@ -6,6 +6,7 @@ const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Ho
 const VALID_ACTIONS = [
   "send_email", "send_whatsapp", "send_sms",
   "add_tag", "remove_tag", "update_status", "notify_sales", "delay",
+  "assign_owner", "enroll_in_automation", "adjust_score",
 ] as const;
 
 const TAG_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_\-]{0,49}$/;
