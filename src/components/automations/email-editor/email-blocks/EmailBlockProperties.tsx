@@ -692,7 +692,7 @@ export default function EmailBlockProperties({ block, onChange }: EmailBlockProp
   };
 
   return (
-    <div className="hidden md:block w-[180px] lg:w-[220px] shrink-0 border-l border-border bg-muted/30 overflow-y-auto">
+    <div className="hidden md:block w-[280px] lg:w-[340px] shrink-0 border-l border-border bg-muted/30 overflow-y-auto">
       <div className="p-3 border-b border-border">
         <div className="flex items-center gap-1.5">
           <Icon className="h-3.5 w-3.5 text-muted-foreground" />
