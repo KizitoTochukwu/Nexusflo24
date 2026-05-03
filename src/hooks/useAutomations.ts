@@ -205,6 +205,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "update_status", label: "Move to Engaged", defaults: { new_status: "Engaged" } },
           { action: "notify_sales", label: "Notify Sales" },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
           { action: "send_whatsapp", label: "Reply on WhatsApp", defaults: { message: "Thanks for getting back, {{first_name}}!" } },
         ],
       },
@@ -219,6 +220,10 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
           { action: "notify_sales", label: "Notify Sales", defaults: { message: "High-score lead — please reach out" } },
+          { action: "adjust_score", label: "+5 score", defaults: { score_delta: 5 } },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
+          { action: "adjust_score", label: "+30 score", defaults: { score_delta: 30 } },
           { action: "send_email", label: "Send VIP email", defaults: { subject: "A personal note from our team" } },
         ],
       },
@@ -233,6 +238,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "send_email", label: "Send confirmation email", defaults: { subject: "Your appointment is confirmed ✅" } },
           { action: "send_whatsapp", label: "Send WhatsApp reminder", defaults: { message: "Hi {{first_name}}, looking forward to our meeting!" } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
           { action: "update_status", label: "Move to Qualified", defaults: { new_status: "Qualified" } },
         ],
       },
@@ -242,6 +248,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "add_tag", label: "Tag: customer", defaults: { tag: "customer" } },
           { action: "send_email", label: "Send thank-you email", defaults: { subject: "Thank you for your purchase 🙌" } },
+          { action: "adjust_score", label: "+30 score", defaults: { score_delta: 30 } },
           { action: "update_status", label: "Mark Won", defaults: { new_status: "Won" } },
           { action: "remove_tag", label: "Remove cart-abandoner tag", defaults: { tag: "cart-abandoner" } },
         ],
