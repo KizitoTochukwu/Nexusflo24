@@ -232,6 +232,25 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
 
   const setFontSize = (n: number) => onChange({ ...p, fontSize: Math.max(8, Math.min(96, n)) });
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const insertVariable = (v: string) => {
+    const ta = textareaRef.current;
+    const content = p.content ?? "";
+    if (!ta) {
+      onChange({ ...p, content: content + v });
+      return;
+    }
+    const start = ta.selectionStart ?? content.length;
+    const end = ta.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + v + content.slice(end);
+    onChange({ ...p, content: next });
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + v.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
+
   return (
     <>
       {/* HubSpot-style toolbar */}
