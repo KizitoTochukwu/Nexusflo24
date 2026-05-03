@@ -58,56 +58,62 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
   const p = block.props as TextBlockProps;
   return (
     <>
-      <div className="flex items-center justify-between">
-        <Label className="text-xs text-muted-foreground">Content</Label>
-        <InsertDropdown onInsert={(v) => onChange({ ...p, content: p.content + v })} />
-      </div>
-      <div>
+      <Section title="Content">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground">Text</Label>
+          <InsertDropdown onInsert={(v) => onChange({ ...p, content: p.content + v })} />
+        </div>
         <Textarea
           className="min-h-[120px] text-sm font-mono"
           value={p.content}
           onChange={(e) => onChange({ ...p, content: e.target.value })}
           placeholder="Use {{first_name}} for variables..."
         />
-      </div>
-      <Field label="Font Size">
-        <div className="flex items-center gap-2">
-          <Slider value={[p.fontSize]} min={10} max={36} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
-          <span className="text-xs text-muted-foreground w-8 text-right">{p.fontSize}px</span>
-        </div>
-      </Field>
-      <Field label="Line Height">
-        <div className="flex items-center gap-2">
-          <Slider value={[p.lineHeight * 10]} min={10} max={25} step={1} onValueChange={([v]) => onChange({ ...p, lineHeight: v / 10 })} className="flex-1" />
-          <span className="text-xs text-muted-foreground w-8 text-right">{p.lineHeight}</span>
-        </div>
-      </Field>
-      <Field label="Text Color">
-        <div className="flex items-center gap-2">
-          <input type="color" value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
-          <Input value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-8 text-xs flex-1" />
-        </div>
-      </Field>
-      <Field label="Alignment">
-        <Select value={p.alignment} onValueChange={(v) => onChange({ ...p, alignment: v as TextBlockProps["alignment"] })}>
-          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="left">Left</SelectItem>
-            <SelectItem value="center">Center</SelectItem>
-            <SelectItem value="right">Right</SelectItem>
-            <SelectItem value="justify">Justify</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
-      <Field label="Font Weight">
-        <Select value={p.fontWeight} onValueChange={(v) => onChange({ ...p, fontWeight: v as "normal" | "bold" })}>
-          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="normal">Normal</SelectItem>
-            <SelectItem value="bold">Bold</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+      </Section>
+      <Section title="Typography">
+        <Field label="Font Size">
+          <div className="flex items-center gap-2">
+            <Slider value={[p.fontSize]} min={10} max={36} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
+            <span className="text-xs text-muted-foreground w-8 text-right">{p.fontSize}px</span>
+          </div>
+        </Field>
+        <Field label="Font Weight">
+          <Select value={p.fontWeight} onValueChange={(v) => onChange({ ...p, fontWeight: v as "normal" | "bold" })}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="bold">Bold</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Alignment">
+          <Select value={p.alignment} onValueChange={(v) => onChange({ ...p, alignment: v as TextBlockProps["alignment"] })}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left</SelectItem>
+              <SelectItem value="center">Center</SelectItem>
+              <SelectItem value="right">Right</SelectItem>
+              <SelectItem value="justify">Justify</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      </Section>
+      <Section title="Color">
+        <Field label="Text Color">
+          <div className="flex items-center gap-2">
+            <input type="color" value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
+            <Input value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-8 text-xs flex-1" />
+          </div>
+        </Field>
+      </Section>
+      <Section title="Spacing">
+        <Field label="Line Height">
+          <div className="flex items-center gap-2">
+            <Slider value={[p.lineHeight * 10]} min={10} max={25} step={1} onValueChange={([v]) => onChange({ ...p, lineHeight: v / 10 })} className="flex-1" />
+            <span className="text-xs text-muted-foreground w-8 text-right">{p.lineHeight}</span>
+          </div>
+        </Field>
+      </Section>
     </>
   );
 }
