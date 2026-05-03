@@ -8,7 +8,7 @@ import {
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, type ConditionOperator } from "@/hooks/useAutomations";
 import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
@@ -47,6 +47,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   update_status: <RefreshCw className="h-4 w-4" />,
   adjust_score: <TrendingUp className="h-4 w-4" />,
   notify_sales: <Bell className="h-4 w-4" />,
+  enroll_in_automation: <Zap className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
 };
 
@@ -62,6 +63,7 @@ interface Props {
 export default function AutomationStepEditor({ steps, onChange, triggerType, exitCriteria, onExitCriteriaChange }: Props) {
   const workspaceId = useWorkspaceId();
   const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
+  const { data: allAutomations } = useAutomations(workspaceId || "");
 
   const addStep = (type: StepData["step_type"]) => {
     const newStep: StepData = { step_type: type, config: {} };
