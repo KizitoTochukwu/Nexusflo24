@@ -35,6 +35,7 @@ export default function CreateAutomationDialog() {
   const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
   const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
   const [tagValue, setTagValue] = useState<string>("");
+  const [selectedFormId, setSelectedFormId] = useState<string>("any");
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>(() => getDefaultExitCriteria("new_lead"));
 
