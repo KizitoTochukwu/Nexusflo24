@@ -150,7 +150,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl px-4 py-[24px] sm:px-[24px] my-0 mx-0">
+      <div className="w-full px-4 py-[24px] sm:px-[24px] my-0 mx-0">
         <Tabs defaultValue="builder">
           <TabsList className="grid w-full max-w-xs grid-cols-2">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
