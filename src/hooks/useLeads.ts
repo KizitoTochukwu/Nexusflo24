@@ -13,6 +13,7 @@ export const PIPELINE_STAGES = [
   { value: "demo_booked", label: "Demo Booked", color: "bg-yellow-100 text-yellow-800" },
   { value: "proposal_sent", label: "Proposal Sent", color: "bg-orange-100 text-orange-700" },
   { value: "won", label: "Won", color: "bg-green-100 text-green-700" },
+  { value: "customer", label: "Customer", color: "bg-emerald-100 text-emerald-800" },
   { value: "lost", label: "Lost", color: "bg-muted text-muted-foreground" },
 ] as const;
 

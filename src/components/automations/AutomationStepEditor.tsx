@@ -8,7 +8,7 @@ import {
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, type ConditionOperator } from "@/hooks/useAutomations";
 import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
@@ -47,10 +47,11 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   update_status: <RefreshCw className="h-4 w-4" />,
   adjust_score: <TrendingUp className="h-4 w-4" />,
   notify_sales: <Bell className="h-4 w-4" />,
+  enroll_in_automation: <Zap className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
 };
 
-const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Lost"];
+const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Customer", "Lost"];
 interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
@@ -62,6 +63,7 @@ interface Props {
 export default function AutomationStepEditor({ steps, onChange, triggerType, exitCriteria, onExitCriteriaChange }: Props) {
   const workspaceId = useWorkspaceId();
   const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
+  const { data: allAutomations } = useAutomations(workspaceId || "");
 
   const addStep = (type: StepData["step_type"]) => {
     const newStep: StepData = { step_type: type, config: {} };
@@ -510,7 +512,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                           <SelectValue placeholder="New status" />
                         </SelectTrigger>
                         <SelectContent>
-                          {["New", "Warm", "Hot", "Won", "Lost"].map((s) => (
+                          {["New", "Warm", "Hot", "Won", "Customer", "Lost"].map((s) => (
                             <SelectItem key={s} value={s}>{s}</SelectItem>
                           ))}
                         </SelectContent>
@@ -539,6 +541,30 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               <SelectItem key={o.reason} value={o.reason}>
                                 {o.label}
                               </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    })()}
+                    {(step.config.action as string) === "enroll_in_automation" && (() => {
+                      const targetId = (step.config.target_automation_id as string) || "";
+                      const options = (allAutomations || []).filter((a) => a.status === "active");
+                      return (
+                        <Select
+                          value={targetId}
+                          onValueChange={(v) => updateStep(i, { target_automation_id: v })}
+                        >
+                          <SelectTrigger className="w-[260px] bg-background">
+                            <SelectValue placeholder="Select automation to enroll in" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.length === 0 && (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                No active automations available
+                              </div>
+                            )}
+                            {options.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>

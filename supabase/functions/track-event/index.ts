@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const VALID_EVENTS = new Set([
   "website_visit", "pricing_page_visit", "lead_magnet_download",
-  "webinar_registration", "call_booking",
+  "webinar_registration", "call_booking", "purchase", "checkout_visit",
 ]);
 
 // Embeddable tracking script served via GET
@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
         lead_magnet_download: "lead_magnet_download",
         webinar_registration: "webinar_registration",
         call_booking: "call_booking",
+        purchase: "purchase_event",
       };
 
       const triggerType = triggerMap[event_type];
