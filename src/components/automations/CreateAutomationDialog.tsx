@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { useCreateAutomation, TRIGGER_OPTIONS } from "@/hooks/useAutomations";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
+import { useForms } from "@/hooks/useForms";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
