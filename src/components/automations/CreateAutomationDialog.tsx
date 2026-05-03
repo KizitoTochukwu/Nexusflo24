@@ -245,6 +245,38 @@ export default function CreateAutomationDialog() {
             </div>
           )}
 
+          {showFormPicker && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-foreground">Scope to form</label>
+                <Select value={selectedFormId} onValueChange={setSelectedFormId}>
+                  <SelectTrigger><SelectValue placeholder="Any form" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any form (workspace-wide)</SelectItem>
+                    {(forms ?? []).map((f: any) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fires whenever this form is submitted (new or returning lead).
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Or scope to funnel (optional)</label>
+                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All funnels</SelectItem>
+                    {(funnels ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           {showFunnelScope && (
             <div>
               <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
