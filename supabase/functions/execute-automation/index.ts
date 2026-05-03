@@ -259,27 +259,77 @@ Deno.serve(async (req) => {
           ? false // no preceding condition → run by default
           : (kind === "yes" ? lastConditionPassed === false : lastConditionPassed === true);
         // Nested skip: inherit parent skip too
-        branchStack.push({ kind, skip: shouldSkip || isInInactiveBranch() });
-        results.push({ step_id: step.id, step_type: step.step_type, status: shouldSkip ? "branch_skipped" : "branch_entered", details: { kind } });
+        const parentSkipped = isInInactiveBranch();
+        const finalSkip = shouldSkip || parentSkipped;
+        branchStack.push({ kind, skip: finalSkip });
+        const markerStatus = finalSkip ? "branch_skipped" : "branch_entered";
+        const markerDetails = {
+          kind,
+          last_condition_passed: lastConditionPassed,
+          reason: parentSkipped
+            ? "Parent branch was inactive"
+            : finalSkip
+              ? `Preceding condition was ${lastConditionPassed ? "true" : "false"}, so the ${kind.toUpperCase()} branch was not taken`
+              : `Preceding condition was ${lastConditionPassed === null ? "absent (default entry)" : lastConditionPassed ? "true" : "false"}, entering the ${kind.toUpperCase()} branch`,
+        };
+        results.push({ step_id: step.id, step_type: step.step_type, status: markerStatus, details: markerDetails });
+        await supabase.from("automation_logs").insert({
+          automation_id, workspace_id, lead_id,
+          event_type: `branch:${kind}_start`,
+          status: markerStatus,
+          details: markerDetails,
+        });
         continue;
       }
       if (step.step_type === "branch_yes_end" || step.step_type === "branch_no_end") {
         const kind: "yes" | "no" = step.step_type === "branch_yes_end" ? "yes" : "no";
         // Pop the most recent frame of matching kind
+        let poppedSkip: boolean | null = null;
         for (let k = branchStack.length - 1; k >= 0; k--) {
-          if (branchStack[k].kind === kind) { branchStack.splice(k, 1); break; }
+          if (branchStack[k].kind === kind) {
+            poppedSkip = branchStack[k].skip;
+            branchStack.splice(k, 1);
+            break;
+          }
         }
-        results.push({ step_id: step.id, step_type: step.step_type, status: "branch_exited", details: { kind } });
+        const endDetails = { kind, was_skipped: poppedSkip === true };
+        results.push({ step_id: step.id, step_type: step.step_type, status: "branch_exited", details: endDetails });
+        await supabase.from("automation_logs").insert({
+          automation_id, workspace_id, lead_id,
+          event_type: `branch:${kind}_end`,
+          status: "branch_exited",
+          details: endDetails,
+        });
         continue;
       }
 
       if (skipRemaining) {
-        results.push({ step_id: step.id, step_type: step.step_type, status: "skipped", details: "Skipped due to condition or delay" });
+        const skipDetails = { reason: "Skipped due to earlier condition or delay" };
+        results.push({ step_id: step.id, step_type: step.step_type, status: "skipped", details: skipDetails });
+        await supabase.from("automation_logs").insert({
+          automation_id, workspace_id, lead_id,
+          event_type: `${step.step_type}:skipped`,
+          status: "skipped",
+          details: skipDetails,
+        });
         continue;
       }
 
       if (isInInactiveBranch()) {
-        results.push({ step_id: step.id, step_type: step.step_type, status: "branch_skipped", details: "Inside inactive YES/NO branch" });
+        // Surface which branch kind suppressed the step so the timeline UI
+        // can render it under the correct YES/NO group with a "skipped" tone.
+        const activeFrame = branchStack[branchStack.length - 1];
+        const skipDetails = {
+          reason: "Inside inactive YES/NO branch",
+          branch_kind: activeFrame?.kind ?? null,
+        };
+        results.push({ step_id: step.id, step_type: step.step_type, status: "branch_skipped", details: skipDetails });
+        await supabase.from("automation_logs").insert({
+          automation_id, workspace_id, lead_id,
+          event_type: `${step.step_type}:branch_skipped`,
+          status: "branch_skipped",
+          details: skipDetails,
+        });
         continue;
       }
 
