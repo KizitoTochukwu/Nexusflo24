@@ -12,6 +12,7 @@ import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
+import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
