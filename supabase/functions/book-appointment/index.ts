@@ -189,6 +189,50 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Cancel pending automation jobs for any active automation in this workspace
+    // whose exit_criteria contains { type: "appointment_booked" }. This stops the
+    // nurture sequence immediately, mirroring fireAutomationsForLeads' sweep.
+    if (leadId) {
+      try {
+        const { data: activeAutos } = await supabase
+          .from("automations")
+          .select("id, exit_criteria")
+          .eq("workspace_id", page.workspace_id)
+          .eq("status", "active");
+        const exitAutoIds = (activeAutos || [])
+          .filter((a: any) => Array.isArray(a.exit_criteria) && a.exit_criteria.some((c: any) => c?.type === "appointment_booked"))
+          .map((a: any) => a.id);
+        if (exitAutoIds.length > 0) {
+          const { data: cancelled } = await supabase
+            .from("scheduled_jobs")
+            .update({
+              status: "cancelled",
+              updated_at: new Date().toISOString(),
+              error: "Exit criteria met: appointment_booked",
+            })
+            .eq("workspace_id", page.workspace_id)
+            .in("automation_id", exitAutoIds)
+            .eq("lead_id", leadId)
+            .eq("status", "pending")
+            .select("id, automation_id, lead_id");
+          if (cancelled && cancelled.length > 0) {
+            await supabase.from("automation_logs").insert(
+              cancelled.map((c: any) => ({
+                automation_id: c.automation_id,
+                workspace_id: page.workspace_id,
+                lead_id: c.lead_id,
+                event_type: "exit_criteria:appointment_booked",
+                status: "cancelled",
+                details: { reason: "Booking created", booking_id: booking.id },
+              }))
+            );
+          }
+        }
+      } catch (e) {
+        console.error("[book-appointment] exit-criteria sweep error:", e);
+      }
+    }
+
     // Fire matching automations with trigger_type = 'book_appointment'
     const { data: automations } = await supabase
       .from("automations")
