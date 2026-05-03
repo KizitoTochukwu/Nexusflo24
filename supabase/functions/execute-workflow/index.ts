@@ -33,13 +33,13 @@ async function evaluateCondition(
 
   switch (subType) {
     case "if_email_opened": {
-      const { count } = await supabase.from("email_logs").select("id", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId).eq("lead_id", leadId).eq("status", "opened");
+      const { count } = await supabase.from("lead_activities").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("lead_id", leadId).eq("type", "email_open");
       return (count ?? 0) > 0;
     }
     case "if_email_not_opened": {
-      const { count } = await supabase.from("email_logs").select("id", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId).eq("lead_id", leadId).eq("status", "opened");
+      const { count } = await supabase.from("lead_activities").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("lead_id", leadId).eq("type", "email_open");
       return (count ?? 0) === 0;
     }
     case "if_link_clicked": {
