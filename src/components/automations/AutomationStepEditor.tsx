@@ -51,6 +51,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   assign_owner: <UserPlus className="h-4 w-4" />,
   enroll_in_automation: <Zap className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
+  end_automation: <DoorOpen className="h-4 w-4" />,
 };
 
 const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Customer", "Lost"];
