@@ -1,47 +1,47 @@
-## Problem
+## Fix the broken `email_opened` condition
 
-YES/NO branching exists in the engine and renders visually when present, but the **Workflow editor has no buttons to add branches manually**. Today the only way to get YES/NO branches is to click "Seed: Subscriber Nurture" — there's no way to add them to your own automations or to a condition you just created.
+The Value Delivery automation is mis-firing because the YES arm never triggers — every lead is treated as "didn't open" and gets `cold-lead`.
 
-That's why you "can't see / use" YES/NO branching in the UI: the controls don't exist yet.
+### Root cause
 
-## Solution
+`execute-automation` and `execute-workflow` both check `email_logs.status='opened'`, but no code path writes that row. Pixel hits live in `lead_activities` (`type='email_open'`). Other conditions like `link_clicked` already query `lead_activities` correctly — `email_opened` was the outlier.
 
-Add first-class branching controls to `AutomationStepEditor.tsx` so any condition step can fork into YES / NO paths.
+### Changes
 
-### 1. "Add YES branch" / "Add NO branch" buttons on every condition step
+**1. `supabase/functions/execute-automation/index.ts` (lines 645–651)**
+Swap the broken `email_logs` query for the existing `countActivities` helper:
+```ts
+} else if (conditionType === "email_opened") {
+  const c = await countActivities((q) => q.eq("type", "email_open"));
+  passed = evalHappened(c);
+}
+```
+This automatically respects `time_window_days` and the `not_happened` operator.
 
-Inside each `condition` block, render two small buttons next to the condition row:
+**2. `supabase/functions/execute-workflow/index.ts` (lines 35–43)**
+Same swap in both `if_email_opened` and `if_email_not_opened`:
+```ts
+case "if_email_opened": {
+  const { count } = await supabase.from("lead_activities").select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId).eq("lead_id", leadId).eq("type", "email_open");
+  return (count ?? 0) > 0;
+}
+case "if_email_not_opened": {
+  const { count } = await supabase.from("lead_activities").select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId).eq("lead_id", leadId).eq("type", "email_open");
+  return (count ?? 0) === 0;
+}
+```
 
-- **+ If YES** (emerald) — inserts `branch_yes_start` immediately after the condition and a matching `branch_yes_end` after it (empty body, ready for steps).
-- **+ If NO** (rose) — same for `branch_no_start` / `branch_no_end`.
+**3. Deploy**
+Redeploy `execute-automation` and `execute-workflow` so the fix takes effect.
 
-Buttons are hidden if a YES/NO branch already exists for that condition (detected by scanning forward until the next condition or end of list).
+### Why not write `email_logs.status='opened'` from `track-open` instead?
 
-### 2. "Add step inside branch" affordance
+`email_logs` is the dashboard's append-only send log — adding open rows would inflate "sent" counts and break analytics. `lead_activities` is the canonical event store and matches every other condition's pattern.
 
-When the cursor is inside an open branch (between `branch_*_start` and `branch_*_end`), the existing bottom "Add Action / Delay / Condition" row stays — but we also render a smaller inline **+ Add step here** button just above each `branch_*_end` marker that inserts the new step *inside* the branch instead of after it.
+### After this ships
 
-### 3. Make branch markers removable
-
-Today `branch_yes_start` etc. render as read-only badges. Add a small × button on each start marker that removes both the matching start and end markers (keeping any steps between them, just un-nested). This lets users undo a branch without losing work.
-
-### 4. Improve the visual container
-
-Wrap steps that fall between `branch_*_start` and `branch_*_end` in a subtly tinted, left-bordered container (emerald for YES, rose for NO) so the fork is obvious at a glance — matching the Timeline tab's styling.
-
-### 5. Update the empty-state hint
-
-On the bottom action row, when the last step is a `condition` with no branches yet, surface a subtle hint: *"Tip: Add an If YES or If NO branch to fork on this condition."*
-
-## Where to find / use it after
-
-Open any automation drawer → **Workflow** tab → add (or click into) a Condition step → use the new **+ If YES** / **+ If NO** buttons on that condition. Steps added afterwards while inside a branch will be visually nested into that branch and only run on that path.
-
-## Technical notes
-
-- File: `src/components/automations/AutomationStepEditor.tsx` only. No engine, hook, or DB changes — the executor already understands these markers.
-- Branch detection helper: walk `steps` forward from condition index `i`, tracking whether `branch_yes_start`/`branch_no_start` appears before the next `condition` step — gives `hasYes` / `hasNo` flags per condition.
-- Insertion helper: when adding a YES branch, splice `[{branch_yes_start}, {branch_yes_end}]` at `i+1`; opening pos for nested-step inserts is `endIndex` (before the `_end` marker).
-- Removal helper: find matching start/end pair by scanning forward for the same `kind`, splice both out.
-- Keep the existing seeder-driven flows working — markers without an immediately-preceding condition (legacy/manually edited) still render as today.
-- Types in `useAutomations.ts` already include the four branch step types, so no type changes needed.
+Value Delivery fires accurately end-to-end:
+- Opened → "How NexusFlo24 works" + tag `engaged` + score +10
+- Not opened → resend with new subject + tag `cold-lead`

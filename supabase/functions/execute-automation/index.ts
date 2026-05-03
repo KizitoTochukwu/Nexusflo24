@@ -643,12 +643,8 @@ Deno.serve(async (req) => {
               const known = !!(lead.phone && String(lead.phone).trim() !== "");
               passed = operator === "is_unknown" ? !known : known;
             } else if (conditionType === "email_opened") {
-              let q = supabase.from("email_logs")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id).eq("status", "opened");
-              if (sinceIso) q = q.gte("created_at", sinceIso);
-              const { count } = await q;
-              passed = evalHappened(count ?? 0);
+              const c = await countActivities((q) => q.eq("type", "email_open"));
+              passed = evalHappened(c);
             } else if (conditionType === "link_clicked") {
               const c = await countActivities((q) => q.eq("type", "link_click"));
               passed = evalHappened(c);
