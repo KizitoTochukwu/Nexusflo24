@@ -491,22 +491,6 @@ export default function AutomationEmailEditor({
         {isEmail && onTemplateSettingsChange && (
           <EmailTemplateSettings settings={currentSettings} onChange={onTemplateSettingsChange} />
         )}
-
-        {/* Quick-insert variable badges (SMS/WhatsApp only) */}
-        {!preview && !isEmail && (
-          <div className="flex flex-wrap gap-1">
-            {VARIABLE_OPTIONS.slice(0, 5).map((v) => (
-              <Badge
-                key={v.value}
-                variant="secondary"
-                className="cursor-pointer hover:bg-accent transition-colors text-[10px]"
-                onClick={() => insertAtCursor(v.value)}
-              >
-                {v.value}
-              </Badge>
-            ))}
-          </div>
-        )}
       </div>
     </TooltipProvider>
   );
