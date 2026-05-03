@@ -42,6 +42,19 @@ const delayDefaults = z.object({
   unit: z.enum(["minutes", "hours", "days"]),
 }).passthrough();
 
+const assignOwnerDefaults = z.object({
+  mode: z.enum(["round_robin", "specific"]).default("round_robin"),
+  user_id: z.string().uuid().optional(),
+}).passthrough();
+
+const enrollDefaults = z.object({
+  target_automation_id: z.string().uuid().optional(),
+}).passthrough();
+
+const adjustScoreDefaults = z.object({
+  score_delta: z.number().int().optional(),
+}).passthrough();
+
 const DEFAULTS_BY_ACTION: Record<string, z.ZodTypeAny> = {
   send_email: sendEmailDefaults,
   send_whatsapp: sendMessageDefaults,
@@ -51,6 +64,9 @@ const DEFAULTS_BY_ACTION: Record<string, z.ZodTypeAny> = {
   update_status: statusDefaults,
   notify_sales: notifySalesDefaults,
   delay: delayDefaults,
+  assign_owner: assignOwnerDefaults,
+  enroll_in_automation: enrollDefaults,
+  adjust_score: adjustScoreDefaults,
 };
 
 const baseSmartActionSchema = z.object({
