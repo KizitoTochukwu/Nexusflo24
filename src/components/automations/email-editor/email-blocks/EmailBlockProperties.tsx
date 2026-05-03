@@ -204,46 +204,52 @@ function ButtonProps({ block, onChange }: { block: EmailBlock; onChange: (p: But
   const p = block.props as ButtonBlockProps;
   return (
     <>
-      <div className="flex items-center justify-between">
-        <Label className="text-xs text-muted-foreground">Button Label</Label>
-        <InsertDropdown onInsert={(v) => onChange({ ...p, label: p.label + v })} />
-      </div>
-      <div>
+      <Section title="Content">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground">Button Label</Label>
+          <InsertDropdown onInsert={(v) => onChange({ ...p, label: p.label + v })} />
+        </div>
         <Input className="h-8 text-xs" value={p.label} onChange={(e) => onChange({ ...p, label: e.target.value })} />
-      </div>
-      <Field label="Button URL">
-        <Input className="h-8 text-xs" value={p.url} onChange={(e) => onChange({ ...p, url: e.target.value })} placeholder="https://..." />
-      </Field>
-      <Field label="Background Color">
-        <div className="flex items-center gap-2">
-          <input type="color" value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
-          <Input value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-8 text-xs flex-1" />
-        </div>
-      </Field>
-      <Field label="Text Color">
-        <div className="flex items-center gap-2">
-          <input type="color" value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
-          <Input value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-8 text-xs flex-1" />
-        </div>
-      </Field>
-      <Field label="Border Radius">
-        <div className="flex items-center gap-2">
-          <Slider value={[p.borderRadius]} min={0} max={24} step={2} onValueChange={([v]) => onChange({ ...p, borderRadius: v })} className="flex-1" />
-          <span className="text-xs text-muted-foreground w-8 text-right">{p.borderRadius}px</span>
-        </div>
-      </Field>
-      <Field label="Font Size">
-        <div className="flex items-center gap-2">
-          <Slider value={[p.fontSize]} min={12} max={24} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
-          <span className="text-xs text-muted-foreground w-8 text-right">{p.fontSize}px</span>
-        </div>
-      </Field>
-      <Field label="Alignment">
-        <AlignmentSelect value={p.alignment} onChange={(v) => onChange({ ...p, alignment: v as ButtonBlockProps["alignment"] })} />
-      </Field>
-      <Field label="Full Width">
-        <Switch checked={p.fullWidth} onCheckedChange={(v) => onChange({ ...p, fullWidth: v })} />
-      </Field>
+        <Field label="Button URL">
+          <Input className="h-8 text-xs" value={p.url} onChange={(e) => onChange({ ...p, url: e.target.value })} placeholder="https://..." />
+        </Field>
+      </Section>
+      <Section title="Typography">
+        <Field label="Font Size">
+          <div className="flex items-center gap-2">
+            <Slider value={[p.fontSize]} min={12} max={24} step={1} onValueChange={([v]) => onChange({ ...p, fontSize: v })} className="flex-1" />
+            <span className="text-xs text-muted-foreground w-8 text-right">{p.fontSize}px</span>
+          </div>
+        </Field>
+        <Field label="Alignment">
+          <AlignmentSelect value={p.alignment} onChange={(v) => onChange({ ...p, alignment: v as ButtonBlockProps["alignment"] })} />
+        </Field>
+      </Section>
+      <Section title="Color">
+        <Field label="Background Color">
+          <div className="flex items-center gap-2">
+            <input type="color" value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
+            <Input value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-8 text-xs flex-1" />
+          </div>
+        </Field>
+        <Field label="Text Color">
+          <div className="flex items-center gap-2">
+            <input type="color" value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
+            <Input value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-8 text-xs flex-1" />
+          </div>
+        </Field>
+      </Section>
+      <Section title="Spacing & Shape">
+        <Field label="Border Radius">
+          <div className="flex items-center gap-2">
+            <Slider value={[p.borderRadius]} min={0} max={24} step={2} onValueChange={([v]) => onChange({ ...p, borderRadius: v })} className="flex-1" />
+            <span className="text-xs text-muted-foreground w-8 text-right">{p.borderRadius}px</span>
+          </div>
+        </Field>
+        <Field label="Full Width">
+          <Switch checked={p.fullWidth} onCheckedChange={(v) => onChange({ ...p, fullWidth: v })} />
+        </Field>
+      </Section>
     </>
   );
 }
