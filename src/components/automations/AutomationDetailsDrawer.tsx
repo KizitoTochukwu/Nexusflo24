@@ -127,7 +127,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const statusColor = automation.status === "active" ? "bg-emerald-100 text-emerald-700" : automation.status === "paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground";
 
   return (
-    <div className="fixed inset-0 z-[60] bg-background overflow-y-auto">
+    <div className="fixed inset-y-0 right-0 left-[var(--dashboard-sidebar-width,0px)] z-[60] bg-background overflow-y-auto transition-[left] duration-300">
       {/* Top bar */}
       <div className="sticky top-0 z-[61] bg-background border-b border-border px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
@@ -157,7 +157,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="builder" className="ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 space-y-5 mt-6 ml-[48px] mr-0">
+          <TabsContent value="builder" className="ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 space-y-5 mt-6 mr-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground">Name</label>

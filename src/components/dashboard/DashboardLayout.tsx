@@ -62,7 +62,10 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const initials = user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?";
 
   return (
-    <div className="flex min-h-screen bg-surface">
+    <div
+      className="flex min-h-screen bg-surface"
+      style={{ "--dashboard-sidebar-width": sidebarOpen ? "14rem" : "3.5rem" } as React.CSSProperties}
+    >
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-primary transition-all duration-300 ${
