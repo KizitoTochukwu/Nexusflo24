@@ -42,6 +42,7 @@ export type AutomationLog = {
 
 export const TRIGGER_OPTIONS = [
   { value: "new_lead", label: "New lead created" },
+  { value: "form_submitted", label: "Form submitted (any form / specific form)" },
   { value: "lead_added_to_folder", label: "Lead added to folder (great for CSV imports)" },
   { value: "lead_tagged", label: "Lead tagged" },
   { value: "tag_added", label: "Tag added (any tag)" },
