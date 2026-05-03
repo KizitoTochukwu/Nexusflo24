@@ -187,6 +187,10 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
           onColorChange={(v) => onChange({ ...p, color: v })}
           onOpacityChange={(v) => onChange({ ...p, colorOpacity: v })}
         />
+        <GradientField
+          value={p.bgGradient}
+          onChange={(g) => onChange({ ...p, bgGradient: g })}
+        />
       </Section>
       <Section title="Spacing">
         <Field label="Line Height">
