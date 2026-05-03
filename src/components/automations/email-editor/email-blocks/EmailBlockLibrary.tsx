@@ -36,6 +36,7 @@ export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps
                         onClick={() => onAddBlock(createEmailBlock(type))}
                       >
                         <Icon className="h-4 w-4" />
+                        <span className="leading-tight text-center">{meta.label}</span>
                       </button>
                     );
                     return (
