@@ -22,6 +22,7 @@ import {
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExecutionTimeline from "./ExecutionTimeline";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
+import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import {
   getDefaultExitCriteria,
   describeCriterion,
