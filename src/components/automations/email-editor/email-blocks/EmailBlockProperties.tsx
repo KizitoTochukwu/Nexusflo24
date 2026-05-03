@@ -406,8 +406,8 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
           </div>
         </div>
 
-        {/* Row 3: Alignment + line-height */}
-        <div className="flex items-center gap-1">
+        {/* Row 3: Alignment + line-height + insert tools */}
+        <div className="flex items-center gap-1 flex-wrap">
           <ToggleGroup
             type="single"
             value={p.alignment}
@@ -458,10 +458,6 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
               <Plus className="h-3 w-3" />
             </button>
           </div>
-        </div>
-
-        {/* Row 4: Insert link / image / button / variables */}
-        <div className="flex items-center gap-1 flex-wrap">
           <Popover open={linkOpen} onOpenChange={setLinkOpen}>
             <PopoverTrigger asChild>
               <Button type="button" variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs bg-background" onClick={openLinkDialog}>
