@@ -459,52 +459,51 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
             </button>
           </div>
         </div>
+
+        {/* Row 4: Insert link / image / button / variables */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <Popover open={linkOpen} onOpenChange={setLinkOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs bg-background" onClick={openLinkDialog}>
+                <Link2 className="h-3.5 w-3.5" /> Link
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 space-y-2" align="start">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Text</Label>
+                <Input value={linkText} onChange={(e) => setLinkText(e.target.value)} className="h-8 text-xs" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">URL</Label>
+                <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="h-8 text-xs" placeholder="https://..." />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="ghost" size="sm" onClick={() => setLinkOpen(false)}>Cancel</Button>
+                <Button size="sm" onClick={confirmLink}>Insert</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 gap-1 text-xs bg-background"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImg}
+          >
+            {uploadingImg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
+            Image
+          </Button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+          <Button type="button" variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs bg-background" onClick={() => setBtnOpen(true)}>
+            <MousePointerClick className="h-3.5 w-3.5" /> Button
+          </Button>
+          <InsertDropdown onInsert={insertVariable} />
+        </div>
       </div>
 
       {/* Content */}
       <Section title="Content">
-        <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs text-muted-foreground">Text</Label>
-          <div className="flex items-center gap-1">
-            <Popover open={linkOpen} onOpenChange={setLinkOpen}>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs" onClick={openLinkDialog}>
-                  <Link2 className="h-3.5 w-3.5" /> Link
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72 space-y-2" align="end">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Text</Label>
-                  <Input value={linkText} onChange={(e) => setLinkText(e.target.value)} className="h-8 text-xs" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">URL</Label>
-                  <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="h-8 text-xs" placeholder="https://..." />
-                </div>
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button variant="ghost" size="sm" onClick={() => setLinkOpen(false)}>Cancel</Button>
-                  <Button size="sm" onClick={confirmLink}>Insert</Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 gap-1 text-xs"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingImg}
-            >
-              {uploadingImg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
-              Image
-            </Button>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-            <Button type="button" variant="outline" size="sm" className="h-8 px-2 gap-1 text-xs" onClick={() => setBtnOpen(true)}>
-              <MousePointerClick className="h-3.5 w-3.5" /> Button
-            </Button>
-            <InsertDropdown onInsert={insertVariable} />
-          </div>
-        </div>
         <Textarea
           ref={textareaRef}
           className="min-h-[140px] text-sm"
