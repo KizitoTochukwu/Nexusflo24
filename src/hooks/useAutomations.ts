@@ -145,6 +145,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "send_whatsapp", label: "Follow up on WhatsApp", defaults: { message: "Hey {{first_name}}, saw you opened our email — any questions?" } },
           { action: "add_tag", label: "Tag: engaged", defaults: { tag: "engaged" } },
+          { action: "adjust_score", label: "+5 score", defaults: { score_delta: 5 } },
           { action: "send_sms", label: "Send SMS nudge", defaults: { message: "Quick reminder from our team 👋" } },
         ],
       },
@@ -154,6 +155,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "notify_sales", label: "Notify Sales", defaults: { message: "Lead clicked a link — high intent" } },
           { action: "send_email", label: "Send follow-up email", defaults: { subject: "Thanks for checking that out" } },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
           { action: "update_status", label: "Move to Warm", defaults: { new_status: "Warm" } },
         ],
       },
@@ -168,6 +170,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "add_tag", label: "Add to nurture flow", defaults: { tag: "nurture" } },
           { action: "send_email", label: "Send welcome email", defaults: { subject: "Thanks for signing up 🎉" } },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
           { action: "notify_sales", label: "Notify Sales" },
         ],
       },
@@ -177,6 +180,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "send_email", label: "Send discount email", defaults: { subject: "Your 10% off is inside 🎁", message: "Hi {{first_name}},\n\nWe noticed you were checking us out — here's 10% off to help you decide.\n\nUse code: SAVE10" } },
           { action: "send_whatsapp", label: "Send WhatsApp reminder", defaults: { message: "Hi {{first_name}}, your cart is still waiting — need help completing your order?" } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
           { action: "add_tag", label: "Tag: cart-abandoner", defaults: { tag: "cart-abandoner" } },
         ],
       },
@@ -186,6 +190,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "notify_sales", label: "Notify Sales", defaults: { message: "Lead viewed pricing — high intent" } },
           { action: "send_email", label: "Send pricing follow-up", defaults: { subject: "Questions about pricing?" } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
           { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
         ],
       },
@@ -200,6 +205,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "update_status", label: "Move to Engaged", defaults: { new_status: "Engaged" } },
           { action: "notify_sales", label: "Notify Sales" },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
           { action: "send_whatsapp", label: "Reply on WhatsApp", defaults: { message: "Thanks for getting back, {{first_name}}!" } },
         ],
       },
@@ -214,6 +220,10 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
           { action: "notify_sales", label: "Notify Sales", defaults: { message: "High-score lead — please reach out" } },
+          { action: "adjust_score", label: "+5 score", defaults: { score_delta: 5 } },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
+          { action: "adjust_score", label: "+30 score", defaults: { score_delta: 30 } },
           { action: "send_email", label: "Send VIP email", defaults: { subject: "A personal note from our team" } },
         ],
       },
@@ -228,6 +238,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "send_email", label: "Send confirmation email", defaults: { subject: "Your appointment is confirmed ✅" } },
           { action: "send_whatsapp", label: "Send WhatsApp reminder", defaults: { message: "Hi {{first_name}}, looking forward to our meeting!" } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
           { action: "update_status", label: "Move to Qualified", defaults: { new_status: "Qualified" } },
         ],
       },
@@ -237,6 +248,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "add_tag", label: "Tag: customer", defaults: { tag: "customer" } },
           { action: "send_email", label: "Send thank-you email", defaults: { subject: "Thank you for your purchase 🙌" } },
+          { action: "adjust_score", label: "+30 score", defaults: { score_delta: 30 } },
           { action: "update_status", label: "Mark Won", defaults: { new_status: "Won" } },
           { action: "remove_tag", label: "Remove cart-abandoner tag", defaults: { tag: "cart-abandoner" } },
         ],
@@ -263,6 +275,7 @@ export const ACTION_OPTIONS = [
   { value: "add_tag", label: "Add Tag", icon: "Tag" },
   { value: "remove_tag", label: "Remove Tag", icon: "XCircle" },
   { value: "update_status", label: "Update Lead Status", icon: "RefreshCw" },
+  { value: "adjust_score", label: "Adjust Lead Score", icon: "TrendingUp" },
   { value: "notify_sales", label: "Notify Sales", icon: "Bell" },
   { value: "delay", label: "Wait / Delay", icon: "Clock" },
 ] as const;

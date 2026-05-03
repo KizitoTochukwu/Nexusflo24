@@ -4,8 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Plus, Trash2, GripVertical, Zap, Filter, Play, Clock,
-  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen
+  Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp
 } from "lucide-react";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, type ConditionOperator } from "@/hooks/useAutomations";
 import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
@@ -34,6 +34,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   add_tag: <Tag className="h-4 w-4" />,
   remove_tag: <XCircle className="h-4 w-4" />,
   update_status: <RefreshCw className="h-4 w-4" />,
+  adjust_score: <TrendingUp className="h-4 w-4" />,
   notify_sales: <Bell className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
 };
@@ -326,6 +327,42 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         </SelectContent>
                       </Select>
                     )}
+                    {(step.config.action as string) === "adjust_score" && (() => {
+                      const delta = Number(step.config.score_delta ?? 5);
+                      const setDelta = (n: number) => updateStep(i, { score_delta: Math.max(-100, Math.min(100, n)) });
+                      const presets = [-10, -5, 5, 10, 20, 30];
+                      return (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center rounded-md border border-border bg-background h-8">
+                            <button type="button" onClick={() => setDelta(delta - 1)} className="px-2 h-full hover:bg-muted/50">
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <input
+                              type="number"
+                              value={delta}
+                              onChange={(e) => setDelta(parseInt(e.target.value) || 0)}
+                              className="w-14 h-full bg-transparent text-center text-sm outline-none"
+                            />
+                            <button type="button" onClick={() => setDelta(delta + 1)} className="px-2 h-full hover:bg-muted/50">
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <span className="text-xs text-muted-foreground">points</span>
+                          {presets.map((p) => (
+                            <Button
+                              key={p}
+                              type="button"
+                              variant={delta === p ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setDelta(p)}
+                            >
+                              {p > 0 ? `+${p}` : p}
+                            </Button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
                     <AutomationEmailEditor

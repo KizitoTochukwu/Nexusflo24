@@ -367,6 +367,23 @@ Deno.serve(async (req) => {
                 meta: { lead_id, automation_id },
               });
               details = { notification: "sent" };
+            } else if (actionType === "adjust_score") {
+              const delta = parseInt(String(config.score_delta ?? config.delta ?? 0), 10) || 0;
+              const previous = Number(lead.score || 0);
+              const newScore = Math.max(0, previous + delta);
+              await supabase.from("leads").update({ score: newScore }).eq("id", lead_id);
+              await supabase.from("lead_score_history").insert({
+                workspace_id,
+                lead_id,
+                delta,
+                previous_score: previous,
+                new_score: newScore,
+                source: "automation",
+                ref_type: "automation",
+                ref_id: automation_id,
+                reason: `Automation adjusted score by ${delta > 0 ? "+" : ""}${delta}`,
+              });
+              details = { delta, previous, newScore };
             } else {
               details = { message: `Unknown action type: ${actionType}` };
               status = "skipped";
