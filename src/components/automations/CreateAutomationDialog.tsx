@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 import { useCreateAutomation, TRIGGER_OPTIONS } from "@/hooks/useAutomations";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useFunnels } from "@/hooks/useFunnels";
+import { useForms } from "@/hooks/useForms";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
@@ -26,6 +27,7 @@ export default function CreateAutomationDialog() {
   const createAutomation = useCreateAutomation();
   const { data: funnels } = useFunnels(workspaceId);
   const { data: folders } = useLeadFolders(workspaceId);
+  const { data: forms } = useForms(workspaceId);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -33,6 +35,7 @@ export default function CreateAutomationDialog() {
   const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
   const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
   const [tagValue, setTagValue] = useState<string>("");
+  const [selectedFormId, setSelectedFormId] = useState<string>("any");
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>(() => getDefaultExitCriteria("new_lead"));
 
@@ -48,6 +51,7 @@ export default function CreateAutomationDialog() {
     setSelectedFunnelId("all");
     setSelectedFolderId("any");
     setTagValue("");
+    setSelectedFormId("any");
     setSteps([]);
     setExitCriteria(getDefaultExitCriteria("new_lead"));
     setSocialKeyword("");
@@ -75,6 +79,9 @@ export default function CreateAutomationDialog() {
       if (selectedFolderId !== "any") triggerConfig.folder_id = selectedFolderId;
     } else if (triggerType === "lead_tagged") {
       if (tagValue.trim()) triggerConfig.tag = tagValue.trim();
+    } else if (triggerType === "form_submitted") {
+      if (selectedFormId !== "any") triggerConfig.form_id = selectedFormId;
+      if (selectedFunnelId !== "all") triggerConfig.funnel_id = selectedFunnelId;
     } else if (isSocialTrigger(triggerType)) {
       if (!socialKeyword.trim()) {
         toast.error("Please enter a keyword (e.g. START)");
@@ -128,7 +135,8 @@ export default function CreateAutomationDialog() {
   const showFolderPicker = triggerType === "lead_added_to_folder";
   const showTagInput = triggerType === "lead_tagged";
   const showSocialConfig = isSocialTrigger(triggerType);
-  const showFunnelScope = !showFolderPicker && !showTagInput && !showSocialConfig;
+  const showFormPicker = triggerType === "form_submitted";
+  const showFunnelScope = !showFolderPicker && !showTagInput && !showSocialConfig && !showFormPicker;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
@@ -234,6 +242,38 @@ export default function CreateAutomationDialog() {
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {showFormPicker && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-foreground">Scope to form</label>
+                <Select value={selectedFormId} onValueChange={setSelectedFormId}>
+                  <SelectTrigger><SelectValue placeholder="Any form" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any form (workspace-wide)</SelectItem>
+                    {(forms ?? []).map((f: any) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fires whenever this form is submitted (new or returning lead).
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Or scope to funnel (optional)</label>
+                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger><SelectValue placeholder="All funnels" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All funnels</SelectItem>
+                    {(funnels ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 

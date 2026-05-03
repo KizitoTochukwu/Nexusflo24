@@ -523,78 +523,154 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- Trigger matching automations (for both new and returning leads) ---
+    // --- Trigger matching automations ---
     {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
+      const enrollUrl = `${supabaseUrl}/functions/v1/enroll-workflow-leads`;
 
+      const capturedFunnelId = (meta as any)?.funnel_id || null;
+      const capturedFormId = (meta as any)?.formId || (meta as any)?.form_id || null;
+
+      // Tags actually newly applied to this lead (vs already present on the existing record)
+      const previousTags = (existing?.tags || []) as string[];
+      const addedTags = newTags.filter((t) => !previousTags.some((p) => String(p).toLowerCase() === String(t).toLowerCase()));
+
+      const dispatchAutomation = async (autoId: string) => {
+        try {
+          await fetch(execUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+            body: JSON.stringify({ automation_id: autoId, lead_id: leadId, workspace_id: workspaceId }),
+          });
+        } catch (e) {
+          console.error(`[capture-lead] dispatch automation ${autoId} failed:`, e);
+        }
+      };
+
+      const dispatchWorkflow = async (eventType: string, eventConfig: Record<string, unknown>) => {
+        try {
+          await fetch(enrollUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+            body: JSON.stringify({
+              workspace_id: workspaceId,
+              lead_ids: [leadId],
+              event_type: eventType,
+              event_config: eventConfig,
+            }),
+          });
+        } catch (e) {
+          console.error(`[capture-lead] enroll-workflow ${eventType} failed:`, e);
+        }
+      };
+
+      // 1) new_lead — only for genuinely new leads
+      if (!existing) {
+        try {
+          const { data: automations } = await supabase
+            .from("automations")
+            .select("id, trigger_config")
+            .eq("workspace_id", workspaceId)
+            .eq("trigger_type", "new_lead")
+            .eq("status", "active");
+
+          for (const auto of automations ?? []) {
+            const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
+            const autoFunnelId = cfg.funnel_id as string | null | undefined;
+            if (autoFunnelId && autoFunnelId !== capturedFunnelId) continue;
+            await dispatchAutomation(auto.id);
+          }
+          await dispatchWorkflow("new_lead", { funnel_id: capturedFunnelId });
+        } catch (autoErr) {
+          console.error("[capture-lead] new_lead trigger error:", autoErr);
+        }
+      }
+
+      // 2) form_submitted — fires for both new and returning leads
       try {
-        const capturedFunnelId = meta?.funnel_id || null;
-
         const { data: automations } = await supabase
           .from("automations")
           .select("id, trigger_config")
           .eq("workspace_id", workspaceId)
-          .eq("trigger_type", "new_lead")
+          .eq("trigger_type", "form_submitted")
           .eq("status", "active");
 
-        if (automations && automations.length > 0) {
-          const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
-          for (const auto of automations) {
-            const cfg = auto.trigger_config as Record<string, unknown> | null;
-            const autoFunnelId = cfg?.funnel_id as string | null | undefined;
-            if (autoFunnelId && autoFunnelId !== capturedFunnelId) {
+        for (const auto of automations ?? []) {
+          const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
+          const autoFormId = cfg.form_id as string | null | undefined;
+          const autoFunnelId = cfg.funnel_id as string | null | undefined;
+          if (autoFormId && autoFormId !== capturedFormId) continue;
+          if (autoFunnelId && autoFunnelId !== capturedFunnelId) continue;
+          await dispatchAutomation(auto.id);
+        }
+        await dispatchWorkflow("form_submitted", { form_id: capturedFormId, funnel_id: capturedFunnelId });
+      } catch (formErr) {
+        console.error("[capture-lead] form_submitted trigger error:", formErr);
+      }
+
+      // 3) lead_tagged + tag_added — for each newly applied tag
+      if (addedTags.length > 0) {
+        try {
+          const { data: automations } = await supabase
+            .from("automations")
+            .select("id, trigger_type, trigger_config")
+            .eq("workspace_id", workspaceId)
+            .in("trigger_type", ["lead_tagged", "tag_added"])
+            .eq("status", "active");
+
+          for (const auto of automations ?? []) {
+            const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
+            const cfgTag = cfg.tag as string | null | undefined;
+            if (auto.trigger_type === "tag_added") {
+              await dispatchAutomation(auto.id);
               continue;
             }
-
-            try {
-              await fetch(execUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${svcKey}`,
-                },
-                body: JSON.stringify({ automation_id: auto.id, lead_id: leadId, workspace_id: workspaceId }),
-              });
-            } catch (e) {
-              console.error(`Failed to trigger automation ${auto.id}:`, e);
+            // lead_tagged: match if no specific tag set OR any added tag matches
+            if (!cfgTag || addedTags.some((t) => String(t).toLowerCase() === String(cfgTag).toLowerCase())) {
+              await dispatchAutomation(auto.id);
             }
           }
+          for (const tag of addedTags) {
+            await dispatchWorkflow("lead_tagged", { tag });
+          }
+        } catch (tagErr) {
+          console.error("[capture-lead] lead_tagged trigger error:", tagErr);
         }
-      } catch (autoErr) {
-        console.error("Automation trigger error:", autoErr);
       }
 
-      try {
-        const { data: triggeredCampaigns } = await supabase
-          .from("campaigns")
-          .select("id")
-          .eq("workspace_id", workspaceId)
-          .eq("campaign_mode", "triggered")
-          .eq("status", "active")
-          .contains("trigger_config", { type: "new_lead" });
+      // 4) Triggered campaigns — only for genuinely new leads
+      if (!existing) {
+        try {
+          const { data: triggeredCampaigns } = await supabase
+            .from("campaigns")
+            .select("id")
+            .eq("workspace_id", workspaceId)
+            .eq("campaign_mode", "triggered")
+            .eq("status", "active")
+            .contains("trigger_config", { type: "new_lead" });
 
-        if (triggeredCampaigns && triggeredCampaigns.length > 0) {
-          const execCampaignUrl = `${supabaseUrl}/functions/v1/execute-campaign`;
-          for (const camp of triggeredCampaigns) {
-            try {
-              await fetch(execCampaignUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${svcKey}`,
-                },
-                body: JSON.stringify({ campaign_id: camp.id, lead_ids: [leadId] }),
-              });
-            } catch (e) {
-              console.error(`Failed to trigger campaign ${camp.id}:`, e);
+          if (triggeredCampaigns && triggeredCampaigns.length > 0) {
+            const execCampaignUrl = `${supabaseUrl}/functions/v1/execute-campaign`;
+            for (const camp of triggeredCampaigns) {
+              try {
+                await fetch(execCampaignUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+                  body: JSON.stringify({ campaign_id: camp.id, lead_ids: [leadId] }),
+                });
+              } catch (e) {
+                console.error(`Failed to trigger campaign ${camp.id}:`, e);
+              }
             }
           }
+        } catch (campErr) {
+          console.error("[capture-lead] campaign trigger error:", campErr);
         }
-      } catch (campErr) {
-        console.error("Campaign trigger error:", campErr);
       }
     }
+
 
     return new Response(JSON.stringify({ ok: true, leadId, updated: !!existing }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
