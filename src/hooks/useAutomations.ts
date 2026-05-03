@@ -170,6 +170,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "add_tag", label: "Add to nurture flow", defaults: { tag: "nurture" } },
           { action: "send_email", label: "Send welcome email", defaults: { subject: "Thanks for signing up 🎉" } },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
           { action: "notify_sales", label: "Notify Sales" },
         ],
       },
@@ -179,6 +180,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "send_email", label: "Send discount email", defaults: { subject: "Your 10% off is inside 🎁", message: "Hi {{first_name}},\n\nWe noticed you were checking us out — here's 10% off to help you decide.\n\nUse code: SAVE10" } },
           { action: "send_whatsapp", label: "Send WhatsApp reminder", defaults: { message: "Hi {{first_name}}, your cart is still waiting — need help completing your order?" } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
           { action: "add_tag", label: "Tag: cart-abandoner", defaults: { tag: "cart-abandoner" } },
         ],
       },
@@ -188,6 +190,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "notify_sales", label: "Notify Sales", defaults: { message: "Lead viewed pricing — high intent" } },
           { action: "send_email", label: "Send pricing follow-up", defaults: { subject: "Questions about pricing?" } },
+          { action: "adjust_score", label: "+20 score", defaults: { score_delta: 20 } },
           { action: "update_status", label: "Mark Hot", defaults: { new_status: "Hot" } },
         ],
       },
