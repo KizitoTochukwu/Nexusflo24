@@ -85,6 +85,97 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
     onChange(updated);
   };
 
+  // Find matching branch end index for a start at `startIdx`. Returns -1 if not found.
+  const findBranchEnd = (startIdx: number): number => {
+    const startType = steps[startIdx]?.step_type;
+    const endType = startType === "branch_yes_start" ? "branch_yes_end"
+      : startType === "branch_no_start" ? "branch_no_end" : null;
+    if (!endType) return -1;
+    let depth = 1;
+    for (let j = startIdx + 1; j < steps.length; j++) {
+      if (steps[j].step_type === startType) depth++;
+      else if (steps[j].step_type === endType) {
+        depth--;
+        if (depth === 0) return j;
+      }
+    }
+    return -1;
+  };
+
+  // Detect whether a condition at index i already has a YES/NO branch immediately following
+  // (allowing other branch of opposite kind in between).
+  const branchInfoForCondition = (i: number) => {
+    let hasYes = false, hasNo = false;
+    let j = i + 1;
+    while (j < steps.length) {
+      const t = steps[j].step_type;
+      if (t === "branch_yes_start") {
+        hasYes = true;
+        const end = findBranchEnd(j);
+        j = end === -1 ? steps.length : end + 1;
+      } else if (t === "branch_no_start") {
+        hasNo = true;
+        const end = findBranchEnd(j);
+        j = end === -1 ? steps.length : end + 1;
+      } else {
+        break;
+      }
+    }
+    return { hasYes, hasNo };
+  };
+
+  const addBranch = (conditionIdx: number, kind: "yes" | "no") => {
+    // Insert after any existing branches that already follow this condition
+    let insertAt = conditionIdx + 1;
+    while (insertAt < steps.length) {
+      const t = steps[insertAt].step_type;
+      if (t === "branch_yes_start" || t === "branch_no_start") {
+        const end = findBranchEnd(insertAt);
+        insertAt = end === -1 ? steps.length : end + 1;
+      } else break;
+    }
+    const startType = kind === "yes" ? "branch_yes_start" : "branch_no_start";
+    const endType = kind === "yes" ? "branch_yes_end" : "branch_no_end";
+    const updated = [...steps];
+    updated.splice(insertAt, 0, { step_type: startType, config: {} }, { step_type: endType, config: {} });
+    onChange(updated);
+  };
+
+  const removeBranch = (startIdx: number) => {
+    const endIdx = findBranchEnd(startIdx);
+    if (endIdx === -1) return;
+    const updated = [...steps];
+    // Remove end first (higher index), then start, preserving inner steps
+    updated.splice(endIdx, 1);
+    updated.splice(startIdx, 1);
+    onChange(updated);
+  };
+
+  const insertStepInsideBranch = (endIdx: number, type: StepData["step_type"]) => {
+    const newStep: StepData = { step_type: type, config: {} };
+    if (type === "delay") newStep.config = { duration: 60, unit: "minutes" };
+    const updated = [...steps];
+    updated.splice(endIdx, 0, newStep);
+    onChange(updated);
+  };
+
+  // Compute branch nesting (kind) for each index, for visual tinting
+  const branchStackPerIndex: Array<"yes" | "no" | null> = (() => {
+    const out: Array<"yes" | "no" | null> = [];
+    const stack: Array<"yes" | "no"> = [];
+    steps.forEach((s) => {
+      if (s.step_type === "branch_yes_start") { stack.push("yes"); out.push("yes"); }
+      else if (s.step_type === "branch_no_start") { stack.push("no"); out.push("no"); }
+      else if (s.step_type === "branch_yes_end" || s.step_type === "branch_no_end") {
+        out.push(stack[stack.length - 1] ?? null);
+        stack.pop();
+      } else {
+        out.push(stack[stack.length - 1] ?? null);
+      }
+    });
+    return out;
+  })();
+
   return (
     <div className="space-y-2">
       {/* Visual trigger block */}
