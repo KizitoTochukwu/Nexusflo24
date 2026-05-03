@@ -588,8 +588,9 @@ Deno.serve(async (req) => {
             if (!passed && config.halt_on_fail === true) {
               skipRemaining = true;
             }
+            // Record result so the next branch_yes_start / branch_no_start marker can fork.
+            lastConditionPassed = passed;
             details = { conditionType: conditionType || config.field, operator, value, value_to: valueTo, time_window_days: timeWindowDays, passed };
-            // Use distinct statuses so logs remain meaningful, but neither halts the flow by default.
             status = passed ? "success" : "condition_not_met";
             break;
           }
