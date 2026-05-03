@@ -128,7 +128,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { automation_id, lead_id, workspace_id, start_from_step } = await req.json();
+    const reqBody = await req.json();
+    const { automation_id, lead_id, workspace_id, start_from_step, branch_context: incomingBranchCtx } = reqBody;
     if (!automation_id || !lead_id || !workspace_id) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
