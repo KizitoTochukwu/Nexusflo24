@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
               lead_id: payload.lead_id || job.lead_id,
               workspace_id: payload.workspace_id || job.workspace_id,
               start_from_step: job.step_index,
+              branch_context: payload.branch_context,
             };
         const execRes = await fetch(targetUrl, {
           method: "POST",

@@ -1,13 +1,27 @@
 /**
  * Pre-built "New Subscriber Nurture" automation for Nexusflo24.
- * Multi-channel (Email + WhatsApp + SMS) with score-based branching.
+ * Multi-channel (Email + WhatsApp + SMS) with TRUE YES/NO branching
+ * via `branch_yes_start` / `branch_no_start` markers.
+ *
+ * The execute-automation engine forks on the most recent condition's
+ * `passed` result: only one branch runs; the other is skipped.
  * Inserted as a draft — user reviews copy, then activates.
  */
 import type { ExitCriterion } from "./exitCriteria";
 
 export const NURTURE_TEMPLATE_NAME = "New Subscriber Nurture (Email + WhatsApp + SMS)";
 
-export type SeedStep = { step_type: "action" | "condition" | "delay"; config: Record<string, unknown> };
+export type SeedStep = {
+  step_type:
+    | "action"
+    | "condition"
+    | "delay"
+    | "branch_yes_start"
+    | "branch_yes_end"
+    | "branch_no_start"
+    | "branch_no_end";
+  config: Record<string, unknown>;
+};
 
 const EMAIL_WELCOME_BODY = `Hi {{first_name}},
 
@@ -75,20 +89,24 @@ export const SUBSCRIBER_NURTURE_STEPS: SeedStep[] = [
   // 4. Wait 1 day
   { step_type: "delay", config: { duration: 1, unit: "days" } },
 
-  // 5. Did they open the welcome email? (branch via smart actions)
+  // 5. Did they open the welcome email?
   { step_type: "condition", config: { condition: "email_opened", operator: "happened", time_window_days: 1 } },
 
-  // 6. If opened — engaged
+  // 6. YES → engaged path
+  { step_type: "branch_yes_start", config: { label: "Opened welcome email" } },
   { step_type: "action", config: { action: "adjust_score", score_delta: 10 } },
   { step_type: "action", config: { action: "add_tag", tag: "engaged" } },
+  { step_type: "branch_yes_end", config: {} },
 
-  // 7. SMS nudge (sent regardless — engine doesn't gate on conditions)
+  // 7. NO → SMS fallback nudge
+  { step_type: "branch_no_start", config: { label: "Didn't open welcome email" } },
   { step_type: "action", config: { action: "send_sms", message: "Hi {{first_name}}, did our Nexusflo24 welcome email land? Reply YES if you'd like a quick onboarding call." } },
+  { step_type: "branch_no_end", config: {} },
 
   // 8. Wait 2 days
   { step_type: "delay", config: { duration: 2, unit: "days" } },
 
-  // 9. Educational email
+  // 9. Educational email (sent to everyone)
   { step_type: "action", config: { action: "send_email", subject: "3 ways creators are 2× their conversions with Nexusflo24", body: EMAIL_TIPS_BODY } },
 
   // 10. Wait 2 days
@@ -97,37 +115,48 @@ export const SUBSCRIBER_NURTURE_STEPS: SeedStep[] = [
   // 11. Did they click a link?
   { step_type: "condition", config: { condition: "link_clicked", operator: "happened", time_window_days: 4 } },
 
-  // 12. High-intent boost
+  // 12. YES → high intent → hand off to AI Sales Closer
+  { step_type: "branch_yes_start", config: { label: "High intent — clicked link" } },
   { step_type: "action", config: { action: "adjust_score", score_delta: 30 } },
   { step_type: "action", config: { action: "update_status", new_status: "Hot" } },
   { step_type: "action", config: { action: "add_tag", tag: "ai-closer-handoff" } },
   { step_type: "action", config: { action: "notify_sales", title: "🔥 Hot lead clicked through", message: "{{first_name}} {{last_name}} clicked a link — they're high intent. Reach out now." } },
+  { step_type: "branch_yes_end", config: {} },
 
-  // 13. Wait 2 days
+  // 13. NO → keep nurturing (no extra action — main flow continues)
+  { step_type: "branch_no_start", config: { label: "Not yet engaged — keep nurturing" } },
+  { step_type: "action", config: { action: "adjust_score", score_delta: 2 } },
+  { step_type: "branch_no_end", config: {} },
+
+  // 14. Wait 2 days
   { step_type: "delay", config: { duration: 2, unit: "days" } },
 
-  // 14. Offer email
+  // 15. Offer email
   { step_type: "action", config: { action: "send_email", subject: "🎁 20% off your first month — 48 hours only", body: EMAIL_OFFER_BODY } },
 
-  // 15. Wait 2 days
+  // 16. Wait 2 days
   { step_type: "delay", config: { duration: 2, unit: "days" } },
 
-  // 16. WhatsApp nudge on offer
+  // 17. WhatsApp nudge on offer
   { step_type: "action", config: { action: "send_whatsapp", message: "Quick nudge {{first_name}} — your 20% off Nexusflo24 code (WELCOME20) is about to expire. Want me to apply it for you?" } },
 
-  // 17. Wait 2 days
+  // 18. Wait 2 days
   { step_type: "delay", config: { duration: 2, unit: "days" } },
 
-  // 18. Score check — warm or break-up
+  // 19. Final fork: warm or cold?
   { step_type: "condition", config: { condition: "score_gt", operator: "greater_than", value: 40 } },
 
-  // 19. Warm path — notify sales
+  // 20. YES → warm → notify sales for personal touch
+  { step_type: "branch_yes_start", config: { label: "Warm — worth a call" } },
   { step_type: "action", config: { action: "notify_sales", title: "Warm lead worth a call", message: "{{first_name}} engaged through the nurture sequence. Score is now {{score}}. Worth a personal touch." } },
+  { step_type: "branch_yes_end", config: {} },
 
-  // 20. Break-up email + cool-off
+  // 21. NO → cold → break-up email + cool-off
+  { step_type: "branch_no_start", config: { label: "Cold — break up politely" } },
   { step_type: "action", config: { action: "send_email", subject: "Should we say goodbye, {{first_name}}?", body: EMAIL_BREAKUP_BODY } },
   { step_type: "action", config: { action: "adjust_score", score_delta: -10 } },
   { step_type: "action", config: { action: "add_tag", tag: "cold" } },
+  { step_type: "branch_no_end", config: {} },
 ];
 
 export const SUBSCRIBER_NURTURE_EXIT_CRITERIA: ExitCriterion[] = [
@@ -139,7 +168,7 @@ export const SUBSCRIBER_NURTURE_EXIT_CRITERIA: ExitCriterion[] = [
 export const SUBSCRIBER_NURTURE_DEFINITION = {
   name: NURTURE_TEMPLATE_NAME,
   description:
-    "Multi-channel nurture for new Nexusflo24 subscribers. Welcomes, educates, branches on engagement, hands hot leads to sales, and politely breaks up with cold ones.",
+    "Multi-channel nurture for new Nexusflo24 subscribers with TRUE YES/NO branching: welcomes, educates, forks on engagement, hands hot leads to sales, and politely breaks up with cold ones.",
   trigger_type: "lead_added_to_folder",
   trigger_config: {} as Record<string, unknown>,
   exit_criteria: SUBSCRIBER_NURTURE_EXIT_CRITERIA,
