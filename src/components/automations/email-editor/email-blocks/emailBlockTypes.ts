@@ -25,6 +25,8 @@ export interface TextBlockProps {
   italic?: boolean;
   underline?: boolean;
   lineHeight: number;
+  bgColor?: string;
+  bgOpacity?: number;
   bgGradient?: GradientProps;
 }
 
