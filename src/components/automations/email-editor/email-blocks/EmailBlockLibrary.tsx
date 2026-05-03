@@ -11,7 +11,7 @@ export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps
   return (
     <TooltipProvider delayDuration={300}>
       {/* Slim icon-rail palette at all breakpoints to maximize canvas width */}
-      <div className="hidden sm:flex w-[180px] shrink-0 flex-col border-r border-border bg-muted/30 overflow-y-auto text-sm">
+      <div className="hidden sm:flex w-[90px] shrink-0 flex-col border-r border-border bg-muted/30 overflow-y-auto text-sm">
         <div className="p-2">
           {GROUPS.map((group) => {
             const entries = (Object.entries(BLOCK_META) as [EmailBlockType, typeof BLOCK_META[EmailBlockType]][])
@@ -19,7 +19,7 @@ export default function EmailBlockLibrary({ onAddBlock }: EmailBlockLibraryProps
             return (
               <div key={group} className="mb-3 last:mb-0">
                 <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{group}</p>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-1 gap-1.5">
                   {entries.map(([type, meta]) => {
                     const Icon = meta.icon;
                     const button = (
