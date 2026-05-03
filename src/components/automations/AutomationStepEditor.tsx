@@ -92,7 +92,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
             <div className="flex justify-center py-1">
               <ArrowDown className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className={`rounded-lg border p-3 ${meta.color}`}>
+            <div className={`rounded-lg border p-3 pr-[12px] ml-0 mr-0 ${meta.color}`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <button onClick={() => moveStep(i, i - 1)} className="cursor-grab opacity-50 hover:opacity-100">
