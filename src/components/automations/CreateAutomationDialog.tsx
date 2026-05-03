@@ -12,6 +12,7 @@ import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
+import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -185,11 +186,16 @@ export default function CreateAutomationDialog() {
           {showTagInput && (
             <div>
               <label className="text-sm font-medium text-foreground">Tag</label>
-              <Input
-                placeholder="e.g. csv-march-2026"
-                value={tagValue}
-                onChange={(e) => setTagValue(e.target.value)}
-              />
+              <Select value={tagValue} onValueChange={setTagValue}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select tag (or leave blank for any)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AUTOMATION_TAG_OPTIONS.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground mt-1">
                 Fires whenever this exact tag is added to a lead. Leave blank to match any tag.
               </p>

@@ -8,6 +8,7 @@ import {
   type ExitCriterion,
   getDefaultExitCriteria,
 } from "@/lib/automations/exitCriteria";
+import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 
 const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Lost"];
 
@@ -93,12 +94,19 @@ export default function ExitCriteriaEditor({ value, onChange, triggerType }: Pro
               </Select>
 
               {meta?.needsValue === "tag" && (
-                <Input
-                  className="h-8 w-[160px] text-xs"
-                  placeholder="tag name"
+                <Select
                   value={(c as Extract<ExitCriterion, { type: "tag_added" }>).tag}
-                  onChange={(e) => update(i, { tag: e.target.value } as any)}
-                />
+                  onValueChange={(v) => update(i, { tag: v } as any)}
+                >
+                  <SelectTrigger className="h-8 w-[160px] text-xs">
+                    <SelectValue placeholder="Select tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AUTOMATION_TAG_OPTIONS.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
 
               {meta?.needsValue === "status" && (
