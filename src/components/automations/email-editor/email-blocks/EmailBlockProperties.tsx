@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   EmailBlock, TextBlockProps, ImageBlockProps, ButtonBlockProps,
   DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
-  BLOCK_META,
+  BLOCK_META, GradientProps,
 } from "./emailBlockTypes";
 import InsertDropdown from "../InsertDropdown";
 
