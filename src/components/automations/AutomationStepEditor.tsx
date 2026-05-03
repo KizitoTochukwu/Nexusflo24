@@ -15,6 +15,7 @@ import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import type { ExitCriterion } from "@/lib/automations/exitCriteria";
+import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 
 export type StepData = {
   step_type:
