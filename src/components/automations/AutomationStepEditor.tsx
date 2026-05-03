@@ -5,12 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
-  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, type ConditionOperator } from "@/hooks/useAutomations";
 import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { useWorkspaceMembers } from "@/hooks/useWorkspaceInvites";
 import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
@@ -47,6 +48,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   update_status: <RefreshCw className="h-4 w-4" />,
   adjust_score: <TrendingUp className="h-4 w-4" />,
   notify_sales: <Bell className="h-4 w-4" />,
+  assign_owner: <UserPlus className="h-4 w-4" />,
   enroll_in_automation: <Zap className="h-4 w-4" />,
   delay: <Clock className="h-4 w-4" />,
 };
@@ -64,6 +66,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
   const workspaceId = useWorkspaceId();
   const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
   const { data: allAutomations } = useAutomations(workspaceId || "");
+  const { data: workspaceMembers } = useWorkspaceMembers(workspaceId || "");
 
   const addStep = (type: StepData["step_type"]) => {
     const newStep: StepData = { step_type: type, config: {} };
@@ -568,6 +571,48 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                             ))}
                           </SelectContent>
                         </Select>
+                      );
+                    })()}
+                    {(step.config.action as string) === "assign_owner" && (() => {
+                      const mode = ((step.config.assign_mode as string) || "round_robin");
+                      const userId = (step.config.assign_user_id as string) || "";
+                      return (
+                        <>
+                          <Select
+                            value={mode}
+                            onValueChange={(v) => updateStep(i, { assign_mode: v, ...(v === "round_robin" ? { assign_user_id: "" } : {}) })}
+                          >
+                            <SelectTrigger className="w-[160px] bg-background">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="round_robin">Round-robin</SelectItem>
+                              <SelectItem value="specific">Specific user</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {mode === "specific" && (
+                            <Select
+                              value={userId}
+                              onValueChange={(v) => updateStep(i, { assign_user_id: v })}
+                            >
+                              <SelectTrigger className="w-[220px] bg-background">
+                                <SelectValue placeholder="Select team member" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(workspaceMembers || []).length === 0 && (
+                                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                    No members found
+                                  </div>
+                                )}
+                                {(workspaceMembers || []).map((m: any) => (
+                                  <SelectItem key={m.user_id} value={m.user_id}>
+                                    {m.profile?.full_name || m.profile?.email || m.user_id.slice(0, 8)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </>
                       );
                     })()}
                   </div>

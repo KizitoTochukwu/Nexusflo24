@@ -6,6 +6,7 @@ const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Ho
 const VALID_ACTIONS = [
   "send_email", "send_whatsapp", "send_sms",
   "add_tag", "remove_tag", "update_status", "notify_sales", "delay",
+  "assign_owner", "enroll_in_automation", "adjust_score",
 ] as const;
 
 const TAG_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_\-]{0,49}$/;
@@ -41,6 +42,19 @@ const delayDefaults = z.object({
   unit: z.enum(["minutes", "hours", "days"]),
 }).passthrough();
 
+const assignOwnerDefaults = z.object({
+  mode: z.enum(["round_robin", "specific"]).default("round_robin"),
+  user_id: z.string().uuid().optional(),
+}).passthrough();
+
+const enrollDefaults = z.object({
+  target_automation_id: z.string().uuid().optional(),
+}).passthrough();
+
+const adjustScoreDefaults = z.object({
+  score_delta: z.number().int().optional(),
+}).passthrough();
+
 const DEFAULTS_BY_ACTION: Record<string, z.ZodTypeAny> = {
   send_email: sendEmailDefaults,
   send_whatsapp: sendMessageDefaults,
@@ -50,6 +64,9 @@ const DEFAULTS_BY_ACTION: Record<string, z.ZodTypeAny> = {
   update_status: statusDefaults,
   notify_sales: notifySalesDefaults,
   delay: delayDefaults,
+  assign_owner: assignOwnerDefaults,
+  enroll_in_automation: enrollDefaults,
+  adjust_score: adjustScoreDefaults,
 };
 
 const baseSmartActionSchema = z.object({

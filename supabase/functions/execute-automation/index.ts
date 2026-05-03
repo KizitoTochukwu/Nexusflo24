@@ -529,6 +529,55 @@ Deno.serve(async (req) => {
                 status = "error";
                 details = { error: e?.message || "Enrollment dispatch failed" };
               }
+            } else if (actionType === "assign_owner") {
+              const mode = String(config.assign_mode || "round_robin");
+              let assignedUserId: string | null = null;
+              if (mode === "specific") {
+                const targetUid = String(config.assign_user_id || "").trim();
+                if (!targetUid) {
+                  status = "skipped";
+                  details = { message: "No user selected for assign_owner" };
+                  break;
+                }
+                // Verify target user belongs to workspace
+                const { data: member } = await supabase
+                  .from("workspace_members")
+                  .select("user_id")
+                  .eq("workspace_id", workspace_id)
+                  .eq("user_id", targetUid)
+                  .maybeSingle();
+                if (!member) {
+                  status = "error";
+                  details = { error: "Selected user is not a member of this workspace" };
+                  break;
+                }
+                assignedUserId = targetUid;
+              } else {
+                // round_robin via DB function
+                const { data: rr, error: rrErr } = await supabase.rpc("assign_next_round_robin", {
+                  _workspace_id: workspace_id,
+                });
+                if (rrErr) {
+                  status = "error";
+                  details = { error: rrErr.message || "Round-robin assignment failed" };
+                  break;
+                }
+                assignedUserId = (rr as string | null) || null;
+              }
+              if (!assignedUserId) {
+                status = "skipped";
+                details = { message: "No eligible user available for assignment" };
+                break;
+              }
+              await supabase.from("leads").update({ assigned_owner_id: assignedUserId }).eq("id", lead_id);
+              await supabase.from("lead_activities").insert({
+                lead_id,
+                workspace_id,
+                user_id: automation.user_id,
+                type: "owner_assigned",
+                meta: { assigned_to: assignedUserId, mode, automation_id },
+              });
+              details = { assigned_to: assignedUserId, mode };
             } else {
               details = { message: `Unknown action type: ${actionType}` };
               status = "skipped";
