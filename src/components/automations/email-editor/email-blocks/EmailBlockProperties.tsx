@@ -54,6 +54,33 @@ function AlignmentSelect({ value, onChange }: { value: string; onChange: (v: str
   );
 }
 
+function ColorOpacityField({
+  label, color, opacity, onColorChange, onOpacityChange,
+}: {
+  label: string;
+  color: string;
+  opacity: number;
+  onColorChange: (v: string) => void;
+  onOpacityChange: (v: number) => void;
+}) {
+  const pct = Math.round(opacity * 100);
+  return (
+    <Field label={label}>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <input type="color" value={color} onChange={(e) => onColorChange(e.target.value)} className="h-7 w-7 rounded border cursor-pointer p-0" />
+          <Input value={color} onChange={(e) => onColorChange(e.target.value)} className="h-8 text-xs flex-1" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-[10px] text-muted-foreground w-12 shrink-0">Opacity</Label>
+          <Slider value={[pct]} min={0} max={100} step={1} onValueChange={([v]) => onOpacityChange(v / 100)} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-9 text-right">{pct}%</span>
+        </div>
+      </div>
+    </Field>
+  );
+}
+
 function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextBlockProps) => void }) {
   const p = block.props as TextBlockProps;
   return (
@@ -99,12 +126,13 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
         </Field>
       </Section>
       <Section title="Color">
-        <Field label="Text Color">
-          <div className="flex items-center gap-2">
-            <input type="color" value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
-            <Input value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-8 text-xs flex-1" />
-          </div>
-        </Field>
+        <ColorOpacityField
+          label="Text Color"
+          color={p.color}
+          opacity={p.colorOpacity ?? 1}
+          onColorChange={(v) => onChange({ ...p, color: v })}
+          onOpacityChange={(v) => onChange({ ...p, colorOpacity: v })}
+        />
       </Section>
       <Section title="Spacing">
         <Field label="Line Height">
@@ -226,18 +254,20 @@ function ButtonProps({ block, onChange }: { block: EmailBlock; onChange: (p: But
         </Field>
       </Section>
       <Section title="Color">
-        <Field label="Background Color">
-          <div className="flex items-center gap-2">
-            <input type="color" value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
-            <Input value={p.bgColor} onChange={(e) => onChange({ ...p, bgColor: e.target.value })} className="h-8 text-xs flex-1" />
-          </div>
-        </Field>
-        <Field label="Text Color">
-          <div className="flex items-center gap-2">
-            <input type="color" value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
-            <Input value={p.textColor} onChange={(e) => onChange({ ...p, textColor: e.target.value })} className="h-8 text-xs flex-1" />
-          </div>
-        </Field>
+        <ColorOpacityField
+          label="Background Color"
+          color={p.bgColor}
+          opacity={p.bgOpacity ?? 1}
+          onColorChange={(v) => onChange({ ...p, bgColor: v })}
+          onOpacityChange={(v) => onChange({ ...p, bgOpacity: v })}
+        />
+        <ColorOpacityField
+          label="Text Color"
+          color={p.textColor}
+          opacity={p.textOpacity ?? 1}
+          onColorChange={(v) => onChange({ ...p, textColor: v })}
+          onOpacityChange={(v) => onChange({ ...p, textOpacity: v })}
+        />
       </Section>
       <Section title="Spacing & Shape">
         <Field label="Border Radius">

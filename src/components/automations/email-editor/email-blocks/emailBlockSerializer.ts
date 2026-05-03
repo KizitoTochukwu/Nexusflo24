@@ -11,10 +11,19 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function withOpacity(hex: string, opacity?: number): string {
+  if (opacity === undefined || opacity >= 1) return hex;
+  const m = /^#?([a-f\d]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, opacity))})`;
+}
+
 function renderText(p: TextBlockProps): string {
-  // Allow basic HTML in content (bold, italic, links etc.)
   const content = p.content.replace(/\n/g, "<br />");
-  return `<div style="font-size:${p.fontSize}px;color:${p.color};text-align:${p.alignment};font-weight:${p.fontWeight};line-height:${p.lineHeight};margin:0 0 16px;">${content}</div>`;
+  const color = withOpacity(p.color, p.colorOpacity);
+  return `<div style="font-size:${p.fontSize}px;color:${color};text-align:${p.alignment};font-weight:${p.fontWeight};line-height:${p.lineHeight};margin:0 0 16px;">${content}</div>`;
 }
 
 function renderImage(p: ImageBlockProps): string {
@@ -26,8 +35,10 @@ function renderImage(p: ImageBlockProps): string {
 
 function renderButton(p: ButtonBlockProps): string {
   const widthStyle = p.fullWidth ? "display:block;width:100%;box-sizing:border-box;" : "display:inline-block;";
+  const bg = withOpacity(p.bgColor, p.bgOpacity);
+  const txt = withOpacity(p.textColor, p.textOpacity);
   return `<div style="text-align:${p.alignment};margin:0 0 16px;">
-<a href="${escapeHtml(p.url)}" target="_blank" style="${widthStyle}background-color:${p.bgColor};color:${p.textColor};font-weight:600;padding:12px 28px;border-radius:${p.borderRadius}px;text-decoration:none;font-size:${p.fontSize}px;text-align:center;">${escapeHtml(p.label)}</a>
+<a href="${escapeHtml(p.url)}" target="_blank" style="${widthStyle}background-color:${bg};color:${txt};font-weight:600;padding:12px 28px;border-radius:${p.borderRadius}px;text-decoration:none;font-size:${p.fontSize}px;text-align:center;">${escapeHtml(p.label)}</a>
 </div>`;
 }
 
