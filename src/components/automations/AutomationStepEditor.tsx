@@ -573,6 +573,48 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         </Select>
                       );
                     })()}
+                    {(step.config.action as string) === "assign_owner" && (() => {
+                      const mode = ((step.config.assign_mode as string) || "round_robin");
+                      const userId = (step.config.assign_user_id as string) || "";
+                      return (
+                        <>
+                          <Select
+                            value={mode}
+                            onValueChange={(v) => updateStep(i, { assign_mode: v, ...(v === "round_robin" ? { assign_user_id: "" } : {}) })}
+                          >
+                            <SelectTrigger className="w-[160px] bg-background">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="round_robin">Round-robin</SelectItem>
+                              <SelectItem value="specific">Specific user</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {mode === "specific" && (
+                            <Select
+                              value={userId}
+                              onValueChange={(v) => updateStep(i, { assign_user_id: v })}
+                            >
+                              <SelectTrigger className="w-[220px] bg-background">
+                                <SelectValue placeholder="Select team member" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(workspaceMembers || []).length === 0 && (
+                                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                    No members found
+                                  </div>
+                                )}
+                                {(workspaceMembers || []).map((m: any) => (
+                                  <SelectItem key={m.user_id} value={m.user_id}>
+                                    {m.profile?.full_name || m.profile?.email || m.user_id.slice(0, 8)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
                     <AutomationEmailEditor
