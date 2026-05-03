@@ -145,6 +145,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "send_whatsapp", label: "Follow up on WhatsApp", defaults: { message: "Hey {{first_name}}, saw you opened our email — any questions?" } },
           { action: "add_tag", label: "Tag: engaged", defaults: { tag: "engaged" } },
+          { action: "adjust_score", label: "+5 score", defaults: { score_delta: 5 } },
           { action: "send_sms", label: "Send SMS nudge", defaults: { message: "Quick reminder from our team 👋" } },
         ],
       },
@@ -154,6 +155,7 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
         suggestedActions: [
           { action: "notify_sales", label: "Notify Sales", defaults: { message: "Lead clicked a link — high intent" } },
           { action: "send_email", label: "Send follow-up email", defaults: { subject: "Thanks for checking that out" } },
+          { action: "adjust_score", label: "+10 score", defaults: { score_delta: 10 } },
           { action: "update_status", label: "Move to Warm", defaults: { new_status: "Warm" } },
         ],
       },
