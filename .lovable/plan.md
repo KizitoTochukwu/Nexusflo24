@@ -1,69 +1,47 @@
-## Goal
+## Problem
 
-Add true YES/NO branching to the automation engine so conditions act as forks (not gates), then re-seed the "New Subscriber Nurture" template using the new branch structure so it matches the diagram exactly.
+YES/NO branching exists in the engine and renders visually when present, but the **Workflow editor has no buttons to add branches manually**. Today the only way to get YES/NO branches is to click "Seed: Subscriber Nurture" — there's no way to add them to your own automations or to a condition you just created.
 
-## Approach
+That's why you "can't see / use" YES/NO branching in the UI: the controls don't exist yet.
 
-Keep the current flat `automation_steps` list (no schema migration). Introduce a lightweight "branch group" pattern using two new step types that the engine already iterates over:
+## Solution
 
-- `branch_yes_start` / `branch_yes_end`
-- `branch_no_start` / `branch_no_end`
+Add first-class branching controls to `AutomationStepEditor.tsx` so any condition step can fork into YES / NO paths.
 
-A `condition` step's `passed` result decides which group runs; the other group is skipped. After both groups end, the main flow resumes. This is fully backwards compatible — existing automations (no branch markers) behave exactly as today.
+### 1. "Add YES branch" / "Add NO branch" buttons on every condition step
 
-```text
-[condition: link_clicked]
-  ├─ branch_yes_start
-  │    score +30, status=Hot, notify sales
-  │  branch_yes_end
-  └─ branch_no_start
-       send_sms fallback, delay 2d, send_email tips
-     branch_no_end
-[continue main flow…]
-```
+Inside each `condition` block, render two small buttons next to the condition row:
 
-## Engine changes (`supabase/functions/execute-automation/index.ts`)
+- **+ If YES** (emerald) — inserts `branch_yes_start` immediately after the condition and a matching `branch_yes_end` after it (empty body, ready for steps).
+- **+ If NO** (rose) — same for `branch_no_start` / `branch_no_end`.
 
-1. Add a runtime `branchSkip` stack alongside the existing `skipRemaining` flag.
-2. When a `condition` step runs, record its `passed` result on a stack frame for the next branch markers.
-3. On `branch_yes_start` → push frame; if last condition passed, execute inside; else skip until matching `branch_yes_end`.
-4. On `branch_no_start` → mirror logic (execute when condition failed).
-5. `branch_*_end` pops the frame and clears the local skip.
-6. Delays inside a branch must remember which branch they're in: extend `scheduled_jobs.payload` with `branch_context` (the active branch frame) so resumes from a delay continue inside the right group. On resume, the engine rebuilds the frame from `payload.branch_context`.
-7. Conditions remain non-halting by default (existing behavior preserved); branching only activates when the next step is a `branch_*_start` marker.
+Buttons are hidden if a YES/NO branch already exists for that condition (detected by scanning forward until the next condition or end of list).
 
-## Template seeder changes (`src/lib/automations/seedNurtureTemplate.ts`)
+### 2. "Add step inside branch" affordance
 
-Re-author `SUBSCRIBER_NURTURE_STEPS` to use the new markers so the diagram is reproduced 1:1:
+When the cursor is inside an open branch (between `branch_*_start` and `branch_*_end`), the existing bottom "Add Action / Delay / Condition" row stays — but we also render a smaller inline **+ Add step here** button just above each `branch_*_end` marker that inserts the new step *inside* the branch instead of after it.
 
-- After "email_opened" condition → YES: score+10, add tag `engaged`. NO: send SMS "did our welcome email land?".
-- After "link_clicked" condition → YES: score+30, status=Hot, tag `ai-closer-handoff`, notify_sales. NO: continue to educational email path.
-- After final "score_gt 40" condition → YES: notify_sales "warm lead worth a call". NO: send break-up email, score-10, add tag `cold`.
+### 3. Make branch markers removable
 
-Update `SeedStep` type to allow the new `step_type` values and add brief `branch_label` config for log clarity.
+Today `branch_yes_start` etc. render as read-only badges. Add a small × button on each start marker that removes both the matching start and end markers (keeping any steps between them, just un-nested). This lets users undo a branch without losing work.
 
-## Editor surface (`src/components/automations/AutomationStepEditor.tsx`)
+### 4. Improve the visual container
 
-Minimal UI update so seeded branches are readable (not yet drag/drop authoring):
+Wrap steps that fall between `branch_*_start` and `branch_*_end` in a subtly tinted, left-bordered container (emerald for YES, rose for NO) so the fork is obvious at a glance — matching the Timeline tab's styling.
 
-- Render `branch_yes_start` / `branch_no_start` as a labeled separator ("If YES" / "If NO") with indentation on contained steps until the matching `_end` marker.
-- Hide raw `_end` markers (render as a thin closing line).
-- No new authoring controls in this pass — users review/activate the seeded template; manual branch creation can come later.
+### 5. Update the empty-state hint
 
-## Re-seed flow (`src/pages/dashboard/DashboardAutomations.tsx`)
+On the bottom action row, when the last step is a `condition` with no branches yet, surface a subtle hint: *"Tip: Add an If YES or If NO branch to fork on this condition."*
 
-- Keep the "Seed: Subscriber Nurture" button.
-- Detect old (pre-branch) seeded template by name; offer a one-click "Replace with branched version" that archives the old draft and inserts the new branched one.
+## Where to find / use it after
 
-## Out of scope (this pass)
+Open any automation drawer → **Workflow** tab → add (or click into) a Condition step → use the new **+ If YES** / **+ If NO** buttons on that condition. Steps added afterwards while inside a branch will be visually nested into that branch and only run on that path.
 
-- No drag-and-drop branch authoring in the editor (read-only render only).
-- No changes to `workflows` / React Flow canvas (that's a separate richer system).
-- No DB schema migration.
+## Technical notes
 
-## Acceptance
-
-- Seeded template reproduces the diagram exactly: YES path runs only when the condition is met, NO path runs only when it isn't.
-- Existing non-branched automations continue to behave identically.
-- Delays inside a branch resume into the correct branch.
-- Logs show `branch:yes` / `branch:no` for clarity.
+- File: `src/components/automations/AutomationStepEditor.tsx` only. No engine, hook, or DB changes — the executor already understands these markers.
+- Branch detection helper: walk `steps` forward from condition index `i`, tracking whether `branch_yes_start`/`branch_no_start` appears before the next `condition` step — gives `hasYes` / `hasNo` flags per condition.
+- Insertion helper: when adding a YES branch, splice `[{branch_yes_start}, {branch_yes_end}]` at `i+1`; opening pos for nested-step inserts is `endIndex` (before the `_end` marker).
+- Removal helper: find matching start/end pair by scanning forward for the same `kind`, splice both out.
+- Keep the existing seeder-driven flows working — markers without an immediately-preceding condition (legacy/manually edited) still render as today.
+- Types in `useAutomations.ts` already include the four branch step types, so no type changes needed.
