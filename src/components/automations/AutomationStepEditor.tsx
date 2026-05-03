@@ -16,6 +16,7 @@ import InsertDropdown from "./email-editor/InsertDropdown";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import type { ExitCriterion } from "@/lib/automations/exitCriteria";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
+import { AUTOMATION_SCORE_OPTIONS } from "@/lib/automations/scoreOptions";
 
 export type StepData = {
   step_type:
@@ -517,38 +518,30 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                     )}
                     {(step.config.action as string) === "adjust_score" && (() => {
                       const delta = Number(step.config.score_delta ?? 5);
-                      const setDelta = (n: number) => updateStep(i, { score_delta: Math.max(-100, Math.min(100, n)) });
-                      const presets = [-10, -5, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+                      const reason = (step.config.score_reason as string) || "";
+                      const matched = AUTOMATION_SCORE_OPTIONS.find(
+                        (o) => o.value === delta && (!reason || o.reason === reason),
+                      );
+                      const selectValue = matched ? matched.reason : "";
                       return (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <div className="flex items-center rounded-md border border-border bg-background h-8">
-                            <button type="button" onClick={() => setDelta(delta - 1)} className="px-2 h-full hover:bg-muted/50">
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <input
-                              type="number"
-                              value={delta}
-                              onChange={(e) => setDelta(parseInt(e.target.value) || 0)}
-                              className="w-14 h-full bg-transparent text-center text-sm outline-none"
-                            />
-                            <button type="button" onClick={() => setDelta(delta + 1)} className="px-2 h-full hover:bg-muted/50">
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <span className="text-xs text-muted-foreground">points</span>
-                          {presets.map((p) => (
-                            <Button
-                              key={p}
-                              type="button"
-                              variant={delta === p ? "default" : "outline"}
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => setDelta(p)}
-                            >
-                              {p > 0 ? `+${p}` : p}
-                            </Button>
-                          ))}
-                        </div>
+                        <Select
+                          value={selectValue}
+                          onValueChange={(v) => {
+                            const opt = AUTOMATION_SCORE_OPTIONS.find((o) => o.reason === v);
+                            if (opt) updateStep(i, { score_delta: opt.value, score_reason: opt.reason });
+                          }}
+                        >
+                          <SelectTrigger className="w-[260px] bg-background">
+                            <SelectValue placeholder="Select scoring reason" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AUTOMATION_SCORE_OPTIONS.map((o) => (
+                              <SelectItem key={o.reason} value={o.reason}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       );
                     })()}
                   </div>
