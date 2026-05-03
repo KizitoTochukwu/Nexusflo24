@@ -54,6 +54,33 @@ function AlignmentSelect({ value, onChange }: { value: string; onChange: (v: str
   );
 }
 
+function ColorOpacityField({
+  label, color, opacity, onColorChange, onOpacityChange,
+}: {
+  label: string;
+  color: string;
+  opacity: number;
+  onColorChange: (v: string) => void;
+  onOpacityChange: (v: number) => void;
+}) {
+  const pct = Math.round(opacity * 100);
+  return (
+    <Field label={label}>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <input type="color" value={color} onChange={(e) => onColorChange(e.target.value)} className="h-7 w-7 rounded border cursor-pointer p-0" />
+          <Input value={color} onChange={(e) => onColorChange(e.target.value)} className="h-8 text-xs flex-1" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Label className="text-[10px] text-muted-foreground w-12 shrink-0">Opacity</Label>
+          <Slider value={[pct]} min={0} max={100} step={1} onValueChange={([v]) => onOpacityChange(v / 100)} className="flex-1" />
+          <span className="text-xs text-muted-foreground w-9 text-right">{pct}%</span>
+        </div>
+      </div>
+    </Field>
+  );
+}
+
 function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextBlockProps) => void }) {
   const p = block.props as TextBlockProps;
   return (
