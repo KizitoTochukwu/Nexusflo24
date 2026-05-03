@@ -676,7 +676,7 @@ function ColumnsProps({ block, onChange }: { block: EmailBlock; onChange: (p: Co
 export default function EmailBlockProperties({ block, onChange }: EmailBlockPropertiesProps) {
   if (!block) {
     return (
-      <div className="hidden md:flex w-[180px] lg:w-[220px] shrink-0 border-l border-border bg-muted/30 p-4 items-center justify-center">
+      <div className="hidden md:flex w-[280px] lg:w-[340px] shrink-0 border-l border-border bg-muted/30 p-4 items-center justify-center">
         <p className="text-xs text-muted-foreground text-center">
           Select a block to edit its properties
         </p>
