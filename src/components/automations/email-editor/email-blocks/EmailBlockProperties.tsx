@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -373,9 +373,10 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
       <Section title="Content">
         <div className="flex items-center justify-between">
           <Label className="text-xs text-muted-foreground">Text</Label>
-          <InsertDropdown onInsert={(v) => onChange({ ...p, content: p.content + v })} />
+          <InsertDropdown onInsert={insertVariable} />
         </div>
         <Textarea
+          ref={textareaRef}
           className="min-h-[140px] text-sm"
           style={{
             fontFamily: currentFamily,
