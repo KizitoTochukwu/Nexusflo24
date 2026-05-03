@@ -238,15 +238,11 @@ Deno.serve(async (req) => {
     let branchStack: BranchFrame[] = [];
 
     // Restore branch context if resuming from a scheduled job
-    const incomingPayload = (typeof start_from_step === "number")
-      ? ((await req.clone().json().catch(() => ({}))) as any)
-      : null;
-    if (incomingPayload?.branch_context) {
+    if (incomingBranchCtx) {
       try {
-        const ctx = incomingPayload.branch_context;
-        if (Array.isArray(ctx.branch_stack)) branchStack = ctx.branch_stack;
-        if (typeof ctx.last_condition_passed === "boolean" || ctx.last_condition_passed === null) {
-          lastConditionPassed = ctx.last_condition_passed;
+        if (Array.isArray(incomingBranchCtx.branch_stack)) branchStack = incomingBranchCtx.branch_stack;
+        if (typeof incomingBranchCtx.last_condition_passed === "boolean" || incomingBranchCtx.last_condition_passed === null) {
+          lastConditionPassed = incomingBranchCtx.last_condition_passed;
         }
       } catch (_e) { /* noop */ }
     }
