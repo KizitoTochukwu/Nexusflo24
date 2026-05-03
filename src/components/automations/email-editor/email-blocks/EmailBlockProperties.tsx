@@ -126,12 +126,13 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
         </Field>
       </Section>
       <Section title="Color">
-        <Field label="Text Color">
-          <div className="flex items-center gap-2">
-            <input type="color" value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-7 w-7 rounded border cursor-pointer p-0" />
-            <Input value={p.color} onChange={(e) => onChange({ ...p, color: e.target.value })} className="h-8 text-xs flex-1" />
-          </div>
-        </Field>
+        <ColorOpacityField
+          label="Text Color"
+          color={p.color}
+          opacity={p.colorOpacity ?? 1}
+          onColorChange={(v) => onChange({ ...p, color: v })}
+          onOpacityChange={(v) => onChange({ ...p, colorOpacity: v })}
+        />
       </Section>
       <Section title="Spacing">
         <Field label="Line Height">
