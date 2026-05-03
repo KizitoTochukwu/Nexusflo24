@@ -202,12 +202,16 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             ) : triggerType === "lead_tagged" ? (
               <div>
                 <label className="text-sm font-medium text-foreground">Tag</label>
-                <Input
-                  className="max-w-sm"
-                  placeholder="e.g. csv-march-2026"
-                  value={tagValue}
-                  onChange={(e) => setTagValue(e.target.value)}
-                />
+                <Select value={tagValue} onValueChange={setTagValue}>
+                  <SelectTrigger className="max-w-sm">
+                    <SelectValue placeholder="Select tag (or leave blank for any)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AUTOMATION_TAG_OPTIONS.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground mt-1">
                   Fires whenever this exact tag is added. Leave blank to match any tag.
                 </p>
