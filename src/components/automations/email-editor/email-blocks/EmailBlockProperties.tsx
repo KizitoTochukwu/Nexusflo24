@@ -30,6 +30,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2 pt-2 first:pt-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80 border-b border-border/60 pb-1">
+        {title}
+      </p>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
 function AlignmentSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Select value={value} onValueChange={onChange}>
