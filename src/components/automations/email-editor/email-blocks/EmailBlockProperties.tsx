@@ -427,17 +427,36 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
               <AlignJustify className="h-3.5 w-3.5" />
             </ToggleGroupItem>
           </ToggleGroup>
-          <div className="flex items-center gap-1.5 flex-1 rounded-md border border-border bg-background h-8 px-2">
-            <TypeIcon className="h-3 w-3 text-muted-foreground shrink-0" />
-            <Slider
-              value={[p.lineHeight * 10]}
-              min={10}
-              max={25}
-              step={1}
-              onValueChange={([v]) => onChange({ ...p, lineHeight: v / 10 })}
-              className="flex-1"
+          <div className="flex items-center rounded-md border border-border bg-background h-8">
+            <TypeIcon className="h-3 w-3 text-muted-foreground shrink-0 ml-1.5" />
+            <button
+              type="button"
+              aria-label="Decrease line height"
+              className="px-1.5 h-full text-muted-foreground hover:text-foreground"
+              onClick={() => onChange({ ...p, lineHeight: Math.max(1.0, +(p.lineHeight - 0.1).toFixed(1)) })}
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <input
+              type="number"
+              step={0.1}
+              min={1}
+              max={2.5}
+              value={p.lineHeight}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!isNaN(n)) onChange({ ...p, lineHeight: Math.max(1.0, Math.min(2.5, n)) });
+              }}
+              className="w-10 h-full bg-transparent text-center text-xs font-medium outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="text-[10px] text-muted-foreground tabular-nums w-6 text-right">{p.lineHeight.toFixed(1)}</span>
+            <button
+              type="button"
+              aria-label="Increase line height"
+              className="px-1.5 h-full text-muted-foreground hover:text-foreground"
+              onClick={() => onChange({ ...p, lineHeight: Math.min(2.5, +(p.lineHeight + 0.1).toFixed(1)) })}
+            >
+              <Plus className="h-3 w-3" />
+            </button>
           </div>
         </div>
       </div>
