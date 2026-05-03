@@ -87,7 +87,22 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
       </div>
 
       {steps.map((step, i) => {
-        const meta = STEP_TYPE_META[step.step_type];
+        // Render branch markers as visual separators (read-only — created by template seeders)
+        if (step.step_type === "branch_yes_start" || step.step_type === "branch_no_start") {
+          const isYes = step.step_type === "branch_yes_start";
+          const label = (step.config as any)?.label as string | undefined;
+          return (
+            <div key={i} className="flex justify-center py-2">
+              <Badge variant="outline" className={isYes ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"}>
+                {isYes ? "▼ If YES" : "▼ If NO"}{label ? ` — ${label}` : ""}
+              </Badge>
+            </div>
+          );
+        }
+        if (step.step_type === "branch_yes_end" || step.step_type === "branch_no_end") {
+          return <div key={i} className="border-t border-dashed border-muted-foreground/30 mx-8 my-1" />;
+        }
+        const meta = STEP_TYPE_META[step.step_type] || STEP_TYPE_META.action;
         return (
           <div key={i}>
             <div className="flex justify-center py-1">
