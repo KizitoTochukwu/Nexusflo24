@@ -33,7 +33,10 @@ function renderText(p: TextBlockProps): string {
   const color = withOpacity(p.color, p.colorOpacity);
   const grad = gradientCss(p.bgGradient);
   const bg = grad ? `background-image:${grad};padding:16px;border-radius:8px;` : "";
-  return `<div style="${bg}font-size:${p.fontSize}px;color:${color};text-align:${p.alignment};font-weight:${p.fontWeight};line-height:${p.lineHeight};margin:0 0 16px;">${content}</div>`;
+  const family = p.fontFamily ? `font-family:${p.fontFamily};` : "";
+  const fStyle = p.italic ? "font-style:italic;" : "";
+  const fDecoration = p.underline ? "text-decoration:underline;" : "";
+  return `<div style="${bg}${family}font-size:${p.fontSize}px;color:${color};text-align:${p.alignment};font-weight:${p.fontWeight};${fStyle}${fDecoration}line-height:${p.lineHeight};margin:0 0 16px;">${content}</div>`;
 }
 
 function renderImage(p: ImageBlockProps): string {
