@@ -51,7 +51,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   delay: <Clock className="h-4 w-4" />,
 };
 
-const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Lost"];
+const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Customer", "Lost"];
 interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
@@ -512,7 +512,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                           <SelectValue placeholder="New status" />
                         </SelectTrigger>
                         <SelectContent>
-                          {["New", "Warm", "Hot", "Won", "Lost"].map((s) => (
+                          {["New", "Warm", "Hot", "Won", "Customer", "Lost"].map((s) => (
                             <SelectItem key={s} value={s}>{s}</SelectItem>
                           ))}
                         </SelectContent>

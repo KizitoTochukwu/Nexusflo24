@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { SmartAction } from "@/hooks/useSmartActions";
 
-const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Lost"] as const;
+const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Customer", "Lost"] as const;
 
 const VALID_ACTIONS = [
   "send_email", "send_whatsapp", "send_sms",
