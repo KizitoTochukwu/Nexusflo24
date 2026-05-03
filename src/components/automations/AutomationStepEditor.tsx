@@ -485,12 +485,19 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </SelectContent>
                     </Select>
                     {((step.config.action as string) === "add_tag" || (step.config.action as string) === "remove_tag") && (
-                      <Input
-                        placeholder="Tag name"
-                        className="w-[140px] bg-background"
+                      <Select
                         value={(step.config.tag as string) || ""}
-                        onChange={(e) => updateStep(i, { tag: e.target.value })}
-                      />
+                        onValueChange={(v) => updateStep(i, { tag: v })}
+                      >
+                        <SelectTrigger className="w-[160px] bg-background">
+                          <SelectValue placeholder="Select tag" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AUTOMATION_TAG_OPTIONS.map((t) => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                     {(step.config.action as string) === "update_status" && (
                       <Select
