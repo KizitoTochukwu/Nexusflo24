@@ -81,8 +81,37 @@ function ColorOpacityField({
         </div>
         <div className="flex items-center gap-2">
           <Label className="text-[10px] text-muted-foreground w-12 shrink-0">Opacity</Label>
-          <Slider value={[pct]} min={0} max={100} step={1} onValueChange={([v]) => onOpacityChange(v / 100)} className="flex-1" />
-          <span className="text-xs text-muted-foreground w-9 text-right">{pct}%</span>
+          <div className="flex items-center rounded-md border border-border bg-background h-8">
+            <button
+              type="button"
+              aria-label="Decrease opacity"
+              className="px-1.5 h-full text-muted-foreground hover:text-foreground"
+              onClick={() => onOpacityChange(Math.max(0, +(opacity - 0.05).toFixed(2)))}
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={pct}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!isNaN(n)) onOpacityChange(Math.max(0, Math.min(100, n)) / 100);
+              }}
+              className="w-12 h-full bg-transparent text-center text-xs font-medium outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <span className="pr-1.5 text-[10px] text-muted-foreground">%</span>
+            <button
+              type="button"
+              aria-label="Increase opacity"
+              className="px-1.5 h-full text-muted-foreground hover:text-foreground border-l border-border"
+              onClick={() => onOpacityChange(Math.min(1, +(opacity + 0.05).toFixed(2)))}
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
     </Field>
