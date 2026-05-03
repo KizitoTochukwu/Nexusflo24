@@ -393,12 +393,6 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
         />
       </Section>
 
-      <Section title="Background">
-        <GradientField
-          value={p.bgGradient}
-          onChange={(g) => onChange({ ...p, bgGradient: g })}
-        />
-      </Section>
     </>
   );
 }
@@ -524,10 +518,6 @@ function ButtonProps({ block, onChange }: { block: EmailBlock; onChange: (p: But
           opacity={p.textOpacity ?? 1}
           onColorChange={(v) => onChange({ ...p, textColor: v })}
           onOpacityChange={(v) => onChange({ ...p, textOpacity: v })}
-        />
-        <GradientField
-          value={p.bgGradient}
-          onChange={(g) => onChange({ ...p, bgGradient: g })}
         />
       </Section>
       <Section title="Spacing & Shape">
