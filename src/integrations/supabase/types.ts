@@ -321,6 +321,8 @@ export type Database = {
           google_calendar_id: string | null
           google_token_id: string | null
           id: string
+          location_type: string
+          location_value: string | null
           max_days_ahead: number
           name: string
           notify_host: boolean
@@ -341,6 +343,8 @@ export type Database = {
           google_calendar_id?: string | null
           google_token_id?: string | null
           id?: string
+          location_type?: string
+          location_value?: string | null
           max_days_ahead?: number
           name: string
           notify_host?: boolean
@@ -361,6 +365,8 @@ export type Database = {
           google_calendar_id?: string | null
           google_token_id?: string | null
           id?: string
+          location_type?: string
+          location_value?: string | null
           max_days_ahead?: number
           name?: string
           notify_host?: boolean
@@ -399,6 +405,8 @@ export type Database = {
           guest_phone: string | null
           id: string
           lead_id: string | null
+          meeting_location: string | null
+          meeting_url: string | null
           notes: string | null
           reschedule_token: string | null
           start_time: string
@@ -415,6 +423,8 @@ export type Database = {
           guest_phone?: string | null
           id?: string
           lead_id?: string | null
+          meeting_location?: string | null
+          meeting_url?: string | null
           notes?: string | null
           reschedule_token?: string | null
           start_time: string
@@ -431,6 +441,8 @@ export type Database = {
           guest_phone?: string | null
           id?: string
           lead_id?: string | null
+          meeting_location?: string | null
+          meeting_url?: string | null
           notes?: string | null
           reschedule_token?: string | null
           start_time?: string
