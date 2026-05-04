@@ -1,72 +1,70 @@
-# Wire the Instant Response trigger accurately
+# Fix: Duplicate Phone Constraint — Friendly Errors + Universal Normalization
 
-The Send Email action and 0–5 min timing already work. The three trigger paths have gaps. Fix them so any of the three (`new lead created` OR `form submitted` OR `tag added = new-lead`) reliably fires the Instant Response automation exactly once per real event.
+Two coordinated fixes so users (a) never see raw Postgres errors and (b) stop hitting the constraint accidentally because phone numbers were stored in inconsistent formats.
 
-## 1. `new_lead` — only fire for genuinely new leads
+---
 
-**File:** `supabase/functions/capture-lead/index.ts` (lines 526–566)
+## Fix 1 — Friendly duplicate-lead error messages
 
-- Wrap the `new_lead` automation dispatch block in `if (!existing) { ... }`. Returning leads (matched by email or phone) must not retrigger "New lead created".
-- Update the misleading comment on line 526 from *"for both new and returning leads"* to *"only for brand-new leads"*.
-- The triggered-campaigns block right below (lines 568–596) gets the same `if (!existing)` guard for the same reason.
+Replace the raw `duplicate key value violates unique constraint "leads_user_phone_unique"` (and the email equivalent) with a clear, actionable message everywhere a lead can be created or updated.
 
-## 2. `form_submitted` — make it a real automation trigger
+**Where it surfaces today:**
+- `useCreateLead` / `useUpdateLead` (`src/hooks/useLeads.ts`) — Add Lead dialog & edit
+- `CsvImportDialog` (already partially handles dedup, but final insert can still throw)
+- `capture-lead` edge function (public forms / funnels)
+- `ingest-leads` edge function (Make.com / API)
 
-**File:** `src/hooks/useAutomations.ts` (TRIGGER_OPTIONS, lines 43–59)
+**What changes:**
+1. **New helper** `src/lib/leads/duplicateError.ts` exporting `parseLeadDbError(err)` that detects Postgres code `23505` and the constraint name, returning:
+   - `{ kind: "duplicate_phone", message: "A lead with this phone number already exists." }`
+   - `{ kind: "duplicate_email", message: "A lead with this email already exists." }`
+   - `{ kind: "other", message: <original> }`
+2. **`useCreateLead` / `useUpdateLead`**: wrap the supabase call, run the error through the helper, and `throw new Error(friendlyMessage)` so the existing `toast.error` shows the clean text. Also surface a follow-up toast action `"Open existing lead"` when we can locate the conflicting lead by `(workspace_id, phone)` or `(workspace_id, email)`.
+3. **`AddLeadDialog`**: on duplicate, keep the dialog open and highlight the offending field (`phone` or `email`) using `form.setError`.
+4. **Edge functions** (`capture-lead`, `ingest-leads`): on `23505`, return HTTP 409 with `{ error: "duplicate_phone" | "duplicate_email", message, existing_lead_id }` instead of a 500. (Note: `capture-lead` already has race-recovery merge logic — we only change what we return when merge isn't appropriate.)
+5. **`CsvImportDialog`**: catch the new 409 path and route those rows into the existing "conflicts" UI rather than the failure list.
 
-Add a new entry:
-```ts
-{ value: "form_submitted", label: "Form submitted (any form / specific form)" }
-```
+---
 
-**File:** `src/components/automations/CreateAutomationDialog.tsx` (and `AutomationStepEditor.tsx` if it renders trigger config)
+## Fix 2 — Normalize phone to E.164 everywhere before lookup AND insert
 
-When `trigger_type === "form_submitted"`, expose an optional `form_id` selector (loaded from `forms` table for the workspace) plus an optional `funnel_id`. Empty = match any form.
+Today phone normalization lives in three different files (`whatsapp-send`, `sms-send`, `CsvImportDialog`) with subtly different rules. The dedup lookup in `capture-lead` and `ingest-leads` does `eq("phone", phone)` against raw input, so `"07517327597"` vs `"+447517327597"` vs `"447517327597"` all create separate rows that then collide on the unique constraint when one is later edited.
 
-**File:** `supabase/functions/capture-lead/index.ts`
+**What changes:**
+1. **New shared module** `supabase/functions/_shared/phone.ts` exporting:
+   - `normalizePhoneE164(raw, defaultCountry?)` — single source of truth, mirroring the most permissive existing logic (UK local → +44, strips non-digits, validates against `^\+[1-9]\d{1,14}$`).
+   - `isValidE164(phone)`.
+   Both `whatsapp-send`, `sms-send`, `whatsapp-webhook`, `capture-lead`, and `ingest-leads` switch to this module (delete their local copies).
+2. **New shared frontend module** `src/lib/leads/phone.ts` with the same `normalizePhoneE164` function. `CsvImportDialog`, `AddLeadDialog`, and `useCreateLead`/`useUpdateLead` all run phone through it before sending to the DB.
+3. **`capture-lead` & `ingest-leads`**: after `sanitizeString`, call `normalizePhoneE164(phone)` and use the normalized value for **both** the dedup `eq("phone", …)` lookup AND the final insert/update. If normalization fails, return 400 "Invalid phone format" (same shape as existing email validation).
+4. **`AddLeadDialog`**: normalize on submit; if invalid, show form error "Use international format like +447517327597".
+5. **One-time backfill migration**: `supabase/migrations/<ts>_normalize_lead_phones.sql` runs `UPDATE public.leads SET phone = normalized WHERE phone IS NOT NULL` using a PL/pgSQL `DO` block that mirrors the JS logic (strip non-digits, prepend `+`, UK `0` → `+44`). Wrapped in a try/skip per row so any phone that can't be normalized is left as-is. Conflicts during backfill (two rows that normalize to the same value for the same user) are merged: keep the older row, copy non-null fields & union tags from the newer, then delete the newer.
 
-After the existing `new_lead` block, add a parallel block that:
-- Queries active automations with `trigger_type='form_submitted'`.
-- Filters by `trigger_config.form_id` (matching `meta.formId`) and `trigger_config.funnel_id` (matching `meta.funnel_id`) — empty config = match any.
-- POSTs to `execute-automation` per matched automation.
-- Runs for both new and returning leads (a form submit is a form submit).
+---
 
-Also dispatch through the Workflows engine for parity:
-```ts
-fetch(`${supabaseUrl}/functions/v1/enroll-workflow-leads`, { ... event_type: "form_submitted", event_config: { form_id, funnel_id } })
-```
+## Technical Details
 
-## 3. `lead_tagged` — fire from capture-lead too
+**Files added:**
+- `src/lib/leads/duplicateError.ts`
+- `src/lib/leads/phone.ts`
+- `supabase/functions/_shared/phone.ts`
+- `supabase/migrations/<timestamp>_normalize_lead_phones.sql`
 
-**File:** `supabase/functions/capture-lead/index.ts`
+**Files modified:**
+- `src/hooks/useLeads.ts` — wrap insert/update with friendly error parsing
+- `src/components/leads/AddLeadDialog.tsx` — normalize on submit, set field-level errors
+- `src/components/leads/CsvImportDialog.tsx` — replace local `normalizePhone` with shared one, handle 409
+- `supabase/functions/capture-lead/index.ts` — use shared phone normalizer + 409 response
+- `supabase/functions/ingest-leads/index.ts` — same
+- `supabase/functions/whatsapp-send/index.ts`, `whatsapp-webhook/index.ts`, `sms-send/index.ts` — switch to shared module (no behavior change)
+- `supabase/functions/_shared/validation.ts` — `safeErrorResponse` already maps "duplicate key" → "Resource already exists"; refine to detect lead-specific constraints.
 
-After the lead is inserted/updated and tags are merged, for every tag in `newTags` that was actually newly applied (i.e. not already present on `existing.tags`), fire:
-- `trigger_type='lead_tagged'` with `trigger_config.tag === <tag>` (specific match)
-- `trigger_type='tag_added'` (any tag)
+**No schema changes** — the existing `leads_user_phone_unique` and `leads_user_email_unique` constraints stay; we just stop tripping them and present nicer errors when we do.
 
-Reuse the same dispatch pattern as the `new_lead` block (query active automations, match `trigger_config.tag` if set, POST to `execute-automation`). Also enroll into Workflows with `event_type: "lead_tagged"`.
+**Risk:** the backfill could merge rows. We will print a `RAISE NOTICE` count of merged rows and run it inside a transaction so it can be rolled back if the count looks wrong. Existing FKs (`lead_activities`, `scheduled_jobs`, etc.) have ON DELETE CASCADE — the merge step re-points activities to the kept lead before deleting the duplicate.
 
-This means the user's `lead_tagged = new-lead` trigger will fire whenever any capture path (form, funnel, CSV import, API) applies the `new-lead` tag.
+---
 
-## 4. Default-tag note (no code change, just confirm with user)
-
-Today new leads from `capture-lead` default to `tags: ["website-signup"]` when no tags are sent. The user's plan assumes the trigger `tag added = new-lead`. Two options — the default-tag behavior is unchanged unless the user picks (b):
-
-- (a) Recommended: keep `website-signup` as default, and have the user configure their forms / funnel destinations to apply the `new-lead` tag explicitly (already supported via `destination.tags`).
-- (b) Alternative: change the default fallback tag in `capture-lead` from `["website-signup"]` to `["new-lead"]`.
-
-I'll ship (a) by default. If you want (b), say so and I'll flip the default in the same change.
-
-## 5. Deploy
-
-Deploy `capture-lead` after the edits. `execute-automation` and `enroll-workflow-leads` are unchanged. Front-end edits to `useAutomations.ts` and the dialog are picked up automatically.
-
-## Outcome
-
-After this ships, all three trigger setups for the same automation reliably fire the Instant Response (Send Email at step 0, runs in seconds):
-
-- `Trigger: New lead created` → fires once when a brand-new lead is captured.
-- `Trigger: Form submitted` (optionally scoped to a form/funnel) → fires every time that form is submitted, new or returning lead.
-- `Trigger: Tag added = new-lead` → fires whenever the `new-lead` tag is applied, whether from capture, CSV import, or manual CRM edit.
-
-If the user attaches the same automation to all three, dedup is already handled by `execute-automation` (it skips if a pending/running `scheduled_jobs` row already exists for the same automation+lead).
+## Out of scope
+- Changing the unique constraint shape (e.g. moving from `(user_id, phone)` to `(workspace_id, phone)`) — separate decision.
+- International phone parsing beyond UK heuristics + raw E.164 — full `libphonenumber` integration is a follow-up.
