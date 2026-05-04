@@ -104,7 +104,7 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
       ...(defaultValues?.id ? { id: defaultValues.id } : {}),
       full_name: values.full_name || null,
       email: values.email || null,
-      phone: values.phone || null,
+      phone: normalizedPhone,
       source: values.source,
       status: values.status,
       pipeline_stage: values.pipeline_stage as any,
