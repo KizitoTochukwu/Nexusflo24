@@ -211,6 +211,20 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const anyErr = err as any;
+    if (anyErr?.code === "23505") {
+      const msg = String(anyErr?.message || "");
+      const isPhone = /phone/i.test(msg);
+      return new Response(
+        JSON.stringify({
+          error: isPhone ? "duplicate_phone" : "duplicate_email",
+          message: isPhone
+            ? "A lead with this phone number already exists."
+            : "A lead with this email already exists.",
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     return new Response(JSON.stringify({ error: safeErrorResponse(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
