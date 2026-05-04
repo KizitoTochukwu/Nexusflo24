@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { findWorkspaceByWhatsAppPhoneNumberId } from "../_shared/channel-credentials.ts";
+import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
