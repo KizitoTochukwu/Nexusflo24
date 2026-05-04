@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Check, Unlink, Mail } from "lucide-react";
+import { Plus, Trash2, Check, Unlink, Mail, Video, MapPin } from "lucide-react";
 import { useGoogleCalendarStatus, useGoogleCalendarConnect, useGoogleCalendarList, useSelectGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import type { BookingPage } from "@/hooks/useBookings";
 
@@ -52,6 +52,8 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
   const [timezone, setTimezone] = useState(initial?.timezone || "UTC");
   const [color, setColor] = useState(initial?.color || "#D4AF37");
   const [notifyHost, setNotifyHost] = useState<boolean>(initial?.notify_host ?? true);
+  const [locationType, setLocationType] = useState<string>((initial as any)?.location_type || "google_meet");
+  const [locationValue, setLocationValue] = useState<string>((initial as any)?.location_value || "");
   const [availability, setAvailability] = useState<Record<string, { start: string; end: string }[]>>(
     (initial?.availability as any) || DEFAULT_AVAILABILITY
   );
@@ -96,7 +98,17 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
       color,
       availability,
       notify_host: notifyHost,
-    } as Partial<BookingPage>);
+      location_type: locationType,
+      location_value: locationType === "google_meet" ? null : (locationValue || null),
+    } as any);
+  };
+
+  const needsLocationValue = ["zoom", "custom_link", "in_person", "phone_call"].includes(locationType);
+  const locationPlaceholder: Record<string, string> = {
+    zoom: "https://zoom.us/j/123456789",
+    custom_link: "https://meet.example.com/your-room",
+    in_person: "123 Main St, Suite 200, City",
+    phone_call: "+1 555 000 1234",
   };
 
   return (
@@ -170,7 +182,52 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
         <Switch id="notify-host" checked={notifyHost} onCheckedChange={setNotifyHost} />
       </div>
 
-      {/* Availability Grid */}
+      {/* Meeting Location */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <Video className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+          <div className="flex-1">
+            <Label className="text-sm font-medium">Meeting location</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              How will guests join? The link or address is included in the confirmation email.
+            </p>
+          </div>
+        </div>
+        <Select value={locationType} onValueChange={setLocationType}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="google_meet">Google Meet (auto-generated)</SelectItem>
+            <SelectItem value="zoom">Zoom link</SelectItem>
+            <SelectItem value="custom_link">Custom link (Teams, Whereby, etc.)</SelectItem>
+            <SelectItem value="in_person">In person</SelectItem>
+            <SelectItem value="phone_call">Phone call</SelectItem>
+          </SelectContent>
+        </Select>
+        {locationType === "google_meet" && (
+          <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+            <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+            {gcalStatus?.connected
+              ? "A Google Meet link is created automatically for every booking."
+              : "Connect Google Calendar below so Meet links can be generated."}
+          </p>
+        )}
+        {needsLocationValue && (
+          <div>
+            <Label className="text-xs">
+              {locationType === "in_person" ? "Address" : locationType === "phone_call" ? "Phone number" : "Meeting URL"}
+            </Label>
+            <Input
+              value={locationValue}
+              onChange={(e) => setLocationValue(e.target.value)}
+              placeholder={locationPlaceholder[locationType]}
+              type={locationType === "zoom" || locationType === "custom_link" ? "url" : "text"}
+              required
+            />
+          </div>
+        )}
+      </div>
+
+
       <div>
         <Label className="mb-2 block">Weekly Availability</Label>
         <div className="space-y-3">

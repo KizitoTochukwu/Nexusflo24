@@ -1,70 +1,56 @@
-# Fix: Duplicate Phone Constraint — Friendly Errors + Universal Normalization
+## Goal
 
-Two coordinated fixes so users (a) never see raw Postgres errors and (b) stop hitting the constraint accidentally because phone numbers were stored in inconsistent formats.
+When a guest books a demo, the confirmation email (and host email) should include a join link — either an auto-generated Google Meet link or a manually configured link (Zoom, Teams, custom URL, or in-person address).
 
----
+## Current gap
 
-## Fix 1 — Friendly duplicate-lead error messages
+- `booking_pages` has no location/meeting-link field.
+- `bookings` stores `google_event_id` but never reads back the Meet link.
+- The Google Calendar event is created without `conferenceData`, so no Meet link is generated.
+- The confirmation email never renders a "Join meeting" section.
 
-Replace the raw `duplicate key value violates unique constraint "leads_user_phone_unique"` (and the email equivalent) with a clear, actionable message everywhere a lead can be created or updated.
+## Plan
 
-**Where it surfaces today:**
-- `useCreateLead` / `useUpdateLead` (`src/hooks/useLeads.ts`) — Add Lead dialog & edit
-- `CsvImportDialog` (already partially handles dedup, but final insert can still throw)
-- `capture-lead` edge function (public forms / funnels)
-- `ingest-leads` edge function (Make.com / API)
+### 1. Database migration
+Add to `booking_pages`:
+- `location_type` text — one of: `google_meet` (default when Google Calendar connected), `zoom`, `custom_link`, `in_person`, `phone_call`
+- `location_value` text — the Zoom/custom URL or physical address (nullable; unused for `google_meet`)
 
-**What changes:**
-1. **New helper** `src/lib/leads/duplicateError.ts` exporting `parseLeadDbError(err)` that detects Postgres code `23505` and the constraint name, returning:
-   - `{ kind: "duplicate_phone", message: "A lead with this phone number already exists." }`
-   - `{ kind: "duplicate_email", message: "A lead with this email already exists." }`
-   - `{ kind: "other", message: <original> }`
-2. **`useCreateLead` / `useUpdateLead`**: wrap the supabase call, run the error through the helper, and `throw new Error(friendlyMessage)` so the existing `toast.error` shows the clean text. Also surface a follow-up toast action `"Open existing lead"` when we can locate the conflicting lead by `(workspace_id, phone)` or `(workspace_id, email)`.
-3. **`AddLeadDialog`**: on duplicate, keep the dialog open and highlight the offending field (`phone` or `email`) using `form.setError`.
-4. **Edge functions** (`capture-lead`, `ingest-leads`): on `23505`, return HTTP 409 with `{ error: "duplicate_phone" | "duplicate_email", message, existing_lead_id }` instead of a 500. (Note: `capture-lead` already has race-recovery merge logic — we only change what we return when merge isn't appropriate.)
-5. **`CsvImportDialog`**: catch the new 409 path and route those rows into the existing "conflicts" UI rather than the failure list.
+Add to `bookings`:
+- `meeting_url` text — final resolved link saved at booking time (Google Meet link from Calendar API response, or copied from `location_value`)
+- `meeting_location` text — human-readable location for in-person/phone bookings
 
----
+### 2. Booking page form (`src/components/bookings/BookingPageForm.tsx`)
+Add a "Meeting location" section:
+- Radio/select: Google Meet (auto) · Zoom link · Custom link · In-person · Phone call
+- Conditional input for the URL/address depending on choice
+- Google Meet option is only enabled when a Google Calendar is connected; show a hint otherwise
 
-## Fix 2 — Normalize phone to E.164 everywhere before lookup AND insert
+### 3. `book-appointment` edge function
+- When `location_type = 'google_meet'` and a Google token exists, include `conferenceData.createRequest` with `conferenceSolutionKey: { type: 'hangoutsMeet' }` in the event payload and add `?conferenceDataVersion=1` to the Calendar API URL. Read back `conferenceData.entryPoints[0].uri` (or `hangoutLink`) and store as `meeting_url`.
+- For other types, copy `location_value` directly into `meeting_url` / `meeting_location`.
+- Pass meeting details into the email layout.
 
-Today phone normalization lives in three different files (`whatsapp-send`, `sms-send`, `CsvImportDialog`) with subtly different rules. The dedup lookup in `capture-lead` and `ingest-leads` does `eq("phone", phone)` against raw input, so `"07517327597"` vs `"+447517327597"` vs `"447517327597"` all create separate rows that then collide on the unique constraint when one is later edited.
+### 4. Email template
+Add a new "Join meeting" card above the action buttons in both guest + host emails:
+- For URL types: gold "Join meeting" CTA button + small text with the link and the platform name (Google Meet / Zoom / Custom)
+- For in-person: location address with a globe glyph
+- For phone call: phone number with the existing phone glyph
+- Include a small "Add to calendar" hint line for guest emails
 
-**What changes:**
-1. **New shared module** `supabase/functions/_shared/phone.ts` exporting:
-   - `normalizePhoneE164(raw, defaultCountry?)` — single source of truth, mirroring the most permissive existing logic (UK local → +44, strips non-digits, validates against `^\+[1-9]\d{1,14}$`).
-   - `isValidE164(phone)`.
-   Both `whatsapp-send`, `sms-send`, `whatsapp-webhook`, `capture-lead`, and `ingest-leads` switch to this module (delete their local copies).
-2. **New shared frontend module** `src/lib/leads/phone.ts` with the same `normalizePhoneE164` function. `CsvImportDialog`, `AddLeadDialog`, and `useCreateLead`/`useUpdateLead` all run phone through it before sending to the DB.
-3. **`capture-lead` & `ingest-leads`**: after `sanitizeString`, call `normalizePhoneE164(phone)` and use the normalized value for **both** the dedup `eq("phone", …)` lookup AND the final insert/update. If normalization fails, return 400 "Invalid phone format" (same shape as existing email validation).
-4. **`AddLeadDialog`**: normalize on submit; if invalid, show form error "Use international format like +447517327597".
-5. **One-time backfill migration**: `supabase/migrations/<ts>_normalize_lead_phones.sql` runs `UPDATE public.leads SET phone = normalized WHERE phone IS NOT NULL` using a PL/pgSQL `DO` block that mirrors the JS logic (strip non-digits, prepend `+`, UK `0` → `+44`). Wrapped in a try/skip per row so any phone that can't be normalized is left as-is. Conflicts during backfill (two rows that normalize to the same value for the same user) are merged: keep the older row, copy non-null fields & union tags from the newer, then delete the newer.
+### 5. Public booking page
+After successful booking, show the meeting link on the confirmation screen too (so the guest sees it immediately without needing email).
 
----
+## Technical notes
 
-## Technical Details
+- Google Meet auto-generation requires `conferenceDataVersion=1` query param on the events.insert call — easy to miss.
+- Existing Calendar OAuth scope (`/auth/calendar`) already permits creating Meet conferences; no scope change needed.
+- For workspaces without Google Calendar connected, default `location_type` to `custom_link` and require the user to fill it in (validation in the form).
+- All changes are backward-compatible: existing booking pages get `location_type = 'custom_link'` with empty `location_value` — emails simply omit the join card if no link is present.
 
-**Files added:**
-- `src/lib/leads/duplicateError.ts`
-- `src/lib/leads/phone.ts`
-- `supabase/functions/_shared/phone.ts`
-- `supabase/migrations/<timestamp>_normalize_lead_phones.sql`
+## Files touched
 
-**Files modified:**
-- `src/hooks/useLeads.ts` — wrap insert/update with friendly error parsing
-- `src/components/leads/AddLeadDialog.tsx` — normalize on submit, set field-level errors
-- `src/components/leads/CsvImportDialog.tsx` — replace local `normalizePhone` with shared one, handle 409
-- `supabase/functions/capture-lead/index.ts` — use shared phone normalizer + 409 response
-- `supabase/functions/ingest-leads/index.ts` — same
-- `supabase/functions/whatsapp-send/index.ts`, `whatsapp-webhook/index.ts`, `sms-send/index.ts` — switch to shared module (no behavior change)
-- `supabase/functions/_shared/validation.ts` — `safeErrorResponse` already maps "duplicate key" → "Resource already exists"; refine to detect lead-specific constraints.
-
-**No schema changes** — the existing `leads_user_phone_unique` and `leads_user_email_unique` constraints stay; we just stop tripping them and present nicer errors when we do.
-
-**Risk:** the backfill could merge rows. We will print a `RAISE NOTICE` count of merged rows and run it inside a transaction so it can be rolled back if the count looks wrong. Existing FKs (`lead_activities`, `scheduled_jobs`, etc.) have ON DELETE CASCADE — the merge step re-points activities to the kept lead before deleting the duplicate.
-
----
-
-## Out of scope
-- Changing the unique constraint shape (e.g. moving from `(user_id, phone)` to `(workspace_id, phone)`) — separate decision.
-- International phone parsing beyond UK heuristics + raw E.164 — full `libphonenumber` integration is a follow-up.
+- New migration (booking_pages + bookings columns)
+- `src/components/bookings/BookingPageForm.tsx`
+- `supabase/functions/book-appointment/index.ts`
+- `src/pages/PublicBooking.tsx` (success screen)

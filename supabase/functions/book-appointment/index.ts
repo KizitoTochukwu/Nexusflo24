@@ -110,6 +110,17 @@ Deno.serve(async (req) => {
       if (newLead) leadId = newLead.id;
     }
 
+    // Resolve meeting location for non-Google-Meet types up front
+    let meetingUrl: string | null = null;
+    let meetingLocation: string | null = null;
+    const locationType: string = (page as any).location_type || "custom_link";
+    const locationValue: string | null = (page as any).location_value || null;
+    if (locationType === "zoom" || locationType === "custom_link") {
+      meetingUrl = locationValue;
+    } else if (locationType === "in_person" || locationType === "phone_call") {
+      meetingLocation = locationValue;
+    }
+
     // Create booking
     const { data: booking, error: bookErr } = await supabase
       .from("bookings")
@@ -124,6 +135,8 @@ Deno.serve(async (req) => {
         end_time: endDt.toISOString(),
         status: "confirmed",
         notes: notes || null,
+        meeting_url: meetingUrl,
+        meeting_location: meetingLocation,
       })
       .select()
       .single();
@@ -147,30 +160,49 @@ Deno.serve(async (req) => {
           if (accessToken) {
             try {
               const calendarId = tokenRow.calendar_id || "primary";
-              const eventRes = await fetch(
-                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
+              const wantMeet = locationType === "google_meet";
+              const eventBody: Record<string, unknown> = {
+                summary: `${page.name} - ${guest_name}`,
+                description: `Booking with ${guest_name} (${guest_email})${notes ? `\nNotes: ${notes}` : ""}`,
+                start: { dateTime: startDt.toISOString(), timeZone: page.timezone },
+                end: { dateTime: endDt.toISOString(), timeZone: page.timezone },
+                attendees: [{ email: guest_email }],
+              };
+              if (wantMeet) {
+                eventBody.conferenceData = {
+                  createRequest: {
+                    requestId: `${booking.id}-${Date.now()}`,
+                    conferenceSolutionKey: { type: "hangoutsMeet" },
                   },
-                  body: JSON.stringify({
-                    summary: `${page.name} - ${guest_name}`,
-                    description: `Booking with ${guest_name} (${guest_email})${notes ? `\nNotes: ${notes}` : ""}`,
-                    start: { dateTime: startDt.toISOString(), timeZone: page.timezone },
-                    end: { dateTime: endDt.toISOString(), timeZone: page.timezone },
-                    attendees: [{ email: guest_email }],
-                  }),
-                }
-              );
+                };
+              } else if (meetingLocation) {
+                eventBody.location = meetingLocation;
+              } else if (meetingUrl) {
+                eventBody.location = meetingUrl;
+              }
+
+              const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events${wantMeet ? "?conferenceDataVersion=1" : ""}`;
+              const eventRes = await fetch(url, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(eventBody),
+              });
 
               if (eventRes.ok) {
                 const eventData = await eventRes.json();
-                await supabase
-                  .from("bookings")
-                  .update({ google_event_id: eventData.id })
-                  .eq("id", booking.id);
+                const meetLink: string | null =
+                  eventData.hangoutLink ||
+                  eventData?.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === "video")?.uri ||
+                  null;
+                const update: Record<string, unknown> = { google_event_id: eventData.id };
+                if (wantMeet && meetLink) {
+                  meetingUrl = meetLink;
+                  update.meeting_url = meetLink;
+                }
+                await supabase.from("bookings").update(update).eq("id", booking.id);
               }
             } catch (_) { /* best effort */ }
           }
@@ -402,6 +434,52 @@ Deno.serve(async (req) => {
       const rescheduleUrl = `${siteUrl}/reschedule/${booking.reschedule_token}`;
       const cancelUrl = `${siteUrl}/cancel/${booking.reschedule_token}`;
 
+      // Build "Join meeting" card based on location type
+      const platformLabel = locationType === "google_meet"
+        ? "Google Meet"
+        : locationType === "zoom"
+        ? "Zoom"
+        : locationType === "in_person"
+        ? "In person"
+        : locationType === "phone_call"
+        ? "Phone call"
+        : "Online meeting";
+
+      const joinCard = (() => {
+        if (meetingUrl) {
+          return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:${navyColor};border-radius:12px;">
+          <tr><td style="padding:22px 24px;">
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${goldColor};font-weight:700;margin-bottom:6px;">${glyph("&#127909;", 12)} &nbsp;Join meeting</div>
+            <div style="font-size:16px;color:#ffffff;font-weight:700;margin-bottom:14px;">${platformLabel}</div>
+            <a href="${meetingUrl}" style="display:inline-block;padding:13px 26px;background:${goldColor};color:${navyColor};text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;">Join meeting →</a>
+            <p class="fallback-links" style="margin:14px 0 0;font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5;word-break:break-all;">
+              Or copy this link: <a href="${meetingUrl}" style="color:#ffffff;text-decoration:underline;">${meetingUrl}</a>
+            </p>
+          </td></tr>
+        </table>`;
+        }
+        if (meetingLocation && locationType === "in_person") {
+          return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:${surfaceColor};border:1px solid ${borderColor};border-left:3px solid ${goldColor};border-radius:8px;">
+          <tr><td style="padding:16px 20px;">
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${goldColor};font-weight:700;margin-bottom:4px;">${glyph(iconGlobe, 12)} &nbsp;Location</div>
+            <div style="font-size:15px;color:${navyColor};font-weight:600;line-height:1.5;">${meetingLocation}</div>
+          </td></tr>
+        </table>`;
+        }
+        if (meetingLocation && locationType === "phone_call") {
+          return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:${surfaceColor};border:1px solid ${borderColor};border-left:3px solid ${goldColor};border-radius:8px;">
+          <tr><td style="padding:16px 20px;">
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${goldColor};font-weight:700;margin-bottom:4px;">${glyph(iconPhone, 12)} &nbsp;We'll call you at</div>
+            <div style="font-size:16px;color:${navyColor};font-weight:700;line-height:1.4;"><a href="tel:${meetingLocation}" style="color:${navyColor};text-decoration:none;">${meetingLocation}</a></div>
+          </td></tr>
+        </table>`;
+        }
+        return "";
+      })();
+
       // Guest confirmation email
       const guestHtml = emailLayout(
         `Your booking for ${page.name} on ${formattedDate} is confirmed.`,
@@ -413,6 +491,7 @@ Deno.serve(async (req) => {
           Your appointment is locked in. We've added the details below — see you soon.
         </p>
         ${summaryCard()}
+        ${joinCard}
         <div style="margin:24px 0 8px;font-size:13px;color:${mutedColor};font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">Manage your booking</div>
         <table cellpadding="0" cellspacing="0" class="action-btn-table" style="margin:0;">
           <tr>
@@ -473,6 +552,7 @@ Deno.serve(async (req) => {
             A new appointment has been booked. Here are the full details.
           </p>
           ${summaryCard(guestRows)}
+          ${joinCard}
           <p style="margin:20px 0 0;font-size:13px;color:${mutedColor};line-height:1.6;">
             Log in to your dashboard to manage this booking, message the guest, or update your availability.
           </p>
@@ -487,7 +567,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, booking }), {
+    return new Response(JSON.stringify({ success: true, booking: { ...booking, meeting_url: meetingUrl, meeting_location: meetingLocation } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

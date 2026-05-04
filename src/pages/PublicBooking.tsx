@@ -32,7 +32,7 @@ export default function PublicBooking() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; reschedule_token: string } | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; reschedule_token: string; meeting_url?: string | null; meeting_location?: string | null } | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
@@ -92,7 +92,12 @@ export default function PublicBooking() {
       wsTrack("Schedule", { content_name: page.name, content_category: "booking" });
       wsTrack("Lead", { content_name: page.name, content_category: "booking" });
       if (data?.booking?.id && data?.booking?.reschedule_token) {
-        setConfirmedBooking({ id: data.booking.id, reschedule_token: data.booking.reschedule_token });
+        setConfirmedBooking({
+          id: data.booking.id,
+          reschedule_token: data.booking.reschedule_token,
+          meeting_url: data.booking.meeting_url || null,
+          meeting_location: data.booking.meeting_location || null,
+        });
       }
       setConfirmed(true);
     } catch (err: any) {
@@ -182,6 +187,33 @@ export default function PublicBooking() {
                 <p className="flex items-center gap-2"><Globe2 className="h-4 w-4" style={{ color: accent }} /> {page.timezone}</p>
               </div>
             </div>
+
+            {!cancelled && confirmedBooking?.meeting_url && (
+              <div className="mt-4 rounded-2xl p-5 text-left text-white" style={{ background: navy }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: accent }}>
+                  <Video className="inline h-3.5 w-3.5 mr-1 -mt-0.5" /> Join meeting
+                </p>
+                <a
+                  href={confirmedBooking.meeting_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition-transform hover:scale-[1.02]"
+                  style={{ background: accent, color: navy }}
+                >
+                  Join meeting →
+                </a>
+                <p className="mt-3 text-[11px] break-all text-white/60">
+                  Or copy: <span className="text-white/90">{confirmedBooking.meeting_url}</span>
+                </p>
+              </div>
+            )}
+
+            {!cancelled && confirmedBooking?.meeting_location && !confirmedBooking?.meeting_url && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 text-left">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Location</p>
+                <p className="font-semibold" style={{ color: navy }}>{confirmedBooking.meeting_location}</p>
+              </div>
+            )}
 
             {!cancelled && confirmedBooking && rescheduleUrl && (
               <>
