@@ -325,16 +325,12 @@ export default function PublicBooking() {
                     </div>
 
                     <Button
-                      onClick={handleBook}
-                      disabled={submitting || !guestName || !guestEmail}
+                      onClick={() => setStep("review")}
+                      disabled={!guestName || !guestEmail}
                       className="h-12 w-full rounded-xl text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:brightness-105"
                       style={{ background: `linear-gradient(135deg, ${navy}, #1a3766)` }}
                     >
-                      {submitting ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirming...</>
-                      ) : (
-                        <>Confirm booking</>
-                      )}
+                      Review booking
                     </Button>
 
                     <p className="text-center text-[11px] text-slate-400">
