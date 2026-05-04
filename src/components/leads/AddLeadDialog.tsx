@@ -82,6 +82,15 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
   }, [open, defaultValues]);
 
   const handleSubmit = (values: FormValues) => {
+    // Normalize phone to E.164 before submit so dedup works
+    let normalizedPhone: string | null = null;
+    if (values.phone && values.phone.trim()) {
+      normalizedPhone = normalizePhoneE164(values.phone);
+      if (!normalizedPhone) {
+        form.setError("phone", { message: "Use international format like +447517327597" });
+        return;
+      }
+    }
     const tags = values.tags
       ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
