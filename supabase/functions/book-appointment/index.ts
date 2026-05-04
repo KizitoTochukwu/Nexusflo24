@@ -160,30 +160,49 @@ Deno.serve(async (req) => {
           if (accessToken) {
             try {
               const calendarId = tokenRow.calendar_id || "primary";
-              const eventRes = await fetch(
-                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    "Content-Type": "application/json",
+              const wantMeet = locationType === "google_meet";
+              const eventBody: Record<string, unknown> = {
+                summary: `${page.name} - ${guest_name}`,
+                description: `Booking with ${guest_name} (${guest_email})${notes ? `\nNotes: ${notes}` : ""}`,
+                start: { dateTime: startDt.toISOString(), timeZone: page.timezone },
+                end: { dateTime: endDt.toISOString(), timeZone: page.timezone },
+                attendees: [{ email: guest_email }],
+              };
+              if (wantMeet) {
+                eventBody.conferenceData = {
+                  createRequest: {
+                    requestId: `${booking.id}-${Date.now()}`,
+                    conferenceSolutionKey: { type: "hangoutsMeet" },
                   },
-                  body: JSON.stringify({
-                    summary: `${page.name} - ${guest_name}`,
-                    description: `Booking with ${guest_name} (${guest_email})${notes ? `\nNotes: ${notes}` : ""}`,
-                    start: { dateTime: startDt.toISOString(), timeZone: page.timezone },
-                    end: { dateTime: endDt.toISOString(), timeZone: page.timezone },
-                    attendees: [{ email: guest_email }],
-                  }),
-                }
-              );
+                };
+              } else if (meetingLocation) {
+                eventBody.location = meetingLocation;
+              } else if (meetingUrl) {
+                eventBody.location = meetingUrl;
+              }
+
+              const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events${wantMeet ? "?conferenceDataVersion=1" : ""}`;
+              const eventRes = await fetch(url, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(eventBody),
+              });
 
               if (eventRes.ok) {
                 const eventData = await eventRes.json();
-                await supabase
-                  .from("bookings")
-                  .update({ google_event_id: eventData.id })
-                  .eq("id", booking.id);
+                const meetLink: string | null =
+                  eventData.hangoutLink ||
+                  eventData?.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === "video")?.uri ||
+                  null;
+                const update: Record<string, unknown> = { google_event_id: eventData.id };
+                if (wantMeet && meetLink) {
+                  meetingUrl = meetLink;
+                  update.meeting_url = meetLink;
+                }
+                await supabase.from("bookings").update(update).eq("id", booking.id);
               }
             } catch (_) { /* best effort */ }
           }
