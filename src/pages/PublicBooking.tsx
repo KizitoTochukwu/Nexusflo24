@@ -102,6 +102,31 @@ export default function PublicBooking() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!confirmedBooking) return;
+    setCancelling(true);
+    setError("");
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/cancel-booking`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reschedule_token: confirmedBooking.reschedule_token,
+          reason: cancelReason || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel");
+      setCancelled(true);
+      setCancelOpen(false);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
