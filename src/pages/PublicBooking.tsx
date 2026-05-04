@@ -23,7 +23,7 @@ export default function PublicBooking() {
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [step, setStep] = useState<"pick" | "details">("pick");
+  const [step, setStep] = useState<"pick" | "details" | "review">("pick");
 
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
