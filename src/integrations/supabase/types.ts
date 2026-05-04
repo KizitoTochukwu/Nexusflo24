@@ -323,6 +323,7 @@ export type Database = {
           id: string
           max_days_ahead: number
           name: string
+          notify_host: boolean
           slug: string | null
           status: string
           timezone: string
@@ -342,6 +343,7 @@ export type Database = {
           id?: string
           max_days_ahead?: number
           name: string
+          notify_host?: boolean
           slug?: string | null
           status?: string
           timezone?: string
@@ -361,6 +363,7 @@ export type Database = {
           id?: string
           max_days_ahead?: number
           name?: string
+          notify_host?: boolean
           slug?: string | null
           status?: string
           timezone?: string

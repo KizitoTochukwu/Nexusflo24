@@ -1,0 +1,1 @@
+ALTER TABLE public.booking_pages ADD COLUMN IF NOT EXISTS notify_host boolean NOT NULL DEFAULT true;
