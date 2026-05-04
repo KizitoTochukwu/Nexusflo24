@@ -491,6 +491,7 @@ Deno.serve(async (req) => {
           Your appointment is locked in. We've added the details below — see you soon.
         </p>
         ${summaryCard()}
+        ${joinCard}
         <div style="margin:24px 0 8px;font-size:13px;color:${mutedColor};font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">Manage your booking</div>
         <table cellpadding="0" cellspacing="0" class="action-btn-table" style="margin:0;">
           <tr>
