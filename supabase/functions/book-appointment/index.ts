@@ -552,6 +552,7 @@ Deno.serve(async (req) => {
             A new appointment has been booked. Here are the full details.
           </p>
           ${summaryCard(guestRows)}
+          ${joinCard}
           <p style="margin:20px 0 0;font-size:13px;color:${mutedColor};line-height:1.6;">
             Log in to your dashboard to manage this booking, message the guest, or update your availability.
           </p>
