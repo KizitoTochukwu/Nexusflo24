@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Check, Unlink } from "lucide-react";
+import { Plus, Trash2, Check, Unlink, Mail } from "lucide-react";
 import { useGoogleCalendarStatus, useGoogleCalendarConnect, useGoogleCalendarList, useSelectGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import type { BookingPage } from "@/hooks/useBookings";
 
@@ -50,6 +51,7 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
   const [maxDays, setMaxDays] = useState(initial?.max_days_ahead || 30);
   const [timezone, setTimezone] = useState(initial?.timezone || "UTC");
   const [color, setColor] = useState(initial?.color || "#D4AF37");
+  const [notifyHost, setNotifyHost] = useState<boolean>(initial?.notify_host ?? true);
   const [availability, setAvailability] = useState<Record<string, { start: string; end: string }[]>>(
     (initial?.availability as any) || DEFAULT_AVAILABILITY
   );
@@ -93,7 +95,8 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
       timezone,
       color,
       availability,
-    });
+      notify_host: notifyHost,
+    } as Partial<BookingPage>);
   };
 
   return (
