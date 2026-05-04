@@ -56,6 +56,7 @@ import FormBuilder from "./pages/dashboard/FormBuilder";
 import PublicForm from "./pages/PublicForm";
 import PublicBooking from "./pages/PublicBooking";
 import RescheduleBooking from "./pages/RescheduleBooking";
+import CancelBooking from "./pages/CancelBooking";
 import HowCapture from "./pages/HowCapture";
 import HowNurture from "./pages/HowNurture";
 import HowConvert from "./pages/HowConvert";
@@ -147,6 +148,7 @@ const App = () => (
               {/* Public booking routes */}
               <Route path="/book/:slug" element={<PublicBooking />} />
               <Route path="/reschedule/:token" element={<RescheduleBooking />} />
+              <Route path="/cancel/:token" element={<CancelBooking />} />
 
               {/* Public unsubscribe */}
               <Route path="/unsubscribe" element={<Unsubscribe />} />
