@@ -17,6 +17,7 @@ export type BookingPage = {
   description: string;
   color: string;
   status: string;
+  notify_host: boolean;
   google_calendar_id: string | null;
   created_at: string;
   updated_at: string;
