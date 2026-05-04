@@ -328,10 +328,10 @@ Deno.serve(async (req) => {
         </tr>`;
 
       const summaryCard = (extraRows = "") => `
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;background:#ffffff;border:1px solid ${borderColor};border-radius:12px;border-top:3px solid ${goldColor};">
-          <tr><td style="padding:20px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" class="summary-card" style="margin:20px 0;background:#ffffff;border:1px solid ${borderColor};border-radius:12px;border-top:3px solid ${goldColor};">
+          <tr><td class="summary-card-inner" style="padding:20px 24px;">
             <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${goldColor};font-weight:700;margin-bottom:4px;">Appointment</div>
-            <div style="font-size:18px;color:${navyColor};font-weight:700;line-height:1.3;margin-bottom:14px;">${page.name}</div>
+            <div class="summary-title" style="font-size:18px;color:${navyColor};font-weight:700;line-height:1.3;margin-bottom:14px;">${page.name}</div>
             <table width="100%" cellpadding="0" cellspacing="0">
               ${row(iconCalendar, "Date", formattedDate)}
               ${row(iconClock, "Time", `${formattedTime} – ${endTime} <span style="font-weight:400;color:${mutedColor};">· ${page.duration_minutes} min</span>`)}
@@ -341,21 +341,41 @@ Deno.serve(async (req) => {
             ${notes ? `
               <div style="margin-top:16px;padding:14px 16px;background:${surfaceColor};border-radius:8px;border-left:3px solid ${goldColor};">
                 <div style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${mutedColor};font-weight:600;margin-bottom:4px;">Notes</div>
-                <div style="font-size:14px;color:${navyColor};line-height:1.5;">${notes}</div>
+                <div style="font-size:14px;color:${navyColor};line-height:1.5;word-break:break-word;">${notes}</div>
               </div>` : ""}
           </td></tr>
         </table>`;
 
+      const responsiveCss = `
+        <style>
+          @media only screen and (max-width:600px) {
+            .email-outer-pad { padding: 16px 8px !important; }
+            .email-card { border-radius: 12px !important; }
+            .email-header { padding: 24px 20px 20px !important; }
+            .email-header h1 { font-size: 20px !important; }
+            .email-header p { font-size: 13px !important; }
+            .email-body { padding: 20px !important; }
+            .email-footer { padding: 20px !important; }
+            .summary-card-inner { padding: 16px !important; }
+            .summary-title { font-size: 16px !important; }
+            .action-btn-table { width: 100% !important; }
+            .action-btn-cell { display: block !important; width: 100% !important; padding: 0 0 10px 0 !important; }
+            .action-btn { display: block !important; width: 100% !important; box-sizing: border-box; text-align: center !important; padding: 14px 20px !important; }
+            .fallback-links { font-size: 11px !important; word-break: break-all !important; }
+          }
+        </style>
+      `;
+
       const emailLayout = (preheader: string, headerTitle: string, headerSub: string, bodyContent: string) => `
         <!DOCTYPE html>
-        <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${headerTitle}</title></head>
-        <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Arial,sans-serif;color:${navyColor};">
+        <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${headerTitle}</title>${responsiveCss}</head>
+        <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Arial,sans-serif;color:${navyColor};-webkit-text-size-adjust:100%;">
           <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${preheader}</div>
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;">
-            <tr><td align="center" style="padding:32px 16px;">
-              <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(11,31,59,0.08);">
+            <tr><td align="center" class="email-outer-pad" style="padding:32px 16px;">
+              <table width="600" cellpadding="0" cellspacing="0" class="email-card" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(11,31,59,0.08);">
                 <!-- Header -->
-                <tr><td style="background:${navyColor};padding:32px 32px 28px;text-align:center;">
+                <tr><td class="email-header" style="background:${navyColor};padding:32px 32px 28px;text-align:center;">
                   <div style="display:inline-block;width:56px;height:56px;line-height:56px;background:${goldColor};border-radius:50%;text-align:center;margin-bottom:16px;">
                     <img src="${iconCheck}" width="22" height="22" alt="" style="display:inline-block;vertical-align:middle;">
                   </div>
@@ -365,9 +385,9 @@ Deno.serve(async (req) => {
                 <!-- Gold accent bar -->
                 <tr><td style="height:3px;background:${goldColor};line-height:0;font-size:0;">&nbsp;</td></tr>
                 <!-- Body -->
-                <tr><td style="padding:32px;">${bodyContent}</td></tr>
+                <tr><td class="email-body" style="padding:32px;">${bodyContent}</td></tr>
                 <!-- Footer -->
-                <tr><td style="background:${surfaceColor};padding:24px 32px;border-top:1px solid ${borderColor};text-align:center;">
+                <tr><td class="email-footer" style="background:${surfaceColor};padding:24px 32px;border-top:1px solid ${borderColor};text-align:center;">
                   <p style="margin:0 0 4px;font-size:13px;color:${navyColor};font-weight:600;">NexusFlo24</p>
                   <p style="margin:0;font-size:12px;color:${mutedColor};">Automate. Convert. Grow.</p>
                 </td></tr>
@@ -394,17 +414,17 @@ Deno.serve(async (req) => {
         </p>
         ${summaryCard()}
         <div style="margin:24px 0 8px;font-size:13px;color:${mutedColor};font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">Manage your booking</div>
-        <table cellpadding="0" cellspacing="0" style="margin:0;">
+        <table cellpadding="0" cellspacing="0" class="action-btn-table" style="margin:0;">
           <tr>
-            <td style="padding-right:10px;">
-              <a href="${rescheduleUrl}" style="display:inline-block;padding:12px 24px;background:${navyColor};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Reschedule</a>
+            <td class="action-btn-cell" style="padding-right:10px;">
+              <a href="${rescheduleUrl}" class="action-btn" style="display:inline-block;padding:12px 24px;background:${navyColor};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Reschedule</a>
             </td>
-            <td>
-              <a href="${cancelUrl}" style="display:inline-block;padding:12px 24px;background:#ffffff;color:${navyColor};text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;border:1.5px solid ${borderColor};">Cancel</a>
+            <td class="action-btn-cell">
+              <a href="${cancelUrl}" class="action-btn" style="display:inline-block;padding:12px 24px;background:#ffffff;color:${navyColor};text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;border:1.5px solid ${borderColor};">Cancel</a>
             </td>
           </tr>
         </table>
-        <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;line-height:1.6;">
+        <p class="fallback-links" style="margin:20px 0 0;font-size:12px;color:#94a3b8;line-height:1.6;word-break:break-word;">
           Trouble with the buttons? Reschedule: <a href="${rescheduleUrl}" style="color:${navyColor};">${rescheduleUrl}</a><br>
           Cancel: <a href="${cancelUrl}" style="color:${navyColor};">${cancelUrl}</a>
         </p>
