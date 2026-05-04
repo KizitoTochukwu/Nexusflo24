@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Check, Unlink } from "lucide-react";
+import { Plus, Trash2, Check, Unlink, Mail } from "lucide-react";
 import { useGoogleCalendarStatus, useGoogleCalendarConnect, useGoogleCalendarList, useSelectGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import type { BookingPage } from "@/hooks/useBookings";
 
@@ -50,6 +51,7 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
   const [maxDays, setMaxDays] = useState(initial?.max_days_ahead || 30);
   const [timezone, setTimezone] = useState(initial?.timezone || "UTC");
   const [color, setColor] = useState(initial?.color || "#D4AF37");
+  const [notifyHost, setNotifyHost] = useState<boolean>(initial?.notify_host ?? true);
   const [availability, setAvailability] = useState<Record<string, { start: string; end: string }[]>>(
     (initial?.availability as any) || DEFAULT_AVAILABILITY
   );
@@ -93,7 +95,8 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
       timezone,
       color,
       availability,
-    });
+      notify_host: notifyHost,
+    } as Partial<BookingPage>);
   };
 
   return (
@@ -149,6 +152,22 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-8 w-10 rounded border cursor-pointer" />
           <span className="text-sm text-muted-foreground">{color}</span>
         </div>
+      </div>
+
+      {/* Host notification toggle */}
+      <div className="rounded-lg border bg-muted/30 p-4 flex items-start justify-between gap-4">
+        <div className="flex gap-3">
+          <Mail className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+          <div>
+            <Label htmlFor="notify-host" className="text-sm font-medium cursor-pointer">
+              Email me when someone books
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Send a confirmation email to the host with the guest's details for every new booking.
+            </p>
+          </div>
+        </div>
+        <Switch id="notify-host" checked={notifyHost} onCheckedChange={setNotifyHost} />
       </div>
 
       {/* Availability Grid */}

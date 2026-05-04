@@ -435,8 +435,9 @@ Deno.serve(async (req) => {
         guestHtml
       );
 
-      // Send owner email
-      if (ownerProfile?.email) {
+      // Send owner email (respect notify_host setting; defaults to true)
+      const notifyHost = (page as any).notify_host !== false;
+      if (notifyHost && ownerProfile?.email) {
         const guestRows = `
           ${row(iconUser, "Guest", guest_name)}
           ${guest_phone ? row(iconMail, "Email", guest_email) : lastRow(iconMail, "Email", guest_email)}
