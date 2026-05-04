@@ -69,7 +69,14 @@ Deno.serve(async (req) => {
     }
 
     const full_name = sanitizeString(body.full_name, 100);
-    const phone = sanitizeString(body.phone, 20);
+    const rawPhone = sanitizeString(body.phone, 30);
+    const phone = rawPhone ? normalizePhoneE164(rawPhone) : null;
+    if (rawPhone && !phone) {
+      return new Response(JSON.stringify({ error: "Invalid phone format. Use international format like +447517327597." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const source = sanitizeString(body.source, 100);
     const notes = sanitizeString(body.notes, 1000);
     const tags = sanitizeTags(body.tags);
