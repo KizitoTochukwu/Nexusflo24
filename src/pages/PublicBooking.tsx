@@ -90,6 +90,9 @@ export default function PublicBooking() {
       if (!res.ok) throw new Error(data.error || "Booking failed");
       wsTrack("Schedule", { content_name: page.name, content_category: "booking" });
       wsTrack("Lead", { content_name: page.name, content_category: "booking" });
+      if (data?.booking?.id && data?.booking?.reschedule_token) {
+        setConfirmedBooking({ id: data.booking.id, reschedule_token: data.booking.reschedule_token });
+      }
       setConfirmed(true);
     } catch (err: any) {
       setError(err.message);
