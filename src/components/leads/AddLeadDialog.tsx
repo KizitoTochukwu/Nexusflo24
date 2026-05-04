@@ -13,6 +13,8 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { PIPELINE_STAGES, type Lead } from "@/hooks/useLeads";
 import type { LeadFolder } from "@/hooks/useLeadFolders";
 
+import { normalizePhoneE164 } from "@/lib/leads/phone";
+
 const SOURCES = ["Landing Page", "WhatsApp", "Facebook Ad", "Referral", "Organic", "Other"];
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
 
