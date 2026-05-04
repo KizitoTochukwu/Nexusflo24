@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sanitizeString, isValidEmail, isValidPhone, sanitizeTags, safeErrorResponse } from "../_shared/validation.ts";
+import { normalizePhoneE164 } from "../_shared/phone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,7 +40,8 @@ Deno.serve(async (req) => {
     // Validate and sanitize inputs
     const full_name = sanitizeString(body.full_name, 100);
     const email = sanitizeString(body.email, 255);
-    const phone = sanitizeString(body.phone, 20);
+    const rawPhone = sanitizeString(body.phone, 30);
+    const phone = rawPhone ? normalizePhoneE164(rawPhone) : null;
     const source = sanitizeString(body.source, 100);
     const status = sanitizeString(body.status, 50);
     const notes = sanitizeString(body.notes, 1000);
@@ -66,8 +68,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (trimmedPhone && !isValidPhone(trimmedPhone)) {
-      return new Response(JSON.stringify({ error: "Invalid phone format" }), {
+    if (rawPhone && !trimmedPhone) {
+      return new Response(JSON.stringify({ error: "Invalid phone format. Use international format like +447517327597." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -209,6 +211,20 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const anyErr = err as any;
+    if (anyErr?.code === "23505") {
+      const msg = String(anyErr?.message || "");
+      const isPhone = /phone/i.test(msg);
+      return new Response(
+        JSON.stringify({
+          error: isPhone ? "duplicate_phone" : "duplicate_email",
+          message: isPhone
+            ? "A lead with this phone number already exists."
+            : "A lead with this email already exists.",
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     return new Response(JSON.stringify({ error: safeErrorResponse(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

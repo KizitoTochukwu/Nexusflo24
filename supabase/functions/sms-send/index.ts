@@ -2,23 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
+import { normalizePhoneE164 as normalizePhoneNumber } from "../_shared/phone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-function normalizePhoneNumber(raw: string): string | null {
-  const cleaned = raw.replace(/[\s\-()]/g, "");
-  if (cleaned.startsWith("+")) return /^\+[1-9]\d{7,14}$/.test(cleaned) ? cleaned : null;
-  if (cleaned.startsWith("00")) {
-    const intl = `+${cleaned.slice(2)}`;
-    return /^\+[1-9]\d{7,14}$/.test(intl) ? intl : null;
-  }
-  if (/^0\d{10}$/.test(cleaned)) return `+44${cleaned.slice(1)}`;
-  if (/^[1-9]\d{7,14}$/.test(cleaned)) return `+${cleaned}`;
-  return null;
-}
 
 type TwilioSender =
   | { kind: "from"; value: string }
