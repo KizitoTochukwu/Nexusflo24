@@ -28,18 +28,6 @@ async function decrypt(encryptedBase64: string, secret: string): Promise<string>
   return new TextDecoder().decode(decrypted);
 }
 
-function normalizePhone(raw: string): string | null {
-  const cleaned = raw.replace(/[\s\-()]/g, "");
-  if (cleaned.startsWith("+") && /^\+[1-9]\d{7,14}$/.test(cleaned)) return cleaned;
-  if (cleaned.startsWith("00")) {
-    const intl = `+${cleaned.slice(2)}`;
-    return /^\+[1-9]\d{7,14}$/.test(intl) ? intl : null;
-  }
-  if (/^0\d{10}$/.test(cleaned)) return `+44${cleaned.slice(1)}`;
-  if (/^[1-9]\d{7,14}$/.test(cleaned)) return `+${cleaned}`;
-  return null;
-}
-
 function phoneCandidates(raw: string): string[] {
   const set = new Set<string>();
   const normalized = normalizePhone(raw);
