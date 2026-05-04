@@ -339,6 +339,103 @@ export default function PublicBooking() {
                   </div>
                 </div>
               )}
+
+              {step === "review" && selectedSlot && (
+                <div className="mx-auto max-w-md">
+                  <button
+                    onClick={() => setStep("details")}
+                    className="mb-5 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" /> Back to details
+                  </button>
+
+                  <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <Sparkles className="h-3 w-3" style={{ color: accent }} /> Final review
+                  </div>
+                  <h2 className="mb-1 text-xl font-bold tracking-tight" style={{ color: navy }}>Confirm your booking</h2>
+                  <p className="mb-6 text-sm text-slate-500">Please review your details below before confirming.</p>
+
+                  {/* Meeting summary */}
+                  <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+                    <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Meeting</p>
+                      <button
+                        onClick={() => setStep("pick")}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800"
+                      >
+                        <Pencil className="h-3 w-3" /> Change
+                      </button>
+                    </div>
+                    <div className="space-y-2.5 px-5 py-4">
+                      <p className="text-sm font-semibold" style={{ color: navy }}>{page.name}</p>
+                      <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                        <CalendarDays className="h-4 w-4" style={{ color: accent }} />
+                        <span>{format(new Date(selectedSlot), "EEEE, MMMM d, yyyy")}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                        <Clock className="h-4 w-4" style={{ color: accent }} />
+                        <span>{format(new Date(selectedSlot), "h:mm a")} · {page.duration_minutes} min</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-sm text-slate-600">
+                        <Globe2 className="h-4 w-4" style={{ color: accent }} />
+                        <span>{page.timezone}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Guest details summary */}
+                  <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+                    <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Your details</p>
+                      <button
+                        onClick={() => setStep("details")}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800"
+                      >
+                        <Pencil className="h-3 w-3" /> Edit
+                      </button>
+                    </div>
+                    <div className="space-y-2.5 px-5 py-4">
+                      <div className="flex items-start gap-2.5 text-sm">
+                        <User className="mt-0.5 h-4 w-4 text-slate-400" />
+                        <span className="text-slate-700">{guestName}</span>
+                      </div>
+                      <div className="flex items-start gap-2.5 text-sm">
+                        <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
+                        <span className="text-slate-700 break-all">{guestEmail}</span>
+                      </div>
+                      {guestPhone && (
+                        <div className="flex items-start gap-2.5 text-sm">
+                          <Phone className="mt-0.5 h-4 w-4 text-slate-400" />
+                          <span className="text-slate-700">{guestPhone}</span>
+                        </div>
+                      )}
+                      {notes && (
+                        <div className="flex items-start gap-2.5 text-sm">
+                          <MessageSquare className="mt-0.5 h-4 w-4 text-slate-400" />
+                          <span className="text-slate-700 whitespace-pre-wrap">{notes}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleBook}
+                    disabled={submitting}
+                    className="h-12 w-full rounded-xl text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:brightness-105"
+                    style={{ background: `linear-gradient(135deg, ${navy}, #1a3766)` }}
+                  >
+                    {submitting ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirming...</>
+                    ) : (
+                      <>Confirm booking</>
+                    )}
+                  </Button>
+
+                  <p className="mt-3 text-center text-[11px] text-slate-400">
+                    A calendar invite will be sent to your email.
+                  </p>
+                </div>
+              )}
             </section>
           </div>
         </div>
