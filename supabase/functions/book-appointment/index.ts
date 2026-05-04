@@ -285,24 +285,26 @@ Deno.serve(async (req) => {
       const borderColor = "#e2e8f0";
       const surfaceColor = "#f8fafc";
 
-      // Inline SVG icons (email-safe, served as data URIs)
-      const icon = (svg: string) =>
-        `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-      const iconCalendar = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${goldColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`);
-      const iconClock = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${goldColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`);
-      const iconGlobe = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${goldColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20"/></svg>`);
-      const iconUser = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${goldColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`);
-      const iconMail = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${goldColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>`);
-      const iconPhone = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${goldColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`);
-      const iconNote = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${goldColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>`);
-      const iconCheck = icon(`<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`);
+      // Email-safe Unicode glyph icons (Gmail mobile blocks inline SVG data URIs,
+      // so we use text glyphs styled in gold which render reliably everywhere).
+      const iconCalendar = "&#128197;"; // 📅
+      const iconClock = "&#128340;";    // 🕔
+      const iconGlobe = "&#127760;";    // 🌐
+      const iconUser = "&#128100;";     // 👤
+      const iconMail = "&#9993;";       // ✉
+      const iconPhone = "&#128222;";    // 📞
+      const iconNote = "&#128221;";     // 📝
+      const iconCheck = "&#10004;";     // ✔
 
-      const row = (iconUrl: string, label: string, value: string) => `
+      const glyph = (char: string, size = 16) =>
+        `<span style="font-size:${size}px;line-height:1;color:${goldColor};display:inline-block;">${char}</span>`;
+
+      const row = (iconChar: string, label: string, value: string) => `
         <tr>
           <td style="padding:10px 0;border-bottom:1px solid ${borderColor};">
             <table cellpadding="0" cellspacing="0" style="width:100%;">
               <tr>
-                <td width="28" valign="top" style="padding-top:2px;"><img src="${iconUrl}" width="18" height="18" alt="" style="display:block;"></td>
+                <td width="28" valign="top" style="padding-top:2px;">${glyph(iconChar)}</td>
                 <td valign="top">
                   <div style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${mutedColor};font-weight:600;margin-bottom:2px;">${label}</div>
                   <div style="font-size:15px;color:${navyColor};font-weight:600;line-height:1.4;">${value}</div>
@@ -312,12 +314,12 @@ Deno.serve(async (req) => {
           </td>
         </tr>`;
 
-      const lastRow = (iconUrl: string, label: string, value: string) => `
+      const lastRow = (iconChar: string, label: string, value: string) => `
         <tr>
           <td style="padding:10px 0;">
             <table cellpadding="0" cellspacing="0" style="width:100%;">
               <tr>
-                <td width="28" valign="top" style="padding-top:2px;"><img src="${iconUrl}" width="18" height="18" alt="" style="display:block;"></td>
+                <td width="28" valign="top" style="padding-top:2px;">${glyph(iconChar)}</td>
                 <td valign="top">
                   <div style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${mutedColor};font-weight:600;margin-bottom:2px;">${label}</div>
                   <div style="font-size:15px;color:${navyColor};font-weight:600;line-height:1.4;">${value}</div>
