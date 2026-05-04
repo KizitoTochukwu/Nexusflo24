@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { usePlanGating } from "@/hooks/usePlanGating";
 import { fireAutomationsForLeads } from "@/lib/automations/fireTriggers";
+import { parseLeadDbError } from "@/lib/leads/duplicateError";
+import { normalizePhoneE164 } from "@/lib/leads/phone";
 
 export const PIPELINE_STAGES = [
   { value: "new_lead", label: "New Lead", color: "bg-blue-100 text-blue-700" },
