@@ -98,10 +98,18 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
       color,
       availability,
       notify_host: notifyHost,
-    } as Partial<BookingPage>);
+      location_type: locationType,
+      location_value: locationType === "google_meet" ? null : (locationValue || null),
+    } as any);
   };
 
-  return (
+  const needsLocationValue = ["zoom", "custom_link", "in_person", "phone_call"].includes(locationType);
+  const locationPlaceholder: Record<string, string> = {
+    zoom: "https://zoom.us/j/123456789",
+    custom_link: "https://meet.example.com/your-room",
+    in_person: "123 Main St, Suite 200, City",
+    phone_call: "+1 555 000 1234",
+  };
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
