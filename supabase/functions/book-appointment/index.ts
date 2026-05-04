@@ -434,6 +434,52 @@ Deno.serve(async (req) => {
       const rescheduleUrl = `${siteUrl}/reschedule/${booking.reschedule_token}`;
       const cancelUrl = `${siteUrl}/cancel/${booking.reschedule_token}`;
 
+      // Build "Join meeting" card based on location type
+      const platformLabel = locationType === "google_meet"
+        ? "Google Meet"
+        : locationType === "zoom"
+        ? "Zoom"
+        : locationType === "in_person"
+        ? "In person"
+        : locationType === "phone_call"
+        ? "Phone call"
+        : "Online meeting";
+
+      const joinCard = (() => {
+        if (meetingUrl) {
+          return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:${navyColor};border-radius:12px;">
+          <tr><td style="padding:22px 24px;">
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${goldColor};font-weight:700;margin-bottom:6px;">${glyph("&#127909;", 12)} &nbsp;Join meeting</div>
+            <div style="font-size:16px;color:#ffffff;font-weight:700;margin-bottom:14px;">${platformLabel}</div>
+            <a href="${meetingUrl}" style="display:inline-block;padding:13px 26px;background:${goldColor};color:${navyColor};text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;">Join meeting →</a>
+            <p class="fallback-links" style="margin:14px 0 0;font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5;word-break:break-all;">
+              Or copy this link: <a href="${meetingUrl}" style="color:#ffffff;text-decoration:underline;">${meetingUrl}</a>
+            </p>
+          </td></tr>
+        </table>`;
+        }
+        if (meetingLocation && locationType === "in_person") {
+          return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:${surfaceColor};border:1px solid ${borderColor};border-left:3px solid ${goldColor};border-radius:8px;">
+          <tr><td style="padding:16px 20px;">
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${goldColor};font-weight:700;margin-bottom:4px;">${glyph(iconGlobe, 12)} &nbsp;Location</div>
+            <div style="font-size:15px;color:${navyColor};font-weight:600;line-height:1.5;">${meetingLocation}</div>
+          </td></tr>
+        </table>`;
+        }
+        if (meetingLocation && locationType === "phone_call") {
+          return `
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:${surfaceColor};border:1px solid ${borderColor};border-left:3px solid ${goldColor};border-radius:8px;">
+          <tr><td style="padding:16px 20px;">
+            <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${goldColor};font-weight:700;margin-bottom:4px;">${glyph(iconPhone, 12)} &nbsp;We'll call you at</div>
+            <div style="font-size:16px;color:${navyColor};font-weight:700;line-height:1.4;"><a href="tel:${meetingLocation}" style="color:${navyColor};text-decoration:none;">${meetingLocation}</a></div>
+          </td></tr>
+        </table>`;
+        }
+        return "";
+      })();
+
       // Guest confirmation email
       const guestHtml = emailLayout(
         `Your booking for ${page.name} on ${formattedDate} is confirmed.`,
