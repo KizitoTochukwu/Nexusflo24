@@ -198,13 +198,25 @@ export function useUpdateLead() {
 
   return useMutation({
     mutationFn: async ({ id, prev, workspace_id, ...updates }: Partial<Lead> & { id: string; prev?: Partial<Lead>; workspace_id?: string }) => {
+      // Normalize phone if it's being updated
+      if (updates.phone !== undefined && updates.phone !== null && updates.phone !== "") {
+        const normalized = normalizePhoneE164(updates.phone);
+        if (!normalized) {
+          throw new Error("Invalid phone format. Use international format like +447517327597.");
+        }
+        updates.phone = normalized;
+      }
+
       const { data, error } = await supabase
         .from("leads")
         .update(updates as any)
         .eq("id", id)
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        const parsed = parseLeadDbError(error);
+        throw Object.assign(new Error(parsed.message), { kind: parsed.kind, field: parsed.field });
+      }
 
       if (prev?.status && updates.status && prev.status !== updates.status && workspace_id) {
         await supabase.from("lead_activities").insert({
