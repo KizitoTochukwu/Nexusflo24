@@ -567,7 +567,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, booking }), {
+    return new Response(JSON.stringify({ success: true, booking: { ...booking, meeting_url: meetingUrl, meeting_location: meetingLocation } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
