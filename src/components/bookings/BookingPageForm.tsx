@@ -154,6 +154,22 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
         </div>
       </div>
 
+      {/* Host notification toggle */}
+      <div className="rounded-lg border bg-muted/30 p-4 flex items-start justify-between gap-4">
+        <div className="flex gap-3">
+          <Mail className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+          <div>
+            <Label htmlFor="notify-host" className="text-sm font-medium cursor-pointer">
+              Email me when someone books
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Send a confirmation email to the host with the guest's details for every new booking.
+            </p>
+          </div>
+        </div>
+        <Switch id="notify-host" checked={notifyHost} onCheckedChange={setNotifyHost} />
+      </div>
+
       {/* Availability Grid */}
       <div>
         <Label className="mb-2 block">Weekly Availability</Label>
