@@ -188,6 +188,33 @@ export default function PublicBooking() {
               </div>
             </div>
 
+            {!cancelled && confirmedBooking?.meeting_url && (
+              <div className="mt-4 rounded-2xl p-5 text-left text-white" style={{ background: navy }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: accent }}>
+                  <Video className="inline h-3.5 w-3.5 mr-1 -mt-0.5" /> Join meeting
+                </p>
+                <a
+                  href={confirmedBooking.meeting_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition-transform hover:scale-[1.02]"
+                  style={{ background: accent, color: navy }}
+                >
+                  Join meeting →
+                </a>
+                <p className="mt-3 text-[11px] break-all text-white/60">
+                  Or copy: <span className="text-white/90">{confirmedBooking.meeting_url}</span>
+                </p>
+              </div>
+            )}
+
+            {!cancelled && confirmedBooking?.meeting_location && !confirmedBooking?.meeting_url && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 text-left">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Location</p>
+                <p className="font-semibold" style={{ color: navy }}>{confirmedBooking.meeting_location}</p>
+              </div>
+            )}
+
             {!cancelled && confirmedBooking && rescheduleUrl && (
               <>
                 <div className="mt-6 grid gap-2 sm:grid-cols-2">
