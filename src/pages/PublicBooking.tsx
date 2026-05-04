@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarDays, Clock, CheckCircle2, Loader2, Globe2, Video, ArrowLeft, Sparkles } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, Loader2, Globe2, Video, ArrowLeft, Sparkles, User, Mail, Phone, MessageSquare, Pencil } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { BookingPage } from "@/hooks/useBookings";
