@@ -52,6 +52,8 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
   const [timezone, setTimezone] = useState(initial?.timezone || "UTC");
   const [color, setColor] = useState(initial?.color || "#D4AF37");
   const [notifyHost, setNotifyHost] = useState<boolean>(initial?.notify_host ?? true);
+  const [locationType, setLocationType] = useState<string>((initial as any)?.location_type || "google_meet");
+  const [locationValue, setLocationValue] = useState<string>((initial as any)?.location_value || "");
   const [availability, setAvailability] = useState<Record<string, { start: string; end: string }[]>>(
     (initial?.availability as any) || DEFAULT_AVAILABILITY
   );
