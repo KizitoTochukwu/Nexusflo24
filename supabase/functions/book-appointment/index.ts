@@ -110,6 +110,17 @@ Deno.serve(async (req) => {
       if (newLead) leadId = newLead.id;
     }
 
+    // Resolve meeting location for non-Google-Meet types up front
+    let meetingUrl: string | null = null;
+    let meetingLocation: string | null = null;
+    const locationType: string = (page as any).location_type || "custom_link";
+    const locationValue: string | null = (page as any).location_value || null;
+    if (locationType === "zoom" || locationType === "custom_link") {
+      meetingUrl = locationValue;
+    } else if (locationType === "in_person" || locationType === "phone_call") {
+      meetingLocation = locationValue;
+    }
+
     // Create booking
     const { data: booking, error: bookErr } = await supabase
       .from("bookings")
@@ -124,6 +135,8 @@ Deno.serve(async (req) => {
         end_time: endDt.toISOString(),
         status: "confirmed",
         notes: notes || null,
+        meeting_url: meetingUrl,
+        meeting_location: meetingLocation,
       })
       .select()
       .single();
