@@ -110,6 +110,8 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
     in_person: "123 Main St, Suite 200, City",
     phone_call: "+1 555 000 1234",
   };
+
+  return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
