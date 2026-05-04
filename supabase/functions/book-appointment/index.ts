@@ -315,22 +315,29 @@ Deno.serve(async (req) => {
         </table>
       `;
 
-      // Build reschedule link
+      // Build reschedule + cancel links
       const siteUrl = Deno.env.get("SITE_URL") || "https://nexusflo24.lovable.app";
       const rescheduleUrl = `${siteUrl}/reschedule/${booking.reschedule_token}`;
+      const cancelUrl = `${siteUrl}/cancel/${booking.reschedule_token}`;
 
       // Guest confirmation email
       const guestHtml = emailLayout("Booking Confirmed!", `
         <p style="margin:0 0 16px;font-size:16px;color:${navyColor};">Hi ${guest_name},</p>
         <p style="margin:0 0 16px;font-size:14px;color:#374151;">Your appointment has been confirmed! Here are the details:</p>
         ${detailsBlock}
-        <p style="margin:16px 0 0;font-size:13px;color:#374151;">Need to change the time?</p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;">
-          <tr><td>
-            <a href="${rescheduleUrl}" style="display:inline-block;padding:10px 24px;background:${brandColor};color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Reschedule Booking</a>
-          </td></tr>
+        <p style="margin:16px 0 8px;font-size:13px;color:#374151;">Need to make changes?</p>
+        <table cellpadding="0" cellspacing="0" style="margin:8px 0;">
+          <tr>
+            <td style="padding-right:8px;">
+              <a href="${rescheduleUrl}" style="display:inline-block;padding:10px 22px;background:${brandColor};color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;">Reschedule</a>
+            </td>
+            <td>
+              <a href="${cancelUrl}" style="display:inline-block;padding:10px 22px;background:#ffffff;color:#dc2626;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;border:1px solid #dc2626;">Cancel booking</a>
+            </td>
+          </tr>
         </table>
-        <p style="margin:8px 0 0;font-size:12px;color:#9ca3af;">Or copy this link: ${rescheduleUrl}</p>
+        <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;">Reschedule: ${rescheduleUrl}</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">Cancel: ${cancelUrl}</p>
       `);
 
       // Owner notification email
