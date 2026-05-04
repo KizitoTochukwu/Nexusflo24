@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarDays, Clock, CheckCircle2, Loader2, Globe2, Video, ArrowLeft, Sparkles, User, Mail, Phone, MessageSquare, Pencil } from "lucide-react";
+import { CalendarDays, Clock, CheckCircle2, Loader2, Globe2, Video, ArrowLeft, Sparkles, User, Mail, Phone, MessageSquare, Pencil, CalendarClock, XCircle, Ban } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { BookingPage } from "@/hooks/useBookings";
@@ -31,6 +32,11 @@ export default function PublicBooking() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; reschedule_token: string } | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -85,11 +91,39 @@ export default function PublicBooking() {
       if (!res.ok) throw new Error(data.error || "Booking failed");
       wsTrack("Schedule", { content_name: page.name, content_category: "booking" });
       wsTrack("Lead", { content_name: page.name, content_category: "booking" });
+      if (data?.booking?.id && data?.booking?.reschedule_token) {
+        setConfirmedBooking({ id: data.booking.id, reschedule_token: data.booking.reschedule_token });
+      }
       setConfirmed(true);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirmedBooking) return;
+    setCancelling(true);
+    setError("");
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/cancel-booking`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reschedule_token: confirmedBooking.reschedule_token,
+          reason: cancelReason || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel");
+      setCancelled(true);
+      setCancelOpen(false);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -115,30 +149,117 @@ export default function PublicBooking() {
   const navy = "#0B1F3B";
 
   if (confirmed) {
+    const rescheduleUrl = confirmedBooking ? `${window.location.origin}/reschedule/${confirmedBooking.reschedule_token}` : null;
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 px-4 py-12">
         <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-[0_30px_80px_-20px_rgba(11,31,59,0.25)] ring-1 ring-slate-200/60">
-          <div className="h-2" style={{ background: `linear-gradient(90deg, ${navy}, ${accent})` }} />
+          <div className="h-2" style={{ background: cancelled ? "linear-gradient(90deg, #94a3b8, #cbd5e1)" : `linear-gradient(90deg, ${navy}, ${accent})` }} />
           <div className="px-8 py-12 text-center">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-50/60">
-              <CheckCircle2 className="h-9 w-9 text-emerald-500" />
-            </div>
-            <h2 className="mb-2 text-2xl font-bold tracking-tight" style={{ color: navy }}>You're all set</h2>
-            <p className="text-sm text-slate-500 mb-6">A confirmation has been sent to <span className="font-medium text-slate-700">{guestEmail}</span></p>
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 text-left">
+            {cancelled ? (
+              <>
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 ring-8 ring-slate-100/60">
+                  <Ban className="h-9 w-9 text-slate-500" />
+                </div>
+                <h2 className="mb-2 text-2xl font-bold tracking-tight" style={{ color: navy }}>Booking cancelled</h2>
+                <p className="text-sm text-slate-500 mb-6">Your appointment has been cancelled. A confirmation email has been sent.</p>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 ring-8 ring-emerald-50/60">
+                  <CheckCircle2 className="h-9 w-9 text-emerald-500" />
+                </div>
+                <h2 className="mb-2 text-2xl font-bold tracking-tight" style={{ color: navy }}>You're all set</h2>
+                <p className="text-sm text-slate-500 mb-6">A confirmation has been sent to <span className="font-medium text-slate-700">{guestEmail}</span></p>
+              </>
+            )}
+
+            <div className={cn("rounded-2xl border p-5 text-left", cancelled ? "border-slate-200 bg-slate-50/60 opacity-70" : "border-slate-200/80 bg-slate-50/60")}>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Meeting</p>
-              <p className="font-semibold" style={{ color: navy }}>{page.name}</p>
+              <p className={cn("font-semibold", cancelled && "line-through text-slate-400")} style={{ color: cancelled ? undefined : navy }}>{page.name}</p>
               <div className="mt-3 space-y-1.5 text-sm text-slate-600">
                 <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" style={{ color: accent }} /> {format(new Date(selectedSlot!), "EEEE, MMMM d, yyyy")}</p>
                 <p className="flex items-center gap-2"><Clock className="h-4 w-4" style={{ color: accent }} /> {format(new Date(selectedSlot!), "h:mm a")} ({page.duration_minutes} min)</p>
                 <p className="flex items-center gap-2"><Globe2 className="h-4 w-4" style={{ color: accent }} /> {page.timezone}</p>
               </div>
             </div>
+
+            {!cancelled && confirmedBooking && rescheduleUrl && (
+              <>
+                <div className="mt-6 grid gap-2 sm:grid-cols-2">
+                  <a
+                    href={rescheduleUrl}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:shadow"
+                  >
+                    <CalendarClock className="h-4 w-4" style={{ color: accent }} />
+                    Reschedule
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setCancelOpen(true)}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50/40 px-4 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 hover:border-red-200"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancel booking
+                  </button>
+                </div>
+                <p className="mt-3 text-[11px] text-slate-400">
+                  You can also use the links in your confirmation email later.
+                </p>
+              </>
+            )}
+
+            {error && <p className="mt-4 text-xs text-red-600">{error}</p>}
           </div>
         </div>
+
+        <Dialog open={cancelOpen} onOpenChange={(o) => !cancelling && setCancelOpen(o)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+                <XCircle className="h-6 w-6 text-red-500" />
+              </div>
+              <DialogTitle className="text-center">Cancel this booking?</DialogTitle>
+              <DialogDescription className="text-center">
+                This will release your time slot and notify the host. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-slate-600">Reason <span className="text-slate-400">(optional)</span></Label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Let the host know why you're cancelling..."
+                rows={3}
+                className="rounded-xl border-slate-200 resize-none"
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setCancelOpen(false)}
+                disabled={cancelling}
+                className="rounded-xl"
+              >
+                Keep booking
+              </Button>
+              <Button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="rounded-xl bg-red-600 text-white hover:bg-red-700"
+              >
+                {cancelling ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cancelling...</>
+                ) : (
+                  <>Yes, cancel</>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
+
 
   const maxDate = addDays(new Date(), page.max_days_ahead);
 
