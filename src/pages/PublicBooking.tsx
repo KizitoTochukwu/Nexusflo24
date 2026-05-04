@@ -208,6 +208,18 @@ export default function PublicBooking() {
               </>
             )}
 
+            <button
+              type="button"
+              onClick={() => {
+                try { window.close(); } catch {}
+                setTimeout(() => { window.location.href = "/"; }, 150);
+              }}
+              className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90"
+              style={{ backgroundColor: navy }}
+            >
+              Exit
+            </button>
+
             {error && <p className="mt-4 text-xs text-red-600">{error}</p>}
           </div>
         </div>
