@@ -199,13 +199,11 @@ Deno.serve(async (req) => {
       const [startH, startM] = window.start.split(":").map(Number);
       const [endH, endM] = window.end.split(":").map(Number);
 
-      const windowStart = new Date(requestedDate);
-      windowStart.setHours(startH, startM, 0, 0);
-      const windowEnd = new Date(requestedDate);
-      windowEnd.setHours(endH, endM, 0, 0);
+      // Build window boundaries as actual UTC instants for the host's wall-clock time.
+      const windowStartMs = zonedWallClockToUtc(reqY, reqMo, reqD, startH, startM, hostTz).getTime();
+      const windowEndMs = zonedWallClockToUtc(reqY, reqMo, reqD, endH, endM, hostTz).getTime();
 
-      let cursor = windowStart.getTime();
-      const windowEndMs = windowEnd.getTime();
+      let cursor = windowStartMs;
 
       while (cursor + duration * 60000 <= windowEndMs) {
         const slotStart = cursor;
@@ -229,7 +227,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ slots: availableSlots, duration, timezone: page.timezone }), {
+    return new Response(JSON.stringify({ slots: availableSlots, duration, timezone: hostTz }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
