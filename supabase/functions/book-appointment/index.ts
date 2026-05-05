@@ -410,7 +410,7 @@ Deno.serve(async (req) => {
               <table width="600" cellpadding="0" cellspacing="0" class="email-card" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(11,31,59,0.08);">
                 <!-- Header -->
                 <tr><td class="email-header" style="background:${navyColor};padding:28px 32px;text-align:center;">
-                  <img src="https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png" width="48" height="48" alt="NexusFlo24" style="display:inline-block;border-radius:10px;margin-bottom:16px;" />
+                  <div style="margin-bottom:20px;"><img src="https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png" width="48" height="48" alt="NexusFlo24" style="display:inline-block;border-radius:10px;" /></div>
                   <div style="display:inline-block;width:56px;height:56px;line-height:56px;background:${goldColor};border-radius:50%;text-align:center;margin-bottom:16px;font-size:28px;color:#ffffff;font-weight:700;">${iconCheck}</div>
                   <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.01em;">${headerTitle}</h1>
                   <p style="margin:0;color:rgba(255,255,255,0.7);font-size:14px;">${headerSub}</p>
