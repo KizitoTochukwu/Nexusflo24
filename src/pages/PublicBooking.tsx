@@ -189,21 +189,21 @@ export default function PublicBooking() {
             </div>
 
             {!cancelled && confirmedBooking?.meeting_url && (
-              <div className="mt-4 rounded-2xl p-5 text-left text-white" style={{ background: navy }}>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: accent }}>
+              <div className="mt-4 rounded-2xl border-2 p-5 text-left bg-white" style={{ borderColor: accent }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: accent }}>
                   <Video className="inline h-3.5 w-3.5 mr-1 -mt-0.5" /> Join meeting
                 </p>
                 <a
                   href={confirmedBooking.meeting_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold transition-transform hover:scale-[1.02]"
-                  style={{ background: accent, color: navy }}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold shadow-sm transition-transform hover:scale-[1.02]"
+                  style={{ background: accent, color: "#0B1F3B" }}
                 >
                   Join meeting →
                 </a>
-                <p className="mt-3 text-[11px] break-all text-white/60">
-                  Or copy: <span className="text-white/90">{confirmedBooking.meeting_url}</span>
+                <p className="mt-3 text-[11px] break-all" style={{ color: "#64748b" }}>
+                  Or copy: <a href={confirmedBooking.meeting_url} target="_blank" rel="noopener noreferrer" className="underline font-medium" style={{ color: navy }}>{confirmedBooking.meeting_url}</a>
                 </p>
               </div>
             )}
