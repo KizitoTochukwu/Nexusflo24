@@ -7,6 +7,55 @@ const corsHeaders = {
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+/**
+ * Convert a wall-clock time (yyyy-mm-dd HH:MM) in a given IANA timezone
+ * to a UTC Date by computing the offset that timezone has at that instant.
+ */
+function zonedWallClockToUtc(year: number, month: number, day: number, hour: number, minute: number, timeZone: string): Date {
+  // First guess: assume the wall-clock matches UTC, then measure the actual offset
+  // that timezone reports at that guessed instant, and correct.
+  const guess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const offsetMs = getTimeZoneOffsetMs(new Date(guess), timeZone);
+  // Correct once. (DST transitions: re-measure at the corrected instant for accuracy.)
+  const corrected = guess - offsetMs;
+  const offsetMs2 = getTimeZoneOffsetMs(new Date(corrected), timeZone);
+  return new Date(guess - offsetMs2);
+}
+
+/** Returns the offset in ms that `timeZone` is ahead of UTC at the given instant. */
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = dtf.formatToParts(date).reduce<Record<string, string>>((acc, p) => {
+    if (p.type !== "literal") acc[p.type] = p.value;
+    return acc;
+  }, {});
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour === "24" ? "0" : parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return asUtc - date.getTime();
+}
+
+/** Get the weekday index (0=Sun..6=Sat) for a date in a given timezone. */
+function weekdayInZone(date: Date, timeZone: string): number {
+  const name = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(date);
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[name] ?? 0;
+}
+
 async function refreshGoogleToken(supabase: any, tokenRow: any, clientId: string, clientSecret: string) {
   if (new Date(tokenRow.token_expires_at) > new Date(Date.now() + 60000)) {
     return tokenRow.access_token;
@@ -59,8 +108,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Booking page not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const requestedDate = new Date(date + "T00:00:00");
-    const dayKey = DAY_KEYS[requestedDate.getDay()];
+    const hostTz = page.timezone || "UTC";
+
+    // Parse the requested date as a wall-clock date in the host's timezone.
+    const [reqY, reqMo, reqD] = date.split("-").map(Number);
+
+    // Determine the weekday (in the host's timezone) for that calendar date.
+    // Use noon UTC of the day so timezone shifts don't cross to the previous/next day.
+    const noonUtc = new Date(Date.UTC(reqY, reqMo - 1, reqD, 12, 0, 0));
+    const dayKey = DAY_KEYS[weekdayInZone(noonUtc, hostTz)];
     const availability = page.availability as Record<string, { start: string; end: string }[]>;
     const daySlots = availability[dayKey] || [];
 
@@ -68,9 +124,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ slots: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get existing bookings for that day
-    const dayStart = date + "T00:00:00.000Z";
-    const dayEnd = date + "T23:59:59.999Z";
+    // Bracket the host's local day in UTC for fetching conflicts.
+    const dayStartInstant = zonedWallClockToUtc(reqY, reqMo, reqD, 0, 0, hostTz);
+    const dayEndInstant = zonedWallClockToUtc(reqY, reqMo, reqD, 23, 59, hostTz);
+    const dayStart = dayStartInstant.toISOString();
+    const dayEnd = dayEndInstant.toISOString();
 
     const { data: existingBookings } = await supabase
       .from("bookings")
@@ -141,13 +199,11 @@ Deno.serve(async (req) => {
       const [startH, startM] = window.start.split(":").map(Number);
       const [endH, endM] = window.end.split(":").map(Number);
 
-      const windowStart = new Date(requestedDate);
-      windowStart.setHours(startH, startM, 0, 0);
-      const windowEnd = new Date(requestedDate);
-      windowEnd.setHours(endH, endM, 0, 0);
+      // Build window boundaries as actual UTC instants for the host's wall-clock time.
+      const windowStartMs = zonedWallClockToUtc(reqY, reqMo, reqD, startH, startM, hostTz).getTime();
+      const windowEndMs = zonedWallClockToUtc(reqY, reqMo, reqD, endH, endM, hostTz).getTime();
 
-      let cursor = windowStart.getTime();
-      const windowEndMs = windowEnd.getTime();
+      let cursor = windowStartMs;
 
       while (cursor + duration * 60000 <= windowEndMs) {
         const slotStart = cursor;
@@ -171,7 +227,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ slots: availableSlots, duration, timezone: page.timezone }), {
+    return new Response(JSON.stringify({ slots: availableSlots, duration, timezone: hostTz }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

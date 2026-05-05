@@ -14,6 +14,26 @@ import type { BookingPage } from "@/hooks/useBookings";
 import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
 import { readableForeground, safeAccent } from "@/lib/contrast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Format an ISO instant in a target IANA timezone using the given Intl options.
+function formatInZone(iso: string | Date, timeZone: string, opts: Intl.DateTimeFormatOptions): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return new Intl.DateTimeFormat("en-US", { ...opts, timeZone }).format(d);
+}
+
+// Curated list of common timezones for the visitor selector.
+const COMMON_TIMEZONES = [
+  "UTC",
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
+  "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Madrid", "Europe/Rome",
+  "Europe/Amsterdam", "Europe/Stockholm", "Europe/Athens", "Europe/Istanbul",
+  "Africa/Lagos", "Africa/Cairo", "Africa/Johannesburg", "Africa/Nairobi",
+  "Asia/Dubai", "Asia/Kolkata", "Asia/Bangkok", "Asia/Singapore", "Asia/Shanghai",
+  "Asia/Hong_Kong", "Asia/Tokyo", "Asia/Seoul",
+  "Australia/Perth", "Australia/Sydney", "Pacific/Auckland",
+];
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
@@ -22,6 +42,10 @@ export default function PublicBooking() {
   const [error, setError] = useState("");
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  // Visitor's timezone for displaying slot times. Defaults to the browser's detected zone.
+  const [viewerTimezone, setViewerTimezone] = useState<string>(() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; }
+  });
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -187,9 +211,9 @@ export default function PublicBooking() {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Meeting</p>
               <p className={cn("font-semibold", cancelled && "line-through text-slate-400")} style={{ color: cancelled ? undefined : navy }}>{page.name}</p>
               <div className="mt-3 space-y-1.5 text-sm text-slate-600">
-                <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" style={{ color: accent }} /> {format(new Date(selectedSlot!), "EEEE, MMMM d, yyyy")}</p>
-                <p className="flex items-center gap-2"><Clock className="h-4 w-4" style={{ color: accent }} /> {format(new Date(selectedSlot!), "h:mm a")} ({page.duration_minutes} min)</p>
-                <p className="flex items-center gap-2"><Globe2 className="h-4 w-4" style={{ color: accent }} /> {page.timezone}</p>
+                <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" style={{ color: accent }} /> {formatInZone(selectedSlot!, viewerTimezone, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+                <p className="flex items-center gap-2"><Clock className="h-4 w-4" style={{ color: accent }} /> {formatInZone(selectedSlot!, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })} ({page.duration_minutes} min)</p>
+                <p className="flex items-center gap-2"><Globe2 className="h-4 w-4" style={{ color: accent }} /> {viewerTimezone}</p>
               </div>
             </div>
 
@@ -357,7 +381,7 @@ export default function PublicBooking() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
                       <Globe2 className="h-4 w-4" style={{ color: accent }} />
                     </div>
-                    <span className="text-white/85">{page.timezone}</span>
+                    <span className="text-white/85">{viewerTimezone}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
@@ -401,9 +425,25 @@ export default function PublicBooking() {
 
                   {/* Slots column */}
                   <div className="sm:border-l sm:border-slate-200/70 sm:pl-8">
-                    <h2 className="mb-4 text-base font-semibold tracking-tight" style={{ color: navy }}>
+                    <h2 className="mb-3 text-base font-semibold tracking-tight" style={{ color: navy }}>
                       {selectedDate ? format(selectedDate, "EEE, MMM d") : "Pick a time"}
                     </h2>
+                    {/* Visitor timezone selector — times below adjust automatically. */}
+                    <div className="mb-4">
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                        Your timezone
+                      </label>
+                      <Select value={viewerTimezone} onValueChange={setViewerTimezone}>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {Array.from(new Set([viewerTimezone, page.timezone, ...COMMON_TIMEZONES])).map((tz) => (
+                            <SelectItem key={tz} value={tz} className="text-xs">{tz}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     {!selectedDate ? (
                       <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
@@ -436,7 +476,7 @@ export default function PublicBooking() {
                                 )}
                                 style={isSelected ? { backgroundColor: navy, borderColor: navy } : {}}
                               >
-                                {format(new Date(slot), "h:mm a")}
+                                {formatInZone(slot, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })}
                               </button>
                               {isSelected && (
                                 <button
@@ -469,9 +509,9 @@ export default function PublicBooking() {
                   <div className="mb-6 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Selected time</p>
                     <p className="text-sm font-semibold" style={{ color: navy }}>
-                      {format(new Date(selectedSlot), "EEEE, MMMM d")} · {format(new Date(selectedSlot), "h:mm a")}
+                      {formatInZone(selectedSlot, viewerTimezone, { weekday: "long", month: "long", day: "numeric" })} · {formatInZone(selectedSlot, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-500">{page.duration_minutes} min · {page.timezone}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{page.duration_minutes} min · {viewerTimezone}</p>
                   </div>
 
                   <h2 className="mb-4 text-base font-semibold tracking-tight" style={{ color: navy }}>Enter your details</h2>
@@ -540,15 +580,15 @@ export default function PublicBooking() {
                       <p className="text-sm font-semibold" style={{ color: navy }}>{page.name}</p>
                       <div className="flex items-center gap-2.5 text-sm text-slate-600">
                         <CalendarDays className="h-4 w-4" style={{ color: accent }} />
-                        <span>{format(new Date(selectedSlot), "EEEE, MMMM d, yyyy")}</span>
+                        <span>{formatInZone(selectedSlot, viewerTimezone, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
                       </div>
                       <div className="flex items-center gap-2.5 text-sm text-slate-600">
                         <Clock className="h-4 w-4" style={{ color: accent }} />
-                        <span>{format(new Date(selectedSlot), "h:mm a")} · {page.duration_minutes} min</span>
+                        <span>{formatInZone(selectedSlot, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })} · {page.duration_minutes} min</span>
                       </div>
                       <div className="flex items-center gap-2.5 text-sm text-slate-600">
                         <Globe2 className="h-4 w-4" style={{ color: accent }} />
-                        <span>{page.timezone}</span>
+                        <span>{viewerTimezone}</span>
                       </div>
                     </div>
                   </div>
