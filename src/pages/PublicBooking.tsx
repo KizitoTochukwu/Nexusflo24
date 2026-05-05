@@ -14,6 +14,26 @@ import type { BookingPage } from "@/hooks/useBookings";
 import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
 import { readableForeground, safeAccent } from "@/lib/contrast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Format an ISO instant in a target IANA timezone using the given Intl options.
+function formatInZone(iso: string | Date, timeZone: string, opts: Intl.DateTimeFormatOptions): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return new Intl.DateTimeFormat("en-US", { ...opts, timeZone }).format(d);
+}
+
+// Curated list of common timezones for the visitor selector.
+const COMMON_TIMEZONES = [
+  "UTC",
+  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Toronto", "America/Mexico_City", "America/Sao_Paulo",
+  "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Madrid", "Europe/Rome",
+  "Europe/Amsterdam", "Europe/Stockholm", "Europe/Athens", "Europe/Istanbul",
+  "Africa/Lagos", "Africa/Cairo", "Africa/Johannesburg", "Africa/Nairobi",
+  "Asia/Dubai", "Asia/Kolkata", "Asia/Bangkok", "Asia/Singapore", "Asia/Shanghai",
+  "Asia/Hong_Kong", "Asia/Tokyo", "Asia/Seoul",
+  "Australia/Perth", "Australia/Sydney", "Pacific/Auckland",
+];
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
