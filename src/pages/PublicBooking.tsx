@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { BookingPage } from "@/hooks/useBookings";
 import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
+import { readableForeground, safeAccent } from "@/lib/contrast";
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
