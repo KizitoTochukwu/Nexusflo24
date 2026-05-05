@@ -42,6 +42,10 @@ export default function PublicBooking() {
   const [error, setError] = useState("");
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  // Visitor's timezone for displaying slot times. Defaults to the browser's detected zone.
+  const [viewerTimezone, setViewerTimezone] = useState<string>(() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; }
+  });
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
