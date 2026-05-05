@@ -106,10 +106,15 @@ export default function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
-          <div className="flex items-center gap-1">
+      <PopoverContent align="end" className="w-[380px] max-w-[calc(100vw-1rem)] p-0">
+        <div className="flex flex-col gap-2 border-b px-4 py-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+            {supported && permission === "denied" && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <BellOff className="h-3 w-3" /> Push blocked
+              </span>
+            )}
             {supported && permission === "default" && (
               <Button
                 variant="ghost"
@@ -120,32 +125,31 @@ export default function NotificationBell() {
                 <BellRing className="h-3 w-3" /> Enable push
               </Button>
             )}
-            {supported && permission === "denied" && (
-              <span className="flex items-center gap-1 px-2 text-xs text-muted-foreground">
-                <BellOff className="h-3 w-3" /> Push blocked
-              </span>
-            )}
-            {unread > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground"
-                onClick={() => markAll.mutate()}
-              >
-                <CheckCheck className="h-3 w-3" /> Mark all read
-              </Button>
-            )}
-            {notifications.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-destructive"
-                onClick={() => deleteAll.mutate()}
-              >
-                <Trash2 className="h-3 w-3" /> Clear all
-              </Button>
-            )}
           </div>
+          {(unread > 0 || notifications.length > 0) && (
+            <div className="flex items-center gap-1">
+              {unread > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground"
+                  onClick={() => markAll.mutate()}
+                >
+                  <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+                </Button>
+              )}
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => deleteAll.mutate()}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Clear all
+                </Button>
+              )}
+            </div>
+          )}
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
