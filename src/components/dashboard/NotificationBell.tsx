@@ -232,13 +232,35 @@ export default function NotificationBell() {
                   key={n.id}
                   n={n}
                   onOpen={handleOpen}
-                  onDelete={(id) => deleteOne.mutate(id)}
+                  onDelete={handleDeleteOne}
                 />
               ))}
             </div>
           )}
         </ScrollArea>
       </PopoverContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove all {notifications.length} notifications. You can't undo this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClearAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Clear all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Popover>
+  );
+}
   );
 }
