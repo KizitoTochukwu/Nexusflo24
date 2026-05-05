@@ -1,4 +1,5 @@
-import { Bell, CheckCheck, User, Mail, BellRing, BellOff, X, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Bell, CheckCheck, User, Mail, BellRing, BellOff, X, Trash2, Loader2 } from "lucide-react";
 import {
   useNotifications,
   useUnreadCount,
@@ -12,9 +13,20 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const typeIcons: Record<string, typeof Bell> = {
   new_lead: User,
@@ -67,14 +79,17 @@ function NotificationItem({
         </div>
       </button>
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
+          e.preventDefault();
           onDelete(n.id);
         }}
         aria-label="Delete notification"
-        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+        title="Delete notification"
+        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 sm:h-6 sm:w-6"
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
       </button>
     </div>
   );
@@ -88,12 +103,46 @@ export default function NotificationBell() {
   const deleteOne = useDeleteNotification();
   const deleteAll = useDeleteAllNotifications();
   const { permission, requestPermission, supported } = usePushNotifications();
+  const { toast } = useToast();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleOpen = (n: Notification) => {
-    // Mark as read first, then remove the item shortly after so the user
-    // perceives the click as acknowledgement and the list stays clean.
     if (!n.read) markRead.mutate(n.id);
-    setTimeout(() => deleteOne.mutate(n.id), 250);
+    setTimeout(() => {
+      deleteOne.mutate(n.id, {
+        onError: (err) =>
+          toast({
+            title: "Couldn't dismiss notification",
+            description: err instanceof Error ? err.message : "Please try again.",
+            variant: "destructive",
+          }),
+      });
+    }, 250);
+  };
+
+  const handleDeleteOne = (id: string) => {
+    deleteOne.mutate(id, {
+      onError: (err) =>
+        toast({
+          title: "Couldn't delete notification",
+          description: err instanceof Error ? err.message : "Please try again.",
+          variant: "destructive",
+        }),
+    });
+  };
+
+  const handleClearAll = () => {
+    setConfirmOpen(false);
+    deleteAll.mutate(undefined, {
+      onSuccess: () =>
+        toast({ title: "All notifications cleared" }),
+      onError: (err) =>
+        toast({
+          title: "Couldn't clear notifications",
+          description: err instanceof Error ? err.message : "Please try again.",
+          variant: "destructive",
+        }),
+    });
   };
 
   return (
@@ -134,25 +183,37 @@ export default function NotificationBell() {
             )}
           </div>
           {(unread > 0 || notifications.length > 0) && (
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               {unread > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled={markAll.isPending}
                   className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground"
                   onClick={() => markAll.mutate()}
                 >
-                  <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+                  {markAll.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCheck className="h-3.5 w-3.5" />
+                  )}
+                  Mark all read
                 </Button>
               )}
               {notifications.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled={deleteAll.isPending}
                   className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-destructive"
-                  onClick={() => deleteAll.mutate()}
+                  onClick={() => setConfirmOpen(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" /> Clear all
+                  {deleteAll.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Clear all
                 </Button>
               )}
             </div>
@@ -171,13 +232,33 @@ export default function NotificationBell() {
                   key={n.id}
                   n={n}
                   onOpen={handleOpen}
-                  onDelete={(id) => deleteOne.mutate(id)}
+                  onDelete={handleDeleteOne}
                 />
               ))}
             </div>
           )}
         </ScrollArea>
       </PopoverContent>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove all {notifications.length} notifications. You can't undo this.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClearAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Clear all
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Popover>
   );
 }

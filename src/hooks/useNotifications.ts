@@ -75,6 +75,7 @@ export function useMarkNotificationRead() {
 
 export function useDeleteNotification() {
   const qc = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -84,7 +85,28 @@ export function useDeleteNotification() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      const key = ["notifications", user?.id];
+      const unreadKey = ["notifications-unread", user?.id];
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Notification[]>(key);
+      const previousUnread = qc.getQueryData<number>(unreadKey);
+      if (previous) {
+        const removed = previous.find((n) => n.id === id);
+        qc.setQueryData<Notification[]>(key, previous.filter((n) => n.id !== id));
+        if (removed && !removed.read && typeof previousUnread === "number") {
+          qc.setQueryData<number>(unreadKey, Math.max(0, previousUnread - 1));
+        }
+      }
+      return { previous, previousUnread };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["notifications", user?.id], ctx.previous);
+      if (typeof ctx?.previousUnread === "number") {
+        qc.setQueryData(["notifications-unread", user?.id], ctx.previousUnread);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
       qc.invalidateQueries({ queryKey: ["notifications-unread"] });
     },
@@ -103,7 +125,23 @@ export function useDeleteAllNotifications() {
         .eq("user_id", user!.id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      const key = ["notifications", user?.id];
+      const unreadKey = ["notifications-unread", user?.id];
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Notification[]>(key);
+      const previousUnread = qc.getQueryData<number>(unreadKey);
+      qc.setQueryData<Notification[]>(key, []);
+      qc.setQueryData<number>(unreadKey, 0);
+      return { previous, previousUnread };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["notifications", user?.id], ctx.previous);
+      if (typeof ctx?.previousUnread === "number") {
+        qc.setQueryData(["notifications-unread", user?.id], ctx.previousUnread);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
       qc.invalidateQueries({ queryKey: ["notifications-unread"] });
     },
