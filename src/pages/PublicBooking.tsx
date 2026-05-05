@@ -381,7 +381,7 @@ export default function PublicBooking() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
                       <Globe2 className="h-4 w-4" style={{ color: accent }} />
                     </div>
-                    <span className="text-white/85">{page.timezone}</span>
+                    <span className="text-white/85">{viewerTimezone}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/10">
@@ -460,7 +460,7 @@ export default function PublicBooking() {
                                 )}
                                 style={isSelected ? { backgroundColor: navy, borderColor: navy } : {}}
                               >
-                                {format(new Date(slot), "h:mm a")}
+                                {formatInZone(slot, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })}
                               </button>
                               {isSelected && (
                                 <button
@@ -493,9 +493,9 @@ export default function PublicBooking() {
                   <div className="mb-6 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Selected time</p>
                     <p className="text-sm font-semibold" style={{ color: navy }}>
-                      {format(new Date(selectedSlot), "EEEE, MMMM d")} · {format(new Date(selectedSlot), "h:mm a")}
+                      {formatInZone(selectedSlot, viewerTimezone, { weekday: "long", month: "long", day: "numeric" })} · {formatInZone(selectedSlot, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-500">{page.duration_minutes} min · {page.timezone}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{page.duration_minutes} min · {viewerTimezone}</p>
                   </div>
 
                   <h2 className="mb-4 text-base font-semibold tracking-tight" style={{ color: navy }}>Enter your details</h2>
@@ -564,15 +564,15 @@ export default function PublicBooking() {
                       <p className="text-sm font-semibold" style={{ color: navy }}>{page.name}</p>
                       <div className="flex items-center gap-2.5 text-sm text-slate-600">
                         <CalendarDays className="h-4 w-4" style={{ color: accent }} />
-                        <span>{format(new Date(selectedSlot), "EEEE, MMMM d, yyyy")}</span>
+                        <span>{formatInZone(selectedSlot, viewerTimezone, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
                       </div>
                       <div className="flex items-center gap-2.5 text-sm text-slate-600">
                         <Clock className="h-4 w-4" style={{ color: accent }} />
-                        <span>{format(new Date(selectedSlot), "h:mm a")} · {page.duration_minutes} min</span>
+                        <span>{formatInZone(selectedSlot, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })} · {page.duration_minutes} min</span>
                       </div>
                       <div className="flex items-center gap-2.5 text-sm text-slate-600">
                         <Globe2 className="h-4 w-4" style={{ color: accent }} />
-                        <span>{page.timezone}</span>
+                        <span>{viewerTimezone}</span>
                       </div>
                     </div>
                   </div>
