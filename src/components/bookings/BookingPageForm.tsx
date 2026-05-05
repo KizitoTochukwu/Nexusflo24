@@ -26,13 +26,13 @@ const TIMEZONES = [
 ];
 
 const DEFAULT_AVAILABILITY: Record<string, { start: string; end: string }[]> = {
-  mon: [{ start: "09:00", end: "17:00" }],
-  tue: [{ start: "09:00", end: "17:00" }],
-  wed: [{ start: "09:00", end: "17:00" }],
-  thu: [{ start: "09:00", end: "17:00" }],
-  fri: [{ start: "09:00", end: "17:00" }],
-  sat: [],
-  sun: [],
+  mon: [{ start: "00:00", end: "23:59" }],
+  tue: [{ start: "00:00", end: "23:59" }],
+  wed: [{ start: "00:00", end: "23:59" }],
+  thu: [{ start: "00:00", end: "23:59" }],
+  fri: [{ start: "00:00", end: "23:59" }],
+  sat: [{ start: "00:00", end: "23:59" }],
+  sun: [{ start: "00:00", end: "23:59" }],
 };
 
 interface Props {
