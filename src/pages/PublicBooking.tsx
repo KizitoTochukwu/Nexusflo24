@@ -150,8 +150,12 @@ export default function PublicBooking() {
 
   if (!page) return null;
 
-  const accent = page.color || "#C9A227";
   const navy = "#0B1F3B";
+  const rawAccent = page.color || "#C9A227";
+  // Ensure accent has enough contrast on white card backgrounds; otherwise fall back to gold.
+  const accent = safeAccent(rawAccent, "#FFFFFF", "#C9A227", 3);
+  // Pick readable text color for the accent-colored CTA button automatically.
+  const accentForeground = readableForeground(accent, ["#FFFFFF", "#0B1F3B"]);
 
   if (confirmed) {
     const rescheduleUrl = confirmedBooking ? `${window.location.origin}/reschedule/${confirmedBooking.reschedule_token}` : null;
