@@ -103,12 +103,46 @@ export default function NotificationBell() {
   const deleteOne = useDeleteNotification();
   const deleteAll = useDeleteAllNotifications();
   const { permission, requestPermission, supported } = usePushNotifications();
+  const { toast } = useToast();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleOpen = (n: Notification) => {
-    // Mark as read first, then remove the item shortly after so the user
-    // perceives the click as acknowledgement and the list stays clean.
     if (!n.read) markRead.mutate(n.id);
-    setTimeout(() => deleteOne.mutate(n.id), 250);
+    setTimeout(() => {
+      deleteOne.mutate(n.id, {
+        onError: (err) =>
+          toast({
+            title: "Couldn't dismiss notification",
+            description: err instanceof Error ? err.message : "Please try again.",
+            variant: "destructive",
+          }),
+      });
+    }, 250);
+  };
+
+  const handleDeleteOne = (id: string) => {
+    deleteOne.mutate(id, {
+      onError: (err) =>
+        toast({
+          title: "Couldn't delete notification",
+          description: err instanceof Error ? err.message : "Please try again.",
+          variant: "destructive",
+        }),
+    });
+  };
+
+  const handleClearAll = () => {
+    setConfirmOpen(false);
+    deleteAll.mutate(undefined, {
+      onSuccess: () =>
+        toast({ title: "All notifications cleared" }),
+      onError: (err) =>
+        toast({
+          title: "Couldn't clear notifications",
+          description: err instanceof Error ? err.message : "Please try again.",
+          variant: "destructive",
+        }),
+    });
   };
 
   return (
