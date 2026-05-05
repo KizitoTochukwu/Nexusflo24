@@ -108,8 +108,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Booking page not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const requestedDate = new Date(date + "T00:00:00");
-    const dayKey = DAY_KEYS[requestedDate.getDay()];
+    const hostTz = page.timezone || "UTC";
+
+    // Parse the requested date as a wall-clock date in the host's timezone.
+    const [reqY, reqMo, reqD] = date.split("-").map(Number);
+
+    // Determine the weekday (in the host's timezone) for that calendar date.
+    // Use noon UTC of the day so timezone shifts don't cross to the previous/next day.
+    const noonUtc = new Date(Date.UTC(reqY, reqMo - 1, reqD, 12, 0, 0));
+    const dayKey = DAY_KEYS[weekdayInZone(noonUtc, hostTz)];
     const availability = page.availability as Record<string, { start: string; end: string }[]>;
     const daySlots = availability[dayKey] || [];
 
@@ -117,9 +124,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ slots: [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get existing bookings for that day
-    const dayStart = date + "T00:00:00.000Z";
-    const dayEnd = date + "T23:59:59.999Z";
+    // Bracket the host's local day in UTC for fetching conflicts.
+    const dayStartInstant = zonedWallClockToUtc(reqY, reqMo, reqD, 0, 0, hostTz);
+    const dayEndInstant = zonedWallClockToUtc(reqY, reqMo, reqD, 23, 59, hostTz);
+    const dayStart = dayStartInstant.toISOString();
+    const dayEnd = dayEndInstant.toISOString();
 
     const { data: existingBookings } = await supabase
       .from("bookings")
