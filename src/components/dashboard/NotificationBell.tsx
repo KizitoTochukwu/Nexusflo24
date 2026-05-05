@@ -1,4 +1,5 @@
-import { Bell, CheckCheck, User, Mail, BellRing, BellOff, X, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Bell, CheckCheck, User, Mail, BellRing, BellOff, X, Trash2, Loader2 } from "lucide-react";
 import {
   useNotifications,
   useUnreadCount,
@@ -12,9 +13,20 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const typeIcons: Record<string, typeof Bell> = {
   new_lead: User,
