@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { BookingPage } from "@/hooks/useBookings";
 import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
+import { readableForeground, safeAccent } from "@/lib/contrast";
 
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
@@ -150,8 +151,12 @@ export default function PublicBooking() {
 
   if (!page) return null;
 
-  const accent = page.color || "#C9A227";
   const navy = "#0B1F3B";
+  const rawAccent = page.color || "#C9A227";
+  // Ensure accent has enough contrast on white card backgrounds; otherwise fall back to gold.
+  const accent = safeAccent(rawAccent, "#FFFFFF", "#C9A227", 3);
+  // Pick readable text color for the accent-colored CTA button automatically.
+  const accentForeground = readableForeground(accent, ["#FFFFFF", "#0B1F3B"]);
 
   if (confirmed) {
     const rescheduleUrl = confirmedBooking ? `${window.location.origin}/reschedule/${confirmedBooking.reschedule_token}` : null;
@@ -198,7 +203,7 @@ export default function PublicBooking() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold shadow-sm transition-transform hover:scale-[1.02]"
-                  style={{ background: accent, color: "#0B1F3B" }}
+                  style={{ background: accent, color: accentForeground }}
                 >
                   Join meeting →
                 </a>
@@ -387,7 +392,7 @@ export default function PublicBooking() {
                         disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || date > maxDate}
                         className={cn("p-3 pointer-events-auto")}
                         modifiersStyles={{
-                          selected: { backgroundColor: accent, color: "white", fontWeight: 600 },
+                          selected: { backgroundColor: accent, color: accentForeground, fontWeight: 600 },
                           today: { color: accent, fontWeight: 700 },
                         }}
                       />
@@ -437,8 +442,8 @@ export default function PublicBooking() {
                                 <button
                                   type="button"
                                   onClick={() => setStep("details")}
-                                  className="rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02]"
-                                  style={{ backgroundColor: accent }}
+                                  className="rounded-xl px-4 py-3 text-sm font-semibold shadow-md transition-transform hover:scale-[1.02]"
+                                  style={{ backgroundColor: accent, color: accentForeground }}
                                 >
                                   Next
                                 </button>
