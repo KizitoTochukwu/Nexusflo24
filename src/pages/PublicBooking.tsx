@@ -203,7 +203,7 @@ export default function PublicBooking() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold shadow-sm transition-transform hover:scale-[1.02]"
-                  style={{ background: accent, color: accentForeground }}
+                  style={{ background: accent, color: "#FFFFFF" }}
                 >
                   Join meeting →
                 </a>
