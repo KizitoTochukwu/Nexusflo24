@@ -33,13 +33,13 @@ function NotificationItem({
   const Icon = typeIcons[n.type] || Bell;
   return (
     <div
-      className={`group relative flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted ${
+      className={`group relative flex w-full items-start gap-2 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-muted ${
         !n.read ? "bg-accent/10" : ""
       }`}
     >
       <button
         onClick={() => onOpen(n)}
-        className="flex flex-1 items-start gap-3 text-left"
+        className="flex min-w-0 flex-1 items-start gap-3 text-left"
       >
         <div
           className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
@@ -48,16 +48,18 @@ function NotificationItem({
         >
           <Icon className="h-4 w-4" />
         </div>
-        <div className="min-w-0 flex-1 pr-6">
+        <div className="min-w-0 flex-1">
           <p
-            className={`text-sm leading-tight ${
+            className={`break-words text-sm leading-snug ${
               !n.read ? "font-semibold text-foreground" : "text-foreground"
             }`}
           >
             {n.title}
           </p>
           {n.body && (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{n.body}</p>
+            <p className="mt-0.5 break-words text-xs leading-snug text-muted-foreground">
+              {n.body}
+            </p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">
             {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
@@ -70,7 +72,7 @@ function NotificationItem({
           onDelete(n.id);
         }}
         aria-label="Delete notification"
-        className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-destructive group-hover:opacity-100 focus:opacity-100"
+        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
       >
         <X className="h-3.5 w-3.5" />
       </button>
@@ -106,7 +108,12 @@ export default function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[380px] max-w-[calc(100vw-1rem)] p-0">
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        collisionPadding={12}
+        className="w-[380px] max-w-[calc(100vw-1.5rem)] p-0"
+      >
         <div className="flex flex-col gap-2 border-b px-4 py-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
