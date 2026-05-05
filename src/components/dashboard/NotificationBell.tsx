@@ -183,25 +183,37 @@ export default function NotificationBell() {
             )}
           </div>
           {(unread > 0 || notifications.length > 0) && (
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               {unread > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled={markAll.isPending}
                   className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground"
                   onClick={() => markAll.mutate()}
                 >
-                  <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+                  {markAll.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <CheckCheck className="h-3.5 w-3.5" />
+                  )}
+                  Mark all read
                 </Button>
               )}
               {notifications.length > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
+                  disabled={deleteAll.isPending}
                   className="h-auto gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-destructive"
-                  onClick={() => deleteAll.mutate()}
+                  onClick={() => setConfirmOpen(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" /> Clear all
+                  {deleteAll.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Clear all
                 </Button>
               )}
             </div>
