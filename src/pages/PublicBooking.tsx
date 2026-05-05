@@ -425,9 +425,25 @@ export default function PublicBooking() {
 
                   {/* Slots column */}
                   <div className="sm:border-l sm:border-slate-200/70 sm:pl-8">
-                    <h2 className="mb-4 text-base font-semibold tracking-tight" style={{ color: navy }}>
+                    <h2 className="mb-3 text-base font-semibold tracking-tight" style={{ color: navy }}>
                       {selectedDate ? format(selectedDate, "EEE, MMM d") : "Pick a time"}
                     </h2>
+                    {/* Visitor timezone selector — times below adjust automatically. */}
+                    <div className="mb-4">
+                      <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                        Your timezone
+                      </label>
+                      <Select value={viewerTimezone} onValueChange={setViewerTimezone}>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {Array.from(new Set([viewerTimezone, page.timezone, ...COMMON_TIMEZONES])).map((tz) => (
+                            <SelectItem key={tz} value={tz} className="text-xs">{tz}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     {!selectedDate ? (
                       <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
