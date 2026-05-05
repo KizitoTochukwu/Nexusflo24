@@ -7,6 +7,55 @@ const corsHeaders = {
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+/**
+ * Convert a wall-clock time (yyyy-mm-dd HH:MM) in a given IANA timezone
+ * to a UTC Date by computing the offset that timezone has at that instant.
+ */
+function zonedWallClockToUtc(year: number, month: number, day: number, hour: number, minute: number, timeZone: string): Date {
+  // First guess: assume the wall-clock matches UTC, then measure the actual offset
+  // that timezone reports at that guessed instant, and correct.
+  const guess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const offsetMs = getTimeZoneOffsetMs(new Date(guess), timeZone);
+  // Correct once. (DST transitions: re-measure at the corrected instant for accuracy.)
+  const corrected = guess - offsetMs;
+  const offsetMs2 = getTimeZoneOffsetMs(new Date(corrected), timeZone);
+  return new Date(guess - offsetMs2);
+}
+
+/** Returns the offset in ms that `timeZone` is ahead of UTC at the given instant. */
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = dtf.formatToParts(date).reduce<Record<string, string>>((acc, p) => {
+    if (p.type !== "literal") acc[p.type] = p.value;
+    return acc;
+  }, {});
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour === "24" ? "0" : parts.hour),
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return asUtc - date.getTime();
+}
+
+/** Get the weekday index (0=Sun..6=Sat) for a date in a given timezone. */
+function weekdayInZone(date: Date, timeZone: string): number {
+  const name = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(date);
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[name] ?? 0;
+}
+
 async function refreshGoogleToken(supabase: any, tokenRow: any, clientId: string, clientSecret: string) {
   if (new Date(tokenRow.token_expires_at) > new Date(Date.now() + 60000)) {
     return tokenRow.access_token;
