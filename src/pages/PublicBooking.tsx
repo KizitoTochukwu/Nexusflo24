@@ -211,9 +211,9 @@ export default function PublicBooking() {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Meeting</p>
               <p className={cn("font-semibold", cancelled && "line-through text-slate-400")} style={{ color: cancelled ? undefined : navy }}>{page.name}</p>
               <div className="mt-3 space-y-1.5 text-sm text-slate-600">
-                <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" style={{ color: accent }} /> {format(new Date(selectedSlot!), "EEEE, MMMM d, yyyy")}</p>
-                <p className="flex items-center gap-2"><Clock className="h-4 w-4" style={{ color: accent }} /> {format(new Date(selectedSlot!), "h:mm a")} ({page.duration_minutes} min)</p>
-                <p className="flex items-center gap-2"><Globe2 className="h-4 w-4" style={{ color: accent }} /> {page.timezone}</p>
+                <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" style={{ color: accent }} /> {formatInZone(selectedSlot!, viewerTimezone, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+                <p className="flex items-center gap-2"><Clock className="h-4 w-4" style={{ color: accent }} /> {formatInZone(selectedSlot!, viewerTimezone, { hour: "numeric", minute: "2-digit", hour12: true })} ({page.duration_minutes} min)</p>
+                <p className="flex items-center gap-2"><Globe2 className="h-4 w-4" style={{ color: accent }} /> {viewerTimezone}</p>
               </div>
             </div>
 
