@@ -147,6 +147,8 @@ export function useDeleteAllNotifications() {
     },
   });
 }
+
+export function useMarkAllRead() {
   const qc = useQueryClient();
   const { user } = useAuth();
 
