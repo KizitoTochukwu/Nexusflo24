@@ -79,14 +79,17 @@ function NotificationItem({
         </div>
       </button>
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
+          e.preventDefault();
           onDelete(n.id);
         }}
         aria-label="Delete notification"
-        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
+        title="Delete notification"
+        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 sm:h-6 sm:w-6"
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
       </button>
     </div>
   );
