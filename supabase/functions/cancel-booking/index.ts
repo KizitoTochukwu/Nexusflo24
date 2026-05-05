@@ -116,7 +116,8 @@ Deno.serve(async (req) => {
         <body style="margin:0;padding:0;background:#fff;font-family:'Inter',Arial,sans-serif;">
           <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px;">
             <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-              <tr><td style="background:${navy};padding:24px 32px;border-radius:12px 12px 0 0;">
+              <tr><td style="background:${navy};padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;">
+                <div style="margin-bottom:14px;"><img src="https://stuaikfyuwcjmchcvfie.supabase.co/storage/v1/object/public/email-assets/nexusflo24-logo-profile.png" width="44" height="44" alt="NexusFlo24" style="display:inline-block;border-radius:10px;" /></div>
                 <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">❌ ${title}</h1>
               </td></tr>
               <tr><td style="background:#f8f9fa;padding:32px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:none;">
