@@ -392,7 +392,7 @@ export default function PublicBooking() {
                         disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || date > maxDate}
                         className={cn("p-3 pointer-events-auto")}
                         modifiersStyles={{
-                          selected: { backgroundColor: accent, color: "white", fontWeight: 600 },
+                          selected: { backgroundColor: accent, color: accentForeground, fontWeight: 600 },
                           today: { color: accent, fontWeight: 700 },
                         }}
                       />
@@ -442,8 +442,8 @@ export default function PublicBooking() {
                                 <button
                                   type="button"
                                   onClick={() => setStep("details")}
-                                  className="rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-md transition-transform hover:scale-[1.02]"
-                                  style={{ backgroundColor: accent }}
+                                  className="rounded-xl px-4 py-3 text-sm font-semibold shadow-md transition-transform hover:scale-[1.02]"
+                                  style={{ backgroundColor: accent, color: accentForeground }}
                                 >
                                   Next
                                 </button>
