@@ -32,6 +32,8 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
   const [retriggering, setRetriggering] = useState<string | null>(null);
   const [emailKeyBroken, setEmailKeyBroken] = useState(false);
   const [emptySteps, setEmptySteps] = useState<number[]>([]);
+  const [dismissedEmailAlert, setDismissedEmailAlert] = useState(false);
+  const [dismissedStepsAlert, setDismissedStepsAlert] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
