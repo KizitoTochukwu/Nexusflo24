@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExecutionTimeline from "./ExecutionTimeline";
+import SequenceHealthPanel from "./SequenceHealthPanel";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import {
