@@ -30,6 +30,8 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
   const [rows, setRows] = useState<RowData[]>([]);
   const [loading, setLoading] = useState(true);
   const [retriggering, setRetriggering] = useState<string | null>(null);
+  const [emailKeyBroken, setEmailKeyBroken] = useState(false);
+  const [emptySteps, setEmptySteps] = useState<number[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,11 +39,19 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
       // Pull recent logs to figure out which leads are enrolled in this automation
       const { data: logs } = await supabase
         .from("automation_logs")
-        .select("lead_id, event_type, status, created_at")
+        .select("lead_id, event_type, status, created_at, details")
         .eq("automation_id", automationId)
         .not("lead_id", "is", null)
         .order("created_at", { ascending: false })
         .limit(500);
+
+      // Detect provider auth errors in recent logs (last 24h)
+      const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const hasAuthError = (logs || []).some((l: any) => {
+        const t = new Date(l.created_at).getTime();
+        return t > dayAgo && l?.details?.provider_auth_error === true;
+      });
+      setEmailKeyBroken(hasAuthError);
 
       const leadIdsSet = new Set<string>();
       const lastByLead: Record<string, { event_type: string; status: string; created_at: string }> = {};
@@ -141,6 +151,28 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
     load();
   }, [load]);
 
+  // Detect broken steps (action steps with no `action` configured)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: steps } = await supabase
+        .from("automation_steps")
+        .select("step_order, step_type, config")
+        .eq("automation_id", automationId)
+        .order("step_order", { ascending: true });
+      if (cancelled) return;
+      const broken = (steps || [])
+        .filter((s: any) => {
+          if (s.step_type !== "action") return false;
+          const cfg = (s.config || {}) as any;
+          return !cfg.action && !cfg.action_type && !cfg.channel;
+        })
+        .map((s: any) => s.step_order as number);
+      setEmptySteps(broken);
+    })();
+    return () => { cancelled = true; };
+  }, [automationId]);
+
   const reTrigger = async (row: RowData) => {
     setRetriggering(row.lead_id);
     try {
@@ -186,6 +218,36 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
         </Button>
       </div>
+
+      {emailKeyBroken && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-destructive">
+              Email sending is paused — invalid Resend API key
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Your automation is running, but every email step is failing because the Resend API key is invalid.
+              Open <strong>Settings → Channels → Email</strong> and paste a valid key to resume sending.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {emptySteps.length > 0 && (
+        <div className="rounded-md border border-amber-400/40 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              {emptySteps.length === 1 ? "1 step needs configuration" : `${emptySteps.length} steps need configuration`}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Step{emptySteps.length > 1 ? "s" : ""} #{emptySteps.map((n) => n + 1).join(", #")} ha{emptySteps.length > 1 ? "ve" : "s"} no action selected and will be skipped.
+              Open the automation editor to pick an action (email, SMS, WhatsApp, tag, etc.) or delete the step.
+            </p>
+          </div>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <div className="text-sm text-muted-foreground border border-dashed rounded-md p-6 text-center">
