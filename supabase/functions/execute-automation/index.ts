@@ -373,8 +373,16 @@ Deno.serve(async (req) => {
             if (actionType === "send_email") {
               const apiKey = Deno.env.get("RESEND_API_KEY");
               const fromEmail = Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com";
-              if (!apiKey) throw new Error("Email provider not configured");
-              if (!lead.email) throw new Error("Lead has no email");
+              if (!apiKey) {
+                status = "skipped";
+                details = { reason: "Email provider not configured", channel: "email", channel_unavailable: true };
+                break;
+              }
+              if (!lead.email) {
+                status = "skipped";
+                details = { reason: "Lead has no email — channel skipped", channel: "email", channel_unavailable: true };
+                break;
+              }
               // Skip if lead is unsubscribed
               if ((lead.tags || []).includes("unsubscribed")) {
                 details = { message: "Lead is unsubscribed", channel: "email" };
@@ -383,7 +391,6 @@ Deno.serve(async (req) => {
               }
               const subject = interpolate(config.subject || "Hello", lead);
               const rawBody = String(config.body || config.message || "");
-              // Detect visual-editor JSON blocks vs plain text/html
               const blocks = parseBlocksFromMessage(rawBody);
               let renderedBody: string;
               if (blocks) {
@@ -392,7 +399,6 @@ Deno.serve(async (req) => {
               } else {
                 renderedBody = formatEmailBody(interpolate(rawBody, lead));
               }
-              // Wrap in branded template with user settings
               const appBaseUrl = "https://nexusflo24.lovable.app";
               const unsubUrl = `${appBaseUrl}/unsubscribe?lid=${lead_id}&wid=${workspace_id}`;
               const ts = config.templateSettings as Record<string, any> | undefined;
@@ -402,21 +408,52 @@ Deno.serve(async (req) => {
                 footer: ts?.footer,
                 unsubUrl,
               });
-              const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
-              lastSendTime = Date.now();
-              details = { messageId: res.id, channel: "email" };
+              try {
+                const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
+                lastSendTime = Date.now();
+                details = { messageId: res.id, channel: "email" };
+              } catch (sendErr: any) {
+                const msg = String(sendErr?.message || "Email send failed");
+                const isAuth = /api\s*key\s*is\s*invalid|unauthorized|invalid_api_key|missing api key/i.test(msg);
+                status = "error";
+                details = { error: msg, channel: "email", provider_auth_error: isAuth };
+                if (isAuth) {
+                  // Surface a one-time workspace notification so the user sees the real fix
+                  await supabase.from("notifications").insert({
+                    workspace_id,
+                    user_id: automation.user_id,
+                    title: "Email sending paused — invalid Resend API key",
+                    body: "Your automations and campaigns can't send emails. Open Settings → Channels → Email and paste a valid Resend API key.",
+                    type: "channel_error",
+                    meta: { channel: "email", provider: "resend", automation_id, lead_id },
+                  }).then(() => {}, () => {});
+                }
+                // Do NOT throw — let the chain continue to the next step
+              }
             } else if (actionType === "send_sms") {
               const sid = Deno.env.get("TWILIO_ACCOUNT_SID");
               const token = Deno.env.get("TWILIO_AUTH_TOKEN");
               const from = Deno.env.get("TWILIO_FROM_NUMBER");
-              if (!sid || !token || !from) throw new Error("SMS provider not configured");
-              if (!lead.phone) throw new Error("Lead has no phone");
+              if (!sid || !token || !from) {
+                status = "skipped";
+                details = { reason: "SMS provider not configured", channel: "sms", channel_unavailable: true };
+                break;
+              }
+              if (!lead.phone) {
+                status = "skipped";
+                details = { reason: "Lead has no phone — channel skipped", channel: "sms", channel_unavailable: true };
+                break;
+              }
               const body = interpolate(config.message || "", lead);
               const res = await sendTwilio(sid, token, from, lead.phone, body);
               lastSendTime = Date.now();
               details = { sid: res.sid, channel: "sms" };
             } else if (actionType === "send_whatsapp") {
-              if (!lead.phone) throw new Error("Lead has no phone");
+              if (!lead.phone) {
+                status = "skipped";
+                details = { reason: "Lead has no phone — channel skipped", channel: "whatsapp", channel_unavailable: true };
+                break;
+              }
               const body = interpolate(config.message || "", lead);
               const waRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
                 method: "POST",
@@ -426,8 +463,22 @@ Deno.serve(async (req) => {
                 },
                 body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true }),
               });
-              const waData = await waRes.json();
-              if (!waRes.ok || !waData.success) throw new Error(waData?.error || "WhatsApp send failed");
+              const waData = await waRes.json().catch(() => ({}));
+              // Soft-handle 24h window closed → mark as skipped (per core rule), don't kill chain
+              if (waData?.fallback === true || /24h\s*window/i.test(String(waData?.error || ""))) {
+                status = "skipped";
+                details = {
+                  reason: "WhatsApp 24h window closed — send an approved template or wait for a reply",
+                  channel: "whatsapp",
+                  wa_window_closed: true,
+                };
+                break;
+              }
+              if (!waRes.ok || !waData.success) {
+                status = "error";
+                details = { error: waData?.error || "WhatsApp send failed", channel: "whatsapp" };
+                break;
+              }
               lastSendTime = Date.now();
               details = { waMessageId: waData.waMessageId, channel: "whatsapp", credentialSource: waData.credentialSource };
             } else if (actionType === "add_tag") {
