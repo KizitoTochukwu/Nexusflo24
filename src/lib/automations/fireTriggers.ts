@@ -37,6 +37,12 @@ export async function fireAutomationsForLeads(params: {
   }).catch((e) => console.error("[fireAutomationsForLeads] exit-criteria cancel error:", e));
 
   // ---------- 2) Original matching + dispatch logic ----------
+  // Exclusive dispatch: if any active LEGACY automation matches this trigger,
+  // we send to execute-automation only. Otherwise we hand off to the new
+  // Workflows engine. This stops both engines from running for the same
+  // (automation, lead) pair, which was causing one engine to silently
+  // overwrite the other's branch_context / scheduled_jobs state.
+  let legacyMatched = false;
   try {
     const { data: autos, error } = await supabase
       .from("automations")
@@ -56,6 +62,8 @@ export async function fireAutomationsForLeads(params: {
       });
     });
 
+    legacyMatched = matched.length > 0;
+
     for (const auto of matched) {
       for (const leadId of leadIds) {
         supabase.functions
@@ -73,20 +81,22 @@ export async function fireAutomationsForLeads(params: {
     console.error("[fireAutomationsForLeads] lookup error:", e);
   }
 
-  // Also dispatch to the new Workflows engine — it has its own matching logic.
-  try {
-    supabase.functions
-      .invoke("enroll-workflow-leads", {
-        body: {
-          workspace_id: workspaceId,
-          lead_ids: leadIds,
-          event_type: triggerType,
-          event_config: triggerConfigMatch || {},
-        },
-      })
-      .catch((e) => console.error("[fireAutomationsForLeads] workflow invoke error:", e));
-  } catch (e) {
-    console.error("[fireAutomationsForLeads] workflow dispatch error:", e);
+  // Only dispatch to Workflows engine if no legacy automation took the trigger.
+  if (!legacyMatched) {
+    try {
+      supabase.functions
+        .invoke("enroll-workflow-leads", {
+          body: {
+            workspace_id: workspaceId,
+            lead_ids: leadIds,
+            event_type: triggerType,
+            event_config: triggerConfigMatch || {},
+          },
+        })
+        .catch((e) => console.error("[fireAutomationsForLeads] workflow invoke error:", e));
+    } catch (e) {
+      console.error("[fireAutomationsForLeads] workflow dispatch error:", e);
+    }
   }
 }
 
