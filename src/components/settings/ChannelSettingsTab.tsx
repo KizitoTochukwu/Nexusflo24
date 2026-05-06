@@ -574,10 +574,18 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         }
       }
 
-      const { data, error } = await supabase.functions.invoke("channel-settings-save", {
-        body: { workspaceId, channel, config: cleanedConfig },
+      const session = (await supabase.auth.getSession()).data.session;
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/channel-settings-save`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ workspaceId, channel, config: cleanedConfig }),
       });
-      if (error) throw error;
+      const data = await readFunctionPayload(response);
+      if (!response.ok) throw new Error(data?.error || `Save failed (${response.status})`);
       if (data?.error) throw new Error(data.error);
       toast.success(`${channel.charAt(0).toUpperCase() + channel.slice(1)} credentials saved.`);
       await fetchStatus();
