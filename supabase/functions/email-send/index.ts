@@ -3,6 +3,7 @@ import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { blocksToHtml, parseBlocksFromMessage } from "../_shared/email-blocks.ts";
+import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -165,6 +166,15 @@ Deno.serve(async (req) => {
     } catch (sendErr: any) {
       const errorMessage = sendErr?.message || "Failed to send email";
       console.error("email-send Resend error:", errorMessage);
+      // Alert workspace owner if this is a credential failure
+      if (isCredentialError("email", errorMessage)) {
+        await notifyCredentialFailure({
+          workspaceId,
+          channel: "email",
+          errorMessage,
+          meta: { provider: "resend", source: "email-send" },
+        });
+      }
       // Log the FAILED send so it appears in email_logs / dashboards
       try {
         await adminClient.from("email_logs").insert({
