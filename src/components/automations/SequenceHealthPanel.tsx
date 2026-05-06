@@ -228,7 +228,7 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         </Button>
       </div>
 
-      {emailKeyBroken && (
+      {emailKeyBroken && !dismissedEmailAlert && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -240,10 +240,19 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
               Open <strong>Settings → Channels → Email</strong> and paste a valid key to resume sending.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setDismissedEmailAlert(true)}
+            aria-label="Dismiss alert"
+            title="Dismiss — I've fixed this"
+            className="shrink-0 -mt-1 -mr-1 h-7 w-7 inline-flex items-center justify-center rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
-      {emptySteps.length > 0 && (
+      {emptySteps.length > 0 && !dismissedStepsAlert && (
         <div className="rounded-md border border-amber-400/40 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -255,6 +264,15 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
               Open the automation editor to pick an action (email, SMS, WhatsApp, tag, etc.) or delete the step.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setDismissedStepsAlert(true)}
+            aria-label="Dismiss alert"
+            title="Dismiss — I've fixed this"
+            className="shrink-0 -mt-1 -mr-1 h-7 w-7 inline-flex items-center justify-center rounded-md text-amber-700/70 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
