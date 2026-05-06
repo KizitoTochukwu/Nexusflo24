@@ -33,6 +33,25 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 const VALID_CHANNELS = ["email", "sms", "whatsapp"];
 
+function trimConfig(config: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(config).map(([key, value]) => [key, String(value ?? "").trim()]),
+  );
+}
+
+function validateSmsConfig(config: Record<string, string>): string | null {
+  if (!/^AC[0-9a-fA-F]{32}$/.test(config.account_sid || "")) {
+    return "Account SID must start with AC and be 34 characters long.";
+  }
+  if (!/^[0-9a-fA-F]{32}$/.test(config.auth_token || "")) {
+    return "Auth Token must be exactly 32 characters from the matching Twilio account.";
+  }
+  if (!config.from_number) {
+    return "Enter a From Number or Messaging Service SID.";
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -92,7 +111,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Encryption key not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const configEncrypted = await encrypt(JSON.stringify(config), encryptionKey);
+    const cleanedConfig = trimConfig(config);
+    if (channel === "sms") {
+      const smsError = validateSmsConfig(cleanedConfig);
+      if (smsError) {
+        return new Response(JSON.stringify({ error: smsError }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    const configEncrypted = await encrypt(JSON.stringify(cleanedConfig), encryptionKey);
 
     const { error: upsertErr } = await adminClient
       .from("workspace_channel_settings")
