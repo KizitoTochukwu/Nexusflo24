@@ -39,7 +39,9 @@ function resolveTwilioSender(raw: string): TwilioSender | null {
   return null;
 }
 
-async function sendTwilioSms(
+const TWILIO_GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+
+async function sendTwilioSmsDirect(
   accountSid: string,
   authToken: string,
   sender: TwilioSender,
@@ -69,11 +71,46 @@ async function sendTwilioSms(
     err.code = data.code;
     throw err;
   }
-  return {
-    providerMessageId: data.sid,
-    status: data.status,
-    from: data.from ?? null,
-  };
+  return { providerMessageId: data.sid, status: data.status, from: data.from ?? null };
+}
+
+async function sendTwilioSmsGateway(
+  sender: TwilioSender,
+  to: string,
+  body: string,
+) {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
+  if (!LOVABLE_API_KEY || !TWILIO_API_KEY) {
+    throw new Error("Twilio connector not linked to project");
+  }
+
+  const params = new URLSearchParams({ To: to, Body: body });
+  if (sender.kind === "messaging_service") {
+    params.set("MessagingServiceSid", sender.value);
+  } else {
+    params.set("From", sender.value);
+  }
+
+  // Gateway auto-prepends /2010-04-01/Accounts/{AccountSid}
+  const res = await fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": TWILIO_API_KEY,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data?.message || `Twilio gateway error: ${res.status}`) as Error & { statusCode?: number; code?: number };
+    err.statusCode = res.status;
+    err.code = data?.code;
+    throw err;
+  }
+  return { providerMessageId: data.sid, status: data.status, from: data.from ?? null };
 }
 
 Deno.serve(async (req) => {
