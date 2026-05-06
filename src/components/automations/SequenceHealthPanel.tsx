@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
