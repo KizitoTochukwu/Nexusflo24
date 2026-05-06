@@ -151,6 +151,28 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
     load();
   }, [load]);
 
+  // Detect broken steps (action steps with no `action` configured)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: steps } = await supabase
+        .from("automation_steps")
+        .select("step_order, step_type, config")
+        .eq("automation_id", automationId)
+        .order("step_order", { ascending: true });
+      if (cancelled) return;
+      const broken = (steps || [])
+        .filter((s: any) => {
+          if (s.step_type !== "action") return false;
+          const cfg = (s.config || {}) as any;
+          return !cfg.action && !cfg.action_type && !cfg.channel;
+        })
+        .map((s: any) => s.step_order as number);
+      setEmptySteps(broken);
+    })();
+    return () => { cancelled = true; };
+  }, [automationId]);
+
   const reTrigger = async (row: RowData) => {
     setRetriggering(row.lead_id);
     try {
