@@ -197,35 +197,51 @@ Deno.serve(async (req) => {
       from_number: Deno.env.get("TWILIO_FROM_NUMBER"),
     });
 
-    if (creds.source === "none" || !creds.config.account_sid || !creds.config.auth_token || !creds.config.from_number) {
-      return new Response(JSON.stringify({ error: "SMS provider not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // The Twilio connector gateway can send even if the account_sid/auth_token
+    // env pair is missing or stale, as long as TWILIO_FROM_NUMBER (or a
+    // workspace-saved sender) is present. Workspace overrides still bypass it
+    // (those are explicit BYO-Twilio setups using their own credentials).
+    const useGateway =
+      creds.source !== "workspace" &&
+      !!Deno.env.get("LOVABLE_API_KEY") &&
+      !!Deno.env.get("TWILIO_API_KEY");
+
+    const senderRaw = String(creds.config.from_number || Deno.env.get("TWILIO_FROM_NUMBER") || "").trim();
+    if (!senderRaw) {
+      return new Response(JSON.stringify({ error: "SMS sender not configured. Add TWILIO_FROM_NUMBER (E.164 number or MG... Messaging Service SID) or save your own Twilio credentials in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    const accountSid = String(creds.config.account_sid).trim();
-    const authToken = String(creds.config.auth_token).trim();
-    const senderRaw = String(creds.config.from_number).trim();
-
-    // Non-secret diagnostic logging — confirms which credential source is in use without exposing tokens.
-    console.log("sms-send credentials resolved", {
-      source: creds.source,
-      sid_prefix: accountSid.slice(0, 4),
-      sid_suffix: accountSid.slice(-4),
-      sid_length: accountSid.length,
-      token_length: authToken.length,
-      sender_kind: senderRaw.startsWith("MG") ? "messaging_service" : "from",
-      sender_preview: senderRaw.slice(0, 4) + "…" + senderRaw.slice(-3),
-    });
 
     const sender = resolveTwilioSender(senderRaw);
     if (!sender) {
-      return new Response(JSON.stringify({ error: "Platform SMS sender is invalid. Set TWILIO_FROM_NUMBER to a valid E.164 number (e.g. +14155552671), Twilio Messaging Service SID (MG...), or supported alphanumeric sender ID." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Configured SMS sender is invalid. Use a valid E.164 number (e.g. +14155552671), Twilio Messaging Service SID (MG...), or supported alphanumeric sender ID." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (sender.kind === "from" && sender.value.startsWith("+") && normalizedTo === sender.value) {
       return new Response(JSON.stringify({ error: "'To' and 'From' number cannot be the same" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const result = await sendTwilioSms(accountSid, authToken, sender, normalizedTo, message);
+    const accountSid = String(creds.config.account_sid || "").trim();
+    const authToken = String(creds.config.auth_token || "").trim();
+
+    console.log("sms-send dispatch", {
+      source: creds.source,
+      via: useGateway ? "connector_gateway" : "direct_basic_auth",
+      sid_prefix: accountSid ? accountSid.slice(0, 4) : null,
+      sid_suffix: accountSid ? accountSid.slice(-4) : null,
+      token_length: authToken.length,
+      sender_kind: sender.kind,
+      sender_preview: senderRaw.slice(0, 4) + "…" + senderRaw.slice(-3),
+    });
+
+    let result: { providerMessageId: string; status: string; from: string | null };
+    if (useGateway) {
+      result = await sendTwilioSmsGateway(sender, normalizedTo, message);
+    } else {
+      if (!accountSid || !authToken) {
+        return new Response(JSON.stringify({ error: "SMS provider not configured. Save Twilio credentials in Settings → Channels or link the platform Twilio connector." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      result = await sendTwilioSmsDirect(accountSid, authToken, sender, normalizedTo, message);
+    }
 
     // Log success
     await adminClient.from("sms_logs").insert({
