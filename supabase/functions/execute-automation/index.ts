@@ -444,9 +444,25 @@ Deno.serve(async (req) => {
                 break;
               }
               const body = interpolate(config.message || "", lead);
-              const res = await sendTwilio(sid, token, from, lead.phone, body);
-              lastSendTime = Date.now();
-              details = { sid: res.sid, channel: "sms" };
+              try {
+                const res = await sendTwilio(sid, token, from, lead.phone, body);
+                lastSendTime = Date.now();
+                details = { sid: res.sid, channel: "sms" };
+              } catch (sendErr: any) {
+                const msg = String(sendErr?.message || "SMS send failed");
+                const isAuth = isCredentialError("sms", msg);
+                status = "error";
+                details = { error: msg, channel: "sms", provider_auth_error: isAuth };
+                if (isAuth) {
+                  await notifyCredentialFailure({
+                    workspaceId: workspace_id,
+                    channel: "sms",
+                    errorMessage: msg,
+                    meta: { provider: "twilio", source: "execute-automation", automation_id, lead_id },
+                  });
+                }
+                // Do NOT throw and do NOT set skipRemaining — chain must continue.
+              }
             } else if (actionType === "send_whatsapp") {
               if (!lead.phone) {
                 status = "skipped";
@@ -454,15 +470,34 @@ Deno.serve(async (req) => {
                 break;
               }
               const body = interpolate(config.message || "", lead);
-              const waRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true }),
-              });
-              const waData = await waRes.json().catch(() => ({}));
+              let waRes: Response;
+              let waData: any = {};
+              try {
+                waRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true }),
+                });
+                waData = await waRes.json().catch(() => ({}));
+              } catch (sendErr: any) {
+                const msg = String(sendErr?.message || "WhatsApp send failed");
+                const isAuth = isCredentialError("whatsapp", msg);
+                status = "error";
+                details = { error: msg, channel: "whatsapp", provider_auth_error: isAuth };
+                if (isAuth) {
+                  await notifyCredentialFailure({
+                    workspaceId: workspace_id,
+                    channel: "whatsapp",
+                    errorMessage: msg,
+                    meta: { provider: "whatsapp_cloud", source: "execute-automation", automation_id, lead_id },
+                  });
+                }
+                // Do NOT throw and do NOT set skipRemaining — chain must continue.
+                break;
+              }
               // Soft-handle 24h window closed → mark as skipped (per core rule), don't kill chain
               if (waData?.fallback === true || /24h\s*window/i.test(String(waData?.error || ""))) {
                 status = "skipped";
