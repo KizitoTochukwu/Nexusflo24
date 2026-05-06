@@ -173,7 +173,11 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
           return !cfg.action && !cfg.action_type && !cfg.channel;
         })
         .map((s: any) => s.step_order as number);
-      setEmptySteps(broken);
+      setEmptySteps((prev) => {
+        const same = prev.length === broken.length && prev.every((v, i) => v === broken[i]);
+        if (!same) setDismissedStepsAlert(false);
+        return broken;
+      });
     })();
     return () => { cancelled = true; };
   }, [automationId]);
