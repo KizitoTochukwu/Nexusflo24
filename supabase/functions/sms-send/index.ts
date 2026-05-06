@@ -164,9 +164,20 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "SMS provider not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const accountSid = creds.config.account_sid;
-    const authToken = creds.config.auth_token;
-    const senderRaw = creds.config.from_number;
+    const accountSid = String(creds.config.account_sid).trim();
+    const authToken = String(creds.config.auth_token).trim();
+    const senderRaw = String(creds.config.from_number).trim();
+
+    // Non-secret diagnostic logging — confirms which credential source is in use without exposing tokens.
+    console.log("sms-send credentials resolved", {
+      source: creds.source,
+      sid_prefix: accountSid.slice(0, 4),
+      sid_suffix: accountSid.slice(-4),
+      sid_length: accountSid.length,
+      token_length: authToken.length,
+      sender_kind: senderRaw.startsWith("MG") ? "messaging_service" : "from",
+      sender_preview: senderRaw.slice(0, 4) + "…" + senderRaw.slice(-3),
+    });
 
     const sender = resolveTwilioSender(senderRaw);
     if (!sender) {
