@@ -1,56 +1,83 @@
-## Goal
+## Confirmed root cause
 
-When a guest books a demo, the confirmation email (and host email) should include a join link — either an auto-generated Google Meet link or a manually configured link (Zoom, Teams, custom URL, or in-person address).
+For automation `33055318-…`:
+- `automation_logs` shows `delay:execute → scheduled` at step_index 3, scheduled for 2026-05-05.
+- `scheduled_jobs` table contains **zero rows** for that automation.
+- Every following step is logged as `skipped` ("Skipped due to earlier condition or delay").
 
-## Current gap
+The current `execute-automation` code does:
+```ts
+await supabase.from("scheduled_jobs").insert({...});
+status = "scheduled";
+skipRemaining = true;
+```
+It **never checks the insert result**. When the insert silently fails (RLS, payload type mismatch, etc.), the function still logs `scheduled`, sets `skipRemaining = true`, and the rest of the sequence is killed. No job ever exists for `process-scheduled-jobs` to pick up — so the lead receives email 1, then nothing.
 
-- `booking_pages` has no location/meeting-link field.
-- `bookings` stores `google_event_id` but never reads back the Meet link.
-- The Google Calendar event is created without `conferenceData`, so no Meet link is generated.
-- The confirmation email never renders a "Join meeting" section.
+This is the actual bug behind "first email fires, sequence stops".
 
-## Plan
+## Fix plan
 
-### 1. Database migration
-Add to `booking_pages`:
-- `location_type` text — one of: `google_meet` (default when Google Calendar connected), `zoom`, `custom_link`, `in_person`, `phone_call`
-- `location_value` text — the Zoom/custom URL or physical address (nullable; unused for `google_meet`)
+### 1. Bullet-proof delay-job insertion (`supabase/functions/execute-automation/index.ts`)
+Replace the silent insert in the `case "delay"` block:
+- Validate `automation_id`, `lead_id`, `workspace_id` are non-null UUIDs before inserting.
+- Capture insert result with `.select("id").maybeSingle()` and check both `error` and that a row came back.
+- On failure: do NOT set `skipRemaining = true`. Instead log `delay:error` to `automation_logs` with the raw Supabase error, and **continue** the for-loop (so the next step still has a chance to run rather than the whole sequence dying).
+- One automatic retry of the insert (with a 200ms backoff) before giving up.
 
-Add to `bookings`:
-- `meeting_url` text — final resolved link saved at booking time (Google Meet link from Calendar API response, or copied from `location_value`)
-- `meeting_location` text — human-readable location for in-person/phone bookings
+### 2. Self-healing recovery (`supabase/functions/automations-recover/index.ts` — NEW)
+Cron'd every 5 minutes. Scans `automation_logs` for entries where:
+- `event_type = 'delay:execute'`, `status = 'scheduled'`, `created_at > now() - 24h`
+- AND no matching row exists in `scheduled_jobs` (same automation_id + lead_id + step_index from `details`)
 
-### 2. Booking page form (`src/components/bookings/BookingPageForm.tsx`)
-Add a "Meeting location" section:
-- Radio/select: Google Meet (auto) · Zoom link · Custom link · In-person · Phone call
-- Conditional input for the URL/address depending on choice
-- Google Meet option is only enabled when a Google Calendar is connected; show a hint otherwise
+For each orphan, re-insert the missing scheduled job using `details.scheduled_run_at` and `details.next_step_index`. Log a `delay:recovered` event for visibility.
 
-### 3. `book-appointment` edge function
-- When `location_type = 'google_meet'` and a Google token exists, include `conferenceData.createRequest` with `conferenceSolutionKey: { type: 'hangoutsMeet' }` in the event payload and add `?conferenceDataVersion=1` to the Calendar API URL. Read back `conferenceData.entryPoints[0].uri` (or `hangoutLink`) and store as `meeting_url`.
-- For other types, copy `location_value` directly into `meeting_url` / `meeting_location`.
-- Pass meeting details into the email layout.
+Also schedule via pg_cron alongside `process-scheduled-jobs`.
 
-### 4. Email template
-Add a new "Join meeting" card above the action buttons in both guest + host emails:
-- For URL types: gold "Join meeting" CTA button + small text with the link and the platform name (Google Meet / Zoom / Custom)
-- For in-person: location address with a globe glyph
-- For phone call: phone number with the existing phone glyph
-- Include a small "Add to calendar" hint line for guest emails
+### 3. Stop double-enrollment between legacy + workflows (`src/lib/automations/fireTriggers.ts`)
+Today every trigger fires BOTH `execute-automation` (legacy) AND `enroll-workflow-leads` (new). When both engines are active for the same lead, one tramples the other's state. Change to:
+- If any active **legacy automation** matches the trigger → only call `execute-automation`.
+- Else → only call `enroll-workflow-leads`.
 
-### 5. Public booking page
-After successful booking, show the meeting link on the confirmation screen too (so the guest sees it immediately without needing email).
+User can still author both, but we never run both for the same lead in the same trigger.
 
-## Technical notes
+### 4. Don't let credit/contact failures break the chain
+In `execute-automation`, the `insufficient_credits` and "Lead has no email/phone" branches already `break` out of the switch (correct), but we should also confirm `skipRemaining` stays `false` so subsequent delays + other-channel steps still run. Audit this path and add a unit-style log line `step:continued_after_error` for transparency.
 
-- Google Meet auto-generation requires `conferenceDataVersion=1` query param on the events.insert call — easy to miss.
-- Existing Calendar OAuth scope (`/auth/calendar`) already permits creating Meet conferences; no scope change needed.
-- For workspaces without Google Calendar connected, default `location_type` to `custom_link` and require the user to fill it in (validation in the form).
-- All changes are backward-compatible: existing booking pages get `location_type = 'custom_link'` with empty `location_value` — emails simply omit the join card if no link is present.
+### 5. Sequence Health panel (`src/components/automations/AutomationDetailsDrawer.tsx`)
+Add a small panel listing currently-enrolled leads with:
+- Last completed step
+- Next scheduled step + run_at (from `scheduled_jobs`)
+- A "Re-trigger" button that calls `execute-automation` with `start_from_step` set to the next step index
+
+Lets the user instantly see "is this lead actually queued?" and recover stuck ones in one click.
+
+### 6. DB index for scheduled_jobs lookups
+Migration adds:
+```sql
+CREATE INDEX IF NOT EXISTS idx_scheduled_jobs_automation_lead_status
+  ON public.scheduled_jobs (automation_id, lead_id, status);
+```
+Speeds up the dedup checks in execute-automation and the recovery scan.
+
+### 7. Operational cleanup (one-time SQL via migration)
+- Mark all `failed` `campaign_fallback` jobs older than 7 days as `archived` so the dashboard isn't noisy.
+- Re-queue any orphaned automations from the last 24h (one-shot version of step 2's recovery).
 
 ## Files touched
 
-- New migration (booking_pages + bookings columns)
-- `src/components/bookings/BookingPageForm.tsx`
-- `supabase/functions/book-appointment/index.ts`
-- `src/pages/PublicBooking.tsx` (success screen)
+- `supabase/functions/execute-automation/index.ts` — harden delay insert, capture errors, don't kill chain
+- `supabase/functions/automations-recover/index.ts` — NEW
+- `src/lib/automations/fireTriggers.ts` — exclusive dispatch
+- `src/components/automations/AutomationDetailsDrawer.tsx` — Sequence Health panel
+- New migration: index + cron schedule for `automations-recover` + one-shot cleanup
+- `supabase/config.toml` — register new function (verify_jwt = false)
+
+## Verification
+
+After deploy, I'll:
+1. Manually re-trigger automation `33055318-…` for a test lead.
+2. Confirm `scheduled_jobs` gets a row with `step_index = 3`.
+3. Wait for the cron tick (or manually invoke `process-scheduled-jobs`) and confirm step 3 fires.
+4. Check `automation_logs` shows the full chain: send_email → add_tag → delay:scheduled → (1 day later) send_email → delay:scheduled → ...
+
+No data is destroyed by any of these changes; orphaned logs from past runs stay as-is, but new runs will be reliable and old stuck runs will be recovered.

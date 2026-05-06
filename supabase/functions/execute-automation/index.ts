@@ -754,46 +754,108 @@ Deno.serve(async (req) => {
             const runAt = new Date(Date.now() + delayMinutes * 60_000).toISOString();
             const nextStepIndex = i + 1;
 
-            if (nextStepIndex < (steps || []).length) {
-              // Prevent duplicate scheduled jobs for same automation+lead+step
-              const { data: existingDelay } = await supabase
-                .from("scheduled_jobs")
-                .select("id")
-                .eq("automation_id", automation_id)
-                .eq("lead_id", lead_id)
-                .eq("step_index", nextStepIndex)
-                .eq("status", "pending")
-                .limit(1);
-
-              if (existingDelay && existingDelay.length > 0) {
-                details = { message: "Delay already scheduled for this step", next_step_index: nextStepIndex };
-                status = "skipped";
-              } else {
-                await supabase.from("scheduled_jobs").insert({
-                  workspace_id,
-                  automation_id,
-                  lead_id,
-                  step_index: nextStepIndex,
-                  run_at: runAt,
-                  payload: {
-                    automation_id,
-                    lead_id,
-                    workspace_id,
-                    branch_context: {
-                      branch_stack: branchStack,
-                      last_condition_passed: lastConditionPassed,
-                    },
-                  },
-                  status: "pending",
-                });
-                details = { scheduled_run_at: runAt, delay: config.delay, next_step_index: nextStepIndex };
-                status = "scheduled";
-              }
-            } else {
+            if (nextStepIndex >= (steps || []).length) {
               details = { message: "Delay is last step, nothing to schedule", delay: config.delay };
               status = "completed";
+              skipRemaining = true;
+              break;
             }
 
+            // Validate IDs are non-null UUID-shaped strings before insert
+            const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRe.test(String(workspace_id)) || !uuidRe.test(String(automation_id)) || !uuidRe.test(String(lead_id))) {
+              details = {
+                error: "Invalid UUID(s) for delay scheduling",
+                workspace_id, automation_id, lead_id,
+              };
+              status = "error";
+              // Do NOT skipRemaining — let caller see this clearly but don't kill chain on next call
+              break;
+            }
+
+            // Dedup check
+            const { data: existingDelay } = await supabase
+              .from("scheduled_jobs")
+              .select("id")
+              .eq("automation_id", automation_id)
+              .eq("lead_id", lead_id)
+              .eq("step_index", nextStepIndex)
+              .eq("status", "pending")
+              .limit(1);
+
+            if (existingDelay && existingDelay.length > 0) {
+              details = { message: "Delay already scheduled for this step", next_step_index: nextStepIndex };
+              status = "skipped";
+              skipRemaining = true;
+              break;
+            }
+
+            // Insert with verification + 1 retry
+            const insertPayload = {
+              workspace_id,
+              automation_id,
+              lead_id,
+              step_index: nextStepIndex,
+              run_at: runAt,
+              payload: {
+                automation_id,
+                lead_id,
+                workspace_id,
+                branch_context: {
+                  branch_stack: branchStack,
+                  last_condition_passed: lastConditionPassed,
+                },
+              },
+              status: "pending",
+            };
+
+            const tryInsert = async () => {
+              const r = await supabase
+                .from("scheduled_jobs")
+                .insert(insertPayload)
+                .select("id")
+                .maybeSingle();
+              return r;
+            };
+
+            let { data: inserted, error: insErr } = await tryInsert();
+            if (insErr || !inserted?.id) {
+              console.error(`[execute-automation] scheduled_jobs insert failed (attempt 1):`, insErr);
+              await new Promise((r) => setTimeout(r, 200));
+              const retry = await tryInsert();
+              inserted = retry.data;
+              insErr = retry.error;
+            }
+
+            if (insErr || !inserted?.id) {
+              // Critical: do NOT set skipRemaining. Log and continue so the
+              // rest of the sequence still has a chance — the recovery job
+              // will also try to repair this on its next sweep.
+              console.error(`[execute-automation] scheduled_jobs insert FAILED after retry:`, insErr);
+              await supabase.from("automation_logs").insert({
+                automation_id, workspace_id, lead_id,
+                event_type: "delay:error",
+                status: "error",
+                details: {
+                  error: insErr?.message || "Insert returned no row",
+                  next_step_index: nextStepIndex,
+                  scheduled_run_at: runAt,
+                  hint: "Recovery sweep will attempt re-queue",
+                },
+              });
+              status = "error";
+              details = { error: "Failed to schedule delay job", next_step_index: nextStepIndex, scheduled_run_at: runAt };
+              // Continue loop — don't skipRemaining; we want the next non-delay step a fair chance
+              break;
+            }
+
+            details = {
+              scheduled_run_at: runAt,
+              delay: config.delay,
+              next_step_index: nextStepIndex,
+              job_id: inserted.id,
+            };
+            status = "scheduled";
             skipRemaining = true;
             break;
           }
