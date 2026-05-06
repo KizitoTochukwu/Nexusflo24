@@ -66,16 +66,15 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
       // Pull leads info
       const { data: leads } = await supabase
         .from("leads")
-        .select("id, full_name, first_name, last_name, email")
+        .select("id, full_name, email")
         .in("id", leadIds);
 
       const leadMap: Record<string, { name: string; email: string | null }> = {};
-      for (const ld of leads || []) {
+      for (const ld of (leads as any[]) || []) {
         const name =
-          (ld.full_name && ld.full_name.trim()) ||
-          [ld.first_name, ld.last_name].filter(Boolean).join(" ").trim() ||
+          (ld.full_name && String(ld.full_name).trim()) ||
           ld.email ||
-          ld.id.slice(0, 8);
+          String(ld.id).slice(0, 8);
         leadMap[ld.id] = { name, email: ld.email ?? null };
       }
 
