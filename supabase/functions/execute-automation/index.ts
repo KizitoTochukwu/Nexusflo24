@@ -3,6 +3,7 @@ import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { blocksToHtml, parseBlocksFromMessage, interpolateBlocks } from "../_shared/email-blocks.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
+import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
