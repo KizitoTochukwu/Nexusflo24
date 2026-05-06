@@ -63,7 +63,12 @@ async function sendTwilioSms(
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || `Twilio error: ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.message || `Twilio error: ${res.status}`) as Error & { statusCode?: number; code?: number };
+    err.statusCode = res.status;
+    err.code = data.code;
+    throw err;
+  }
   return {
     providerMessageId: data.sid,
     status: data.status,
@@ -191,6 +196,7 @@ Deno.serve(async (req) => {
     console.error("sms-send error:", err);
 
     const rawErr = err?.message || "Unknown error";
+    const providerStatus = Number(err?.statusCode || err?.status || 0) || undefined;
 
     try {
       if (requestBody.workspaceId) {
@@ -206,7 +212,7 @@ Deno.serve(async (req) => {
         });
 
         // Alert workspace owner if this is a credential failure
-        if (isCredentialError("sms", rawErr)) {
+        if (isCredentialError("sms", rawErr, providerStatus)) {
           await notifyCredentialFailure({
             workspaceId: requestBody.workspaceId,
             channel: "sms",
@@ -222,13 +228,17 @@ Deno.serve(async (req) => {
     const errMsgRaw = err?.message || "Failed to send SMS";
     const isTwilioPairError = /current combination of 'To'.*'From'|and\/or 'From' parameters/i.test(errMsgRaw);
     const isGeoPermissionError = /Permission to send an SMS has not been enabled for the region/i.test(errMsgRaw);
+    const isCredentialFailure = isCredentialError("sms", errMsgRaw, providerStatus);
     const isClientError =
       /Invalid 'To' Phone Number|Invalid 'From' Phone Number|cannot be the same/i.test(errMsgRaw) ||
       isTwilioPairError ||
-      isGeoPermissionError;
+      isGeoPermissionError ||
+      isCredentialFailure;
 
     let errMsg = errMsgRaw;
-    if (isGeoPermissionError) {
+    if (isCredentialFailure) {
+      errMsg = "Twilio rejected the Account SID/Auth Token. Paste the current 32-character Auth Token from the same Twilio account or subaccount as the Account SID.";
+    } else if (isGeoPermissionError) {
       const region = errMsgRaw.match(/\+(\d{1,4})/)?.[0] || "this region";
       errMsg = `Twilio has not enabled SMS for ${region}. Open Twilio Console → Messaging → Settings → Geo Permissions and enable the destination country, then retry. (Trial accounts must also verify the recipient number.)`;
     } else if (isTwilioPairError) {
