@@ -39,11 +39,19 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
       // Pull recent logs to figure out which leads are enrolled in this automation
       const { data: logs } = await supabase
         .from("automation_logs")
-        .select("lead_id, event_type, status, created_at")
+        .select("lead_id, event_type, status, created_at, details")
         .eq("automation_id", automationId)
         .not("lead_id", "is", null)
         .order("created_at", { ascending: false })
         .limit(500);
+
+      // Detect provider auth errors in recent logs (last 24h)
+      const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const hasAuthError = (logs || []).some((l: any) => {
+        const t = new Date(l.created_at).getTime();
+        return t > dayAgo && l?.details?.provider_auth_error === true;
+      });
+      setEmailKeyBroken(hasAuthError);
 
       const leadIdsSet = new Set<string>();
       const lastByLead: Record<string, { event_type: string; status: string; created_at: string }> = {};
