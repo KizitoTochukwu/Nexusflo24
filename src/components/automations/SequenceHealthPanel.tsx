@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -32,6 +32,8 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
   const [retriggering, setRetriggering] = useState<string | null>(null);
   const [emailKeyBroken, setEmailKeyBroken] = useState(false);
   const [emptySteps, setEmptySteps] = useState<number[]>([]);
+  const [dismissedEmailAlert, setDismissedEmailAlert] = useState(false);
+  const [dismissedStepsAlert, setDismissedStepsAlert] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,7 +53,10 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         const t = new Date(l.created_at).getTime();
         return t > dayAgo && l?.details?.provider_auth_error === true;
       });
-      setEmailKeyBroken(hasAuthError);
+      setEmailKeyBroken((prev) => {
+        if (prev !== hasAuthError) setDismissedEmailAlert(false);
+        return hasAuthError;
+      });
 
       const leadIdsSet = new Set<string>();
       const lastByLead: Record<string, { event_type: string; status: string; created_at: string }> = {};
@@ -168,7 +173,11 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
           return !cfg.action && !cfg.action_type && !cfg.channel;
         })
         .map((s: any) => s.step_order as number);
-      setEmptySteps(broken);
+      setEmptySteps((prev) => {
+        const same = prev.length === broken.length && prev.every((v, i) => v === broken[i]);
+        if (!same) setDismissedStepsAlert(false);
+        return broken;
+      });
     })();
     return () => { cancelled = true; };
   }, [automationId]);
@@ -219,7 +228,7 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         </Button>
       </div>
 
-      {emailKeyBroken && (
+      {emailKeyBroken && !dismissedEmailAlert && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -231,10 +240,19 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
               Open <strong>Settings → Channels → Email</strong> and paste a valid key to resume sending.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setDismissedEmailAlert(true)}
+            aria-label="Dismiss alert"
+            title="Dismiss — I've fixed this"
+            className="shrink-0 -mt-1 -mr-1 h-7 w-7 inline-flex items-center justify-center rounded-md text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
-      {emptySteps.length > 0 && (
+      {emptySteps.length > 0 && !dismissedStepsAlert && (
         <div className="rounded-md border border-amber-400/40 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
           <div className="flex-1 min-w-0">
@@ -246,6 +264,15 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
               Open the automation editor to pick an action (email, SMS, WhatsApp, tag, etc.) or delete the step.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setDismissedStepsAlert(true)}
+            aria-label="Dismiss alert"
+            title="Dismiss — I've fixed this"
+            className="shrink-0 -mt-1 -mr-1 h-7 w-7 inline-flex items-center justify-center rounded-md text-amber-700/70 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
