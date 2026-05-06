@@ -632,10 +632,18 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
     if (!smsTestTo) { toast.error("Enter test phone"); return; }
     setSmsTestSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("sms-send", {
-        body: { workspaceId, to: smsTestTo, message: "NexusFlo24 Test SMS ✅ Your custom SMS is working!" },
+      const session = (await supabase.auth.getSession()).data.session;
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sms-send`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ workspaceId, to: smsTestTo.trim(), message: "NexusFlo24 Test SMS ✅ Your custom SMS is working!", preview: true }),
       });
-      if (error) throw error;
+      const data = await readFunctionPayload(response);
+      if (!response.ok) throw new Error(data?.error || `SMS test failed (${response.status})`);
       if (data?.error) throw new Error(data.error);
       toast.success("Test SMS sent!");
     } catch (err: any) { toast.error(err.message || "Failed"); }
