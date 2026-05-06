@@ -950,9 +950,32 @@ Deno.serve(async (req) => {
             status = "skipped";
         }
       } catch (stepErr: any) {
+        // CRITICAL: a thrown step error must NEVER set skipRemaining.
+        // One failed action (bad credentials, transient provider hiccup) must
+        // not nuke the rest of the sequence — only end_automation, an explicit
+        // halt_on_fail condition, or a delay step are allowed to halt the chain.
+        const errMsg = stepErr?.message || "Step execution failed";
         status = "error";
-        details = { error: stepErr?.message || "Step execution failed" };
+        details = { error: errMsg };
         console.error(`Step ${step.id} error:`, stepErr);
+
+        // Best-effort credential alert if this looks like a provider auth failure
+        try {
+          const actionType = (config?.action || config?.action_type || config?.channel) as string | undefined;
+          const channel = actionType === "send_email" ? "email"
+            : actionType === "send_sms" ? "sms"
+            : actionType === "send_whatsapp" ? "whatsapp"
+            : null;
+          if (channel && isCredentialError(channel, errMsg)) {
+            details.provider_auth_error = true;
+            await notifyCredentialFailure({
+              workspaceId: workspace_id,
+              channel: channel as any,
+              errorMessage: errMsg,
+              meta: { source: "execute-automation:outer-catch", automation_id, lead_id },
+            });
+          }
+        } catch (_) { /* swallow alert errors */ }
       }
 
       // Log step execution
