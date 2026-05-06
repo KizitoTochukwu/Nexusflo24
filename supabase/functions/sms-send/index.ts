@@ -190,6 +190,8 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("sms-send error:", err);
 
+    const rawErr = err?.message || "Unknown error";
+
     try {
       if (requestBody.workspaceId) {
         const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -200,8 +202,18 @@ Deno.serve(async (req) => {
           from_number: null,
           message: requestBody.message || "",
           status: "failed",
-          error: err.message || "Unknown error",
+          error: rawErr,
         });
+
+        // Alert workspace owner if this is a credential failure
+        if (isCredentialError("sms", rawErr)) {
+          await notifyCredentialFailure({
+            workspaceId: requestBody.workspaceId,
+            channel: "sms",
+            errorMessage: rawErr,
+            meta: { provider: "twilio", source: "sms-send" },
+          });
+        }
       }
     } catch (_) {
       /* ignore logging errors */
