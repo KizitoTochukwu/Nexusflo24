@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExecutionTimeline from "./ExecutionTimeline";
+import SequenceHealthPanel from "./SequenceHealthPanel";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import {
@@ -154,9 +155,10 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       {/* Content */}
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs defaultValue="builder">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-xl grid-cols-4">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="health">Health</TabsTrigger>
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
 
@@ -300,6 +302,14 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                   return lead.full_name || lead.email || lead.phone || `Lead ${leadId.slice(0, 8)}`;
                 }}
               />
+            )}
+          </TabsContent>
+
+          <TabsContent value="health" className="mt-5 space-y-3">
+            {automation && workspaceId ? (
+              <SequenceHealthPanel automationId={automation.id} workspaceId={workspaceId} />
+            ) : (
+              <div className="text-sm text-muted-foreground">Workspace not loaded.</div>
             )}
           </TabsContent>
 
