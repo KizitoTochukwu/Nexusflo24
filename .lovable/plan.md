@@ -1,43 +1,29 @@
-## Change B — Don't let one failed action nuke the entire sequence
+I checked the live SMS function logs and the database state. The SMS sender is still failing with Twilio HTTP 401 `Authenticate`, and the currently active workspace SMS credential record was updated at `20:09 UTC` but still has the shorter encrypted length (`212`) that indicates the workspace override is still being used and may not contain the correct full credential set.
 
-### Problem (recap from the screenshot)
+New hypothesis: the app is continuing to use the saved per-workspace Twilio override, so even if the platform Twilio secrets were updated, `sms-send` resolves the stale/bad workspace credentials first and never reaches the updated platform credentials.
 
-When an action step throws (e.g. Twilio "Authenticate" / Resend "API key is invalid"), the engine logs `status: "error"` for that step. But every later step in the same automation invocation appears in the timeline as `action:skipped` with reason **"Skipped due to earlier condition or delay"** — the user is seeing 6+ red `action:skipped` rows after a single bad credential.
+Plan to fix it:
 
-### Root cause
+1. Update the active workspace SMS configuration
+   - Remove or disconnect the bad per-workspace SMS credential override for the affected workspace (`95bc7e99-798e-49ef-a5c3-ab68bbc08950`).
+   - This will make SMS sends fall back to the updated platform Twilio credentials already stored securely in Lovable Cloud.
+   - If you intended this workspace to use its own Twilio account instead of platform credentials, I’ll re-save the workspace override only after adding safer validation below.
 
-In `supabase/functions/execute-automation/index.ts`:
+2. Harden credential resolution in `sms-send`
+   - Trim the resolved Account SID, Auth Token, and sender before calling Twilio.
+   - Add non-secret diagnostic logging that reports credential source (`workspace` vs `platform`), Account SID prefix/suffix only, token length only, and sender type.
+   - This confirms which credential source is actually being used without exposing secrets.
 
-- The `send_sms` and `send_whatsapp` action branches do **not** wrap the provider call in a `try/catch` (only `send_email` does). When Twilio / WhatsApp throws, the error escapes the inner `case` block and is caught by the outer `catch (stepErr)` at line ~917.
-- That outer catch sets `status = "error"` but **also** any other unexpected throw further up the loop body bubbles out of the `for` loop entirely. More importantly, the recovery flow (`automations-recover`) and the `process-scheduled-jobs` resume path can re-enqueue the same step and observe a stale skip flag in some edge cases.
-- Combined with the `skipRemaining` flag check at line 307, any path that accidentally trips `skipRemaining = true` (or any future code added inside the action `case` that does so) kills the whole chain.
+3. Improve the settings UI error handling
+   - Replace the `supabase.functions.invoke("channel-settings-save")` save call with the same direct `fetch` response parser already used for SMS tests.
+   - This ensures backend validation errors display clearly instead of the generic “Edge Function returned a non-2xx status code”.
 
-The codebase already has a comment on the condition branch (lines 772–786) explicitly saying *"A failed condition must NOT halt the rest of the automation."* We need to apply the same rule to **failed actions**.
+4. Verify after applying
+   - Query the database to confirm the workspace override is no longer active or has been replaced correctly.
+   - Call the SMS test path again using the authenticated preview session.
+   - Re-check `sms-send` logs to confirm it is using the expected credential source and no longer returns Twilio `Authenticate`.
 
-### Fix
-
-Two small, surgical edits to `supabase/functions/execute-automation/index.ts`:
-
-1. **Wrap `send_sms` and `send_whatsapp` in try/catch** so a thrown provider error never escapes the action `case`. On failure, set `status = "error"`, capture `details.error`, fire `notifyCredentialFailure` if `isCredentialError(...)` is true (matching the existing `send_email` behavior), and `break` — exactly mirroring the pattern at lines 412–431.
-
-2. **Harden the outer `catch (stepErr)` at line 917** to:
-   - Still set `status = "error"` and log the step.
-   - Explicitly **never** set `skipRemaining = true`, and add a comment saying so.
-   - For send actions, also call `notifyCredentialFailure` when the error message matches `isCredentialError(channel, msg)` so credential alerts fire even if the throw came from an unexpected codepath.
-
-The `skipRemaining = true` lines that stay are only the legitimate ones:
-- `end_automation` action (line 632) — user explicitly asked to end.
-- `condition` with `halt_on_fail: true` (line 785) — explicit opt-in.
-- `delay` step variants (lines 810, 839, 909) — delays must pause the chain so it can resume from `scheduled_jobs`.
-
-### Result
-
-- Bad Resend / Twilio / WhatsApp credentials → only the affected send shows red. Subsequent delays, follow-up emails on a different channel, tag updates, status changes, and assignment steps all still run.
-- Workspace owner still gets the credential alert via `notifyCredentialFailure` (deduped 6h per channel — already implemented).
-- No schema changes, no UI changes, no DB migrations. Pure engine behavior fix.
-
-### Files touched
-
-- `supabase/functions/execute-automation/index.ts` — ~15 lines edited across two spots (`send_sms` block, `send_whatsapp` block, outer `catch`).
-
-After deploy I'll verify by checking the most recent automation logs for any lead that hit the Twilio "Authenticate" error and confirm later steps would now run instead of being skipped.
+What I will not do:
+- I will not expose or print your Twilio secret values.
+- I will not ask you to run SQL or update anything externally.
+- I will not store Twilio credentials in frontend code.
