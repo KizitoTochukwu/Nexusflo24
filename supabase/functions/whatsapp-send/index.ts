@@ -302,6 +302,16 @@ Deno.serve(async (req) => {
         ...(leadId ? { lead_id: leadId } : {}),
       });
 
+      // Alert workspace owner if this is a credential/auth failure (token invalid/expired, permissions)
+      if (graphCode === 190 || graphCode === 200 || graphCode === 10 || isCredentialError("whatsapp", errMsg)) {
+        await notifyCredentialFailure({
+          workspaceId,
+          channel: "whatsapp",
+          errorMessage: errMsg,
+          meta: { provider: "meta", source: "whatsapp-send", graphCode, graphSubcode },
+        });
+      }
+
       const isClientError = [190, 100, 10, 200, 131000, 131026, 131047, 131051].includes(graphCode) || graphCode === 0;
       return new Response(JSON.stringify({ success: false, error: errMsg, graphCode, graphSubcode }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
