@@ -305,6 +305,14 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             )}
           </TabsContent>
 
+          <TabsContent value="health" className="mt-5 space-y-3">
+            {automation && workspaceId ? (
+              <SequenceHealthPanel automationId={automation.id} workspaceId={workspaceId} />
+            ) : (
+              <div className="text-sm text-muted-foreground">Workspace not loaded.</div>
+            )}
+          </TabsContent>
+
           <TabsContent value="logs" className="mt-5 space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <Filter className="h-4 w-4 text-muted-foreground" />
