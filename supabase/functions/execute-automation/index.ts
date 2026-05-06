@@ -415,19 +415,17 @@ Deno.serve(async (req) => {
                 details = { messageId: res.id, channel: "email" };
               } catch (sendErr: any) {
                 const msg = String(sendErr?.message || "Email send failed");
-                const isAuth = /api\s*key\s*is\s*invalid|unauthorized|invalid_api_key|missing api key/i.test(msg);
+                const isAuth = isCredentialError("email", msg);
                 status = "error";
                 details = { error: msg, channel: "email", provider_auth_error: isAuth };
                 if (isAuth) {
-                  // Surface a one-time workspace notification so the user sees the real fix
-                  await supabase.from("notifications").insert({
-                    workspace_id,
-                    user_id: automation.user_id,
-                    title: "Email sending paused — invalid Resend API key",
-                    body: "Your automations and campaigns can't send emails. Open Settings → Channels → Email and paste a valid Resend API key.",
-                    type: "channel_error",
-                    meta: { channel: "email", provider: "resend", automation_id, lead_id },
-                  }).then(() => {}, () => {});
+                  // Deduped workspace-level alert (once per 6h per channel)
+                  await notifyCredentialFailure({
+                    workspaceId: workspace_id,
+                    channel: "email",
+                    errorMessage: msg,
+                    meta: { provider: "resend", source: "execute-automation", automation_id, lead_id },
+                  });
                 }
                 // Do NOT throw — let the chain continue to the next step
               }
