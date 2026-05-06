@@ -1,83 +1,82 @@
-## Confirmed root cause
+## Diagnosis — the automation IS firing
 
-For automation `33055318-…`:
-- `automation_logs` shows `delay:execute → scheduled` at step_index 3, scheduled for 2026-05-05.
-- `scheduled_jobs` table contains **zero rows** for that automation.
-- Every following step is logged as `skipped` ("Skipped due to earlier condition or delay").
+I traced both new leads through the database:
 
-The current `execute-automation` code does:
-```ts
-await supabase.from("scheduled_jobs").insert({...});
-status = "scheduled";
-skipRemaining = true;
+- **kizzyadichie@outlook.com** (Newsletter, 18:09:23) → enrolled in `Testing` automation at 18:09:24
+- **kizitotochukwu52@gmail.com** (Webinar, 18:03:40) → enrolled at 18:03:43
+
+Both were correctly picked up by the `new_lead` trigger of automation `baabbe12-…` (Testing). The chain has been advancing on schedule:
+
+```text
+Lead 7d34… : step 0 → 2 (delay, completed) → 3,4 → 5 (delay, pending @ 18:20)
+Lead e72d… : step 0 → 2 (completed) → 5 (completed) → 10 (delay, pending @ 18:20)
 ```
-It **never checks the insert result**. When the insert silently fails (RLS, payload type mismatch, etc.), the function still logs `scheduled`, sets `skipRemaining = true`, and the rest of the sequence is killed. No job ever exists for `process-scheduled-jobs` to pick up — so the lead receives email 1, then nothing.
 
-This is the actual bug behind "first email fires, sequence stops".
+So the trigger fired and the engine is doing its job. **Three real problems are blocking the actual messages from being sent.**
+
+## Root causes
+
+### 1. Resend API key is invalid (blocks every email)
+Edge logs show:
+```text
+email-send Resend error: API key is invalid
+```
+Step 0 of the Testing automation is `send_email`. It fails immediately for every lead. The chain still advances (delay queues), but no email is ever delivered.
+
+### 2. Step #3 of the Testing automation is empty
+```text
+step_order: 3, step_type: action, config: {}
+```
+This logs `Unknown action type: undefined` and produces a noisy `action:skipped` event. It should be deleted or configured.
+
+### 3. The newsletter signup lead has no phone number
+`send_whatsapp` and `send_sms` steps throw `Lead has no phone`. The newsletter form only collects email, but the automation tries WhatsApp + SMS. Without a "skip if missing channel" fallback, every non-email step errors out.
+
+### 4. Cosmetic: WhatsApp 24h-window error logged loudly
+For the lead that did have a phone, WhatsApp returned `24h window closed`. That's correct provider behavior, but it's logged as an `error` rather than a graceful `skipped`.
 
 ## Fix plan
 
-### 1. Bullet-proof delay-job insertion (`supabase/functions/execute-automation/index.ts`)
-Replace the silent insert in the `case "delay"` block:
-- Validate `automation_id`, `lead_id`, `workspace_id` are non-null UUIDs before inserting.
-- Capture insert result with `.select("id").maybeSingle()` and check both `error` and that a row came back.
-- On failure: do NOT set `skipRemaining = true`. Instead log `delay:error` to `automation_logs` with the raw Supabase error, and **continue** the for-loop (so the next step still has a chance to run rather than the whole sequence dying).
-- One automatic retry of the insert (with a 200ms backoff) before giving up.
+### A. Make it obvious the email channel is broken
+- Add a one-time check in `execute-automation` that, if `send_email` fails with `API key is invalid` or `Unauthorized`, writes a workspace-level notification: *"Email sending is paused — your Resend API key is invalid. Fix it in Settings → Channels → Email."*
+- Also surface this in the **Sequence Health panel** (already exists from the previous fix) as a red banner at the top of the automation drawer.
 
-### 2. Self-healing recovery (`supabase/functions/automations-recover/index.ts` — NEW)
-Cron'd every 5 minutes. Scans `automation_logs` for entries where:
-- `event_type = 'delay:execute'`, `status = 'scheduled'`, `created_at > now() - 24h`
-- AND no matching row exists in `scheduled_jobs` (same automation_id + lead_id + step_index from `details`)
+### B. Show the user how to fix the Resend key
+- Open the channel-settings tab focused on Email when the user clicks the banner.
+- The user must paste a valid `RESEND_API_KEY` in **Settings → Channels → Email** (or update the workspace-level Resend key if they're using a personal one).
 
-For each orphan, re-insert the missing scheduled job using `details.scheduled_run_at` and `details.next_step_index`. Log a `delay:recovered` event for visibility.
+### C. Auto-skip channel steps when the lead lacks the contact info
+In `execute-automation/index.ts`:
+- For `send_sms` / `send_whatsapp`: if `!lead.phone`, mark the step as `skipped` (with reason `"Lead has no phone — channel skipped"`) instead of `error`. Do **not** kill the chain.
+- For `send_email`: if `!lead.email`, same treatment.
+- Add a per-step `automation_logs` event `action:channel_unavailable` so the UI can show a yellow "skipped — missing contact info" instead of a red error.
 
-Also schedule via pg_cron alongside `process-scheduled-jobs`.
+### D. Treat WhatsApp 24h-window as a soft skip
+- When `whatsapp-send` returns `success:false` + `fallback:true` (24h window), log `action:wa_window_closed` with status `skipped` and a hint "Send an approved template or wait for reply". Don't error.
+- This already aligns with the core memory rule.
 
-### 3. Stop double-enrollment between legacy + workflows (`src/lib/automations/fireTriggers.ts`)
-Today every trigger fires BOTH `execute-automation` (legacy) AND `enroll-workflow-leads` (new). When both engines are active for the same lead, one tramples the other's state. Change to:
-- If any active **legacy automation** matches the trigger → only call `execute-automation`.
-- Else → only call `enroll-workflow-leads`.
+### E. Repair the broken step #3 in the Testing automation
+- One-shot: write a small admin tool note in the **Sequence Health panel** that flags any step with `step_type='action'` and empty `config.action` as **"Configure this step"** with a one-click open-in-editor link.
+- No automatic fix — the user has to choose what action this step should perform.
 
-User can still author both, but we never run both for the same lead in the same trigger.
+### F. Show empty-channel coverage upfront in the builder
+- In `AutomationStepEditor.tsx`: when the user picks `send_sms` or `send_whatsapp`, show an inline warning if the trigger source (e.g. newsletter form) doesn't typically capture phone numbers: *"Most leads from this trigger may not have a phone — consider adding a Condition: phone_known before this step."*
 
-### 4. Don't let credit/contact failures break the chain
-In `execute-automation`, the `insufficient_credits` and "Lead has no email/phone" branches already `break` out of the switch (correct), but we should also confirm `skipRemaining` stays `false` so subsequent delays + other-channel steps still run. Audit this path and add a unit-style log line `step:continued_after_error` for transparency.
+## Files to touch
 
-### 5. Sequence Health panel (`src/components/automations/AutomationDetailsDrawer.tsx`)
-Add a small panel listing currently-enrolled leads with:
-- Last completed step
-- Next scheduled step + run_at (from `scheduled_jobs`)
-- A "Re-trigger" button that calls `execute-automation` with `start_from_step` set to the next step index
+- `supabase/functions/execute-automation/index.ts` — soft-skip missing-channel steps; detect invalid-key emails; emit clearer log events
+- `supabase/functions/whatsapp-send/index.ts` — confirm 24h-window response shape (already correct per memory)
+- `src/components/automations/SequenceHealthPanel.tsx` — add red banner for "channel broken" + yellow chip for "skipped missing-contact"
+- `src/components/automations/AutomationStepEditor.tsx` — empty-step + missing-channel warnings
+- `src/components/automations/AutomationDetailsDrawer.tsx` — small surface for the broken-step quick-jump
 
-Lets the user instantly see "is this lead actually queued?" and recover stuck ones in one click.
+## Verification steps
 
-### 6. DB index for scheduled_jobs lookups
-Migration adds:
-```sql
-CREATE INDEX IF NOT EXISTS idx_scheduled_jobs_automation_lead_status
-  ON public.scheduled_jobs (automation_id, lead_id, status);
-```
-Speeds up the dedup checks in execute-automation and the recovery scan.
+After the fix:
+1. Check the Health panel for automation `baabbe12-…` → confirm red banner about Resend key + yellow chip on step 3 (empty action).
+2. Re-trigger the Testing automation for `kizzyadichie@outlook.com`. Expected log chain: `send_email:error (api_key) → delay:scheduled → on resume: send_whatsapp:channel_unavailable (no phone) → empty step warning → send_sms:channel_unavailable → add_tag:success → update_status:success → ...`
+3. After the user fixes the Resend key, re-trigger and confirm `send_email:success` + email arrives.
 
-### 7. Operational cleanup (one-time SQL via migration)
-- Mark all `failed` `campaign_fallback` jobs older than 7 days as `archived` so the dashboard isn't noisy.
-- Re-queue any orphaned automations from the last 24h (one-shot version of step 2's recovery).
-
-## Files touched
-
-- `supabase/functions/execute-automation/index.ts` — harden delay insert, capture errors, don't kill chain
-- `supabase/functions/automations-recover/index.ts` — NEW
-- `src/lib/automations/fireTriggers.ts` — exclusive dispatch
-- `src/components/automations/AutomationDetailsDrawer.tsx` — Sequence Health panel
-- New migration: index + cron schedule for `automations-recover` + one-shot cleanup
-- `supabase/config.toml` — register new function (verify_jwt = false)
-
-## Verification
-
-After deploy, I'll:
-1. Manually re-trigger automation `33055318-…` for a test lead.
-2. Confirm `scheduled_jobs` gets a row with `step_index = 3`.
-3. Wait for the cron tick (or manually invoke `process-scheduled-jobs`) and confirm step 3 fires.
-4. Check `automation_logs` shows the full chain: send_email → add_tag → delay:scheduled → (1 day later) send_email → delay:scheduled → ...
-
-No data is destroyed by any of these changes; orphaned logs from past runs stay as-is, but new runs will be reliable and old stuck runs will be recovered.
+## Out of scope for this fix
+- Replacing Resend with a different provider — the user can already configure a different key in Channels → Email.
+- Auto-rewriting the automation step #3 — too risky, user must decide.
