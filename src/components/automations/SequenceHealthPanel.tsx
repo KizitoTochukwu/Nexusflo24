@@ -53,7 +53,10 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         const t = new Date(l.created_at).getTime();
         return t > dayAgo && l?.details?.provider_auth_error === true;
       });
-      setEmailKeyBroken(hasAuthError);
+      setEmailKeyBroken((prev) => {
+        if (prev !== hasAuthError) setDismissedEmailAlert(false);
+        return hasAuthError;
+      });
 
       const leadIdsSet = new Set<string>();
       const lastByLead: Record<string, { event_type: string; status: string; created_at: string }> = {};
