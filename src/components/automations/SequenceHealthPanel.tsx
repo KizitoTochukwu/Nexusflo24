@@ -219,6 +219,36 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         </Button>
       </div>
 
+      {emailKeyBroken && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-destructive">
+              Email sending is paused — invalid Resend API key
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Your automation is running, but every email step is failing because the Resend API key is invalid.
+              Open <strong>Settings → Channels → Email</strong> and paste a valid key to resume sending.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {emptySteps.length > 0 && (
+        <div className="rounded-md border border-amber-400/40 bg-amber-50 dark:bg-amber-950/20 p-3 flex items-start gap-3">
+          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              {emptySteps.length === 1 ? "1 step needs configuration" : `${emptySteps.length} steps need configuration`}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Step{emptySteps.length > 1 ? "s" : ""} #{emptySteps.map((n) => n + 1).join(", #")} ha{emptySteps.length > 1 ? "ve" : "s"} no action selected and will be skipped.
+              Open the automation editor to pick an action (email, SMS, WhatsApp, tag, etc.) or delete the step.
+            </p>
+          </div>
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <div className="text-sm text-muted-foreground border border-dashed rounded-md p-6 text-center">
           No leads have entered this automation yet.
