@@ -3,6 +3,7 @@ import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhoneNumber } from "../_shared/phone.ts";
+import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
