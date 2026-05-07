@@ -45,7 +45,7 @@ const BlogArticle = () => {
     return (
       <Layout>
         <Skeleton className="w-full h-72 md:h-[420px]" />
-        <div className="container max-w-3xl py-10 space-y-4">
+        <div className="container max-w-3xl bg-slate-200 py-10 space-y-4">
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
           <Skeleton className="h-64 w-full" />
