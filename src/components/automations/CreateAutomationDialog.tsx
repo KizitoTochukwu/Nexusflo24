@@ -290,7 +290,7 @@ export default function CreateAutomationDialog() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Only triggers for leads from this funnel"}
+                {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Fires when a new lead is associated with this funnel (via visit, form submission, or direct capture)"}
               </p>
             </div>
           )}

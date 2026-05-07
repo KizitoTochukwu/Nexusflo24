@@ -574,6 +574,21 @@ Deno.serve(async (req) => {
         }
       };
 
+      // Helper: check if lead is associated with a funnel via funnel_visits
+      const leadLinkedToFunnel = async (funnelId: string): Promise<boolean> => {
+        try {
+          const { count } = await supabase
+            .from("funnel_visits")
+            .select("id", { count: "exact", head: true })
+            .eq("funnel_id", funnelId)
+            .eq("lead_id", leadId);
+          return (count ?? 0) > 0;
+        } catch (e) {
+          console.error("[capture-lead] funnel association lookup failed:", e);
+          return false;
+        }
+      };
+
       // 1) new_lead — only for genuinely new leads
       if (!existing) {
         try {
@@ -587,7 +602,9 @@ Deno.serve(async (req) => {
           for (const auto of automations ?? []) {
             const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
             const autoFunnelId = cfg.funnel_id as string | null | undefined;
-            if (autoFunnelId && autoFunnelId !== capturedFunnelId) continue;
+            if (autoFunnelId) {
+              if (autoFunnelId !== capturedFunnelId && !(await leadLinkedToFunnel(autoFunnelId))) continue;
+            }
             await dispatchAutomation(auto.id);
           }
           await dispatchWorkflow("new_lead", { funnel_id: capturedFunnelId });
@@ -610,7 +627,9 @@ Deno.serve(async (req) => {
           const autoFormId = cfg.form_id as string | null | undefined;
           const autoFunnelId = cfg.funnel_id as string | null | undefined;
           if (autoFormId && autoFormId !== capturedFormId) continue;
-          if (autoFunnelId && autoFunnelId !== capturedFunnelId) continue;
+          if (autoFunnelId) {
+            if (autoFunnelId !== capturedFunnelId && !(await leadLinkedToFunnel(autoFunnelId))) continue;
+          }
           await dispatchAutomation(auto.id);
         }
         await dispatchWorkflow("form_submitted", { form_id: capturedFormId, funnel_id: capturedFunnelId });

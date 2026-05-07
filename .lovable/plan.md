@@ -1,29 +1,18 @@
-I checked the live SMS function logs and the database state. The SMS sender is still failing with Twilio HTTP 401 `Authenticate`, and the currently active workspace SMS credential record was updated at `20:09 UTC` but still has the shorter encrypted length (`212`) that indicates the workspace override is still being used and may not contain the correct full credential set.
+# Fix funnel-scoped automation triggering
 
-New hypothesis: the app is continuing to use the saved per-workspace Twilio override, so even if the platform Twilio secrets were updated, `sms-send` resolves the stale/bad workspace credentials first and never reaches the updated platform credentials.
+When an automation is scoped to a specific funnel, it should fire whenever a new lead is associated with that funnel — not only when the lead arrives directly through the funnel's public form.
 
-Plan to fix it:
+## Changes
 
-1. Update the active workspace SMS configuration
-   - Remove or disconnect the bad per-workspace SMS credential override for the affected workspace (`95bc7e99-798e-49ef-a5c3-ab68bbc08950`).
-   - This will make SMS sends fall back to the updated platform Twilio credentials already stored securely in Lovable Cloud.
-   - If you intended this workspace to use its own Twilio account instead of platform credentials, I’ll re-save the workspace override only after adding safer validation below.
+1. **`src/lib/automations/fireTriggers.ts`** — Extend matching logic. When `trigger_config.funnel_id` is set but the event has no `funnel_id`, look up association via `funnel_visits` (lead_id + funnel_id) or `form_submissions` joined to `forms.funnel_id`. Only skip the automation if no association exists.
 
-2. Harden credential resolution in `sms-send`
-   - Trim the resolved Account SID, Auth Token, and sender before calling Twilio.
-   - Add non-secret diagnostic logging that reports credential source (`workspace` vs `platform`), Account SID prefix/suffix only, token length only, and sender type.
-   - This confirms which credential source is actually being used without exposing secrets.
+2. **`supabase/functions/capture-lead/index.ts`** — Mirror the same association lookup before skipping a funnel-scoped automation for `new_lead` and `form_submitted` triggers.
 
-3. Improve the settings UI error handling
-   - Replace the `supabase.functions.invoke("channel-settings-save")` save call with the same direct `fetch` response parser already used for SMS tests.
-   - This ensures backend validation errors display clearly instead of the generic “Edge Function returned a non-2xx status code”.
+3. **`src/hooks/useLeads.ts`** — In `useCreateLead`, after a successful insert call `fireAutomationsForLeads({ workspaceId, leadIds: [data.id], triggerType: "new_lead" })` so manually added leads also trigger automations.
 
-4. Verify after applying
-   - Query the database to confirm the workspace override is no longer active or has been replaced correctly.
-   - Call the SMS test path again using the authenticated preview session.
-   - Re-check `sms-send` logs to confirm it is using the expected credential source and no longer returns Twilio `Authenticate`.
+4. **UI copy** — In `CreateAutomationDialog.tsx` and `AutomationDetailsDrawer.tsx`, update the funnel-scope helper text to: "Fires when a new lead is associated with this funnel (via visit, form submission, or direct capture)."
 
-What I will not do:
-- I will not expose or print your Twilio secret values.
-- I will not ask you to run SQL or update anything externally.
-- I will not store Twilio credentials in frontend code.
+## Notes
+- No DB schema changes.
+- Existing wildcard "Testing" automation (`trigger_config = {}`) continues to fire for every lead.
+- Tag/folder/status scoping behavior is unchanged.
