@@ -38,7 +38,7 @@ const About = () => (
 
 
     {/* Vision & Mission */}
-    <section className="py-20">
+    <section className="py-20 text-gray-50 bg-slate-200">
       <div className="container">
         <h2 className="mb-4 text-center text-3xl font-bold">Our Vision & Mission</h2>
         <p className="mx-auto mb-12 max-w-xl text-center text-muted-foreground">
@@ -93,7 +93,7 @@ const About = () => (
     </section>
 
     {/* Message from the CEO */}
-    <section className="py-20">
+    <section className="py-20 text-gray-50 bg-slate-200">
       <div className="container">
         <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-accent/30 bg-card shadow-card">
           <div className="grid items-center md:grid-cols-5">
@@ -183,7 +183,7 @@ const About = () => (
 
 
     {/* Timeline */}
-    <section className="py-20">
+    <section className="py-20 text-gray-50 bg-slate-200">
       <div className="container">
         <h2 className="mb-12 text-center text-3xl font-bold">Our Journey</h2>
         <div className="mx-auto max-w-2xl space-y-6">
