@@ -1,0 +1,1 @@
+UPDATE public.automations SET trigger_config = '{}'::jsonb, updated_at = now() WHERE id = 'baabbe12-7f97-4dd2-ab24-5e7609e590a0';
