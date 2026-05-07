@@ -183,7 +183,7 @@ const About = () => (
 
 
     {/* Timeline */}
-    <section className="py-20">
+    <section className="py-20 text-gray-50 bg-slate-200">
       <div className="container">
         <h2 className="mb-12 text-center text-3xl font-bold">Our Journey</h2>
         <div className="mx-auto max-w-2xl space-y-6">
