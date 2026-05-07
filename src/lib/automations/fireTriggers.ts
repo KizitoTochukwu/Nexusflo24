@@ -52,15 +52,38 @@ export async function fireAutomationsForLeads(params: {
       .eq("trigger_type", triggerType);
     if (error) throw error;
 
-    const matched = (autos ?? []).filter((a) => {
-      if (!triggerConfigMatch) return true;
+    const candidate = (autos ?? []).filter((a) => {
       const cfg = (a.trigger_config ?? {}) as Record<string, unknown>;
+      if (!triggerConfigMatch) {
+        // No event-side scope provided. Funnel-scoped automations need an
+        // association lookup (handled below). Other scoped configs (tag,
+        // status, folder, form) without a matching event value are skipped.
+        const hasNonFunnelScope = Object.entries(cfg).some(
+          ([k, v]) => k !== "funnel_id" && v !== undefined && v !== null && v !== ""
+        );
+        return !hasNonFunnelScope;
+      }
       return Object.entries(triggerConfigMatch).every(([k, v]) => {
         const av = cfg[k];
         if (av === undefined || av === null || av === "") return true;
         return String(av) === String(v);
       });
     });
+
+    // Resolve funnel-scope: when an automation has a funnel_id but the event
+    // didn't carry one, check whether the lead has any association with that
+    // funnel via funnel_visits or form_submissions→forms.
+    const matched: typeof candidate = [];
+    for (const auto of candidate) {
+      const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
+      const cfgFunnelId = (cfg.funnel_id as string | null | undefined) || null;
+      const eventFunnelId = (triggerConfigMatch?.funnel_id as string | undefined) || null;
+      if (cfgFunnelId && !eventFunnelId) {
+        const associated = await leadAssociatedWithFunnel(leadIds, cfgFunnelId);
+        if (!associated) continue;
+      }
+      matched.push(auto);
+    }
 
     legacyMatched = matched.length > 0;
 
