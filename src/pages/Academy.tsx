@@ -32,7 +32,7 @@ const Academy = () =>
 <Layout>
     {/* Hero */}
     <section className="bg-hero py-20 md:py-28 text-center">
-      <div className="container max-w-3xl">
+      <div className="container max-w-3xl bg-slate-200">
         <Badge className="bg-accent/20 text-accent border-accent/30 mb-4">🎓 NexusFlo24 Academy</Badge>
         <h1 className="text-3xl md:text-5xl font-extrabold text-primary-foreground mb-4 animate-fade-up">
           Master AI Marketing <span className="text-gradient-gold">Automation</span>

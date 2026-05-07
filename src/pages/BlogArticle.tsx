@@ -45,7 +45,7 @@ const BlogArticle = () => {
     return (
       <Layout>
         <Skeleton className="w-full h-72 md:h-[420px]" />
-        <div className="container max-w-3xl py-10 space-y-4">
+        <div className="container max-w-3xl bg-slate-200 py-10 space-y-4">
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
           <Skeleton className="h-64 w-full" />
@@ -163,7 +163,7 @@ const BlogArticle = () => {
       </header>
 
       {/* Article body */}
-      <article className="container max-w-3xl px-4 py-12 md:py-20 bg-secondary rounded-md">
+      <article className="container max-w-3xl bg-slate-200 px-4 py-12 md:py-20 bg-secondary rounded-md">
         <Link
           to="/blog"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-accent transition-colors mb-6"
@@ -263,7 +263,7 @@ const BlogArticle = () => {
       {/* CTA */}
       <section className="relative overflow-hidden bg-hero py-16 md:py-24 bg-primary">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,hsl(var(--accent)/0.15),transparent_60%)]" />
-        <div className="relative container max-w-3xl px-4 text-center">
+        <div className="relative container max-w-3xl bg-slate-200 px-4 text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-accent">
             Ready to grow?
           </span>

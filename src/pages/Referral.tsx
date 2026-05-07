@@ -56,7 +56,7 @@ const Referral = () => {
     <Layout>
       {/* Hero */}
       <section className="bg-hero py-20 md:py-28 text-center">
-        <div className="container max-w-3xl">
+        <div className="container max-w-3xl bg-slate-200">
           <h1 className="text-3xl md:text-5xl font-extrabold text-primary-foreground mb-4 animate-fade-up">
             Refer a Friend. <span className="text-gradient-gold">Earn Rewards.</span>
           </h1>

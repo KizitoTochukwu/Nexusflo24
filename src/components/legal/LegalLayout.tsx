@@ -16,7 +16,7 @@ interface LegalLayoutProps {
 const LegalLayout = ({ title, lastUpdated, toc, children }: LegalLayoutProps) => (
   <Layout>
     <section className="py-16 md:py-24">
-      <div className="container max-w-3xl">
+      <div className="container max-w-3xl bg-slate-200">
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
 
