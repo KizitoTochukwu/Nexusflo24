@@ -163,7 +163,7 @@ const BlogArticle = () => {
       </header>
 
       {/* Article body */}
-      <article className="container max-w-3xl px-4 py-12 md:py-20 bg-secondary rounded-md">
+      <article className="container max-w-3xl bg-slate-200 px-4 py-12 md:py-20 bg-secondary rounded-md">
         <Link
           to="/blog"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-accent transition-colors mb-6"
