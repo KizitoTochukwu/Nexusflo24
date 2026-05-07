@@ -43,7 +43,7 @@ const Blog = () => {
     <Layout>
       {/* Hero */}
       <section className="bg-hero py-16 md:py-20 text-center">
-        <div className="container max-w-3xl">
+        <div className="container max-w-3xl bg-slate-200">
           <h1 className="text-3xl md:text-5xl font-extrabold text-primary-foreground mb-4 animate-fade-up">
             NexusFlo24 <span className="text-gradient-gold">Blog</span>
           </h1>
