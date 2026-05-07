@@ -93,7 +93,7 @@ const About = () => (
     </section>
 
     {/* Message from the CEO */}
-    <section className="py-20">
+    <section className="py-20 text-gray-50 bg-slate-200">
       <div className="container">
         <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-accent/30 bg-card shadow-card">
           <div className="grid items-center md:grid-cols-5">
