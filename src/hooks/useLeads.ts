@@ -181,6 +181,13 @@ export function useCreateLead() {
         meta: { new_status: lead.status || "New", note: "Lead created" },
       } as any);
 
+      // Fire new_lead automations for manually-created leads
+      fireAutomationsForLeads({
+        workspaceId: lead.workspace_id,
+        leadIds: [data.id],
+        triggerType: "new_lead",
+      }).catch((e) => console.error("[useCreateLead] fireAutomationsForLeads:", e));
+
       return data;
     },
     onSuccess: () => {
