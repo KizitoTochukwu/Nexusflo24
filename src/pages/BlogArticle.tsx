@@ -263,7 +263,7 @@ const BlogArticle = () => {
       {/* CTA */}
       <section className="relative overflow-hidden bg-hero py-16 md:py-24 bg-primary">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,hsl(var(--accent)/0.15),transparent_60%)]" />
-        <div className="relative container max-w-3xl px-4 text-center">
+        <div className="relative container max-w-3xl bg-slate-200 px-4 text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-accent">
             Ready to grow?
           </span>
