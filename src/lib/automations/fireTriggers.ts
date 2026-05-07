@@ -125,30 +125,16 @@ export async function fireAutomationsForLeads(params: {
 
 /**
  * Returns true if any of the given leads is associated with the funnel via
- * funnel_visits or form_submissions whose form belongs to the funnel.
+ * funnel_visits (the only reliable lead↔funnel link in the schema).
  */
 async function leadAssociatedWithFunnel(leadIds: string[], funnelId: string): Promise<boolean> {
   try {
-    const { count: visitCount } = await supabase
+    const { count } = await supabase
       .from("funnel_visits")
       .select("id", { count: "exact", head: true })
       .eq("funnel_id", funnelId)
       .in("lead_id", leadIds);
-    if ((visitCount ?? 0) > 0) return true;
-
-    const { data: funnelForms } = await supabase
-      .from("forms")
-      .select("id")
-      .eq("funnel_id", funnelId as any);
-    const formIds = (funnelForms ?? []).map((f: any) => f.id);
-    if (formIds.length === 0) return false;
-
-    const { count: subCount } = await supabase
-      .from("form_submissions")
-      .select("id", { count: "exact", head: true })
-      .in("form_id", formIds)
-      .in("lead_id", leadIds);
-    return (subCount ?? 0) > 0;
+    return (count ?? 0) > 0;
   } catch (e) {
     console.error("[leadAssociatedWithFunnel] lookup error:", e);
     return false;
