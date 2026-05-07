@@ -51,7 +51,7 @@ const faqs = [
 const PricingFaq = () => {
   return (
     <section className="py-20">
-      <div className="container max-w-3xl">
+      <div className="container max-w-3xl bg-slate-200">
         <h2 className="mb-2 text-center text-2xl font-bold">
           Frequently Asked Questions
         </h2>
