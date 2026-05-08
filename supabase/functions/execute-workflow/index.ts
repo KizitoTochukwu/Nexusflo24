@@ -265,16 +265,67 @@ async function runAction(
         await supabase.from("leads").update({ notes: newNotes }).eq("id", lead.id);
         return { status: "success", details: { note } };
       }
-      case "notify_team": {
+      case "notify_team":
+      case "notify_sales": {
         if (isTest) return { status: "skipped", details: { reason: "test_mode" } };
-        await supabase.from("notifications").insert({
-          workspace_id: workflow.workspace_id, user_id: lead.assigned_owner_id || workflow.user_id,
-          title: interpolate(String(cfg.title || "Workflow alert"), lead),
-          body: interpolate(String(cfg.message || ""), lead),
-          type: "workflow",
-          meta: { workflow_id: workflow.id, lead_id: lead.id },
-        });
-        return { status: "success", details: {} };
+        const title = interpolate(String(cfg.title || "Workflow alert"), lead);
+        const body = interpolate(String(cfg.message || ""), lead);
+        const recipientKinds: string[] = Array.isArray(cfg.recipients) && cfg.recipients.length
+          ? cfg.recipients
+          : ["lead_owner", "creator"];
+        const channels: string[] = Array.isArray(cfg.channels) && cfg.channels.length
+          ? cfg.channels
+          : ["inapp", "email"];
+        const ids = new Set<string>();
+        if (recipientKinds.includes("lead_owner") && (lead.assigned_owner_id || lead.user_id)) {
+          ids.add(lead.assigned_owner_id || lead.user_id);
+        }
+        if (recipientKinds.includes("creator") && workflow.user_id) ids.add(workflow.user_id);
+        if (recipientKinds.includes("specific") && Array.isArray(cfg.recipient_user_ids)) {
+          for (const uid of cfg.recipient_user_ids) if (uid) ids.add(String(uid));
+        }
+        if (recipientKinds.includes("all_admins") || recipientKinds.includes("all_members")) {
+          const { data: members } = await supabase
+            .from("workspace_members").select("user_id, role").eq("workspace_id", workflow.workspace_id);
+          for (const m of (members || [])) {
+            if (recipientKinds.includes("all_members")) ids.add(m.user_id);
+            else if (["owner", "admin"].includes(m.role)) ids.add(m.user_id);
+          }
+        }
+        if (ids.size === 0) return { status: "skipped", details: { reason: "no_recipients" } };
+        const idList = Array.from(ids);
+        const { data: profiles } = await supabase.from("profiles").select("id, email, phone").in("id", idList);
+        const pmap = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]));
+        const stats: Record<string, number> = { inapp: 0, email: 0, sms: 0, whatsapp: 0 };
+        for (const uid of idList) {
+          const p = pmap.get(uid);
+          if (channels.includes("inapp")) {
+            await supabase.from("notifications").insert({
+              workspace_id: workflow.workspace_id, user_id: uid, title, body,
+              type: "workflow", meta: { workflow_id: workflow.id, lead_id: lead.id },
+            });
+            stats.inapp++;
+          }
+          if (channels.includes("email") && p?.email) {
+            await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+              workspaceId: workflow.workspace_id, to: p.email, subject: title,
+              html: `<p>${body.replace(/\n/g, "<br>")}</p>`, skipCredits: true, isInternal: true,
+            }); stats.email++;
+          }
+          if (channels.includes("sms") && p?.phone) {
+            await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+              workspaceId: workflow.workspace_id, to: p.phone, message: `${title}\n${body}`,
+              skipCredits: true, isInternal: true,
+            }); stats.sms++;
+          }
+          if (channels.includes("whatsapp") && p?.phone) {
+            await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+              workspaceId: workflow.workspace_id, to: p.phone, body: `*${title}*\n${body}`,
+              skipCredits: true, isInternal: true,
+            }); stats.whatsapp++;
+          }
+        }
+        return { status: "success", details: { recipients: idList.length, ...stats } };
       }
       case "webhook": {
         if (isTest || !cfg.url) return { status: "skipped", details: { reason: !cfg.url ? "no_url" : "test_mode" } };
