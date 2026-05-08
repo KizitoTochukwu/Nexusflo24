@@ -625,11 +625,6 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       );
                     })()}
                   </div>
-                  {["send_whatsapp", "send_sms"].includes(step.config.action as string) && (
-                    <div className="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded p-2">
-                      Tip: leads from email-only forms (newsletter, lead magnets) usually have no phone — this step will be auto-skipped for them. Add a <strong>Condition: phone_known</strong> earlier if you want to branch instead.
-                    </div>
-                  )}
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
                     <AutomationEmailEditor
                       isEmail={(step.config.action as string) === "send_email"}
