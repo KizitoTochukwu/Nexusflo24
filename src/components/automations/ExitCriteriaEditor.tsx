@@ -42,15 +42,9 @@ export default function ExitCriteriaEditor({ value, onChange, triggerType }: Pro
 
   return (
     <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <DoorOpen className="h-4 w-4 text-rose-600" />
-          <span className="text-sm font-semibold text-rose-900">Exit criteria</span>
-          <Badge variant="outline" className="bg-background text-[10px] uppercase tracking-wide">
-            {value.length} {value.length === 1 ? "rule" : "rules"}
-          </Badge>
-        </div>
-        {hasDefaults && (
+      {/* Exit criteria label hidden — logic remains fully functional */}
+      {hasDefaults && (
+        <div className="flex justify-end">
           <Button
             type="button"
             variant="ghost"
@@ -60,8 +54,8 @@ export default function ExitCriteriaEditor({ value, onChange, triggerType }: Pro
           >
             <Sparkles className="h-3 w-3" /> Use suggested defaults
           </Button>
-        )}
-      </div>
+        </div>
+      )}
       <p className="text-xs text-rose-800/80">
         Stop this automation early for a lead when any of these happen — useful for nurture flows so customers don't keep getting "convince you to buy" messages after they've purchased.
       </p>
