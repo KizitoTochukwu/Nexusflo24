@@ -1,23 +1,20 @@
-## Hide Exit Rules from Automation Create/Edit UI
+## Remove the "WhatsApp formatting" hint strip
 
-### Goal
-Remove the Exit Criteria editor from the automation creation dialog and the automation details drawer, while keeping all underlying exit-criteria logic fully intact (evaluation, default generation, backfill banner, log filtering, exited counts).
+### Context
+At `src/components/automations/email-editor/AutomationEmailEditor.tsx` line 484–486, a small footer below the message textarea reads:
 
-### Changes
+> WhatsApp formatting: `*bold*` · `_italic_` · `~strike~` · `` `code` ``
 
-1. **CreateAutomationDialog.tsx**
-   - Remove the `<ExitCriteriaEditor>` JSX block (lines 303–307).
-   - Remove the unused `ExitCriteriaEditor` import.
-   - Keep `exitCriteria` state, `getDefaultExitCriteria` calls, and `handleCreate` save logic unchanged — defaults will still be saved silently.
+This strip renders for **both SMS and WhatsApp** branches (it's in the non-email block). It is:
+- **Misleading for SMS** — those markers are not rendered by carriers.
+- **Low value for WhatsApp** — power users already know it; the toolbar above already provides Bold/Italic buttons that wrap the same syntax.
 
-2. **AutomationStepEditor.tsx**
-   - Remove the "Exit criteria" popover button + its `<ExitCriteriaEditor>` child (lines 707–730).
-   - Remove unused `Popover`, `PopoverContent`, `PopoverTrigger` imports.
-   - Keep `exitCriteria` / `onExitCriteriaChange` props intact — they are still passed and saved by the parent drawer.
+### Change
+- Delete lines 484–486 (the entire `<div className="px-3 py-2 border-t …">…</div>` block) in `AutomationEmailEditor.tsx`.
+- No other code touches this element. No imports become unused.
+- All formatting behavior (toolbar buttons, send pipeline, WhatsApp markdown rendering on the recipient side) stays unchanged.
 
 ### What stays untouched
-- `DashboardAutomations.tsx` backfill banner and exited counts column.
-- `exitCriteria` evaluation in `execute-automation` edge function.
-- Default exit criteria generation (`getDefaultExitCriteria`).
-- Log filter for "Exit criteria" events.
-- All database fields (`exit_criteria` column) and API hooks.
+- Toolbar buttons (Bold / Italic / etc.).
+- Character / SMS-segment counter on the same toolbar row.
+- Email editor, template settings, preview iframe.
