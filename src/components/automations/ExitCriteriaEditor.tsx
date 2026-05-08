@@ -1,8 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X, DoorOpen, Plus, Sparkles } from "lucide-react";
+import { X, Plus, Sparkles } from "lucide-react";
 import {
   EXIT_CRITERION_TYPES,
   type ExitCriterion,
