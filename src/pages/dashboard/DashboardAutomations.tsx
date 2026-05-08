@@ -200,7 +200,6 @@ const DashboardAutomations = () => {
             <TableBody>
               {automations.map((a) => {
                 const exitCount = exitedCounts?.[a.id] || 0;
-                search
                 return (
                 <TableRow key={a.id} className="cursor-pointer hover:bg-muted/40" onClick={() => openDetails(a)}>
                   <TableCell className="font-medium">
