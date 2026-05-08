@@ -643,13 +643,119 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       onTemplateSettingsChange={(ts) => updateStep(i, { templateSettings: ts })}
                     />
                   )}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
+                  {(step.config.action as string) === "notify_sales" && (() => {
+                    const recipients = (step.config.recipients as string[]) || ["lead_owner", "creator"];
+                    const channels = (step.config.channels as string[]) || ["inapp", "email"];
+                    const specificIds = (step.config.recipient_user_ids as string[]) || [];
+                    const toggle = (list: string[], val: string) =>
+                      list.includes(val) ? list.filter((x) => x !== val) : [...list, val];
+                    const RECIPIENT_OPTS: Array<[string, string]> = [
+                      ["lead_owner", "Lead owner"],
+                      ["creator", "Automation creator"],
+                      ["all_admins", "All admins"],
+                      ["all_members", "All members"],
+                      ["specific", "Specific user(s)"],
+                    ];
+                    const CHANNEL_OPTS: Array<[string, string]> = [
+                      ["inapp", "In-app"],
+                      ["email", "Email"],
+                      ["sms", "SMS"],
+                      ["whatsapp", "WhatsApp"],
+                    ];
+                    return (
+                      <div className="space-y-3 rounded-md border border-border bg-background/40 p-3">
+                        <div className="space-y-1.5">
+                          <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Recipients</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {RECIPIENT_OPTS.map(([val, label]) => (
+                              <Button
+                                key={val}
+                                type="button"
+                                size="sm"
+                                variant={recipients.includes(val) ? "default" : "outline"}
+                                className="h-7 text-xs"
+                                onClick={() => updateStep(i, { recipients: toggle(recipients, val) })}
+                              >
+                                {label}
+                              </Button>
+                            ))}
+                          </div>
+                          {recipients.includes("specific") && (
+                            <div className="flex flex-wrap gap-1.5 pt-1.5">
+                              {(workspaceMembers || []).map((m: any) => {
+                                const checked = specificIds.includes(m.user_id);
+                                return (
+                                  <Button
+                                    key={m.user_id}
+                                    type="button"
+                                    size="sm"
+                                    variant={checked ? "default" : "outline"}
+                                    className="h-6 text-[11px]"
+                                    onClick={() => updateStep(i, { recipient_user_ids: toggle(specificIds, m.user_id) })}
+                                  >
+                                    {m.profile?.full_name || m.profile?.email || m.user_id.slice(0, 8)}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Channels</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {CHANNEL_OPTS.map(([val, label]) => (
+                              <Button
+                                key={val}
+                                type="button"
+                                size="sm"
+                                variant={channels.includes(val) ? "default" : "outline"}
+                                className="h-7 text-xs"
+                                onClick={() => updateStep(i, { channels: toggle(channels, val) })}
+                              >
+                                {label}
+                              </Button>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Email/SMS/WhatsApp use each recipient's profile contact info. Missing contacts are skipped.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Title</div>
+                          </div>
+                          <Input
+                            className="bg-background"
+                            placeholder="e.g. 🔥 Hot lead — {{lead.full_name}}"
+                            value={(step.config.title as string) || ""}
+                            onChange={(e) => updateStep(i, { title: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Message</div>
+                            <InsertDropdown onInsert={(v) =>
+                              updateStep(i, { message: ((step.config.message as string) || "") + v })
+                            } />
+                          </div>
+                          <textarea
+                            className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            placeholder="Note for sales — supports {{lead.first_name}}, {{lead.email}}, etc."
+                            value={(step.config.message as string) || ""}
+                            onChange={(e) => updateStep(i, { message: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
                         updateStep(i, { tag: ((step.config.tag as string) || "") + v });
-                      } else if (action === "notify_sales") {
-                        updateStep(i, { message: ((step.config.message as string) || "") + v });
                       }
                     }} />
                   )}

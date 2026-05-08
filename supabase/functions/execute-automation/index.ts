@@ -540,15 +540,168 @@ Deno.serve(async (req) => {
                 details = { newStatus };
               }
             } else if (actionType === "notify_sales") {
-              await supabase.from("notifications").insert({
-                workspace_id,
-                user_id: automation.user_id,
-                title: interpolate(config.title || "Automation Alert", lead),
-                body: interpolate(config.message || `Lead ${lead.full_name || lead.email} requires attention.`, lead),
-                type: "automation_alert",
-                meta: { lead_id, automation_id },
-              });
-              details = { notification: "sent" };
+              // ---- Notify Sales v2: multi-recipient + multi-channel fan-out ----
+              const title = interpolate(config.title || "Automation Alert", lead);
+              const body = interpolate(
+                config.message || `Lead ${lead.full_name || lead.email} requires attention.`,
+                lead,
+              );
+
+              // Resolve recipient set (default = lead owner + automation creator).
+              const recipientKinds: string[] = Array.isArray(config.recipients) && config.recipients.length
+                ? config.recipients
+                : ["lead_owner", "creator"];
+              const channels: string[] = Array.isArray(config.channels) && config.channels.length
+                ? config.channels
+                : ["inapp", "email"];
+
+              const recipientUserIds = new Set<string>();
+              if (recipientKinds.includes("lead_owner")) {
+                const ownerId = (lead as any).assigned_owner_id || (lead as any).user_id;
+                if (ownerId) recipientUserIds.add(ownerId);
+              }
+              if (recipientKinds.includes("creator") && automation.user_id) {
+                recipientUserIds.add(automation.user_id);
+              }
+              if (recipientKinds.includes("specific") && Array.isArray(config.recipient_user_ids)) {
+                for (const uid of config.recipient_user_ids) if (uid) recipientUserIds.add(String(uid));
+              }
+              if (recipientKinds.includes("all_admins") || recipientKinds.includes("all_members")) {
+                const { data: members } = await supabase
+                  .from("workspace_members")
+                  .select("user_id, role")
+                  .eq("workspace_id", workspace_id);
+                for (const m of members || []) {
+                  if (recipientKinds.includes("all_members")) recipientUserIds.add(m.user_id);
+                  else if (["owner", "admin"].includes(m.role)) recipientUserIds.add(m.user_id);
+                }
+              }
+
+              const deliveries: Record<string, any> = { inapp: 0, email: 0, sms: 0, whatsapp: 0, skipped: [] as any[] };
+
+              if (recipientUserIds.size === 0) {
+                status = "skipped";
+                details = { reason: "no_recipients_resolved", recipientKinds };
+                break;
+              }
+
+              // Fetch profile contact info in one go for email/sms/whatsapp delivery.
+              const ids = Array.from(recipientUserIds);
+              const { data: profiles } = await supabase
+                .from("profiles")
+                .select("id, email, full_name, phone")
+                .in("id", ids);
+              const profileMap = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]));
+
+              for (const uid of ids) {
+                const prof = profileMap.get(uid);
+
+                // 1) In-app — always (mirrors original behaviour, but per recipient).
+                if (channels.includes("inapp")) {
+                  await supabase.from("notifications").insert({
+                    workspace_id,
+                    user_id: uid,
+                    title,
+                    body,
+                    type: "automation_alert",
+                    meta: { lead_id, automation_id },
+                  });
+                  deliveries.inapp++;
+                }
+
+                // 2) Email
+                if (channels.includes("email")) {
+                  const to = prof?.email;
+                  if (!to) {
+                    deliveries.skipped.push({ uid, channel: "email", reason: "no_profile_email" });
+                  } else {
+                    try {
+                      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                        },
+                        body: JSON.stringify({
+                          workspaceId: workspace_id,
+                          to,
+                          subject: title,
+                          html: `<p>${body.replace(/\n/g, "<br>")}</p>`,
+                          leadId: lead_id,
+                          skipCredits: true,
+                          isInternal: true,
+                        }),
+                      });
+                      deliveries.email++;
+                    } catch (e: any) {
+                      deliveries.skipped.push({ uid, channel: "email", reason: e?.message || "send_failed" });
+                    }
+                  }
+                }
+
+                // 3) SMS
+                if (channels.includes("sms")) {
+                  const to = prof?.phone;
+                  if (!to) {
+                    deliveries.skipped.push({ uid, channel: "sms", reason: "no_profile_phone" });
+                  } else {
+                    try {
+                      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                        },
+                        body: JSON.stringify({
+                          workspaceId: workspace_id,
+                          to,
+                          message: `${title}\n${body}`,
+                          skipCredits: true,
+                          isInternal: true,
+                        }),
+                      });
+                      deliveries.sms++;
+                    } catch (e: any) {
+                      deliveries.skipped.push({ uid, channel: "sms", reason: e?.message || "send_failed" });
+                    }
+                  }
+                }
+
+                // 4) WhatsApp (24h window rules already enforced by whatsapp-send)
+                if (channels.includes("whatsapp")) {
+                  const to = prof?.phone;
+                  if (!to) {
+                    deliveries.skipped.push({ uid, channel: "whatsapp", reason: "no_profile_phone" });
+                  } else {
+                    try {
+                      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                        },
+                        body: JSON.stringify({
+                          workspaceId: workspace_id,
+                          to,
+                          body: `*${title}*\n${body}`,
+                          skipCredits: true,
+                          isInternal: true,
+                        }),
+                      });
+                      const d = await r.json().catch(() => ({}));
+                      if (d?.fallback === true || d?.success === false) {
+                        deliveries.skipped.push({ uid, channel: "whatsapp", reason: "wa_window_or_error" });
+                      } else {
+                        deliveries.whatsapp++;
+                      }
+                    } catch (e: any) {
+                      deliveries.skipped.push({ uid, channel: "whatsapp", reason: e?.message || "send_failed" });
+                    }
+                  }
+                }
+              }
+
+              details = { recipients: ids.length, deliveries };
             } else if (actionType === "adjust_score") {
               const delta = parseInt(String(config.score_delta ?? config.delta ?? 0), 10) || 0;
               const previous = Number(lead.score || 0);

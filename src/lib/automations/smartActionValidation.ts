@@ -34,7 +34,11 @@ const statusDefaults = z.object({
 }).passthrough();
 
 const notifySalesDefaults = z.object({
+  title: z.string().trim().max(120, "Title must be ≤ 120 chars").optional(),
   message: z.string().trim().max(500, "Note must be ≤ 500 chars").optional(),
+  recipients: z.array(z.enum(["lead_owner", "creator", "specific", "all_admins", "all_members"])).optional(),
+  recipient_user_ids: z.array(z.string().uuid()).optional(),
+  channels: z.array(z.enum(["inapp", "email", "sms", "whatsapp"])).optional(),
 }).passthrough();
 
 const delayDefaults = z.object({
