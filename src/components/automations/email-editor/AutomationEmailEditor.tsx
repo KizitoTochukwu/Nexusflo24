@@ -481,9 +481,6 @@ export default function AutomationEmailEditor({
               className="min-h-[260px] border-0 rounded-none resize-y focus-visible:ring-0 focus-visible:ring-offset-0 text-sm leading-relaxed"
             />
 
-            <div className="px-3 py-2 border-t border-border bg-muted/20 text-[10px] text-muted-foreground">
-              WhatsApp formatting: <code className="font-mono">*bold*</code> · <code className="font-mono">_italic_</code> · <code className="font-mono">~strike~</code> · <code className="font-mono">`code`</code>
-            </div>
           </div>
         )}
 
