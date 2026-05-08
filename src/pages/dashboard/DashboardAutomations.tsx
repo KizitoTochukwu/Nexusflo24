@@ -205,12 +205,6 @@ const DashboardAutomations = () => {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {a.name}
-                      {hasExitRules && (
-                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 gap-1 text-[10px]">
-                          <DoorOpen className="h-2.5 w-2.5" />
-                          {((a.exit_criteria ?? []) as unknown[]).length} exit rule{((a.exit_criteria ?? []) as unknown[]).length === 1 ? "" : "s"}
-                        </Badge>
-                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{triggerLabel(a.trigger_type)}</TableCell>
