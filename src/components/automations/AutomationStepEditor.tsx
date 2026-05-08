@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import {
   Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus
@@ -704,30 +704,6 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
         <Button variant="outline" size="sm" onClick={() => addStep("delay")} className="gap-1.5">
           <Clock className="h-3.5 w-3.5" /> Add Delay
         </Button>
-        {onExitCriteriaChange && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800">
-                <DoorOpen className="h-3.5 w-3.5" />
-                Exit criteria
-                {exitCriteria && exitCriteria.length > 0 && (
-                  <Badge variant="outline" className="ml-1 h-5 px-1.5 bg-rose-50 text-rose-700 border-rose-200 text-[10px]">
-                    {exitCriteria.length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[480px] p-0 max-h-[70vh] overflow-y-auto" align="end">
-              <div className="p-3">
-                <ExitCriteriaEditor
-                  value={exitCriteria ?? []}
-                  onChange={onExitCriteriaChange}
-                  triggerType={triggerType}
-                />
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
       </div>
     </div>
   );

@@ -11,7 +11,6 @@ import { useFunnels } from "@/hooks/useFunnels";
 import { useForms } from "@/hooks/useForms";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
-import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import { supabase } from "@/integrations/supabase/client";
@@ -300,11 +299,6 @@ export default function CreateAutomationDialog() {
             <AutomationStepEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
           </div>
 
-          <ExitCriteriaEditor
-            value={exitCriteria}
-            onChange={setExitCriteria}
-            triggerType={triggerType}
-          />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
