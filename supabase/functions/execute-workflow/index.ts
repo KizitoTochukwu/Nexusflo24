@@ -234,13 +234,91 @@ async function runAction(
       }
       case "assign_owner": {
         if (isTest) return { status: "skipped", details: { reason: "test_mode" } };
+        let assignedUserId: string | null = null;
         if (cfg.mode === "round_robin") {
           const { data: ownerId } = await supabase.rpc("assign_next_round_robin", { _workspace_id: workflow.workspace_id });
-          if (ownerId) await supabase.from("leads").update({ assigned_owner_id: ownerId }).eq("id", lead.id);
-          return { status: "success", details: { owner_id: ownerId } };
+          assignedUserId = (ownerId as string | null) || null;
+        } else if (cfg.user_id) {
+          assignedUserId = String(cfg.user_id);
         }
-        if (cfg.user_id) await supabase.from("leads").update({ assigned_owner_id: cfg.user_id }).eq("id", lead.id);
-        return { status: "success", details: { owner_id: cfg.user_id } };
+        if (!assignedUserId) return { status: "skipped", details: { reason: "no_eligible_user" } };
+
+        const previousOwnerId = (lead as any).assigned_owner_id || null;
+        await supabase.from("leads").update({ assigned_owner_id: assignedUserId }).eq("id", lead.id);
+        await supabase.from("lead_activities").insert({
+          lead_id: lead.id, workspace_id: workflow.workspace_id, user_id: workflow.user_id,
+          type: "owner_assigned",
+          meta: { assigned_to: assignedUserId, mode: cfg.mode || "specific", workflow_id: workflow.id, previous_owner_id: previousOwnerId },
+        }).catch(() => {});
+
+        // Notify new owner (mirrors execute-automation v2)
+        const notifyNewOwner = cfg.notify_new_owner !== false;
+        const isNoop = previousOwnerId && previousOwnerId === assignedUserId;
+        if (notifyNewOwner && !isNoop) {
+          const channels: string[] = Array.isArray(cfg.channels) && cfg.channels.length ? cfg.channels : ["inapp", "email"];
+          const alsoNotify: string[] = Array.isArray(cfg.also_notify) ? cfg.also_notify : [];
+          const recipientIds = new Set<string>([assignedUserId]);
+          if (alsoNotify.includes("creator") && workflow.user_id) recipientIds.add(workflow.user_id);
+          if (alsoNotify.includes("previous_owner") && previousOwnerId) recipientIds.add(previousOwnerId);
+          if (alsoNotify.includes("all_admins")) {
+            const { data: members } = await supabase
+              .from("workspace_members").select("user_id, role").eq("workspace_id", workflow.workspace_id);
+            for (const m of members || []) {
+              if (["owner", "admin"].includes(m.role)) recipientIds.add(m.user_id);
+            }
+          }
+          const ids = Array.from(recipientIds);
+          const { data: profiles } = await supabase
+            .from("profiles").select("id, email, phone").in("id", ids);
+          const profileMap = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]));
+          const title = interpolate(String(cfg.notify_title || "New lead assigned to you"), lead);
+          const body = interpolate(
+            String(cfg.notify_message || "{{lead.full_name}} ({{lead.email}}) was just assigned to you."),
+            lead,
+          );
+          for (const uid of ids) {
+            const prof = profileMap.get(uid);
+            if (channels.includes("inapp")) {
+              await supabase.from("notifications").insert({
+                workspace_id: workflow.workspace_id, user_id: uid, title, body,
+                type: "lead_assigned",
+                meta: { lead_id: lead.id, workflow_id: workflow.id, assigned_to: assignedUserId },
+              });
+            }
+            if (channels.includes("email") && prof?.email) {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({
+                  workspaceId: workflow.workspace_id, to: prof.email, subject: title,
+                  html: `<p>${body.replace(/\n/g, "<br>")}</p>`,
+                  leadId: lead.id, skipCredits: true, isInternal: true,
+                }),
+              }).catch(() => {});
+            }
+            if (channels.includes("sms") && prof?.phone) {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({
+                  workspaceId: workflow.workspace_id, to: prof.phone, message: `${title}\n${body}`,
+                  skipCredits: true, isInternal: true,
+                }),
+              }).catch(() => {});
+            }
+            if (channels.includes("whatsapp") && prof?.phone) {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({
+                  workspaceId: workflow.workspace_id, to: prof.phone, body: `*${title}*\n${body}`,
+                  skipCredits: true, isInternal: true,
+                }),
+              }).catch(() => {});
+            }
+          }
+        }
+        return { status: "success", details: { owner_id: assignedUserId, previous_owner_id: previousOwnerId, notified: notifyNewOwner && !isNoop } };
       }
       case "create_task": {
         if (isTest) return { status: "skipped", details: { reason: "test_mode" } };

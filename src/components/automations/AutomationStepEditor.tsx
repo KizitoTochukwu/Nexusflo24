@@ -585,6 +585,19 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                     {(step.config.action as string) === "assign_owner" && (() => {
                       const mode = ((step.config.assign_mode as string) || "round_robin");
                       const userId = (step.config.assign_user_id as string) || "";
+                      const notifyNewOwner = step.config.notify_new_owner !== false;
+                      const channels = (step.config.channels as string[]) || ["inapp", "email"];
+                      const alsoNotify = (step.config.also_notify as string[]) || [];
+                      const toggle = (list: string[], val: string) =>
+                        list.includes(val) ? list.filter((x) => x !== val) : [...list, val];
+                      const CHANNEL_OPTS: Array<[string, string]> = [
+                        ["inapp", "In-app"], ["email", "Email"], ["sms", "SMS"], ["whatsapp", "WhatsApp"],
+                      ];
+                      const ALSO_OPTS: Array<[string, string]> = [
+                        ["creator", "Automation creator"],
+                        ["previous_owner", "Previous owner"],
+                        ["all_admins", "All admins"],
+                      ];
                       return (
                         <>
                           <Select
@@ -621,6 +634,82 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </SelectContent>
                             </Select>
                           )}
+                          <div className="basis-full" />
+                          <div className="w-full space-y-3 rounded-md border border-border bg-background/40 p-3">
+                            <label className="flex items-center gap-2 text-xs font-medium">
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5"
+                                checked={notifyNewOwner}
+                                onChange={(e) => updateStep(i, { notify_new_owner: e.target.checked })}
+                              />
+                              Notify the new owner when assigned
+                            </label>
+                            {notifyNewOwner && (
+                              <>
+                                <div className="space-y-1.5">
+                                  <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Channels</div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {CHANNEL_OPTS.map(([val, label]) => (
+                                      <Button
+                                        key={val}
+                                        type="button"
+                                        size="sm"
+                                        variant={channels.includes(val) ? "default" : "outline"}
+                                        className="h-7 text-xs"
+                                        onClick={() => updateStep(i, { channels: toggle(channels, val) })}
+                                      >
+                                        {label}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Email/SMS/WhatsApp use each recipient's profile contact info. Missing contacts are skipped.
+                                  </p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Also notify</div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ALSO_OPTS.map(([val, label]) => (
+                                      <Button
+                                        key={val}
+                                        type="button"
+                                        size="sm"
+                                        variant={alsoNotify.includes(val) ? "default" : "outline"}
+                                        className="h-7 text-xs"
+                                        onClick={() => updateStep(i, { also_notify: toggle(alsoNotify, val) })}
+                                      >
+                                        {label}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Title</div>
+                                  <Input
+                                    className="bg-background"
+                                    placeholder="New lead assigned to you"
+                                    value={(step.config.notify_title as string) || ""}
+                                    onChange={(e) => updateStep(i, { notify_title: e.target.value })}
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Message</div>
+                                    <InsertDropdown onInsert={(v) =>
+                                      updateStep(i, { notify_message: ((step.config.notify_message as string) || "") + v })
+                                    } />
+                                  </div>
+                                  <textarea
+                                    className="w-full min-h-[70px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    placeholder="{{lead.full_name}} ({{lead.email}}) was just assigned to you."
+                                    value={(step.config.notify_message as string) || ""}
+                                    onChange={(e) => updateStep(i, { notify_message: e.target.value })}
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
                         </>
                       );
                     })()}
