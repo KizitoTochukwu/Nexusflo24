@@ -807,15 +807,119 @@ Deno.serve(async (req) => {
                 details = { message: "No eligible user available for assignment" };
                 break;
               }
+              const previousOwnerId = (lead as any).assigned_owner_id || null;
               await supabase.from("leads").update({ assigned_owner_id: assignedUserId }).eq("id", lead_id);
               await supabase.from("lead_activities").insert({
                 lead_id,
                 workspace_id,
                 user_id: automation.user_id,
                 type: "owner_assigned",
-                meta: { assigned_to: assignedUserId, mode, automation_id },
+                meta: { assigned_to: assignedUserId, mode, automation_id, previous_owner_id: previousOwnerId },
               });
-              details = { assigned_to: assignedUserId, mode };
+
+              // ---- Notify the new owner (Assign Owner v2) ----
+              const notifyNewOwner = config.notify_new_owner !== false;
+              const isReassignNoop = previousOwnerId && previousOwnerId === assignedUserId;
+              const notifyDeliveries: Record<string, any> = { inapp: 0, email: 0, sms: 0, whatsapp: 0, skipped: [] as any[] };
+
+              if (notifyNewOwner && !isReassignNoop) {
+                const channels: string[] = Array.isArray(config.channels) && config.channels.length
+                  ? config.channels
+                  : ["inapp", "email"];
+                const alsoNotify: string[] = Array.isArray(config.also_notify) ? config.also_notify : [];
+
+                const recipientIds = new Set<string>([assignedUserId]);
+                if (alsoNotify.includes("creator") && automation.user_id) recipientIds.add(automation.user_id);
+                if (alsoNotify.includes("previous_owner") && previousOwnerId) recipientIds.add(previousOwnerId);
+                if (alsoNotify.includes("all_admins")) {
+                  const { data: members } = await supabase
+                    .from("workspace_members").select("user_id, role").eq("workspace_id", workspace_id);
+                  for (const m of members || []) {
+                    if (["owner", "admin"].includes(m.role)) recipientIds.add(m.user_id);
+                  }
+                }
+
+                const ids = Array.from(recipientIds);
+                const { data: profiles } = await supabase
+                  .from("profiles").select("id, email, full_name, phone").in("id", ids);
+                const profileMap = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]));
+
+                const titleTpl = config.notify_title || "New lead assigned to you";
+                const msgTpl = config.notify_message
+                  || "{{lead.full_name}} ({{lead.email}}) was just assigned to you.";
+                const title = interpolate(String(titleTpl), lead);
+                const body = interpolate(String(msgTpl), lead);
+
+                for (const uid of ids) {
+                  const prof = profileMap.get(uid);
+                  if (channels.includes("inapp")) {
+                    await supabase.from("notifications").insert({
+                      workspace_id, user_id: uid, title, body,
+                      type: "lead_assigned",
+                      meta: { lead_id, automation_id, assigned_to: assignedUserId, previous_owner_id: previousOwnerId },
+                    });
+                    notifyDeliveries.inapp++;
+                  }
+                  if (channels.includes("email") && prof?.email) {
+                    try {
+                      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                        body: JSON.stringify({
+                          workspaceId: workspace_id, to: prof.email, subject: title,
+                          html: `<p>${body.replace(/\n/g, "<br>")}</p>`,
+                          leadId: lead_id, skipCredits: true, isInternal: true,
+                        }),
+                      });
+                      notifyDeliveries.email++;
+                    } catch (e: any) { notifyDeliveries.skipped.push({ uid, channel: "email", reason: e?.message }); }
+                  } else if (channels.includes("email")) {
+                    notifyDeliveries.skipped.push({ uid, channel: "email", reason: "no_profile_email" });
+                  }
+                  if (channels.includes("sms") && prof?.phone) {
+                    try {
+                      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                        body: JSON.stringify({
+                          workspaceId: workspace_id, to: prof.phone, message: `${title}\n${body}`,
+                          skipCredits: true, isInternal: true,
+                        }),
+                      });
+                      notifyDeliveries.sms++;
+                    } catch (e: any) { notifyDeliveries.skipped.push({ uid, channel: "sms", reason: e?.message }); }
+                  } else if (channels.includes("sms")) {
+                    notifyDeliveries.skipped.push({ uid, channel: "sms", reason: "no_profile_phone" });
+                  }
+                  if (channels.includes("whatsapp") && prof?.phone) {
+                    try {
+                      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                        body: JSON.stringify({
+                          workspaceId: workspace_id, to: prof.phone, body: `*${title}*\n${body}`,
+                          skipCredits: true, isInternal: true,
+                        }),
+                      });
+                      const d = await r.json().catch(() => ({}));
+                      if (d?.fallback === true || d?.success === false) {
+                        notifyDeliveries.skipped.push({ uid, channel: "whatsapp", reason: "wa_window_or_error" });
+                      } else { notifyDeliveries.whatsapp++; }
+                    } catch (e: any) { notifyDeliveries.skipped.push({ uid, channel: "whatsapp", reason: e?.message }); }
+                  } else if (channels.includes("whatsapp")) {
+                    notifyDeliveries.skipped.push({ uid, channel: "whatsapp", reason: "no_profile_phone" });
+                  }
+                }
+              }
+
+              details = {
+                assigned_to: assignedUserId,
+                mode,
+                previous_owner_id: previousOwnerId,
+                notified: notifyNewOwner && !isReassignNoop,
+                ...(notifyNewOwner && !isReassignNoop ? { deliveries: notifyDeliveries } : {}),
+                ...(isReassignNoop ? { reassign_noop: true } : {}),
+              };
             } else if (actionType === "end_automation") {
               skipRemaining = true;
               details = { message: "Automation ended by End Automation action", reason: config.reason || null };

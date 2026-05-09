@@ -49,6 +49,11 @@ const delayDefaults = z.object({
 const assignOwnerDefaults = z.object({
   mode: z.enum(["round_robin", "specific"]).default("round_robin"),
   user_id: z.string().uuid().optional(),
+  notify_new_owner: z.boolean().optional(),
+  channels: z.array(z.enum(["inapp", "email", "sms", "whatsapp"])).optional(),
+  also_notify: z.array(z.enum(["creator", "previous_owner", "all_admins"])).optional(),
+  notify_title: z.string().trim().max(120, "Title must be ≤ 120 chars").optional(),
+  notify_message: z.string().trim().max(500, "Message must be ≤ 500 chars").optional(),
 }).passthrough();
 
 const enrollDefaults = z.object({
