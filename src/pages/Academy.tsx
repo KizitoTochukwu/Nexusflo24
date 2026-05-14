@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,10 @@ const testimonials = [
 
 const Academy = () =>
 <Layout>
+    <Seo
+      title="NexusFlo24 Academy – Free AI Marketing & Automation Courses"
+      description="Master AI marketing, funnels, CRM, WhatsApp and email automation with on-demand video courses, taught by NexusFlo24 experts."
+    />
     {/* Hero */}
     <section className="bg-hero py-20 md:py-28 text-center">
       <div className="container max-w-3xl bg-slate-200">

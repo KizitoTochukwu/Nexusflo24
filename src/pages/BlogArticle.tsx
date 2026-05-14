@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -149,6 +150,27 @@ const BlogArticle = () => {
 
   return (
     <Layout>
+      <Seo
+        title={article.title}
+        description={(article.excerpt || article.title || "Read the latest from NexusFlo24.").slice(0, 158)}
+        type="article"
+        image={article.image_url || undefined}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: article.title,
+          image: article.image_url ? [article.image_url] : undefined,
+          datePublished: article.published_at || article.created_at,
+          dateModified: article.updated_at || article.published_at,
+          author: { "@type": "Person", name: article.author || "NexusFlo24" },
+          publisher: {
+            "@type": "Organization",
+            name: "NexusFlo24",
+            logo: { "@type": "ImageObject", url: "https://nexusflo24.com/nexusflo24-logo.png" },
+          },
+          mainEntityOfPage: `https://nexusflo24.com/blog/${article.slug}`,
+        }}
+      />
       {/* Hero image */}
       <header className="relative bg-hero pt-20">
         {article.image_url ? (

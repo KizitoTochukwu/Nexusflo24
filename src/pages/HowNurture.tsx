@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,10 @@ const spotlightFeatures = [
 
 const HowNurture = () => (
   <Layout>
+    <Seo
+      title="How It Works – Nurture Leads Across Email, WhatsApp & SMS"
+      description="Automate follow-ups across email, WhatsApp and SMS with behaviour-based workflows that turn cold leads into warm prospects."
+    />
     {/* Hero */}
     <section className="bg-hero relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(213_50%_25%_/_0.5),transparent_70%)]" />

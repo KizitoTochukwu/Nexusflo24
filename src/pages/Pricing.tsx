@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import PricingFaq from "@/components/pricing/PricingFaq";
 import PricingCtaBanner from "@/components/pricing/PricingCtaBanner";
 import { useNavigate } from "react-router-dom";
@@ -214,6 +215,10 @@ const Pricing = () => {
 
   return (
     <Layout>
+      <Seo
+        title="Pricing – Plans for Creators, Startups & Agencies"
+        description="Simple monthly or yearly pricing. Start free for 14 days, then choose Starter, Plus, Pro or Enterprise. Includes credits for email, SMS and WhatsApp."
+      />
       {/* Hero */}
       <section className="bg-hero py-20 text-center">
         <div className="container">

@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,10 @@ const spotlightFeatures = [
 
 const HowConvert = () => (
   <Layout>
+    <Seo
+      title="How It Works – Convert Leads with AI Sales Closer & Bookings"
+      description="Close more deals with AI-driven follow-ups, smart pipelines and integrated booking pages that convert qualified leads into customers."
+    />
     {/* Hero */}
     <section className="bg-hero relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(213_50%_25%_/_0.5),transparent_70%)]" />

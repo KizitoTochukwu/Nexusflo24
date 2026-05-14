@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,10 @@ const spotlightFeatures = [
 
 const HowCapture = () => (
   <Layout>
+    <Seo
+      title="How It Works – Capture Leads with AI Forms & Funnels"
+      description="See how NexusFlo24 captures leads automatically with AI forms, landing pages, embed widgets and integrations to your favourite tools."
+    />
     {/* Hero */}
     <section className="bg-hero relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(213_50%_25%_/_0.5),transparent_70%)]" />

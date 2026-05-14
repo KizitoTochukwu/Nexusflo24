@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +91,11 @@ const Index = () => {
 
   return (
   <Layout>
+    <Seo
+      title="NexusFlo24 – AI Sales & Marketing Automation Platform"
+      description="Turn website visitors into paying customers automatically using AI-powered funnels, CRM, email and WhatsApp automation — no tech skills needed."
+      path="/"
+    />
     {/* Hero */}
     <section className="relative overflow-hidden min-h-[600px] md:min-h-[700px]">
       {/* Background image */}
