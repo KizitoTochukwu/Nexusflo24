@@ -1,0 +1,35 @@
+# NexusFlo24
+
+> AI-powered sales & marketing automation platform. Capture leads, nurture them across Email, WhatsApp and SMS, and convert with AI funnels and a built-in CRM.
+
+NexusFlo24 helps creators, entrepreneurs and small businesses turn website visitors into paying customers automatically — no tech skills needed.
+
+## Pages
+
+- [Home](/): Product overview and hero pitch.
+- [Features](/features): Full feature list — CRM, automations, funnels, multi-channel messaging, AI copy, analytics.
+- [Pricing](/pricing): Plans (Starter, Plus, Pro, Enterprise), credit packs and 14-day free trial details.
+- [About](/about): Company story, mission and team.
+- [Contact](/contact): Sales and support contact form.
+- [Academy](/academy): Free training resources on marketing automation.
+- [Blog](/blog): Articles on AI sales, marketing automation and growth.
+- [Referral](/referral): Refer-a-friend program (500 credits per signup).
+
+## How it works
+
+- [Capture](/how-it-works/capture): Lead capture via forms, funnels and integrations.
+- [Nurture](/how-it-works/nurture): Multi-channel automated follow-ups.
+- [Convert](/how-it-works/convert): Closing leads with AI sales workflows and bookings.
+
+## Legal
+
+- [Privacy Policy](/privacy-policy)
+- [Terms of Service](/terms-of-service)
+- [Cookie Policy](/cookie-policy)
+- [Acceptable Use](/acceptable-use)
+- [Refund Policy](/refund-policy)
+- [Security](/security)
+- [Anti-Spam Policy](/anti-spam-policy)
+- [GDPR Rights](/gdpr-rights)
+- [Disclaimer](/disclaimer)
+- [Data Processing Addendum](/data-processing-addendum)
