@@ -162,7 +162,7 @@ const BlogArticle = () => {
           image: article.image_url ? [article.image_url] : undefined,
           datePublished: article.published_at || article.created_at,
           dateModified: article.updated_at || article.published_at,
-          author: { "@type": "Person", name: article.author_name || "NexusFlo24" },
+          author: { "@type": "Person", name: article.author || "NexusFlo24" },
           publisher: {
             "@type": "Organization",
             name: "NexusFlo24",
