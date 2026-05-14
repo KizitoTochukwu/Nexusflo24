@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +49,10 @@ const Contact = () => {
 
   return (
     <Layout>
+      <Seo
+        title="Contact NexusFlo24 – Talk to Sales or Support"
+        description="Get in touch with the NexusFlo24 team. Book a demo, ask about pricing or reach our support specialists for help with your account."
+      />
       <section className="bg-hero py-20 text-center">
         <div className="container">
           <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-navy-light/50 px-4 py-1.5 text-sm text-gold">

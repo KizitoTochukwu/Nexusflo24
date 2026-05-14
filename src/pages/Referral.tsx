@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,10 @@ const Referral = () => {
 
   return (
     <Layout>
+      <Seo
+        title="Referral Program – Earn 500 Credits per Signup"
+        description="Invite friends to NexusFlo24 and earn 500 messaging credits for every active signup. Track clicks, signups and rewards in real time."
+      />
       {/* Hero */}
       <section className="bg-hero py-20 md:py-28 text-center">
         <div className="container max-w-3xl bg-slate-200">

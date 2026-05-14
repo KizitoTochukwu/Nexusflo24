@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,10 @@ const Blog = () => {
 
   return (
     <Layout>
+      <Seo
+        title="Blog – AI Sales, Marketing Automation & Growth Insights"
+        description="Practical guides on AI sales, marketing automation, CRM, funnels and multi-channel growth from the NexusFlo24 team."
+      />
       {/* Hero */}
       <section className="bg-hero py-16 md:py-20 text-center">
         <div className="container max-w-3xl bg-slate-200">

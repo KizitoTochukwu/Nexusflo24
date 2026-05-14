@@ -1,4 +1,5 @@
 import Layout from "@/components/layout/Layout";
+import Seo from "@/components/seo/Seo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +87,10 @@ const integrations = [
 
 const Features = () => (
   <Layout>
+    <Seo
+      title="Features – CRM, Funnels, Email, WhatsApp & SMS Automation"
+      description="Explore every NexusFlo24 feature: AI lead scoring, smart CRM, drag-and-drop funnels, multichannel campaigns, automations and analytics in one platform."
+    />
     {/* ═══════════════════════ HERO ═══════════════════════ */}
     <section className="bg-hero py-24 pb-8 lg:pb-0 overflow-hidden">
       <div className="container">
