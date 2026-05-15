@@ -95,6 +95,29 @@ const Index = () => {
       title="NexusFlo24 – AI Sales & Marketing Automation Platform"
       description="Turn website visitors into paying customers automatically using AI-powered funnels, CRM, email and WhatsApp automation — no tech skills needed."
       path="/"
+      jsonLd={{
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            name: "NexusFlo24",
+            url: "https://nexusflo24.com",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: "https://nexusflo24.com/blog?q={search_term_string}",
+              "query-input": "required name=search_term_string",
+            },
+          },
+          {
+            "@type": "FAQPage",
+            mainEntity: faqs.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          },
+        ],
+      }}
     />
     {/* Hero */}
     <section className="relative overflow-hidden min-h-[600px] md:min-h-[700px]">
