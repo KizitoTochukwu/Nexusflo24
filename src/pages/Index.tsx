@@ -105,6 +105,9 @@ const Index = () => {
           alt=""
           className="h-full w-full object-cover"
           loading="eager"
+          fetchPriority="high"
+          width={1920}
+          height={1080}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/50 to-navy/80" />
       </div>
