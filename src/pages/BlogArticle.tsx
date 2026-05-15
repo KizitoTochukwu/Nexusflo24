@@ -157,18 +157,30 @@ const BlogArticle = () => {
         image={article.image_url || undefined}
         jsonLd={{
           "@context": "https://schema.org",
-          "@type": "Article",
-          headline: article.title,
-          image: article.image_url ? [article.image_url] : undefined,
-          datePublished: article.published_at || article.created_at,
-          dateModified: article.updated_at || article.published_at,
-          author: { "@type": "Person", name: article.author || "NexusFlo24" },
-          publisher: {
-            "@type": "Organization",
-            name: "NexusFlo24",
-            logo: { "@type": "ImageObject", url: "https://nexusflo24.com/nexusflo24-logo.png" },
-          },
-          mainEntityOfPage: `https://nexusflo24.com/blog/${article.slug}`,
+          "@graph": [
+            {
+              "@type": "Article",
+              headline: article.title,
+              image: article.image_url ? [article.image_url] : undefined,
+              datePublished: article.published_at || article.created_at,
+              dateModified: article.updated_at || article.published_at,
+              author: { "@type": "Person", name: article.author || "NexusFlo24" },
+              publisher: {
+                "@type": "Organization",
+                name: "NexusFlo24",
+                logo: { "@type": "ImageObject", url: "https://nexusflo24.com/nexusflo24-logo.png" },
+              },
+              mainEntityOfPage: `https://nexusflo24.com/blog/${article.slug}`,
+            },
+            {
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Home", item: "https://nexusflo24.com/" },
+                { "@type": "ListItem", position: 2, name: "Blog", item: "https://nexusflo24.com/blog" },
+                { "@type": "ListItem", position: 3, name: article.title, item: `https://nexusflo24.com/blog/${article.slug}` },
+              ],
+            },
+          ],
         }}
       />
       {/* Hero image */}
