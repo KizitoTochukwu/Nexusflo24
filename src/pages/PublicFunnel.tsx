@@ -151,7 +151,7 @@ export default function PublicFunnel() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="animate-pulse text-gray-400">Loading…</div>
+        <div className="animate-pulse text-muted-foreground">Loading…</div>
       </div>
     );
   }
