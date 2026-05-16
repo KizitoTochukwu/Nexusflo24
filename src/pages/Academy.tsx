@@ -1,5 +1,6 @@
 import Layout from "@/components/layout/Layout";
 import Seo from "@/components/seo/Seo";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   BookOpen,
@@ -78,17 +79,17 @@ const Academy = () => (
           <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 5,000+ learners</span>
         </div>
         <div className="mt-10 flex flex-wrap justify-center gap-3 animate-fade-up animation-delay-600">
-          <a href="https://nas.io/nexusflo24" target="_blank" rel="noopener noreferrer">
+          <Link to="/register?plan=academy&intent=learn">
             <Button size="lg" className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
               <span className="font-semibold">Start Learning</span>
               <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
-          </a>
-          <a href="https://nas.io/nexusflo24/courses/nhza" target="_blank" rel="noopener noreferrer">
+          </Link>
+          <Link to="/register?plan=academy&intent=program">
             <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
               Join the Program
             </Button>
-          </a>
+          </Link>
         </div>
       </div>
     </section>
@@ -233,12 +234,12 @@ const Academy = () => (
           Join thousands of marketers learning AI automation with NexusFlo24 Academy.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a href="https://nas.io/nexusflo24" target="_blank" rel="noopener noreferrer">
+          <Link to="/register?plan=academy&intent=enroll">
             <Button size="lg" className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
               <span className="font-semibold">Join Academy Now</span>
               <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
-          </a>
+          </Link>
           <a href="#categories">
             <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
               Browse Courses
