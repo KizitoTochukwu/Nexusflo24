@@ -1,36 +1,41 @@
-# Premium Contact Page Redesign
+# Premium About Page Redesign
 
-Elevate `/contact` to a high-end SaaS feel using the existing Navy + Gold tokens — no new dependencies, no business-logic changes. Form submission, lead capture, and SEO stay intact.
+Polish `/about` with the same Navy + Gold premium treatment used on the Contact page. Keep all copy, images, stats, timeline, leadership, and CTA links — only restructure layout and elevate visuals. No backend or data changes.
 
-## Visual direction
+## Fixes (current issues)
 
-- **Hero**: Replace flat navy band with a layered `bg-hero` gradient + soft gold radial glow, subtle grid/noise overlay, and an animated fade-up headline. Tighten the eyebrow chip, enlarge the headline, add a one-line trust strip ("Trusted by creators • Replies < 24h • GDPR-ready").
-- **Two-column layout**: Asymmetric split — form (7/12) as an elevated glass-style card with gold top border accent; contact info (5/12) as stacked premium info cards instead of plain rows.
-- **Form card**:
-  - Rounded-2xl, `shadow-card` → hover `shadow-card-hover`, subtle gradient border (navy → gold).
-  - Floating section title "Send us a message" + helper subtitle.
-  - Inputs: larger height (h-12), refined focus ring in gold, icon prefixes (User, Mail, Building, MessageSquare).
-  - CTA button: full-width, gold gradient (`bg-gradient-gold`), `shadow-gold`, arrow icon, micro-interaction on hover (translate-x).
-  - Success state: keep logic, restyle with gold check badge + gradient background.
-- **Contact info cards**:
-  - Each channel (Email, WhatsApp, Office) as its own rounded card with gradient icon tile, hover lift, and a small "Open" / "Chat" / "Get directions" ghost link.
-  - Add a 4th compact card: "Response time" with a live "Typically replies in under 2 hours" badge (static copy).
-- **Trust band** (new, below the grid): thin strip with 4 reassurance items (Secure • GDPR • 24/7 monitoring • UK-based) using Lucide icons, muted styling, no new section heading.
-- **Background**: Section uses `bg-surface` with a faint top-to-bottom gradient to separate from hero.
+- Several sections use `bg-slate-200` with `text-gray-50` (white text on light grey → unreadable). Replace with semantic tokens.
+- Values cards have icon color identical to background (`text-accent` on `bg-accent`) — icons invisible. Title also stacked oddly with `bg-primary` chip styling.
+- Stats section sets `text-primary-foreground` on outer container but cards use light bg → muted text becomes light-on-light.
+- Timeline lacks visible spine and feels flat.
 
-## Motion
+## Section-by-section direction
 
-- `animate-fade-up` on hero headline + subtitle (staggered via existing `animation-delay-*` utilities).
-- Cards: `transition-all duration-300 hover:-translate-y-1` for premium feel.
+1. **Hero** — Same premium treatment as Contact: layered `bg-hero` + gold radial glow, faint grid overlay, staggered fade-up headline, eyebrow chip, trust microcopy row ("10k+ users · 40+ countries · GDPR-ready"). Slightly larger H1.
+
+2. **Vision & Mission** — Move to clean `bg-background`. Cards get gradient navy→gold hairline border (1px wrapper), larger icon tile with `bg-gradient-gold` + `shadow-gold`, refined typography. Replace the "Where we're headed / What we do every day" labels with subtle uppercase eyebrows in `text-accent`.
+
+3. **Values** — Rebuild as 4 premium cards on `bg-surface`: white card, gold gradient icon tile at top-left, hover lift, accent left-border on hover. Fix invisible icons and broken chip.
+
+4. **CEO Message** — Keep 2/5 photo + 3/5 message split. Wrap card in gradient border, add a subtle quote-mark watermark (Lucide `Quote` at low opacity in corner), gold accent bar at top, signature gets a small gold underline.
+
+5. **Stats & Culture** — Hero-style dark section using `bg-hero` with glow. Stat cards become glass cards (`bg-navy-light/40 backdrop-blur` + `border-accent/20`), gold numerals via `text-gradient-gold`. Culture cards: dark translucent variant with hover gold border.
+
+6. **Timeline** — Vertical spine in `bg-gradient-to-b from-accent/60 to-accent/0`, year badges with `bg-gradient-gold shadow-gold`, event content as elevated cards with hover lift. Light `bg-background` section (not slate-200).
+
+7. **Leadership** — Premium cards: larger avatar with gold ring (`ring-2 ring-accent/40 ring-offset-2`), name + role, optional LinkedIn-style ghost link placeholder removed (no new data). Subtle gradient hover.
+
+8. **CTA band** — Keep `bg-hero`, add gold glow, upgrade button to `bg-gradient-gold` with arrow micro-interaction. Add a secondary ghost button "See Pricing" linking to `/pricing`.
 
 ## Technical notes
 
-- Single file change: `src/pages/Contact.tsx`.
-- Use only existing semantic tokens (`primary`, `accent`, `muted-foreground`, `gold`, `navy-light`, `surface`, `gradient-hero`, `gradient-gold`, `shadow-card`, `shadow-gold`). No new colors, no index.css edits needed.
-- Keep `Seo`, `useCaptureLead`, form state, validation, and success branch unchanged.
-- Keep all current copy and contact details; only restructure presentation and add the trust strip + response-time card copy.
-- Responsive: stack to single column < lg; info cards become 2-up on md, 1-up on sm.
+- Single file change: `src/pages/About.tsx`.
+- Use only existing tokens: `primary`, `accent`, `muted-foreground`, `surface`, `card`, `navy-light`, `gold`, `gradient-hero`, `gradient-gold`, `shadow-card`, `shadow-card-hover`, `shadow-gold`, `text-gradient-gold`.
+- Use existing animations: `animate-fade-up`, `animation-delay-200/400/600`, `hover:-translate-y-1 transition-all duration-300`.
+- Remove all `bg-slate-200`, `text-gray-50`, and the broken Values color combos.
+- Keep image paths, link targets, copy, and the 5-entry timeline as-is.
+- No new packages, no index.css edits, no route changes.
 
 ## Out of scope
 
-- No new routes, no backend changes, no new packages, no map embed, no live chat widget.
+- New team members, new stats, new copy beyond microcopy additions in hero/CTA, parallax/scroll libs, video embeds.
