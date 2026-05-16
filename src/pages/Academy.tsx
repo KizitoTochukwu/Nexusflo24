@@ -176,11 +176,6 @@ const Academy = () => (
               </div>
             </Link>
           ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </section>
