@@ -30,6 +30,7 @@ import InactivityManager from "./components/auth/InactivityManager";
 import DashboardRedirect from "./pages/DashboardRedirect";
 import Referral from "./pages/Referral";
 import Academy from "./pages/Academy";
+import AcademyCourse from "./pages/AcademyCourse";
 import Blog from "./pages/Blog";
 import BlogArticle from "./pages/BlogArticle";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/referral" element={<Referral />} />
               <Route path="/academy" element={<Academy />} />
+              <Route path="/academy/:slug" element={<AcademyCourse />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogArticle />} />
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
