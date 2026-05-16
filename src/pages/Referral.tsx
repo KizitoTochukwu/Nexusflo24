@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useReferrals } from "@/hooks/useReferrals";
-import { Copy, Share2, Mail, MessageCircle, Users, MousePointerClick, Gift, Trophy, Loader2 } from "lucide-react";
+import { Copy, Share2, Mail, MessageCircle, Users, MousePointerClick, Gift, Trophy, Loader2, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
