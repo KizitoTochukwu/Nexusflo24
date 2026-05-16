@@ -107,7 +107,7 @@ const Referral = () => {
       </section>
 
       {/* How It Works */}
-      <section className="py-16 md:py-24 bg-surface">
+      <section id="how-it-works" className="py-16 md:py-24 bg-surface">
         <div className="container max-w-5xl">
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">How It Works</h2>
           <div className="grid md:grid-cols-3 gap-8">
