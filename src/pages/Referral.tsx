@@ -60,17 +60,49 @@ const Referral = () => {
         description="Invite friends to NexusFlo24 and earn 500 messaging credits for every active signup. Track clicks, signups and rewards in real time."
       />
       {/* Hero */}
-      <section className="bg-hero py-20 md:py-28 text-center">
-        <div className="container max-w-3xl bg-slate-200">
-          <h1 className="text-3xl md:text-5xl font-extrabold text-primary-foreground mb-4 animate-fade-up">
+      <section className="relative overflow-hidden bg-hero py-24 md:py-28 text-center">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-accent/20 blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-[320px] w-[320px] rounded-full bg-accent/10 blur-3xl" />
+          <div
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage:
+                "linear-gradient(hsl(var(--accent)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--accent)) 1px, transparent 1px)",
+              backgroundSize: "48px 48px",
+            }}
+          />
+        </div>
+        <div className="container relative max-w-3xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-navy-light/50 px-4 py-1.5 text-sm text-gold backdrop-blur animate-fade-up">
+            <Sparkles className="h-3.5 w-3.5" /> Referral Program
+          </span>
+          <h1 className="mt-5 text-5xl font-extrabold tracking-tight text-primary-foreground md:text-6xl animate-fade-up animation-delay-200">
             Refer a Friend. <span className="text-gradient-gold">Earn Rewards.</span>
           </h1>
-          <p className="text-primary-foreground/80 text-lg md:text-xl mb-8 animate-fade-up animation-delay-200">
+          <p className="mx-auto mt-5 max-w-xl text-lg text-primary-foreground/70 animate-fade-up animation-delay-400">
             Share NexusFlo24 with your network and get rewarded for every signup. It's a win-win.
           </p>
-          <Button size="lg" className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold animate-fade-up animation-delay-400" onClick={() => document.getElementById("referral-link")?.scrollIntoView({ behavior: "smooth" })}>
-            Start Referring
-          </Button>
+          <div className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-primary-foreground/60 animate-fade-up animation-delay-400">
+            <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 500 credits per signup</span>
+            <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Unlimited referrals</span>
+            <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Real-time tracking</span>
+          </div>
+          <div className="mt-10 flex flex-wrap justify-center gap-3 animate-fade-up animation-delay-600">
+            <Button
+              size="lg"
+              className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95"
+              onClick={() => document.getElementById("referral-link")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              <span className="font-semibold">Start Referring</span>
+              <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+            <a href="#how-it-works">
+              <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
+                How It Works
+              </Button>
+            </a>
+          </div>
         </div>
       </section>
 
