@@ -234,12 +234,12 @@ const Academy = () => (
           Join thousands of marketers learning AI automation with NexusFlo24 Academy.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a href="https://nas.io/nexusflo24" target="_blank" rel="noopener noreferrer">
+          <Link to="/register?plan=academy&intent=enroll">
             <Button size="lg" className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
               <span className="font-semibold">Join Academy Now</span>
               <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
-          </a>
+          </Link>
           <a href="#categories">
             <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
               Browse Courses
