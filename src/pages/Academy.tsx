@@ -27,14 +27,7 @@ const categories = [
   { icon: MessageCircle, label: "WhatsApp Automation", count: 3 },
 ];
 
-const courses = [
-  { title: "AI Marketing Fundamentals", category: "AI Marketing", duration: "2h 30m", lessons: 12, rating: 4.9, students: 1240, premium: false, image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=225&fit=crop" },
-  { title: "Building High-Converting Funnels", category: "Funnels", duration: "3h 15m", lessons: 18, rating: 4.8, students: 890, premium: true, image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=225&fit=crop" },
-  { title: "CRM Automation Masterclass", category: "CRM Automation", duration: "4h", lessons: 24, rating: 4.7, students: 670, premium: true, image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=225&fit=crop" },
-  { title: "WhatsApp Marketing 101", category: "WhatsApp Automation", duration: "1h 45m", lessons: 8, rating: 4.9, students: 2100, premium: false, image: "https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=400&h=225&fit=crop" },
-  { title: "Facebook & Google Ads Strategy", category: "Ads & Analytics", duration: "3h 45m", lessons: 20, rating: 4.6, students: 560, premium: true, image: "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=400&h=225&fit=crop" },
-  { title: "Email Drip Campaigns That Convert", category: "Email Automation", duration: "2h", lessons: 10, rating: 4.8, students: 980, premium: false, image: "https://images.unsplash.com/photo-1596526131083-e8c633c948d2?w=400&h=225&fit=crop" },
-];
+import { courses } from "@/data/academyCourses";
 
 const testimonials = [
   { name: "Sarah M.", role: "Digital Marketer", quote: "NexusFlo24 Academy transformed how I approach AI marketing. The courses are practical and immediately applicable.", rating: 5 },
@@ -134,9 +127,10 @@ const Academy = () => (
         </p>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {courses.map((c) => (
-            <div
+            <Link
+              to={`/academy/${c.slug}`}
               key={c.title}
-              className={`group rounded-2xl ${c.premium ? "bg-gradient-to-br from-accent/50 via-border to-accent/20" : "bg-border"} p-[1px] shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover`}
+              className={`group block rounded-2xl ${c.premium ? "bg-gradient-to-br from-accent/50 via-border to-accent/20" : "bg-border"} p-[1px] shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover`}
             >
               <div className="overflow-hidden rounded-2xl bg-card">
                 <div className="relative h-48 overflow-hidden">
@@ -177,6 +171,11 @@ const Academy = () => (
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Users className="h-3 w-3" /> {c.students.toLocaleString()}
                     </span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
                   </div>
                 </div>
               </div>
