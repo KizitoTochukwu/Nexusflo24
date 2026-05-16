@@ -10,7 +10,9 @@ const navLinks = [
 { label: "Pricing", to: "/pricing" },
 { label: "Academy", to: "/academy" },
 { label: "Blog", to: "/blog" },
-{ label: "Referral", to: "/referral" }];
+{ label: "Referral", to: "/referral" },
+{ label: "About", to: "/about" },
+{ label: "Contact", to: "/contact" }];
 
 
 
