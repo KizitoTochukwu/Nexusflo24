@@ -1,24 +1,48 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import logoFull from "@/assets/nexusflo24-logo-full.png";
 
 const navLinks = [
-{ label: "Dashboard", to: "/dashboard" },
-{ label: "Features", to: "/features" },
-{ label: "Pricing", to: "/pricing" },
-{ label: "Academy", to: "/academy" },
-{ label: "Blog", to: "/blog" },
-{ label: "Referral", to: "/referral" },
-{ label: "About", to: "/about" },
-{ label: "Contact", to: "/contact" }];
+  { label: "Dashboard", to: "/dashboard" },
+  { label: "Features", to: "/features" },
+  { label: "Pricing", to: "/pricing" },
+  { label: "Academy", to: "/academy" },
+  { label: "Blog", to: "/blog" },
+  { label: "Referral", to: "/referral" },
+  { label: "About", to: "/about" },
+  { label: "Contact", to: "/contact" },
+];
 
-
+const solutionsLinks = [
+  { label: "For Coaches & Creators", to: "/coaches-creators" },
+  { label: "For Marketing Agencies", to: "/marketing-agencies" },
+  { label: "For SMEs / Local Businesses", to: "/small-business" },
+];
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const solutionsActive = solutionsLinks.some((l) => l.to === location.pathname);
+
+  const linkClass = (active: boolean) =>
+    `rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
+      active ? "text-accent" : "text-muted-foreground"
+    }`;
+
+  // Insert Solutions after Features
+  const desktopNav: Array<{ type: "link" | "solutions"; label?: string; to?: string }> = [];
+  navLinks.forEach((link) => {
+    desktopNav.push({ type: "link", ...link });
+    if (link.to === "/features") desktopNav.push({ type: "solutions" });
+  });
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
@@ -29,19 +53,41 @@ const Header = () => {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {navLinks.map((link) =>
-          <Link
-            key={link.to}
-            to={link.to}
-            className={`rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
-            location.pathname === link.to ?
-            "text-accent" :
-            "text-muted-foreground"}`
-            }>
-
-              {link.label}
-            </Link>
-          )}
+          {desktopNav.map((item, idx) => {
+            if (item.type === "solutions") {
+              return (
+                <DropdownMenu key="solutions">
+                  <DropdownMenuTrigger
+                    className={`${linkClass(solutionsActive)} inline-flex items-center gap-1 outline-none`}
+                  >
+                    Solutions
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[14rem]">
+                    {solutionsLinks.map((s) => (
+                      <DropdownMenuItem key={s.to} asChild>
+                        <Link
+                          to={s.to}
+                          className={location.pathname === s.to ? "text-accent" : ""}
+                        >
+                          {s.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            }
+            return (
+              <Link
+                key={item.to}
+                to={item.to!}
+                className={linkClass(location.pathname === item.to)}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -58,30 +104,45 @@ const Header = () => {
         </div>
 
         {/* Mobile toggle */}
-        <button
-          className="md:hidden"
-          onClick={() => setMobileOpen(!mobileOpen)}>
-
+        <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
       {/* Mobile menu */}
-      {mobileOpen &&
-      <div className="border-t bg-background p-4 md:hidden animate-fade-in">
+      {mobileOpen && (
+        <div className="border-t bg-background p-4 md:hidden animate-fade-in">
           <nav className="flex flex-col gap-2">
-            {navLinks.map((link) =>
-          <Link
-            key={link.to}
-            to={link.to}
-            onClick={() => setMobileOpen(false)}
-            className={`rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
-            location.pathname === link.to ? "text-accent" : "text-muted-foreground"}`
-            }>
-
-                {link.label}
-              </Link>
-          )}
+            {navLinks.map((link) => (
+              <div key={link.to}>
+                <Link
+                  to={link.to}
+                  onClick={() => setMobileOpen(false)}
+                  className={linkClass(location.pathname === link.to) + " block"}
+                >
+                  {link.label}
+                </Link>
+                {link.to === "/features" && (
+                  <div className="mt-1">
+                    <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                      Solutions
+                    </div>
+                    {solutionsLinks.map((s) => (
+                      <Link
+                        key={s.to}
+                        to={s.to}
+                        onClick={() => setMobileOpen(false)}
+                        className={`block rounded-md pl-6 pr-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
+                          location.pathname === s.to ? "text-accent" : "text-muted-foreground"
+                        }`}
+                      >
+                        {s.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
             <div className="mt-2 flex flex-col gap-2">
               <Link to="/login" onClick={() => setMobileOpen(false)}>
                 <Button variant="ghost" className="w-full">Log In</Button>
@@ -94,9 +155,9 @@ const Header = () => {
             </div>
           </nav>
         </div>
-      }
-    </header>);
-
+      )}
+    </header>
+  );
 };
 
 export default Header;
