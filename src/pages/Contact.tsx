@@ -6,19 +6,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Mail,
-  MapPin,
   MessageCircle,
-  Zap,
   Loader2,
-  User,
-  Building2,
-  MessageSquare,
   ArrowRight,
   CheckCircle2,
   Clock,
   ShieldCheck,
   Lock,
   Globe2,
+  Star,
 } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -68,34 +64,10 @@ const Contact = () => {
   };
 
   const channels = [
-    {
-      icon: Mail,
-      title: "Email us",
-      lines: ["admin@nexusflo24.com", "kizitom.de@gmail.com"],
-      sub: "We respond within 24 hours.",
-      action: { label: "Open inbox", href: "mailto:admin@nexusflo24.com" },
-    },
-    {
-      icon: MessageCircle,
-      title: "WhatsApp",
-      lines: ["+44 7517 327597"],
-      sub: "Chat with our team live.",
-      action: { label: "Start chat", href: "https://wa.me/447517327597" },
-    },
-    {
-      icon: MapPin,
-      title: "Office",
-      lines: ["123 Innovation Way, Bury Road", "Greater Manchester, UK · BL2"],
-      sub: "By appointment only.",
-      action: { label: "Get directions", href: "https://maps.google.com/?q=Bury+Road+Greater+Manchester+BL2" },
-    },
-    {
-      icon: Clock,
-      title: "Response time",
-      lines: ["Typically replies in under 2 hours"],
-      sub: "Mon–Fri · 9am–6pm GMT",
-      badge: "Online now",
-    },
+    { icon: Mail, title: "Email us", value: "admin@nexusflo24.com", sub: "Reply within 24h" },
+    { icon: MessageCircle, title: "WhatsApp", value: "+44 7517 327597", sub: "Chat live with our team" },
+    { icon: Clock, title: "Response time", value: "Under 2 hours", sub: "Mon–Fri · 9–6 GMT" },
+    { icon: Star, title: "Trusted", value: "10k+ businesses", sub: "Creators & SMBs" },
   ];
 
   const trustItems = [
@@ -112,52 +84,75 @@ const Contact = () => {
         description="Get in touch with the NexusFlo24 team. Book a demo, ask about pricing or reach our support specialists for help with your account."
       />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-hero py-24">
-        {/* Decorative glow */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-accent/20 blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-[320px] w-[320px] rounded-full bg-accent/10 blur-3xl" />
-          <div
-            className="absolute inset-0 opacity-[0.04]"
-            style={{
-              backgroundImage:
-                "linear-gradient(hsl(var(--accent)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--accent)) 1px, transparent 1px)",
-              backgroundSize: "48px 48px",
-            }}
-          />
-        </div>
+      <section className="bg-surface px-4 py-12 md:px-8 md:py-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="relative overflow-hidden rounded-3xl bg-primary shadow-2xl">
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 bg-gradient-to-bl from-accent/10 to-transparent" />
+            <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.04]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--accent)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--accent)) 1px, transparent 1px)",
+                backgroundSize: "48px 48px",
+              }}
+            />
 
-        <div className="container relative text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-navy-light/50 px-4 py-1.5 text-sm text-gold backdrop-blur animate-fade-up">
-            <Zap className="h-3.5 w-3.5" /> Contact
-          </span>
-          <h1 className="mt-5 text-5xl font-extrabold tracking-tight text-primary-foreground md:text-6xl animate-fade-up animation-delay-200">
-            Let's <span className="text-gradient-gold">build something</span> together
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg text-primary-foreground/70 animate-fade-up animation-delay-400">
-            Questions, demo requests, or partnership ideas — our team replies fast and personally.
-          </p>
-          <div className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-primary-foreground/60 animate-fade-up animation-delay-600">
-            <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Trusted by creators & SMBs</span>
-            <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Replies in under 24h</span>
-            <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> GDPR-ready</span>
-          </div>
-        </div>
-      </section>
+            <div className="relative z-10 grid lg:grid-cols-2">
+              {/* LEFT — editorial */}
+              <div className="flex flex-col justify-center p-8 md:p-14 lg:p-16">
+                <span className="mb-8 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 backdrop-blur">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+                  <span className="text-xs font-semibold uppercase tracking-widest text-accent">
+                    Get in touch
+                  </span>
+                </span>
 
-      {/* Main grid */}
-      <section className="relative bg-surface py-20">
-        <div className="container">
-          <div className="grid gap-10 lg:grid-cols-12">
-            {/* Form */}
-            <div className="lg:col-span-7">
-              <div className="relative rounded-2xl bg-gradient-to-br from-accent/40 via-border to-accent/20 p-[1px] shadow-card transition-shadow duration-300 hover:shadow-card-hover">
-                <div className="relative overflow-hidden rounded-2xl bg-card p-8 md:p-10">
-                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-gold" />
+                <h1 className="mb-6 text-4xl font-bold leading-[1.1] text-primary-foreground md:text-5xl lg:text-6xl">
+                  Let's{" "}
+                  <span className="bg-gradient-gold bg-clip-text text-transparent">build something</span>{" "}
+                  together
+                </h1>
+                <p className="mb-10 max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl">
+                  Questions, demo requests, or partnership ideas — our team replies fast and personally.
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {channels.map((c) => (
+                    <div
+                      key={c.title}
+                      className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-colors hover:border-accent/40"
+                    >
+                      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 transition-transform group-hover:scale-110">
+                        <c.icon className="h-5 w-5 text-accent" />
+                      </div>
+                      <h3 className="text-sm font-medium text-primary-foreground">{c.title}</h3>
+                      <p className="mt-1 text-xs text-primary-foreground/60">{c.value}</p>
+                      <p className="mt-0.5 text-[10px] text-primary-foreground/40">{c.sub}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-12 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/10 pt-8">
+                  {trustItems.map((t) => (
+                    <div
+                      key={t.label}
+                      className="flex items-center gap-2 text-xs font-medium text-primary-foreground/60"
+                    >
+                      <t.icon className="h-4 w-4 text-accent" />
+                      <span>{t.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RIGHT — form */}
+              <div className="flex items-center p-6 md:p-10 lg:p-12">
+                <div className="relative w-full overflow-hidden rounded-3xl bg-card p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.45)] md:p-10">
+                  <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-gold" />
 
                   {success ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-gold shadow-gold">
                         <CheckCircle2 className="h-10 w-10 text-primary" />
                       </div>
@@ -168,99 +163,101 @@ const Contact = () => {
                     </div>
                   ) : (
                     <>
-                      <div className="mb-7">
-                        <h2 className="text-2xl font-bold md:text-3xl">Send us a message</h2>
-                        <p className="mt-1.5 text-sm text-muted-foreground">
-                          Fill out the form and we'll route your request to the right specialist.
+                      <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-foreground">Send us a message</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          We'll route your request to the right specialist.
                         </p>
                       </div>
 
                       <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="grid gap-5 md:grid-cols-2">
-                          <div>
-                            <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              Name *
+                          <div className="space-y-1.5">
+                            <Label
+                              htmlFor="name"
+                              className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                            >
+                              Full Name
                             </Label>
-                            <div className="relative mt-1.5">
-                              <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                              <Input
-                                id="name"
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                placeholder="Your name"
-                                maxLength={100}
-                                className="h-12 pl-10 focus-visible:ring-accent"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              Email *
-                            </Label>
-                            <div className="relative mt-1.5">
-                              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                              <Input
-                                id="email"
-                                type="email"
-                                value={form.email}
-                                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                placeholder="you@company.com"
-                                maxLength={255}
-                                className="h-12 pl-10 focus-visible:ring-accent"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="company" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Company
-                          </Label>
-                          <div className="relative mt-1.5">
-                            <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
-                              id="company"
-                              value={form.company}
-                              onChange={(e) => setForm({ ...form, company: e.target.value })}
-                              placeholder="Your company (optional)"
+                              id="name"
+                              value={form.name}
+                              onChange={(e) => setForm({ ...form, name: e.target.value })}
+                              placeholder="John Doe"
                               maxLength={100}
-                              className="h-12 pl-10 focus-visible:ring-accent"
+                              className="h-12 rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label
+                              htmlFor="email"
+                              className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                            >
+                              Email Address
+                            </Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              value={form.email}
+                              onChange={(e) => setForm({ ...form, email: e.target.value })}
+                              placeholder="john@company.com"
+                              maxLength={255}
+                              className="h-12 rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
                             />
                           </div>
                         </div>
 
-                        <div>
-                          <Label htmlFor="message" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Message *
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor="company"
+                            className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                          >
+                            Company (Optional)
                           </Label>
-                          <div className="relative mt-1.5">
-                            <MessageSquare className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground" />
-                            <Textarea
-                              id="message"
-                              value={form.message}
-                              onChange={(e) => setForm({ ...form, message: e.target.value })}
-                              placeholder="Tell us how we can help…"
-                              rows={5}
-                              maxLength={1000}
-                              className="resize-none pl-10 pt-3 focus-visible:ring-accent"
-                            />
-                          </div>
+                          <Input
+                            id="company"
+                            value={form.company}
+                            onChange={(e) => setForm({ ...form, company: e.target.value })}
+                            placeholder="Your organization"
+                            maxLength={100}
+                            className="h-12 rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label
+                            htmlFor="message"
+                            className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                          >
+                            Message
+                          </Label>
+                          <Textarea
+                            id="message"
+                            value={form.message}
+                            onChange={(e) => setForm({ ...form, message: e.target.value })}
+                            placeholder="Tell us how we can help..."
+                            rows={4}
+                            maxLength={1000}
+                            className="resize-none rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
+                          />
                         </div>
 
                         <Button
                           type="submit"
                           disabled={loading}
-                          className="group h-12 w-full bg-gradient-gold text-primary shadow-gold transition-all hover:opacity-95 hover:shadow-card-hover"
+                          className="group h-14 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-primary/20"
                         >
-                          {loading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          <span className="font-semibold">Send message</span>
-                          <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          <span>Send message</span>
+                          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </Button>
 
-                        <p className="text-center text-xs text-muted-foreground">
-                          By submitting, you agree to our privacy policy. We never share your details.
+                        <p className="px-4 text-center text-[10px] text-muted-foreground">
+                          By submitting, you agree to our{" "}
+                          <a href="/legal/privacy-policy" className="underline hover:text-accent">
+                            Privacy Policy
+                          </a>
+                          . We never share your personal data.
                         </p>
                       </form>
                     </>
@@ -268,63 +265,18 @@ const Contact = () => {
                 </div>
               </div>
             </div>
-
-            {/* Channels */}
-            <div className="lg:col-span-5">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                {channels.map((c) => (
-                  <a
-                    key={c.title}
-                    href={(c as any).action?.href}
-                    target={(c as any).action?.href?.startsWith("http") ? "_blank" : undefined}
-                    rel="noopener noreferrer"
-                    className="group relative block overflow-hidden rounded-2xl border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover"
-                  >
-                    <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-accent/5 transition-all duration-500 group-hover:bg-accent/10" />
-                    <div className="relative flex items-start gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-gold shadow-gold">
-                        <c.icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="font-semibold text-primary">{c.title}</h3>
-                          {(c as any).badge && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-green-600">
-                              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                              {(c as any).badge}
-                            </span>
-                          )}
-                        </div>
-                        {c.lines.map((line) => (
-                          <p key={line} className="mt-0.5 text-sm font-medium text-foreground">
-                            {line}
-                          </p>
-                        ))}
-                        <p className="mt-1 text-xs text-muted-foreground">{c.sub}</p>
-                        {(c as any).action && (
-                          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-accent opacity-0 transition-opacity group-hover:opacity-100">
-                            {(c as any).action.label}
-                            <ArrowRight className="h-3 w-3" />
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* Trust strip */}
-          <div className="mt-14 rounded-2xl border bg-card/60 px-6 py-5 shadow-card backdrop-blur">
-            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-sm text-muted-foreground">
-              {trustItems.map((t) => (
-                <div key={t.label} className="flex items-center gap-2">
-                  <t.icon className="h-4 w-4 text-accent" />
-                  <span className="font-medium">{t.label}</span>
+          {/* Bottom support bar */}
+          <div className="mt-12 flex flex-wrap justify-center gap-x-12 gap-y-6 opacity-60 transition-opacity duration-500 hover:opacity-100">
+            {trustItems.map((t) => (
+              <div key={t.label} className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                  <t.icon className="h-4 w-4 text-primary" />
                 </div>
-              ))}
-            </div>
+                <span className="text-sm font-bold tracking-tight text-foreground/70">{t.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
