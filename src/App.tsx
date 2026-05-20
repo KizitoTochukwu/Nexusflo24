@@ -61,6 +61,9 @@ import CancelBooking from "./pages/CancelBooking";
 import HowCapture from "./pages/HowCapture";
 import HowNurture from "./pages/HowNurture";
 import HowConvert from "./pages/HowConvert";
+import CoachesCreators from "./pages/sectors/CoachesCreators";
+import MarketingAgencies from "./pages/sectors/MarketingAgencies";
+import SmallBusiness from "./pages/sectors/SmallBusiness";
 
 import DashboardWorkflows from "./pages/dashboard/DashboardWorkflows";
 import WorkflowEditor from "./pages/dashboard/WorkflowEditor";
@@ -106,6 +109,9 @@ const App = () => (
               <Route path="/how-it-works/capture" element={<HowCapture />} />
               <Route path="/how-it-works/nurture" element={<HowNurture />} />
               <Route path="/how-it-works/convert" element={<HowConvert />} />
+              <Route path="/coaches-creators" element={<CoachesCreators />} />
+              <Route path="/marketing-agencies" element={<MarketingAgencies />} />
+              <Route path="/small-business" element={<SmallBusiness />} />
 
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
