@@ -1,26 +1,25 @@
-## Add "Solutions" dropdown to Header nav
+## Redesign /contact as premium "Split editorial" lead capture page
 
-Add a new "Solutions" item to the desktop and mobile navigation in `src/components/layout/Header.tsx`, linking to the three sector landing pages.
+Rebuild `src/pages/Contact.tsx` to match the approved "Split editorial elevation" direction while preserving all existing logic (lead capture, validation, subject prefill, success state).
 
-### Desktop
-- Replace the current plain `<Link>` rendering loop with a hybrid: regular links for existing items, and a Radix dropdown (using the existing `@/components/ui/dropdown-menu`) for "Solutions".
-- Trigger: "Solutions" button styled identically to the other nav links (same padding, font, hover, active color). Includes a small `ChevronDown` icon from `lucide-react`.
-- Active state: highlight "Solutions" in gold (`text-accent`) when the current path is one of the three sector routes.
-- Menu items (each a `<Link>` wrapped in `DropdownMenuItem asChild`):
-  - **For Coaches & Creators** → `/coaches-creators`
-  - **For Marketing Agencies** → `/marketing-agencies`
-  - **For SMEs / Local Businesses** → `/small-business`
-- Placement: insert "Solutions" right after "Features" in the nav order (Dashboard, Features, **Solutions**, Pricing, …).
+### Layout
+Single full-width bento card (navy primary background, rounded-3xl, deep shadow) on a light surface. Inside, a 2-column grid:
 
-### Mobile
-- In the mobile menu, render "Solutions" as a non-link section header (muted, slightly smaller), followed by the three sector links indented (e.g. `pl-6`) so the hierarchy is obvious without needing a collapsible accordion.
-- Each mobile link closes the menu on click (existing `setMobileOpen(false)` pattern).
-- Active state on each sector link matches the existing pattern.
+- **Left pane (editorial):** pill badge ("Get in touch" with pulsing gold dot) → display H1 with gold gradient on "build something" → lead copy → 2×2 channel cards (Email, WhatsApp, Response time, Trusted) on translucent white/5 backgrounds with gold icon chips → divider → in-hero trust strip (Secure, GDPR, UK team, 24/7).
+- **Right pane (form):** floating white card with gold top accent bar, deep shadow lifting it off the navy. Same fields: Name + Email (2-col), Company, Message, primary CTA. Tiny uppercase tracked labels above inputs. Focus state = gold border + soft gold ring. Success state preserved (gold check, message).
 
-### Implementation notes
-- Define a `solutionsLinks` array alongside `navLinks` so labels/paths live in one place.
-- Reuse existing styling tokens — no new colors, no design-system changes.
-- No changes to Footer, routing, or sector pages.
+Below the card: subtle grayscale trust strip with the same 4 badges, fades to full opacity on hover.
 
-### Files
-- Edit: `src/components/layout/Header.tsx`
+### Design system compliance
+Use semantic tokens (`bg-primary`, `text-primary-foreground`, `text-accent`, `bg-accent`, `bg-card`, `bg-surface`, `bg-gradient-gold`) — no hardcoded hex. Tokens already map to brand Navy/Gold per memory.
+
+### Preserved behavior
+- `useCaptureLead()` hook usage, subject querystring prefill, toast feedback, zod-like manual validation, maxLengths
+- `<Seo>` title/description
+- Wrapped in `<Layout>` (Header/Footer)
+- Success view layout
+
+### File
+- Edit: `src/pages/Contact.tsx` (full rewrite)
+
+No new components, no routing changes, no backend changes.
