@@ -113,10 +113,12 @@ const Contact = () => {
             },
             lead_email: form.email,
             lead_name: form.name,
+            lead_phone: form.phone || null,
             notify_channels: { email: true, whatsapp: true, sms: false },
             notify_emails: ["admin@nexusflo24.com"],
             notify_phones: ["+447517327597"],
             send_confirmation: true,
+            send_lead_whatsapp: !!form.phone,
           },
         })
         .catch((err) => console.error("notify-form-submission error:", err));
