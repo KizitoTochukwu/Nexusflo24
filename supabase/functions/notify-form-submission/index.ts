@@ -34,7 +34,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { form_id, workspace_id, values, lead_email, lead_name } = (await req.json()) as Payload;
+    const body = (await req.json()) as Payload & {
+      notify_channels?: { email?: boolean; sms?: boolean; whatsapp?: boolean };
+      notify_emails?: string[];
+      notify_phones?: string[];
+      form_name?: string;
+    };
+    const { form_id, workspace_id, values, lead_email, lead_name } = body;
     if (!form_id || !workspace_id) {
       return new Response(JSON.stringify({ error: "form_id and workspace_id required" }), {
         status: 400,
@@ -46,24 +52,39 @@ Deno.serve(async (req) => {
     const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, svcKey);
 
-    // Load the form (need name, schema for labels, settings for notify config)
-    const { data: form, error: formErr } = await admin
-      .from("forms")
-      .select("name, schema, settings, workspace_id")
-      .eq("id", form_id)
-      .maybeSingle();
-
-    if (formErr || !form) {
-      return new Response(JSON.stringify({ error: "Form not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Synthetic/pseudo-form path (e.g. Contact page) — no DB row required.
+    const isPseudo = form_id === "contact-page" || !!body.form_name;
+    let form: any = null;
+    if (!isPseudo) {
+      const { data, error: formErr } = await admin
+        .from("forms")
+        .select("name, schema, settings, workspace_id")
+        .eq("id", form_id)
+        .maybeSingle();
+      if (formErr || !data) {
+        return new Response(JSON.stringify({ error: "Form not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      form = data;
+    } else {
+      form = {
+        name: body.form_name || "Contact Page",
+        schema: { steps: [] },
+        settings: {},
+        workspace_id,
+      };
     }
 
     const settings: any = form.settings ?? {};
-    const channels = settings.notify_channels ?? { email: true, sms: false, whatsapp: false };
-    const recipientEmails: string[] = Array.isArray(settings.notify_emails) ? settings.notify_emails.filter(Boolean) : [];
-    const recipientPhones: string[] = Array.isArray(settings.notify_phones) ? settings.notify_phones.filter(Boolean) : [];
+    const channels = body.notify_channels ?? settings.notify_channels ?? { email: true, sms: false, whatsapp: false };
+    const recipientEmails: string[] = Array.isArray(body.notify_emails)
+      ? body.notify_emails.filter(Boolean)
+      : Array.isArray(settings.notify_emails) ? settings.notify_emails.filter(Boolean) : [];
+    const recipientPhones: string[] = Array.isArray(body.notify_phones)
+      ? body.notify_phones.filter(Boolean)
+      : Array.isArray(settings.notify_phones) ? settings.notify_phones.filter(Boolean) : [];
 
     if (!channels.email && !channels.sms && !channels.whatsapp) {
       return new Response(JSON.stringify({ skipped: "all channels disabled" }), {

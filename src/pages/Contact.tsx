@@ -20,6 +20,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useCaptureLead } from "@/hooks/useCaptureLead";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const [searchParams] = useSearchParams();
@@ -59,6 +60,31 @@ const Contact = () => {
         formId: "contact-form",
         page: "/contact",
       });
+
+      // Fire-and-forget admin notification (Email + WhatsApp). Never block UX.
+      supabase.functions
+        .invoke("notify-form-submission", {
+          body: {
+            form_id: "contact-page",
+            form_name: "Contact Page",
+            workspace_id: "624d5422-a619-47bd-ab77-8ec7b8208023",
+            values: {
+              Name: form.name,
+              Email: form.email,
+              Phone: form.phone || "—",
+              Company: form.company || "—",
+              Subject: subject || "general",
+              Message: form.message,
+            },
+            lead_email: form.email,
+            lead_name: form.name,
+            notify_channels: { email: true, whatsapp: true, sms: false },
+            notify_emails: ["admin@nexusflo24.com"],
+            notify_phones: ["+447517327597"],
+          },
+        })
+        .catch((err) => console.error("notify-form-submission error:", err));
+
       toast.success("Message sent! We'll get back to you within 24 hours.");
     } catch {
       toast.error("Something went wrong. Please try again.");
