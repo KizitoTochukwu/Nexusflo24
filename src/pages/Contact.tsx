@@ -66,9 +66,11 @@ const Contact = () => {
     try {
       const tagSlug = (s: string) =>
         s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-      const extraTags: string[] = [];
+      const extraTags: string[] = ["contact-lead"];
       if (form.industry) extraTags.push(`industry-${tagSlug(form.industry)}`);
       if (form.interest) extraTags.push(`interest-${tagSlug(form.interest)}`);
+      if (form.interest === "Demo Request") extraTags.push("demo-interest");
+      if (form.interest === "Support") extraTags.push("support-request");
 
       await capture({
         full_name: form.name,
@@ -111,10 +113,12 @@ const Contact = () => {
             },
             lead_email: form.email,
             lead_name: form.name,
+            lead_phone: form.phone || null,
             notify_channels: { email: true, whatsapp: true, sms: false },
             notify_emails: ["admin@nexusflo24.com"],
             notify_phones: ["+447517327597"],
             send_confirmation: true,
+            send_lead_whatsapp: !!form.phone,
           },
         })
         .catch((err) => console.error("notify-form-submission error:", err));

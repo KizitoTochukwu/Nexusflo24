@@ -1,85 +1,55 @@
-## Goal
+## Current status vs. your requirements
 
-Send an instant admin notification (Email always, WhatsApp + SMS optional) every time someone submits the `/contact` form — independent of CRM scoring/hot-lead logic.
 
-## Approach
+| Requirement                         | Status           | Notes                                                                                        |
+| ----------------------------------- | ---------------- | -------------------------------------------------------------------------------------------- |
+| Save lead to CRM                    | ✅ Wired          | `capture-lead` inserts/dedups, assigns round-robin, routes to "Contact Form" folder          |
+| **+10 lead score**                  | ✅ Already active | `capture-lead` sets `score: 10` on new leads                                                 |
+| **Welcome email to lead**           | ✅ Already active | `notify-form-submission` sends branded Navy/Gold confirmation email via Resend               |
+| **Notify internal team/admin**      | ✅ Already active | Email to `admin@nexusflo24.com` + WhatsApp to `+447517327597`                                |
+| Folder-based automations            | ✅ Active         | "Contact Form" folder auto-created; fires any active `lead_added_to_folder` automation       |
+| **Tag: `contact-lead**`             | ❌ Missing        | Today only `website-signup`, `contact-form`, `contact-{subject}`, `industry-…`, `interest-…` |
+| **Tag: `demo-interest**`            | ❌ Missing        | Need to derive from "Interested in" = Demo Request                                           |
+| **Tag: `support-request**`          | ❌ Missing        | Need to derive from "Interested in" = Support                                                |
+| **WhatsApp follows up on the lead** | ❌ Missing        | Today WA only goes to admin, not to the submitter                                            |
 
-Reuse the existing `notify-form-submission` Edge Function pattern (already wired for the Forms module) instead of creating a new function. It already:
-- Sends a branded email via Resend
-- Calls `sms-send` and `whatsapp-send` for phone alerts
-- Falls back to workspace owner/admin recipients
-- Handles CORS + service-role auth
 
-We'll invoke it from the Contact page right after `capture()` succeeds, using a synthetic `form_id` for the contact page, with hard-coded recipients (admin email + admin phone) plus channel toggles.
+## Plan to close the 2 gaps
 
-## Changes
+### 1. Add the three required tags (frontend — `src/pages/Contact.tsx`)
 
-### 1. `src/pages/Contact.tsx`
-After the existing `await capture(...)` call, fire a second non-blocking invoke:
-```ts
-supabase.functions.invoke("notify-form-submission", {
-  body: {
-    form_id: "contact-page",            // synthetic id
-    workspace_id: PUBLIC_ADMIN_WS_ID,   // your main workspace
-    values: { name, email, phone, company, message, subject },
-    lead_email: form.email,
-    lead_name: form.name,
-  },
-});
-```
-Wrap in `try/catch` — never block the user-facing success state if notification fails.
+Append to the existing `tags` + `lead_destination.apply_tags` arrays:
 
-### 2. `supabase/functions/notify-form-submission/index.ts`
-Small tweak: the function currently 404s if no row exists in `forms` table. Add a branch:
-- If `form_id === "contact-page"` (or form lookup misses), skip the DB lookup and use a built-in "Contact Page" pseudo-form with:
-  - `name: "Contact Page"`
-  - `settings.notify_channels: { email: true, sms: false, whatsapp: true }` (defaults; can be overridden via request body)
-  - `settings.notify_emails: ["admin@nexusflo24.com"]`
-  - `settings.notify_phones: ["+44 7517 327597"]`
-- Allow the caller to pass `notify_channels`, `notify_emails`, `notify_phones` directly in the body to override.
+- Always add `contact-lead`
+- If `form.interest === "Demo Request"` → add `demo-interest`
+- If `form.interest === "Support"` → add `support-request`
 
-This keeps one notification function for both modules and avoids a brittle DB row.
+This keeps the existing `industry-…` / `interest-…` slug tags AND gives you the canonical tags you listed. Any automation in the Automation Builder using trigger `lead_tagged` with tag `demo-interest` / `support-request` / `contact-lead` will fire automatically (folder trigger already fires too).
 
-### 3. Recipient configuration
-Hard-code defaults in the edge function for the contact page (admin email + WhatsApp number already shown on the Contact page itself):
-- Email: `admin@nexusflo24.com`
-- WhatsApp: `+44 7517 327597`
-- SMS: off by default (Twilio costs); can be enabled by passing `notify_channels.sms: true`
+### 2. Send WhatsApp follow-up to the lead (when phone exists)
 
-### 4. No DB migration required
-No new tables, no `forms` row needed. Channels (Resend, WhatsApp, Twilio) are already configured via existing secrets.
+In `supabase/functions/notify-form-submission/index.ts`, add a new branch (mirrors the confirmation-email branch):
 
-## What the admin will receive
+- Trigger when `body.send_lead_whatsapp === true` AND a valid lead phone is present.
+- Call existing `whatsapp-send` edge function with the lead's phone and a short personalised message (e.g. "Hi {firstName}, thanks for contacting NexusFlo24! We've received your request and a specialist will reach out within 24h. — Team NexusFlo24").
+- Respect the WA 24h-window rule already standardized in the project: if `whatsapp-send` returns `success:false + fallback:true`, log it and skip silently (don't send `hello_world`). Result recorded in `result.lead_whatsapp`.
 
-**Email** (branded, navy/gold, same template as form notifications):
-- Subject: `📝 New submission on "Contact Page" from {name}`
-- Body: labelled table of Name, Email, Phone, Company, Message, Subject tag
-- CTA button → workspace CRM
+Then in `Contact.tsx`, pass `lead_phone: form.phone` and `send_lead_whatsapp: true` in the `notify-form-submission` body (only when a phone was entered).
 
-**WhatsApp** (text):
-```
-New submission on "Contact Page" from {name}
+### Files touched
 
-Name: ...
-Email: ...
-Phone: ...
-Company: ...
-Message: ...
-```
-Sent via existing `whatsapp-send` (falls back gracefully if 24h window closed per project rule).
+- `src/pages/Contact.tsx` — add 3 conditional tags + pass lead phone / `send_lead_whatsapp` flag.
+- `supabase/functions/notify-form-submission/index.ts` — add lead-WhatsApp branch.
+- Deploy `notify-form-submission`.
 
-**SMS** (only if explicitly enabled): same body, truncated.
+### Verification after build
 
-## What does NOT change
-- `capture-lead` flow, lead scoring, hot-lead alerts, CRM entry — all untouched
-- Contact page UI — no visual changes
-- Existing Forms module notifications — unaffected
+- Submit the contact form with "Demo Request" + a phone → check `leads.tags` contains `contact-lead` + `demo-interest`, `score=10`, lead lands in "Contact Form" folder, confirmation email arrives, admin email + WA arrive, and lead receives WA (if within 24h window).
+- Submit with "Support" + no phone → tags include `contact-lead` + `support-request`, no lead WA attempted.
 
-## Files touched
-- `src/pages/Contact.tsx` — add fire-and-forget invoke after capture
-- `supabase/functions/notify-form-submission/index.ts` — add contact-page pseudo-form branch + body-level recipient overrides
+### Note on automations
 
-## Open questions
-1. Confirm admin email = `admin@nexusflo24.com` and WhatsApp = `+44 7517 327597` as defaults?
-2. SMS off by default OK, or also on?
-3. Want me to also CC the workspace owner's email automatically, or only the hard-coded admin email?
+The platform fires automations automatically on:
+
+- `lead_added_to_folder` ("Contact Form" — already wired)
+- `lead_tagged` (specific tag) — so to wire "send welcome email + WA on demo interest" as a Builder automation, you create one in the Automation Builder with trigger `lead_tagged` = `demo-interest`. The tags this plan adds will make those triggers fire correctly.

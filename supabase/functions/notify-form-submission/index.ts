@@ -276,6 +276,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---------- WHATSAPP FOLLOW-UP TO LEAD ----------
+    const leadPhone: string | null = (body as any).lead_phone || null;
+    if ((body as any).send_lead_whatsapp && leadPhone) {
+      try {
+        const firstName = (lead_name || "there").split(" ")[0];
+        const waBody = `Hi ${firstName}! 👋 Thanks for contacting NexusFlo24. We've received your request and a specialist will reach out within 24 hours. — Team NexusFlo24`;
+        const res = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+          body: JSON.stringify({ workspace_id, to: leadPhone, body: waBody }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json?.success !== false) {
+          result.lead_whatsapp = "sent";
+        } else if (json?.fallback) {
+          result.lead_whatsapp = "skipped_24h_window";
+        } else {
+          result.lead_whatsapp = `error ${res.status}`;
+        }
+      } catch (e) {
+        console.error("[notify-form-submission] lead whatsapp error:", e);
+        result.lead_whatsapp = "error";
+      }
+    }
+
+
+
     return new Response(JSON.stringify({ ok: true, result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
