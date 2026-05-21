@@ -70,7 +70,7 @@ const Contact = () => {
         phone: form.phone || undefined,
         source: "Contact",
         tags: ["website-signup", "contact-form", ...(subject ? [`contact-${subject}`] : [])],
-        notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Message: ${form.message}`,
+        notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Industry: ${form.industry || "N/A"}. Interested in: ${form.interest || "N/A"}. Message: ${form.message}`,
         formId: "contact-form",
         page: "/contact",
       });
