@@ -137,9 +137,9 @@ const Contact = () => {
                 </span>
 
                 <h1 className="mb-6 text-4xl font-bold leading-[1.1] text-primary-foreground md:text-5xl lg:text-6xl">
-                  Let's{" "}
-                  <span className="bg-gradient-gold bg-clip-text text-transparent">build something</span>{" "}
-                  together
+                  Let's help you{" "}
+                  <span className="bg-gradient-gold bg-clip-text text-transparent">automate your sales</span>{" "}
+                  & follow-up
                 </h1>
                 <p className="mb-10 max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl">
                   Questions, demo requests, or partnership ideas — our team replies fast and personally.
