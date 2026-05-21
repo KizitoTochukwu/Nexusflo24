@@ -52,6 +52,7 @@ const Contact = () => {
       await capture({
         full_name: form.name,
         email: form.email,
+        phone: form.phone || undefined,
         source: "Contact",
         tags: ["website-signup", "contact-form", ...(subject ? [`contact-${subject}`] : [])],
         notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Message: ${form.message}`,
