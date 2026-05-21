@@ -226,6 +226,56 @@ Deno.serve(async (req) => {
       for (const p of phoneTargets) result.whatsapp.push(await invokeChannel("whatsapp-send", p));
     }
 
+    // ---------- CONFIRMATION EMAIL TO LEAD ----------
+    if (body.send_confirmation && lead_email) {
+      try {
+        const resendKey = Deno.env.get("RESEND_API_KEY");
+        const emailFrom = Deno.env.get("EMAIL_FROM") || "NexusFlo24 <noreply@nexusflo24.com>";
+        if (resendKey) {
+          const firstName = (lead_name || "there").split(" ")[0];
+          const html = `
+            <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;color:#0B1F3B;">
+              <div style="text-align:center;margin-bottom:24px;">
+                <h1 style="color:#0B1F3B;margin:0 0 8px;font-size:24px;">Thanks for reaching out, ${escapeHtml(firstName)}! 👋</h1>
+                <p style="color:#555;margin:0;font-size:15px;line-height:1.5;">We've received your message and a real human from the NexusFlo24 team will get back to you within 24 hours.</p>
+              </div>
+              <div style="background:#f7f8fb;border-radius:10px;padding:18px 20px;margin:24px 0;">
+                <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#0B1F3B;text-transform:uppercase;letter-spacing:0.5px;">What happens next</p>
+                <ul style="margin:0;padding-left:18px;color:#333;font-size:14px;line-height:1.7;">
+                  <li>Our team reviews your request (usually within a few hours)</li>
+                  <li>We reply by email with next steps or a quick question</li>
+                  <li>If you booked a demo, we'll confirm your time slot</li>
+                </ul>
+              </div>
+              <div style="text-align:center;margin:28px 0 12px;">
+                <a href="https://nexusflo24.com" style="display:inline-block;background:#0B1F3B;color:#D4AF37;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Visit NexusFlo24 →</a>
+              </div>
+              <p style="text-align:center;color:#999;font-size:12px;margin-top:24px;">
+                Need us sooner? Email <a href="mailto:admin@nexusflo24.com" style="color:#0B1F3B;">admin@nexusflo24.com</a> or WhatsApp <a href="https://wa.me/447517327597" style="color:#0B1F3B;">+44 7517 327597</a>.
+              </p>
+              <p style="text-align:center;color:#bbb;font-size:11px;margin-top:16px;">NexusFlo24 • AI-Powered Marketing Automation</p>
+            </div>
+          `;
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: emailFrom,
+              to: [lead_email],
+              subject: `Thanks for contacting NexusFlo24, ${firstName}!`,
+              html,
+            }),
+          });
+          result.confirmation_email = res.ok ? "sent" : `error ${res.status}`;
+        } else {
+          result.confirmation_email = "no resend key";
+        }
+      } catch (e) {
+        console.error("[notify-form-submission] confirmation email error:", e);
+        result.confirmation_email = "error";
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true, result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
