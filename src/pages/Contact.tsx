@@ -27,6 +27,7 @@ const Contact = () => {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     company: "",
     message:
       subject === "demo"
@@ -51,6 +52,7 @@ const Contact = () => {
       await capture({
         full_name: form.name,
         email: form.email,
+        phone: form.phone || undefined,
         source: "Contact",
         tags: ["website-signup", "contact-form", ...(subject ? [`contact-${subject}`] : [])],
         notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Message: ${form.message}`,
@@ -207,21 +209,40 @@ const Contact = () => {
                           </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                          <Label
-                            htmlFor="company"
-                            className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
-                          >
-                            Company (Optional)
-                          </Label>
-                          <Input
-                            id="company"
-                            value={form.company}
-                            onChange={(e) => setForm({ ...form, company: e.target.value })}
-                            placeholder="Your organization"
-                            maxLength={100}
-                            className="h-12 rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
-                          />
+                        <div className="grid gap-5 md:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label
+                              htmlFor="phone"
+                              className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                            >
+                              Phone (Optional)
+                            </Label>
+                            <Input
+                              id="phone"
+                              type="tel"
+                              value={form.phone}
+                              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                              placeholder="+44 7517 327597"
+                              maxLength={30}
+                              className="h-12 rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label
+                              htmlFor="company"
+                              className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                            >
+                              Company (Optional)
+                            </Label>
+                            <Input
+                              id="company"
+                              value={form.company}
+                              onChange={(e) => setForm({ ...form, company: e.target.value })}
+                              placeholder="Your organization"
+                              maxLength={100}
+                              className="h-12 rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
+                            />
+                          </div>
                         </div>
 
                         <div className="space-y-1.5">
