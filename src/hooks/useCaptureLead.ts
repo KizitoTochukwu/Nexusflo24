@@ -57,6 +57,7 @@ export function useCaptureLead() {
           tags: input.tags,
           notes: `${input.notes}${utmNote}`,
           meta,
+          ...(input.lead_destination ? { lead_destination: input.lead_destination } : {}),
         },
       });
 
