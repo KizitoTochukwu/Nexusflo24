@@ -138,11 +138,11 @@ const Contact = () => {
 
                 <h1 className="mb-6 text-4xl font-bold leading-[1.1] text-primary-foreground md:text-5xl lg:text-6xl">
                   Let's help you{" "}
-                  <span className="bg-gradient-gold bg-clip-text text-transparent">automate your sales</span>{" "}
+                  <span className="bg-gradient-gold bg-clip-text text-transparent bg-slate-200">automate your sales</span>{" "}
                   & follow-up
                 </h1>
                 <p className="mb-10 max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl">
-                  Questions, demo requests, or partnership ideas — our team replies fast and personally.
+                  Whether you need help getting started, booking a demo, or growing your business with automation — the NexusFlo24 team is here to help.
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
