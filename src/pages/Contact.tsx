@@ -64,18 +64,35 @@ const Contact = () => {
       return;
     }
     try {
+      const tagSlug = (s: string) =>
+        s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const extraTags: string[] = [];
+      if (form.industry) extraTags.push(`industry-${tagSlug(form.industry)}`);
+      if (form.interest) extraTags.push(`interest-${tagSlug(form.interest)}`);
+
       await capture({
         full_name: form.name,
         email: form.email,
         phone: form.phone || undefined,
         source: "Contact",
-        tags: ["website-signup", "contact-form", ...(subject ? [`contact-${subject}`] : [])],
+        tags: [
+          "website-signup",
+          "contact-form",
+          ...(subject ? [`contact-${subject}`] : []),
+          ...extraTags,
+        ],
         notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Industry: ${form.industry || "N/A"}. Interested in: ${form.interest || "N/A"}. Message: ${form.message}`,
         formId: "contact-form",
         page: "/contact",
-      });
+        lead_destination: {
+          folder_name: "Contact Form",
+          apply_tags: extraTags,
+          source: "Contact Page",
+          pipeline_stage: "new_lead",
+        },
+      } as any);
 
-      // Fire-and-forget admin notification (Email + WhatsApp). Never block UX.
+      // Fire-and-forget admin notification + lead confirmation email
       supabase.functions
         .invoke("notify-form-submission", {
           body: {
@@ -97,6 +114,7 @@ const Contact = () => {
             notify_channels: { email: true, whatsapp: true, sms: false },
             notify_emails: ["admin@nexusflo24.com"],
             notify_phones: ["+447517327597"],
+            send_confirmation: true,
           },
         })
         .catch((err) => console.error("notify-form-submission error:", err));

@@ -10,6 +10,12 @@ interface CaptureLeadInput {
   notes: string;
   formId: string;
   page: string;
+  lead_destination?: {
+    folder_name?: string;
+    apply_tags?: string[];
+    source?: string;
+    pipeline_stage?: string;
+  };
 }
 
 function getUtmParams() {
@@ -51,6 +57,7 @@ export function useCaptureLead() {
           tags: input.tags,
           notes: `${input.notes}${utmNote}`,
           meta,
+          ...(input.lead_destination ? { lead_destination: input.lead_destination } : {}),
         },
       });
 
