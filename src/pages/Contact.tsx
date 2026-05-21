@@ -257,7 +257,7 @@ const Contact = () => {
                               htmlFor="phone"
                               className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
                             >
-                              Phone (Optional)
+                              Phone Number
                             </Label>
                             <Input
                               id="phone"
@@ -274,7 +274,7 @@ const Contact = () => {
                               htmlFor="company"
                               className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
                             >
-                              Company (Optional)
+                              Company / Business Name
                             </Label>
                             <Input
                               id="company"
@@ -287,23 +287,101 @@ const Contact = () => {
                           </div>
                         </div>
 
+                        <div className="grid gap-5 md:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label
+                              htmlFor="industry"
+                              className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                            >
+                              Business Type / Industry
+                            </Label>
+                            <Select
+                              value={form.industry}
+                              onValueChange={(v) => setForm({ ...form, industry: v })}
+                            >
+                              <SelectTrigger
+                                id="industry"
+                                className="h-12 rounded-xl text-sm focus:border-accent focus:ring-4 focus:ring-accent/10"
+                              >
+                                <SelectValue placeholder="Select your industry" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[
+                                  "Coaching & Consulting",
+                                  "E-commerce & Retail",
+                                  "Real Estate",
+                                  "Health & Wellness",
+                                  "Education & Training",
+                                  "Agency / Marketing",
+                                  "SaaS & Technology",
+                                  "Finance & Insurance",
+                                  "Hospitality & Travel",
+                                  "Creator / Influencer",
+                                  "Non-profit",
+                                  "Other",
+                                ].map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label
+                              htmlFor="interest"
+                              className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+                            >
+                              What are you interested in?
+                            </Label>
+                            <Select
+                              value={form.interest}
+                              onValueChange={(v) => setForm({ ...form, interest: v })}
+                            >
+                              <SelectTrigger
+                                id="interest"
+                                className="h-12 rounded-xl text-sm focus:border-accent focus:ring-4 focus:ring-accent/10"
+                              >
+                                <SelectValue placeholder="Choose an option" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[
+                                  "Demo Request",
+                                  "Automation Setup",
+                                  "Funnel Building",
+                                  "Lead Generation",
+                                  "WhatsApp Automation",
+                                  "CRM Setup",
+                                  "Partnership Inquiry",
+                                  "Support",
+                                ].map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
                         <div className="space-y-1.5">
                           <Label
                             htmlFor="message"
                             className="ml-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
                           >
-                            Message
+                            Message / Goal
                           </Label>
                           <Textarea
                             id="message"
                             value={form.message}
                             onChange={(e) => setForm({ ...form, message: e.target.value })}
-                            placeholder="Tell us how we can help..."
+                            placeholder="Tell us about your goal or what you'd like to achieve..."
                             rows={4}
                             maxLength={1000}
                             className="resize-none rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
                           />
                         </div>
+
 
                         <Button
                           type="submit"
