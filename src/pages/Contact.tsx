@@ -389,7 +389,7 @@ const Contact = () => {
                           className="group h-14 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-primary/20"
                         >
                           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          <span>Send message</span>
+                          <span>Submit Request</span>
                           <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </Button>
 
