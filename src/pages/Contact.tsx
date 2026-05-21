@@ -395,7 +395,7 @@ const Contact = () => {
 
                         <p className="px-4 text-center text-[10px] text-muted-foreground">
                           By submitting, you agree to our{" "}
-                          <a href="/legal/privacy-policy" className="underline hover:text-accent">
+                          <a href="https://nexusflo24.com/privacy-policy" className="underline hover:text-accent">
                             Privacy Policy
                           </a>
                           . We never share your personal data.
