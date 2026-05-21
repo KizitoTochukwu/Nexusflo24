@@ -27,6 +27,7 @@ const Contact = () => {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     company: "",
     message:
       subject === "demo"
