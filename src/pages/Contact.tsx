@@ -20,6 +20,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useCaptureLead } from "@/hooks/useCaptureLead";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const [searchParams] = useSearchParams();
