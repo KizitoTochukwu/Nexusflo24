@@ -30,6 +30,13 @@ const Contact = () => {
     email: "",
     phone: "",
     company: "",
+    industry: "",
+    interest:
+      subject === "demo"
+        ? "Demo Request"
+        : subject === "sales"
+          ? "Automation Setup"
+          : "",
     message:
       subject === "demo"
         ? "I'd like to book a demo of NexusFlo24."
