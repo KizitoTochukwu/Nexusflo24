@@ -192,7 +192,7 @@ const Contact = () => {
                   ) : (
                     <>
                       <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-foreground">Send us a message</h2>
+                        <h2 className="text-2xl font-bold text-foreground">Tell Us What You Need</h2>
                         <p className="mt-1 text-sm text-muted-foreground">
                           We'll route your request to the right specialist.
                         </p>
