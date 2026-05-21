@@ -87,6 +87,8 @@ const Contact = () => {
               Email: form.email,
               Phone: form.phone || "—",
               Company: form.company || "—",
+              Industry: form.industry || "—",
+              "Interested in": form.interest || "—",
               Subject: subject || "general",
               Message: form.message,
             },
