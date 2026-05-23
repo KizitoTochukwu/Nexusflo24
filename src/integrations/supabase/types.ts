@@ -3278,6 +3278,40 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_public_booking_page: {
+        Args: { p_slug: string }
+        Returns: {
+          buffer_minutes: number
+          color: string
+          description: string
+          duration_minutes: number
+          id: string
+          location_type: string
+          location_value: string
+          max_days_ahead: number
+          name: string
+          slug: string
+          status: string
+        }[]
+      }
+      get_public_booking_slug: {
+        Args: { p_id: string }
+        Returns: {
+          slug: string
+          status: string
+        }[]
+      }
+      get_workspace_public_pixels: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          ga4_enabled: boolean
+          ga4_measurement_id: string
+          gtm_enabled: boolean
+          gtm_id: string
+          meta_enabled: boolean
+          meta_pixel_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -460,12 +460,10 @@ function BookingButton({ props: p, bookingPageId }: { props: Record<string, unkn
 
   useEffect(() => {
     (async () => {
-      const { data } = await (await import("@/integrations/supabase/client")).supabase
-        .from("booking_pages" as any)
-        .select("slug")
-        .eq("id", bookingPageId)
-        .maybeSingle();
-      if ((data as any)?.slug) setSlug((data as any).slug as string);
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.rpc("get_public_booking_slug" as any, { p_id: bookingPageId });
+      const row = Array.isArray(data) ? data[0] : data;
+      if ((row as any)?.slug) setSlug((row as any).slug as string);
     })();
   }, [bookingPageId]);
 
