@@ -164,9 +164,9 @@ const Contact = () => {
               }}
             />
 
-            <div className="relative z-10 grid lg:grid-cols-2">
-              {/* LEFT — editorial */}
-              <div className="flex flex-col justify-center p-8 md:p-14 lg:p-16">
+            <div className="relative z-10 grid lg:grid-cols-2 lg:grid-rows-[auto_1fr]">
+              {/* LEFT TOP — heading */}
+              <div className="order-1 flex flex-col justify-center p-8 pb-0 md:p-14 md:pb-0 lg:col-start-1 lg:row-start-1 lg:p-16 lg:pb-0">
                 <span className="mb-8 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 backdrop-blur">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
                   <span className="text-xs font-semibold uppercase tracking-widest text-accent">
@@ -179,10 +179,13 @@ const Contact = () => {
                   <span className="bg-gradient-gold bg-clip-text text-amber-400 bg-slate-200">automate your sales</span>{" "}
                   & follow-up
                 </h1>
-                <p className="mb-10 max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl">
+                <p className="max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl lg:mb-10">
                   Whether you need help getting started, booking a demo, or growing your business with automation — the NexusFlo24 team is here to help.
                 </p>
+              </div>
 
+              {/* LEFT BOTTOM — channels + trust (moved below the form on mobile) */}
+              <div className="order-3 flex flex-col justify-center p-8 pt-10 md:p-14 md:pt-10 lg:col-start-1 lg:row-start-2 lg:order-2 lg:p-16 lg:pt-0">
                 <div className="grid grid-cols-2 gap-4">
                   {channels.map((c) => (
                     <div
@@ -213,7 +216,8 @@ const Contact = () => {
               </div>
 
               {/* RIGHT — form */}
-              <div className="flex items-center p-6 md:p-10 lg:p-12">
+              <div className="order-2 flex items-center p-6 md:p-10 lg:order-3 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:p-12">
+
                 <div className="relative w-full overflow-hidden rounded-3xl bg-card p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.45)] md:p-10">
                   <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-gold" />
 
