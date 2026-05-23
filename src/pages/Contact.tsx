@@ -187,7 +187,7 @@ const Contact = () => {
                   {channels.map((c) => (
                     <div
                       key={c.title}
-                      className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
+                      className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-colors hover:border-accent/40"
                     >
                       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 transition-transform group-hover:scale-110">
                         <c.icon className="h-5 w-5 text-accent" />
