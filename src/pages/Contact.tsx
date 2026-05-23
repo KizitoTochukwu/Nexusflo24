@@ -176,7 +176,7 @@ const Contact = () => {
 
                 <h1 className="mb-6 text-4xl font-bold leading-[1.1] text-primary-foreground md:text-5xl lg:text-6xl">
                   Let's help you{" "}
-                  <span className="bg-gradient-gold bg-clip-text bg-slate-200 text-amber-400">automate your sales</span>{" "}
+                  <span className="bg-gradient-gold bg-clip-text text-amber-400 bg-slate-200">automate your sales</span>{" "}
                   & follow-up
                 </h1>
                 <p className="mb-10 max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl">
