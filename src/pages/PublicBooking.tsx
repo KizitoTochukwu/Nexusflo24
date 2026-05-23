@@ -66,14 +66,10 @@ export default function PublicBooking() {
   useEffect(() => {
     if (!slug) return;
     (async () => {
-      const { data, error: err } = await supabase
-        .from("booking_pages" as any)
-        .select("*")
-        .eq("slug", slug)
-        .eq("status", "active")
-        .maybeSingle();
-      if (err || !data) setError("Booking page not found.");
-      else setPage(data as unknown as BookingPage);
+      const { data, error: err } = await supabase.rpc("get_public_booking_page" as any, { p_slug: slug });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (err || !row) setError("Booking page not found.");
+      else setPage(row as unknown as BookingPage);
       setLoading(false);
     })();
   }, [slug]);

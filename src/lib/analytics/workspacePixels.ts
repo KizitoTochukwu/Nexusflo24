@@ -34,13 +34,13 @@ const TAG_ATTR = "data-nf24-ws-pixel";
 
 export async function loadWorkspacePixels(workspaceId: string): Promise<WorkspacePixelConfig | null> {
   if (!workspaceId) return null;
-  const { data, error } = await supabase
-    .from("workspace_tracking_pixels")
-    .select("meta_pixel_id, meta_enabled, ga4_measurement_id, ga4_enabled, gtm_id, gtm_enabled")
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_workspace_public_pixels" as any, {
+    p_workspace_id: workspaceId,
+  });
   if (error || !data) return null;
-  return data as WorkspacePixelConfig;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return row as WorkspacePixelConfig;
 }
 
 /** Remove all previously-injected pixels for the given (or any) workspace. */
