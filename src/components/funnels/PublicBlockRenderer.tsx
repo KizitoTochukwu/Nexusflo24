@@ -122,7 +122,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
             <Tag
               className={headingClass}
               style={baseStyle}
-              dangerouslySetInnerHTML={{ __html: sanitizedText }}
+              dangerouslySetInnerHTML={{ __html: cleanHtml(sanitizedText) }}
             />
           </div>
         );
@@ -161,7 +161,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
             <div
               className="text-base md:text-lg leading-relaxed"
               style={textStyle}
-              dangerouslySetInnerHTML={{ __html: resolvedText }}
+              dangerouslySetInnerHTML={{ __html: cleanHtml(resolvedText) }}
             />
           </div>
         );
