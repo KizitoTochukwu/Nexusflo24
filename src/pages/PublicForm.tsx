@@ -13,14 +13,10 @@ export default function PublicForm() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("forms")
-        .select("*")
-        .eq("slug", slug!)
-        .eq("status", "active")
-        .maybeSingle();
+      const { data } = await supabase.rpc("get_public_form" as any, { p_slug: slug! });
+      const row = Array.isArray(data) ? data[0] : data;
       if (!cancelled) {
-        setForm(data as unknown as FormRecord | null);
+        setForm((row ?? null) as unknown as FormRecord | null);
         setLoading(false);
       }
     })();

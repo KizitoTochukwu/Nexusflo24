@@ -3301,6 +3301,23 @@ export type Database = {
           status: string
         }[]
       }
+      get_public_form: {
+        Args: { p_slug: string }
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          schema: Json
+          settings: Json
+          slug: string
+          status: string
+          submission_count: number
+          theme: Json
+          updated_at: string
+          workspace_id: string
+        }[]
+      }
       get_workspace_public_pixels: {
         Args: { p_workspace_id: string }
         Returns: {

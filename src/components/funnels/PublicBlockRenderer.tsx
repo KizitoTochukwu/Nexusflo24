@@ -1,9 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
+import DOMPurify from "dompurify";
 import type { Block } from "@/components/funnels/builder/blockTypes";
 import { parseVideoUrl, buildEmbedParams } from "@/components/funnels/builder/videoUtils";
 import CountdownBlock, { getCountdownPropsFromBlock } from "@/components/funnels/builder/CountdownBlock";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
+
+const cleanHtml = (html: string) =>
+  DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["b", "i", "u", "em", "strong", "a", "br", "span", "p", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "small", "sub", "sup"],
+    ALLOWED_ATTR: ["href", "target", "rel", "style", "class"],
+    ALLOW_DATA_ATTR: false,
+  });
 
 interface Props {
   blocks: Block[];
@@ -114,7 +122,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
             <Tag
               className={headingClass}
               style={baseStyle}
-              dangerouslySetInnerHTML={{ __html: sanitizedText }}
+              dangerouslySetInnerHTML={{ __html: cleanHtml(sanitizedText) }}
             />
           </div>
         );
@@ -153,7 +161,7 @@ function RenderBlock({ block, onFormSubmit, formSubmitting, leadData = {} }: { b
             <div
               className="text-base md:text-lg leading-relaxed"
               style={textStyle}
-              dangerouslySetInnerHTML={{ __html: resolvedText }}
+              dangerouslySetInnerHTML={{ __html: cleanHtml(resolvedText) }}
             />
           </div>
         );
