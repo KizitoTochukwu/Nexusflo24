@@ -1,55 +1,112 @@
-## Current status vs. your requirements
 
+# WhatsApp Cloud API — "It Just Works" Wiring
 
-| Requirement                         | Status           | Notes                                                                                        |
-| ----------------------------------- | ---------------- | -------------------------------------------------------------------------------------------- |
-| Save lead to CRM                    | ✅ Wired          | `capture-lead` inserts/dedups, assigns round-robin, routes to "Contact Form" folder          |
-| **+10 lead score**                  | ✅ Already active | `capture-lead` sets `score: 10` on new leads                                                 |
-| **Welcome email to lead**           | ✅ Already active | `notify-form-submission` sends branded Navy/Gold confirmation email via Resend               |
-| **Notify internal team/admin**      | ✅ Already active | Email to `admin@nexusflo24.com` + WhatsApp to `+447517327597`                                |
-| Folder-based automations            | ✅ Active         | "Contact Form" folder auto-created; fires any active `lead_added_to_folder` automation       |
-| **Tag: `contact-lead**`             | ❌ Missing        | Today only `website-signup`, `contact-form`, `contact-{subject}`, `industry-…`, `interest-…` |
-| **Tag: `demo-interest**`            | ❌ Missing        | Need to derive from "Interested in" = Demo Request                                           |
-| **Tag: `support-request**`          | ❌ Missing        | Need to derive from "Interested in" = Support                                                |
-| **WhatsApp follows up on the lead** | ❌ Missing        | Today WA only goes to admin, not to the submitter                                            |
+Goal: match HubSpot / ManyChat / Wati behavior. User writes a message → it gets delivered, regardless of the 24h window, by automatically swapping in an approved Marketing template when needed. Pricing is transparent, fallbacks are explicit, and the UI surfaces what happened.
 
+## How it will feel to the user
 
-## Plan to close the 2 gaps
+- **Inbox**: typing inside an open thread sends free text. If the 24h window is closed, the composer shows a small banner "Window closed — sending as approved template (~£0.04)" and a template picker pre-selected to the workspace default. One click sends.
+- **Campaigns (WhatsApp)**: step always asks for a "Re-engagement template" (any approved Marketing template). Free-text body becomes the `{{1}}` variable. Sending shows "X delivered, Y via template, Z blocked (no template configured)".
+- **Automations (WhatsApp step)**: same template picker baked into the step editor, with the same auto-fill behavior.
+- **Settings → Channels → WhatsApp**: new "Default re-engagement template" dropdown (populated from `whatsapp_templates` where `status = approved` and `category = MARKETING`). Tooltip explains the 24h rule and per-message cost.
 
-### 1. Add the three required tags (frontend — `src/pages/Contact.tsx`)
+## What gets built
 
-Append to the existing `tags` + `lead_destination.apply_tags` arrays:
+### 1. Backend — `whatsapp-send` becomes self-healing
 
-- Always add `contact-lead`
-- If `form.interest === "Demo Request"` → add `demo-interest`
-- If `form.interest === "Support"` → add `support-request`
+In `supabase/functions/whatsapp-send/index.ts`, when caller sends free text AND window is closed:
+1. Look up `whatsapp_settings.default_reengagement_template_id` for the workspace.
+2. If set → load template from `whatsapp_templates`, build payload with the original `body` injected as `{{1}}`, send to Graph as `type: "template"`.
+3. Log `whatsapp_messages` row with `auto_templated: true`, `template_name`, `original_body`, `category: "marketing"`.
+4. Return `success: true, auto_templated: true, template_used: <name>`.
+5. If no default template configured → keep current `success:false, fallback:true, reason:"window_closed"` behavior so SMS/email fallback still fires.
 
-This keeps the existing `industry-…` / `interest-…` slug tags AND gives you the canonical tags you listed. Any automation in the Automation Builder using trigger `lead_tagged` with tag `demo-interest` / `support-request` / `contact-lead` will fire automatically (folder trigger already fires too).
+No change to behavior when caller already passes an explicit `template`.
 
-### 2. Send WhatsApp follow-up to the lead (when phone exists)
+### 2. Database — one column + one log field
 
-In `supabase/functions/notify-form-submission/index.ts`, add a new branch (mirrors the confirmation-email branch):
+Migration:
+- `ALTER TABLE whatsapp_settings ADD COLUMN default_reengagement_template_id uuid REFERENCES whatsapp_templates(id) ON DELETE SET NULL;`
+- `ALTER TABLE whatsapp_messages ADD COLUMN auto_templated boolean NOT NULL DEFAULT false;`
+- `ALTER TABLE whatsapp_messages ADD COLUMN template_name text;`
 
-- Trigger when `body.send_lead_whatsapp === true` AND a valid lead phone is present.
-- Call existing `whatsapp-send` edge function with the lead's phone and a short personalised message (e.g. "Hi {firstName}, thanks for contacting NexusFlo24! We've received your request and a specialist will reach out within 24h. — Team NexusFlo24").
-- Respect the WA 24h-window rule already standardized in the project: if `whatsapp-send` returns `success:false + fallback:true`, log it and skip silently (don't send `hello_world`). Result recorded in `result.lead_whatsapp`.
+(Re-uses existing `whatsapp_templates` table — no new table needed.)
 
-Then in `Contact.tsx`, pass `lead_phone: form.phone` and `send_lead_whatsapp: true` in the `notify-form-submission` body (only when a phone was entered).
+### 3. Settings UI
 
-### Files touched
+`src/components/settings/ChannelSettingsTab.tsx` (WhatsApp section):
+- Add "Default re-engagement template" `<Select>` populated from approved Marketing templates.
+- Helper text: "When a contact hasn't messaged you in 24h, WhatsApp blocks free text. We'll automatically send this approved template instead (~£0.04 per message). Your text goes into the {{1}} variable."
+- Link to "Manage templates" → existing `WhatsAppTemplatesTab`.
 
-- `src/pages/Contact.tsx` — add 3 conditional tags + pass lead phone / `send_lead_whatsapp` flag.
-- `supabase/functions/notify-form-submission/index.ts` — add lead-WhatsApp branch.
-- Deploy `notify-form-submission`.
+### 4. Campaign UI
 
-### Verification after build
+`src/components/campaigns/CreateCampaignDialog.tsx` (when channel = whatsapp or multi-channel):
+- New "Re-engagement template" field (defaults to workspace default).
+- Stored in `campaigns.message_content.whatsappTemplate` (already used by `execute-campaign`).
+- Inline cost badge: "~£0.04 per message outside 24h window".
 
-- Submit the contact form with "Demo Request" + a phone → check `leads.tags` contains `contact-lead` + `demo-interest`, `score=10`, lead lands in "Contact Form" folder, confirmation email arrives, admin email + WA arrive, and lead receives WA (if within 24h window).
-- Submit with "Support" + no phone → tags include `contact-lead` + `support-request`, no lead WA attempted.
+`src/components/campaigns/CampaignAnalytics.tsx`:
+- Add counters: `delivered_via_template`, `blocked_window_closed`.
+- Banner when `blocked_window_closed > 0`: "X messages blocked — configure a re-engagement template to recover these automatically." → CTA to Settings.
 
-### Note on automations
+### 5. Automation UI
 
-The platform fires automations automatically on:
+`src/components/automations/AutomationStepEditor.tsx` (WhatsApp action type):
+- Same template picker as Campaigns. Stores `step.config.whatsappTemplate`.
+- `execute-automation` already forwards arbitrary config to `whatsapp-send` — just needs to pass `template` through (small edit).
 
-- `lead_added_to_folder` ("Contact Form" — already wired)
-- `lead_tagged` (specific tag) — so to wire "send welcome email + WA on demo interest" as a Builder automation, you create one in the Automation Builder with trigger `lead_tagged` = `demo-interest`. The tags this plan adds will make those triggers fire correctly.
+### 6. Inbox UI
+
+`src/pages/dashboard/DashboardMessages.tsx` + WhatsApp thread composer:
+- Compute `is_window_open` from latest inbound message timestamp (< 24h).
+- When closed: show amber banner above composer with template picker (default = workspace default).
+- Send button label switches to "Send as template (~£0.04)" when window closed.
+- After send, show in thread as "Sent via template: {name}" pill.
+
+### 7. Reporting touch
+
+Update `useDashboardMetrics` (or campaign report queries) to surface `auto_templated` count so users see "Re-engagement templates used: N (£N.NN)".
+
+## Files touched (estimate)
+
+```text
+Backend
+  supabase/functions/whatsapp-send/index.ts          (auto-template logic)
+  supabase/functions/execute-automation/index.ts     (pass template through)
+  supabase/migrations/<new>.sql                       (2 columns)
+
+Settings
+  src/components/settings/ChannelSettingsTab.tsx
+  src/hooks/useChannelSettings.ts (if exists)
+
+Campaigns
+  src/components/campaigns/CreateCampaignDialog.tsx
+  src/components/campaigns/CampaignAnalytics.tsx
+  src/components/campaigns/CampaignDetailsDrawer.tsx
+
+Automations
+  src/components/automations/AutomationStepEditor.tsx
+
+Inbox
+  src/pages/dashboard/DashboardMessages.tsx
+  src/hooks/useWhatsAppInbox.ts                       (expose last_inbound_at)
+  + small composer component for window banner
+
+Shared
+  src/hooks/useWhatsAppTemplates.ts (new — approved Marketing templates)
+```
+
+## Out of scope (intentionally)
+
+- Submitting new templates to Meta from inside the app (use existing `WhatsAppTemplatesTab` flow).
+- Per-template pricing tiers per country (show single "~£0.04" indicative price; Meta bills actuals).
+- Sessions-based bulk re-opening of windows (no API exists for this — that's the whole point of templates).
+
+## Risk / caveats called out to user
+
+- User must have **at least one approved Marketing template** for the auto-recovery to work. UI will prompt them to create one if none exists.
+- Meta charges per conversation (~£0.04 marketing) — surfaced everywhere a template send can happen so there are no billing surprises.
+- Templates can be rejected by Meta; we'll show `status` from `whatsapp_templates` and only allow `approved` ones in pickers.
+
+Approve to switch to build mode and I'll ship it in this order: migration → `whatsapp-send` logic → Settings picker → Campaign/Automation steps → Inbox composer → analytics counters.
