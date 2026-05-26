@@ -10,10 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useApprovedWhatsAppTemplates, useWhatsAppSettings, useUpdateDefaultReengagementTemplate } from "@/hooks/useWhatsAppTemplates";
 import {
   Mail, Smartphone, MessageCircle, Loader2, Save, ChevronDown,
   CheckCircle2, XCircle, Unplug, Send, Globe, Copy, RefreshCw,
-  Phone, ShieldCheck, ExternalLink, ArrowRight, ArrowLeft,
+  Phone, ShieldCheck, ExternalLink, ArrowRight, ArrowLeft, Sparkles,
 } from "lucide-react";
 
 interface ChannelStatus {
