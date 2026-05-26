@@ -311,6 +311,34 @@ export default function DashboardMessages() {
                 </div>
 
 
+                {/* WhatsApp 24h window status banner */}
+                {selectedThread.channel === "whatsapp" && !templateMode && (
+                  waWindowOpen ? (
+                    <div className="mx-3 mt-3 rounded-md bg-green-50 border border-green-200 px-3 py-1.5 text-[11px] text-green-800 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      24h window open — free-form replies allowed
+                    </div>
+                  ) : defaultTemplate ? (
+                    <div className="mx-3 mt-3 rounded-md bg-accent/10 border border-accent/30 px-3 py-1.5 text-[11px] text-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-accent" />
+                      <span>
+                        Window closed — your message will auto-send as template{" "}
+                        <strong>{defaultTemplate.name}</strong> (~£0.04)
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mx-3 mt-3 rounded-md bg-amber-50 border border-amber-200 px-3 py-1.5 text-[11px] text-amber-900 flex items-center gap-1.5">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>
+                        Window closed — sends will fail.{" "}
+                        <a href={`/dashboard/${workspaceId}/settings?tab=channels`} className="underline font-medium">
+                          Set a default re-engagement template
+                        </a>
+                      </span>
+                    </div>
+                  )
+                )}
+
                 {/* Template selector */}
                 {templateMode && selectedThread.channel === "whatsapp" && (
                   <div className="mx-3 mt-3 p-3 rounded-lg bg-muted/50 border space-y-2">
