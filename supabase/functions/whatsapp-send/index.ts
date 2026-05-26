@@ -368,6 +368,8 @@ Deno.serve(async (req) => {
       message_type: effectiveTemplate ? "template" : type,
       body: sentLogBody,
       status: "sent",
+      auto_templated: autoTemplated,
+      template_name: effectiveTemplate?.name || null,
       ...(leadId ? { lead_id: leadId } : {}),
     });
 
@@ -381,7 +383,7 @@ Deno.serve(async (req) => {
         .eq("delivery_status", "pending");
     }
 
-    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source, autoTemplated }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source, autoTemplated, templateUsed: effectiveTemplate?.name }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("whatsapp-send error:", err);
     return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send WhatsApp message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
