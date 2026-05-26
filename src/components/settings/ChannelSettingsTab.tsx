@@ -495,6 +495,71 @@ function WhatsAppWizard({ onComplete }: { onComplete: (config: Record<string, st
   );
 }
 
+// ── WhatsApp Re-engagement Template Picker ──
+// Lets the workspace pick a default APPROVED Marketing template that the
+// backend will auto-send (with the user's text in {{1}}) whenever an
+// outbound free-form WhatsApp message lands outside the 24h window.
+// This is what makes the channel "feel automatic" — same behavior as
+// HubSpot / ManyChat / Wati.
+function ReengagementTemplatePicker({ workspaceId }: { workspaceId: string }) {
+  const { data: settings, isLoading: settingsLoading } = useWhatsAppSettings(workspaceId);
+  const { data: templates = [], isLoading: tplLoading } = useApprovedWhatsAppTemplates(workspaceId);
+  const updateMut = useUpdateDefaultReengagementTemplate(workspaceId);
+
+  const currentId = settings?.default_reengagement_template_id || "";
+  const marketingTpls = templates.filter((t) => t.category?.toUpperCase() === "MARKETING" || t.category?.toUpperCase() === "UTILITY");
+
+  return (
+    <div className="space-y-2 rounded-md border border-accent/30 bg-accent/5 p-3">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-accent" />
+        <Label className="text-sm font-semibold text-foreground">
+          Default re-engagement template
+        </Label>
+        <Badge variant="outline" className="text-[10px] h-4">Auto-recover</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        WhatsApp blocks free-form text outside the 24h customer-care window.
+        When set, we'll automatically send this approved template instead and
+        inject your message into the <code className="text-[11px] bg-muted px-1 rounded">{`{{1}}`}</code> body
+        variable. Meta charges ~£0.04 per re-engagement conversation.
+      </p>
+
+      {settingsLoading || tplLoading ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" /> Loading templates…
+        </div>
+      ) : marketingTpls.length === 0 ? (
+        <div className="text-xs text-amber-900 bg-amber-50 border border-amber-300/60 rounded p-2">
+          No approved Marketing or Utility templates yet. Add one in{" "}
+          <strong>Settings → WhatsApp Templates</strong> first, then come back here.
+        </div>
+      ) : (
+        <div className="flex gap-2 items-center">
+          <Select
+            value={currentId || "none"}
+            onValueChange={(v) => updateMut.mutate(v === "none" ? null : v)}
+            disabled={updateMut.isPending}
+          >
+            <SelectTrigger className="flex-1 h-9 text-sm">
+              <SelectValue placeholder="Select a template…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">— None (let sends fail outside 24h) —</SelectItem>
+              {marketingTpls.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name} <span className="text-muted-foreground">· {t.language} · {t.variable_count} vars</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {updateMut.isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ──
 export default function ChannelSettingsTab({ workspaceId }: { workspaceId: string }) {
   const [channels, setChannels] = useState<Record<string, ChannelStatus> | null>(null);
