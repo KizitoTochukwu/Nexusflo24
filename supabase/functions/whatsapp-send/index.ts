@@ -214,47 +214,84 @@ Deno.serve(async (req) => {
     //                                           switch to SMS / Email /
     //                                           prompt the user to pick an
     //                                           approved template.
-    let effectiveTemplate = template;
-    const autoTemplated = false; // legacy field kept in response for back-compat
+    let effectiveTemplate: TemplatePayload | undefined = template;
+    let autoTemplated = false;
 
     if (!template && msgBody) {
       const windowOpen = await isWindowOpen(adminClient, workspaceId, normalizedTo);
       if (!windowOpen) {
-        const errMsg = "WhatsApp 24h window closed — recipient has not messaged you in 24h. Send an approved template, switch channels, or wait for a reply.";
-        console.warn("WA window closed", { workspaceId, to: normalizedTo });
+        // Try to auto-recover: if the workspace has a default re-engagement
+        // template configured, send that template with the user's text
+        // injected as the {{1}} body variable. This mirrors how
+        // HubSpot / ManyChat / Wati hide the 24h window from the user.
+        const { data: waSettings } = await adminClient
+          .from("whatsapp_settings")
+          .select("default_reengagement_template_id")
+          .eq("workspace_id", workspaceId)
+          .maybeSingle();
 
-        await adminClient.from("whatsapp_messages").insert({
-          workspace_id: workspaceId,
-          direction: "outbound",
-          phone_number: normalizedTo,
-          message_type: "text",
-          body: msgBody,
-          status: "failed",
-          error: errMsg,
-          ...(leadId ? { lead_id: leadId } : {}),
-        });
-
-        if (campaignId && leadId) {
-          await adminClient.from("campaign_messages")
-            .update({ delivery_status: "failed", error: errMsg })
-            .eq("campaign_id", campaignId)
-            .eq("lead_id", leadId)
-            .eq("channel", "whatsapp")
-            .eq("delivery_status", "pending");
+        const defaultTplId = waSettings?.default_reengagement_template_id;
+        let defaultTpl: { name: string; language: string; variable_count: number } | null = null;
+        if (defaultTplId) {
+          const { data: tpl } = await adminClient
+            .from("whatsapp_templates")
+            .select("name, language, variable_count, status")
+            .eq("id", defaultTplId)
+            .eq("workspace_id", workspaceId)
+            .maybeSingle();
+          if (tpl && tpl.status === "approved") defaultTpl = tpl as any;
         }
 
-        // HTTP 200 + structured payload so the caller's `error` branch in
-        // supabase.functions.invoke is NOT triggered — the caller reads
-        // `success === false && fallback === true` and routes to fallback.
-        return new Response(JSON.stringify({
-          success: false,
-          fallback: true,
-          reason: "window_closed",
-          error: errMsg,
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        if (defaultTpl) {
+          autoTemplated = true;
+          const components = defaultTpl.variable_count > 0
+            ? [{
+                type: "body",
+                parameters: [{ type: "text", text: msgBody.slice(0, 1024) }],
+              }]
+            : undefined;
+          effectiveTemplate = {
+            name: defaultTpl.name,
+            language: defaultTpl.language || "en",
+            ...(components ? { components } : {}),
+          };
+          console.log("WA window closed — auto-sending via default template", {
+            workspaceId, template: defaultTpl.name,
+          });
+        } else {
+          const errMsg = "WhatsApp 24h window closed — recipient has not messaged you in 24h. Configure a default re-engagement template in Settings → Channels, or send an approved template manually.";
+          console.warn("WA window closed (no default template)", { workspaceId, to: normalizedTo });
+
+          await adminClient.from("whatsapp_messages").insert({
+            workspace_id: workspaceId,
+            direction: "outbound",
+            phone_number: normalizedTo,
+            message_type: "text",
+            body: msgBody,
+            status: "failed",
+            error: errMsg,
+            ...(leadId ? { lead_id: leadId } : {}),
+          });
+
+          if (campaignId && leadId) {
+            await adminClient.from("campaign_messages")
+              .update({ delivery_status: "failed", error: errMsg })
+              .eq("campaign_id", campaignId)
+              .eq("lead_id", leadId)
+              .eq("channel", "whatsapp")
+              .eq("delivery_status", "pending");
+          }
+
+          return new Response(JSON.stringify({
+            success: false,
+            fallback: true,
+            reason: "window_closed",
+            error: errMsg,
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 
