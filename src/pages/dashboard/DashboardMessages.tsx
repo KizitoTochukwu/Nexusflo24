@@ -115,7 +115,29 @@ export default function DashboardMessages() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [currentMessages]);
 
+  // ─── WhatsApp 24h window awareness ───
+  // The backend auto-sends an approved template (workspace default) when the
+  // window is closed, so the user can keep typing freely. We compute the
+  // window state here purely for transparency — to show a small banner that
+  // matches HubSpot / ManyChat / Wati UX.
+  const { data: waSettings } = useWhatsAppSettings(
+    selectedThread?.channel === "whatsapp" ? workspaceId : null,
+  );
+  const { data: approvedTemplates = [] } = useApprovedWhatsAppTemplates(
+    selectedThread?.channel === "whatsapp" ? workspaceId : null,
+  );
+  const lastInboundAt = selectedThread?.channel === "whatsapp"
+    ? waMessages.find((m: any) => m.direction === "inbound")?.created_at
+    : null;
+  const waWindowOpen = lastInboundAt
+    ? (Date.now() - new Date(lastInboundAt).getTime()) < 24 * 60 * 60 * 1000
+    : false;
+  const defaultTemplate = waSettings?.default_reengagement_template_id
+    ? approvedTemplates.find((t) => t.id === waSettings.default_reengagement_template_id)
+    : null;
+
   // Template mode is kept for manual use but 24h auto-fallback is handled server-side
+
 
   const handleSend = async () => {
     if ((!reply.trim() && !templateMode) || !selectedThread || !workspaceId) return;
