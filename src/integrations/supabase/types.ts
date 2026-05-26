@@ -2408,6 +2408,7 @@ export type Database = {
       }
       whatsapp_messages: {
         Row: {
+          auto_templated: boolean
           body: string | null
           created_at: string
           direction: string
@@ -2417,10 +2418,12 @@ export type Database = {
           message_type: string
           phone_number: string
           status: string
+          template_name: string | null
           wa_message_id: string | null
           workspace_id: string
         }
         Insert: {
+          auto_templated?: boolean
           body?: string | null
           created_at?: string
           direction?: string
@@ -2430,10 +2433,12 @@ export type Database = {
           message_type?: string
           phone_number: string
           status?: string
+          template_name?: string | null
           wa_message_id?: string | null
           workspace_id: string
         }
         Update: {
+          auto_templated?: boolean
           body?: string | null
           created_at?: string
           direction?: string
@@ -2443,6 +2448,7 @@ export type Database = {
           message_type?: string
           phone_number?: string
           status?: string
+          template_name?: string | null
           wa_message_id?: string | null
           workspace_id?: string
         }
@@ -2467,6 +2473,7 @@ export type Database = {
         Row: {
           access_token_encrypted: string
           created_at: string
+          default_reengagement_template_id: string | null
           id: string
           is_active: boolean
           phone_number_id: string
@@ -2477,6 +2484,7 @@ export type Database = {
         Insert: {
           access_token_encrypted: string
           created_at?: string
+          default_reengagement_template_id?: string | null
           id?: string
           is_active?: boolean
           phone_number_id: string
@@ -2487,6 +2495,7 @@ export type Database = {
         Update: {
           access_token_encrypted?: string
           created_at?: string
+          default_reengagement_template_id?: string | null
           id?: string
           is_active?: boolean
           phone_number_id?: string
@@ -2495,6 +2504,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_settings_default_reengagement_template_id_fkey"
+            columns: ["default_reengagement_template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_settings_workspace_id_fkey"
             columns: ["workspace_id"]
