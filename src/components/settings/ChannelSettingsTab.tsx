@@ -949,6 +949,9 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   <Button variant="outline" size="sm" onClick={handleTestWhatsApp} disabled={waTestSending}>
                     {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
                   </Button>
+
+                  <Separator />
+                  <ReengagementTemplatePicker workspaceId={workspaceId} />
                 </>
               )}
             </CardContent>
