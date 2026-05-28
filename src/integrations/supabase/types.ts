@@ -3294,6 +3294,14 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_booking_calendar_status: {
+        Args: { p_booking_page_id: string }
+        Returns: {
+          calendar_id: string
+          connected: boolean
+          token_id: string
+        }[]
+      }
       get_public_booking_page: {
         Args: { p_slug: string }
         Returns: {
