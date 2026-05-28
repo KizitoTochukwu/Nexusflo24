@@ -19,22 +19,14 @@ export function useGoogleCalendarStatus(bookingPageId: string | undefined) {
     queryFn: async () => {
       if (!bookingPageId) return null;
       const { data, error } = await supabase
-        .from("booking_pages" as any)
-        .select("google_token_id")
-        .eq("id", bookingPageId)
-        .single();
+        .rpc("get_booking_calendar_status" as any, { p_booking_page_id: bookingPageId })
+        .maybeSingle();
       if (error) throw error;
-      const tokenId = (data as any)?.google_token_id;
-      if (!tokenId) return { connected: false, tokenId: null, calendarId: null };
-
-      const { data: token, error: tErr } = await supabase
-        .from("google_calendar_tokens" as any)
-        .select("id, calendar_id, created_at")
-        .eq("id", tokenId)
-        .single();
-
-      if (tErr || !token) return { connected: false, tokenId: null, calendarId: null };
-      return { connected: true, tokenId: (token as any).id, calendarId: (token as any).calendar_id as string };
+      return {
+        connected: Boolean((data as any)?.connected),
+        tokenId: (data as any)?.token_id ?? null,
+        calendarId: (data as any)?.calendar_id ?? null,
+      };
     },
     enabled: !!user && !!bookingPageId,
   });
