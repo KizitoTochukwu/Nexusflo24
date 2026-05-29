@@ -1,112 +1,120 @@
+# WhatsApp Integration — HubSpot-style wiring
 
-# WhatsApp Cloud API — "It Just Works" Wiring
+Goal: any workspace can click **Connect WhatsApp**, complete Meta's Embedded Signup, and immediately send/receive messages with their approved templates synced automatically — exactly like HubSpot, Wati, ManyChat.
 
-Goal: match HubSpot / ManyChat / Wati behavior. User writes a message → it gets delivered, regardless of the 24h window, by automatically swapping in an approved Marketing template when needed. Pricing is transparent, fallbacks are explicit, and the UI surfaces what happened.
+## What's already in place
+- `whatsapp_settings` (per-workspace phone_number_id + encrypted access_token + default re-engagement template)
+- `whatsapp_templates` (manual entry today)
+- `whatsapp_messages` (inbound + outbound log, with `auto_templated` / `template_name`)
+- `whatsapp-send` edge function with credentials resolver, credit deduction, auto-template-on-window-closed logic (already drafted)
+- `whatsapp-webhook` edge function (inbound + status callbacks)
+- `whatsapp-save-settings` edge function (manual paste flow)
+- Settings → Channels tab with manual phone-id/token form + templates marketplace
 
-## How it will feel to the user
+## What's missing / broken
+1. No one-click Meta connect — users must manually create a Meta app, get a Phone Number ID + permanent token, paste them. >90% drop-off.
+2. Templates are typed by hand — they drift from what Meta actually approved.
+3. Re-engagement auto-template path is coded but never verified end-to-end.
+4. No proof inbound webhook + statuses surface in the dashboard inbox in real time.
+5. Workspaces have no visible "connection health" — token expiry, WABA ID, display name, business verification status are all hidden.
 
-- **Inbox**: typing inside an open thread sends free text. If the 24h window is closed, the composer shows a small banner "Window closed — sending as approved template (~£0.04)" and a template picker pre-selected to the workspace default. One click sends.
-- **Campaigns (WhatsApp)**: step always asks for a "Re-engagement template" (any approved Marketing template). Free-text body becomes the `{{1}}` variable. Sending shows "X delivered, Y via template, Z blocked (no template configured)".
-- **Automations (WhatsApp step)**: same template picker baked into the step editor, with the same auto-fill behavior.
-- **Settings → Channels → WhatsApp**: new "Default re-engagement template" dropdown (populated from `whatsapp_templates` where `status = approved` and `category = MARKETING`). Tooltip explains the 24h rule and per-message cost.
+## Plan
 
-## What gets built
+### 1. Meta Embedded Signup (one-click connect)
+**Frontend** (`ChannelSettingsTab.tsx` → new `WhatsAppConnectCard`):
+- Load Facebook JS SDK (`https://connect.facebook.net/en_US/sdk.js`) on demand.
+- "Connect WhatsApp" button calls `FB.login(...)` with `config_id=<META_EMBEDDED_SIGNUP_CONFIG_ID>`, `response_type='code'`, scope `whatsapp_business_management,whatsapp_business_messaging,business_management`.
+- On success, capture the short-lived `code` + the WABA/phone payload returned via `FB.AppEvents` / `message` event listener.
+- POST `{ code, waba_id, phone_number_id }` to new edge function `whatsapp-embedded-signup`.
 
-### 1. Backend — `whatsapp-send` becomes self-healing
+**New edge function `whatsapp-embedded-signup`**:
+- Exchange `code` → access token via `GET /v21.0/oauth/access_token` using `META_APP_ID` + `META_APP_SECRET`.
+- Call `POST /v21.0/{waba_id}/subscribed_apps` to subscribe our app to the WABA (required for inbound webhooks).
+- Call `POST /v21.0/{phone_number_id}/register` with a PIN to register the phone with Cloud API.
+- Encrypt token, upsert `whatsapp_settings` (workspace_id, phone_number_id, access_token_encrypted, waba_id, display_phone_number, verified_name, is_active=true).
+- Trigger initial template sync (call internal `whatsapp-sync-templates`).
 
-In `supabase/functions/whatsapp-send/index.ts`, when caller sends free text AND window is closed:
-1. Look up `whatsapp_settings.default_reengagement_template_id` for the workspace.
-2. If set → load template from `whatsapp_templates`, build payload with the original `body` injected as `{{1}}`, send to Graph as `type: "template"`.
-3. Log `whatsapp_messages` row with `auto_templated: true`, `template_name`, `original_body`, `category: "marketing"`.
-4. Return `success: true, auto_templated: true, template_used: <name>`.
-5. If no default template configured → keep current `success:false, fallback:true, reason:"window_closed"` behavior so SMS/email fallback still fires.
+**Schema additions** to `whatsapp_settings`:
+- `waba_id text`, `display_phone_number text`, `verified_name text`, `business_account_name text`, `token_expires_at timestamptz null`, `connection_method text default 'manual'` ('manual' | 'embedded_signup').
 
-No change to behavior when caller already passes an explicit `template`.
+**Required new secrets** (will request via `add_secret`):
+- `META_APP_ID` (public — also exposed as `VITE_META_APP_ID` for FB.init)
+- `META_APP_SECRET` (server-only, for code exchange)
+- `META_EMBEDDED_SIGNUP_CONFIG_ID` (public — also `VITE_META_EMBEDDED_SIGNUP_CONFIG_ID`)
 
-### 2. Database — one column + one log field
+User must, in Meta App dashboard: add "WhatsApp" product, set up "Embedded Signup" configuration, whitelist callback domain `nexusflo24.com` + `*.lovable.app`. We'll provide a short setup doc in-app.
 
-Migration:
-- `ALTER TABLE whatsapp_settings ADD COLUMN default_reengagement_template_id uuid REFERENCES whatsapp_templates(id) ON DELETE SET NULL;`
-- `ALTER TABLE whatsapp_messages ADD COLUMN auto_templated boolean NOT NULL DEFAULT false;`
-- `ALTER TABLE whatsapp_messages ADD COLUMN template_name text;`
+Manual paste form stays as a fallback ("Advanced: connect with your own token").
 
-(Re-uses existing `whatsapp_templates` table — no new table needed.)
+### 2. Auto-sync approved templates from Meta
+**New edge function `whatsapp-sync-templates`**:
+- Input: `{ workspace_id }`.
+- Reads `waba_id` + decrypted access_token from `whatsapp_settings`.
+- Fetches `GET /v21.0/{waba_id}/message_templates?limit=100` (paginated).
+- For each template, upsert into `whatsapp_templates` on `(workspace_id, name, language)` with `status` (APPROVED/PENDING/REJECTED → lowercased), `category`, `body_preview` (extracted from BODY component), `variable_count` (count of `{{n}}` in body), and a new `components jsonb` column storing the full Meta component array so `whatsapp-send` can build the exact `components` payload with header/body/button params.
+- Mark templates that exist locally but no longer in Meta as `status='deleted'`.
 
-### 3. Settings UI
+**Schema addition** to `whatsapp_templates`: `components jsonb`, `meta_template_id text`, `last_synced_at timestamptz`.
 
-`src/components/settings/ChannelSettingsTab.tsx` (WhatsApp section):
-- Add "Default re-engagement template" `<Select>` populated from approved Marketing templates.
-- Helper text: "When a contact hasn't messaged you in 24h, WhatsApp blocks free text. We'll automatically send this approved template instead (~£0.04 per message). Your text goes into the {{1}} variable."
-- Link to "Manage templates" → existing `WhatsAppTemplatesTab`.
+**UI** — `WhatsAppTemplatesTab`:
+- Replace "Add template" with "Sync from Meta" button (manual add still available but secondary).
+- Show status badge (approved/pending/rejected) pulled from Meta.
+- Auto-trigger sync on connect, plus a 1×/day cron via `process-scheduled-jobs`.
 
-### 4. Campaign UI
+### 3. Finalize re-engagement fallback (end-to-end)
+- `whatsapp-send` already auto-falls-back to `default_reengagement_template_id`. Two remaining issues:
+  - For templates with variables, currently injects raw `msgBody` as `{{1}}`. Confirm length cap (1024) + escape newlines (Meta rejects `\n` in body params for some categories).
+  - When `effectiveTemplate.components` exists in the synced template, pass them through unchanged instead of rebuilding (handles HEADER + BUTTON params correctly).
+- Add settings UI: if no `default_reengagement_template_id` is set but at least one approved UTILITY/MARKETING template exists, prompt the user to pick one with a yellow banner ("Pick a default template so messages outside the 24h window still deliver").
 
-`src/components/campaigns/CreateCampaignDialog.tsx` (when channel = whatsapp or multi-channel):
-- New "Re-engagement template" field (defaults to workspace default).
-- Stored in `campaigns.message_content.whatsappTemplate` (already used by `execute-campaign`).
-- Inline cost badge: "~£0.04 per message outside 24h window".
+### 4. Inbound webhook + 2-way inbox verification
+- `whatsapp-webhook` already writes inbound rows. Audit it for:
+  - Handles `messages`, `statuses` (sent/delivered/read/failed), and updates matching `whatsapp_messages.status` by `wa_message_id`.
+  - Sets `lead_id` by matching `phone_number` (E.164) against `leads.phone`; creates a lead if none.
+- Realtime: enable `ALTER PUBLICATION supabase_realtime ADD TABLE public.whatsapp_messages` (if not already) so `DashboardMessages` updates live.
+- `DashboardMessages` WhatsApp tab: confirm it subscribes to the channel and renders inbound + outbound threaded by `phone_number`.
 
-`src/components/campaigns/CampaignAnalytics.tsx`:
-- Add counters: `delivered_via_template`, `blocked_window_closed`.
-- Banner when `blocked_window_closed > 0`: "X messages blocked — configure a re-engagement template to recover these automatically." → CTA to Settings.
+### 5. Connection health card
+Small card on Channels tab showing: connected number, verified business name, WABA ID, token age, "Test send to my number" button, "Disconnect" button (revokes `subscribed_apps`, nulls `is_active`).
 
-### 5. Automation UI
+---
 
-`src/components/automations/AutomationStepEditor.tsx` (WhatsApp action type):
-- Same template picker as Campaigns. Stores `step.config.whatsappTemplate`.
-- `execute-automation` already forwards arbitrary config to `whatsapp-send` — just needs to pass `template` through (small edit).
+## Files / deliverables
 
-### 6. Inbox UI
+**New edge functions**
+- `supabase/functions/whatsapp-embedded-signup/index.ts`
+- `supabase/functions/whatsapp-sync-templates/index.ts`
+- `supabase/functions/whatsapp-disconnect/index.ts`
 
-`src/pages/dashboard/DashboardMessages.tsx` + WhatsApp thread composer:
-- Compute `is_window_open` from latest inbound message timestamp (< 24h).
-- When closed: show amber banner above composer with template picker (default = workspace default).
-- Send button label switches to "Send as template (~£0.04)" when window closed.
-- After send, show in thread as "Sent via template: {name}" pill.
+**Edited edge functions**
+- `whatsapp-send`: use synced `components` for templates; tighten variable escaping.
+- `whatsapp-webhook`: audit + add status mapping + lead auto-link (if missing).
 
-### 7. Reporting touch
+**Schema (single migration)**
+- `whatsapp_settings`: add `waba_id`, `display_phone_number`, `verified_name`, `business_account_name`, `token_expires_at`, `connection_method`.
+- `whatsapp_templates`: add `components jsonb`, `meta_template_id text`, `last_synced_at timestamptz`; allow `status='deleted'`.
+- Add `whatsapp_messages` to `supabase_realtime` publication (idempotent).
 
-Update `useDashboardMetrics` (or campaign report queries) to surface `auto_templated` count so users see "Re-engagement templates used: N (£N.NN)".
+**Frontend**
+- `src/components/settings/WhatsAppConnectCard.tsx` (new) — embedded signup button + connection health.
+- `src/components/settings/ChannelSettingsTab.tsx` — mount the new card above the manual form, demote manual to "Advanced".
+- `src/components/settings/WhatsAppTemplatesTab.tsx` — "Sync from Meta" button, status badges.
+- `src/hooks/useWhatsAppConnection.ts` (new) — wraps connect / disconnect / sync / health query.
+- `src/lib/meta/fbSdk.ts` (new) — lazy-load FB JS SDK, `FB.init`, `FB.login` promise wrapper.
 
-## Files touched (estimate)
+**Cron**
+- `process-scheduled-jobs` enqueues a daily `whatsapp-sync-templates` per active workspace.
 
-```text
-Backend
-  supabase/functions/whatsapp-send/index.ts          (auto-template logic)
-  supabase/functions/execute-automation/index.ts     (pass template through)
-  supabase/migrations/<new>.sql                       (2 columns)
+**Secrets to add** (will prompt user after plan approval):
+- `META_APP_ID`, `META_APP_SECRET`, `META_EMBEDDED_SIGNUP_CONFIG_ID`
 
-Settings
-  src/components/settings/ChannelSettingsTab.tsx
-  src/hooks/useChannelSettings.ts (if exists)
+**Setup prereq the user must do once in Meta dashboard** (we'll surface this as an in-app doc/link):
+- Create / pick a Meta App → add WhatsApp + Facebook Login for Business products.
+- Configure an Embedded Signup "config" → copy the Config ID.
+- Add `https://nexusflo24.com` and `https://id-preview--*.lovable.app` to Valid OAuth Redirect URIs.
+- Submit for Advanced Access on `whatsapp_business_management` + `whatsapp_business_messaging` (required to go live; dev mode works for testing with whitelisted users).
 
-Campaigns
-  src/components/campaigns/CreateCampaignDialog.tsx
-  src/components/campaigns/CampaignAnalytics.tsx
-  src/components/campaigns/CampaignDetailsDrawer.tsx
-
-Automations
-  src/components/automations/AutomationStepEditor.tsx
-
-Inbox
-  src/pages/dashboard/DashboardMessages.tsx
-  src/hooks/useWhatsAppInbox.ts                       (expose last_inbound_at)
-  + small composer component for window banner
-
-Shared
-  src/hooks/useWhatsAppTemplates.ts (new — approved Marketing templates)
-```
-
-## Out of scope (intentionally)
-
-- Submitting new templates to Meta from inside the app (use existing `WhatsAppTemplatesTab` flow).
-- Per-template pricing tiers per country (show single "~£0.04" indicative price; Meta bills actuals).
-- Sessions-based bulk re-opening of windows (no API exists for this — that's the whole point of templates).
-
-## Risk / caveats called out to user
-
-- User must have **at least one approved Marketing template** for the auto-recovery to work. UI will prompt them to create one if none exists.
-- Meta charges per conversation (~£0.04 marketing) — surfaced everywhere a template send can happen so there are no billing surprises.
-- Templates can be rejected by Meta; we'll show `status` from `whatsapp_templates` and only allow `approved` ones in pickers.
-
-Approve to switch to build mode and I'll ship it in this order: migration → `whatsapp-send` logic → Settings picker → Campaign/Automation steps → Inbox composer → analytics counters.
+## Out of scope (flag for later)
+- Template **creation** from inside NexusFlo24 (we sync existing, not author new ones).
+- Multi-number per workspace (one phone_number_id per workspace for now).
+- Tech Provider / Solution Partner billing pass-through (we just connect, Meta bills the user's WABA).
