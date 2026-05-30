@@ -916,7 +916,10 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         </Card>
       </Collapsible>
 
-      {/* ─── WhatsApp Channel ─── */}
+      {/* ─── WhatsApp One-Click Connect (Meta Embedded Signup) ─── */}
+      <WhatsAppConnectCard workspaceId={workspaceId} />
+
+      {/* ─── WhatsApp Channel — Advanced manual setup (fallback) ─── */}
       <Collapsible>
         <Card>
           <CollapsibleTrigger asChild>
