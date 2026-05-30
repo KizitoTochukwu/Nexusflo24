@@ -878,9 +878,6 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       );
                     })()}
                     {(step.config.action as string) === "assign_owner" && (() => {
-                      return (
-                        <>
-                          <div className="basis-full h-0" />
                       const mode = ((step.config.assign_mode as string) || "round_robin");
                       const userId = (step.config.assign_user_id as string) || "";
                       const notifyNewOwner = step.config.notify_new_owner !== false;
@@ -898,6 +895,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       ];
                       return (
                         <>
+                          <div className="basis-full h-0" />
                           <Select
                             value={mode}
                             onValueChange={(v) => updateStep(i, { assign_mode: v, ...(v === "round_robin" ? { assign_user_id: "" } : {}) })}
