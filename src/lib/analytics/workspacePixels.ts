@@ -53,7 +53,8 @@ function tag(el: HTMLElement, workspaceId: string) {
   el.setAttribute(TAG_ATTR, workspaceId);
 }
 
-/** Idempotent Meta Pixel loader. Re-firing init for the same id is a no-op in fbq. */
+/** Idempotent Meta Pixel loader. Skips init if the same pixel ID is already loaded. */
+const initedPixelIds = new Set<string>();
 export function injectMetaPixel(pixelId: string, workspaceId: string) {
   if (!pixelId) return;
   // Bootstrap fbq if not already present
@@ -74,9 +75,22 @@ export function injectMetaPixel(pixelId: string, workspaceId: string) {
     tag(s, workspaceId);
     document.head.appendChild(s);
   }
+  // Skip if already initialized in this session (avoids "Duplicate Pixel ID"
+  // warnings when index.html — or a previous call — already booted the same id).
+  if (initedPixelIds.has(pixelId)) return;
+  const fbqAny = window.fbq as any;
+  const existingIds: string[] =
+    (fbqAny?._pixelsByID && Object.keys(fbqAny._pixelsByID)) ||
+    (Array.isArray(fbqAny?.instance?.pixelsByID) ? fbqAny.instance.pixelsByID : []) ||
+    [];
+  if (existingIds.includes(pixelId)) {
+    initedPixelIds.add(pixelId);
+    return;
+  }
   try {
     window.fbq!("init", pixelId);
     window.fbq!("track", "PageView");
+    initedPixelIds.add(pixelId);
   } catch (err) {
     console.warn("[ws-pixel] meta init failed", err);
   }
