@@ -14,24 +14,67 @@ declare global {
 
 let sdkPromise: Promise<void> | null = null;
 
+const SDK_LOAD_TIMEOUT_MS = 15000;
+const LOGIN_TIMEOUT_MS = 120000;
+
+const BLOCKED_SDK_MESSAGE =
+  "Couldn't load Facebook (connect.facebook.net). It's likely blocked by an ad-blocker, tracking protection (Brave Shields / Safari ITP), or your network. Disable those for this site and try again.";
+
 export function loadFbSdk(appId: string): Promise<void> {
   if (sdkPromise) return sdkPromise;
-  sdkPromise = new Promise((resolve, reject) => {
-    if (typeof window === "undefined") return reject(new Error("window unavailable"));
-    if (window.FB) return resolve();
 
-    window.fbAsyncInit = () => {
-      window.FB!.init({
-        appId,
-        cookie: true,
-        xfbml: false,
-        version: "v21.0",
-      });
+  sdkPromise = new Promise<void>((resolve, reject) => {
+    if (typeof window === "undefined") {
+      return reject(new Error("window unavailable"));
+    }
+
+    const finishOk = () => {
+      clearTimeout(timeoutId);
       resolve();
     };
+    const finishErr = (err: Error) => {
+      clearTimeout(timeoutId);
+      // allow retry after failure
+      sdkPromise = null;
+      reject(err);
+    };
 
+    const timeoutId = setTimeout(() => {
+      finishErr(new Error(BLOCKED_SDK_MESSAGE));
+    }, SDK_LOAD_TIMEOUT_MS);
+
+    // Already initialized
+    if (window.FB) return finishOk();
+
+    // Script tag already exists from a previous attempt: poll for FB readiness
     const existing = document.getElementById("facebook-jssdk");
-    if (existing) return;
+    if (existing) {
+      const start = Date.now();
+      const poll = setInterval(() => {
+        if (window.FB) {
+          clearInterval(poll);
+          finishOk();
+        } else if (Date.now() - start > SDK_LOAD_TIMEOUT_MS) {
+          clearInterval(poll);
+          finishErr(new Error(BLOCKED_SDK_MESSAGE));
+        }
+      }, 200);
+      return;
+    }
+
+    window.fbAsyncInit = () => {
+      try {
+        window.FB!.init({
+          appId,
+          cookie: true,
+          xfbml: false,
+          version: "v21.0",
+        });
+        finishOk();
+      } catch (e: any) {
+        finishErr(new Error(e?.message || "Facebook SDK init failed"));
+      }
+    };
 
     const script = document.createElement("script");
     script.id = "facebook-jssdk";
@@ -39,9 +82,10 @@ export function loadFbSdk(appId: string): Promise<void> {
     script.async = true;
     script.defer = true;
     script.crossOrigin = "anonymous";
-    script.onerror = () => reject(new Error("Failed to load Facebook SDK"));
+    script.onerror = () => finishErr(new Error(BLOCKED_SDK_MESSAGE));
     document.body.appendChild(script);
   });
+
   return sdkPromise;
 }
 
@@ -61,6 +105,7 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
 
     let wabaId = "";
     let phoneNumberId = "";
+    let settled = false;
 
     const messageHandler = (event: MessageEvent) => {
       if (typeof event.data !== "string") return;
@@ -78,30 +123,52 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
     };
     window.addEventListener("message", messageHandler);
 
-    window.FB.login(
-      (response: { authResponse?: { code?: string }; status?: string }) => {
-        window.removeEventListener("message", messageHandler);
-        if (response?.authResponse?.code) {
-          const code = response.authResponse.code;
-          if (!wabaId || !phoneNumberId) {
-            reject(
-              new Error(
-                "Connected, but Meta didn't return your WhatsApp Business Account. Make sure you complete the WhatsApp setup steps in the popup before closing it.",
-              ),
-            );
-            return;
+    const cleanup = () => {
+      settled = true;
+      window.removeEventListener("message", messageHandler);
+      clearTimeout(timeoutId);
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (settled) return;
+      cleanup();
+      reject(
+        new Error(
+          "Meta didn't respond. The popup may have been blocked — allow popups for this site, disable any ad-blocker, and try again.",
+        ),
+      );
+    }, LOGIN_TIMEOUT_MS);
+
+    try {
+      window.FB.login(
+        (response: { authResponse?: { code?: string }; status?: string }) => {
+          if (settled) return;
+          cleanup();
+          if (response?.authResponse?.code) {
+            const code = response.authResponse.code;
+            if (!wabaId || !phoneNumberId) {
+              reject(
+                new Error(
+                  "Connected, but Meta didn't return your WhatsApp Business Account. Complete every step of the Meta popup (Business → WABA → Phone number) before closing it.",
+                ),
+              );
+              return;
+            }
+            resolve({ code, wabaId, phoneNumberId });
+          } else {
+            reject(new Error("Connection cancelled."));
           }
-          resolve({ code, wabaId, phoneNumberId });
-        } else {
-          reject(new Error("Connection cancelled."));
-        }
-      },
-      {
-        config_id: configId,
-        response_type: "code",
-        override_default_response_type: true,
-        extras: { setup: { } },
-      },
-    );
+        },
+        {
+          config_id: configId,
+          response_type: "code",
+          override_default_response_type: true,
+          extras: { setup: {} },
+        },
+      );
+    } catch (e: any) {
+      cleanup();
+      reject(new Error(e?.message || "Failed to open Meta popup"));
+    }
   });
 }
