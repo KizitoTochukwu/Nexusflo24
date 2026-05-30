@@ -758,19 +758,22 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </SelectContent>
                     </Select>
                     {((step.config.action as string) === "add_tag" || (step.config.action as string) === "remove_tag") && (
-                      <Select
-                        value={(step.config.tag as string) || ""}
-                        onValueChange={(v) => updateStep(i, { tag: v })}
-                      >
-                        <SelectTrigger className="w-[160px] bg-background">
-                          <SelectValue placeholder="Select tag" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {AUTOMATION_TAG_OPTIONS.map((t) => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <>
+                        <div className="basis-full h-0" />
+                        <Select
+                          value={(step.config.tag as string) || ""}
+                          onValueChange={(v) => updateStep(i, { tag: v })}
+                        >
+                          <SelectTrigger className="w-[160px] bg-background">
+                            <SelectValue placeholder="Select tag" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AUTOMATION_TAG_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </>
                     )}
                     {(step.config.action as string) === "end_automation" && (
                       <Input
@@ -1105,7 +1108,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
