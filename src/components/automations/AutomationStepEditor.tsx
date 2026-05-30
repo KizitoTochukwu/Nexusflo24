@@ -1133,11 +1133,12 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                             onChange={(e) => updateStep(i, { message: e.target.value })}
                           />
                         </div>
-                            )}
-                          </div>
-                        </>
-                      );
-                    })()}
+                                </>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
                   {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score", "assign_owner"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
