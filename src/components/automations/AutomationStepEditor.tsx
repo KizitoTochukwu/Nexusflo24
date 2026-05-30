@@ -1133,6 +1133,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                             onChange={(e) => updateStep(i, { message: e.target.value })}
                           />
                         </div>
+                            )}
                           </div>
                         </>
                       );
