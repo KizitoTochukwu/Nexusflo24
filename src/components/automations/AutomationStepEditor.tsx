@@ -881,8 +881,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                             ))}
                           </SelectContent>
                         </Select>
-                      );
-                    })()}
+                      </>
+                    );
+                  })()}
                     {(step.config.action as string) === "assign_owner" && (() => {
                       const mode = ((step.config.assign_mode as string) || "round_robin");
                       const userId = (step.config.assign_user_id as string) || "";
