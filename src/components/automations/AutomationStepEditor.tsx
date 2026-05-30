@@ -797,8 +797,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                             {["New", "Warm", "Hot", "Won", "Customer", "Lost"].map((s) => (
                               <SelectItem key={s} value={s}>{s}</SelectItem>
                             ))}
-                        </SelectContent>
-                      </Select>
+                          </SelectContent>
+                        </Select>
+                      </>
                     )}
                     {(step.config.action as string) === "adjust_score" && (() => {
                       const delta = Number(step.config.score_delta ?? 5);
