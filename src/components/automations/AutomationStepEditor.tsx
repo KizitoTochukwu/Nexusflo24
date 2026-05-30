@@ -94,6 +94,44 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
     onChange(updated);
   };
 
+  // Drag-and-drop reordering for non-branch steps
+  const isBranchMarker = (t: StepData["step_type"]) =>
+    t === "branch_yes_start" || t === "branch_yes_end" ||
+    t === "branch_no_start" || t === "branch_no_end";
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (i: number) => (e: React.DragEvent) => {
+    if (isBranchMarker(steps[i].step_type)) { e.preventDefault(); return; }
+    setDraggedIndex(i);
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", String(i)); } catch { /* noop */ }
+  };
+
+  const handleDragOver = (i: number) => (e: React.DragEvent) => {
+    if (draggedIndex === null) return;
+    if (isBranchMarker(steps[i].step_type)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== i) setDragOverIndex(i);
+  };
+
+  const handleDrop = (i: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const from = draggedIndex;
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    if (from === null || from === i) return;
+    if (isBranchMarker(steps[i].step_type)) return;
+    moveStep(from, i);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   // Find matching branch end index for a start at `startIdx`. Returns -1 if not found.
   const findBranchEnd = (startIdx: number): number => {
     const startType = steps[startIdx]?.step_type;
