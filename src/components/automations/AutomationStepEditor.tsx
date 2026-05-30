@@ -291,12 +291,27 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
             <div className="flex justify-center py-1">
               <ArrowDown className="h-4 w-4 text-muted-foreground" />
             </div>
-            <div className={`rounded-lg border p-3 pr-[12px] ml-0 mr-0 ${meta.color}`}>
+            <div
+              draggable
+              onDragStart={handleDragStart(i)}
+              onDragOver={handleDragOver(i)}
+              onDrop={handleDrop(i)}
+              onDragEnd={handleDragEnd}
+              className={cn(
+                `rounded-lg border p-3 pr-[12px] ml-0 mr-0 ${meta.color} transition-all`,
+                draggedIndex === i && "opacity-40",
+                dragOverIndex === i && draggedIndex !== i && "ring-2 ring-primary ring-offset-1",
+              )}
+            >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <button onClick={() => moveStep(i, i - 1)} className="cursor-grab opacity-50 hover:opacity-100">
+                  <span
+                    className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100"
+                    title="Drag to reorder"
+                    aria-label="Drag to reorder"
+                  >
                     <GripVertical className="h-4 w-4" />
-                  </button>
+                  </span>
                   {meta.icon}
                   <Badge variant="outline" className={meta.color}>{meta.label}</Badge>
                 </div>
