@@ -197,8 +197,10 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
       if (a === "add_tag") return `Add Tag\n${cfg.tag || "…"}`;
       if (a === "remove_tag") return `Remove tag: ${cfg.tag || "…"}`;
       if (a === "adjust_score") {
-        const d = Number(cfg.score_delta ?? 0);
-        return `${d >= 0 ? "+" : ""}${d} score`;
+        const d = Number(cfg.score_delta ?? 5);
+        const r = (cfg.score_reason as string) || "";
+        const matched = AUTOMATION_SCORE_OPTIONS.find(o => o.value === d && (!r || o.reason === r));
+        return `Adjust Lead Score\n${matched?.label || `${d >= 0 ? "+" : ""}${d} score`}`;
       }
       if (a === "update_status") return `Update Lead Status\n${cfg.new_status || "…"}`;
       if (a === "notify_sales") return "Notify sales";
@@ -809,7 +811,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       );
                       const selectValue = matched ? matched.reason : "";
                       return (
-                        <Select
+                        <>
+                          <div className="basis-full h-0" />
+                          <Select
                           value={selectValue}
                           onValueChange={(v) => {
                             const opt = AUTOMATION_SCORE_OPTIONS.find((o) => o.reason === v);
@@ -827,8 +831,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                             ))}
                           </SelectContent>
                         </Select>
-                      );
-                    })()}
+                      </>
+                    );
+                  })()}
                     {(step.config.action as string) === "enroll_in_automation" && (() => {
                       const targetId = (step.config.target_automation_id as string) || "";
                       const options = (allAutomations || []).filter((a) => a.status === "active");
@@ -1111,7 +1116,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
