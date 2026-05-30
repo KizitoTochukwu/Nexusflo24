@@ -408,7 +408,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
           );
         }
         const meta = STEP_TYPE_META[step.step_type] || STEP_TYPE_META.action;
-        const condBranchInfo = step.step_type === "condition" ? branchInfoForCondition(i) : null;
+        // condition branch state is rendered inline by the new outcome rows below
         return (
           <div key={i} className={inBranchClass}>
             <div className="flex justify-center py-1">
