@@ -194,7 +194,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
       if (a === "send_email") return "Send Email";
       if (a === "send_whatsapp") return "Send WhatsApp";
       if (a === "send_sms") return "Send SMS";
-      if (a === "add_tag") return `Tag: ${cfg.tag || "…"}`;
+      if (a === "add_tag") return `Add Tag\n${cfg.tag || "…"}`;
       if (a === "remove_tag") return `Remove tag: ${cfg.tag || "…"}`;
       if (a === "adjust_score") {
         const d = Number(cfg.score_delta ?? 0);
@@ -495,7 +495,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         If {isYes ? "YES" : "NO"}
                       </Badge>
                       <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
-                      <span className="text-xs font-medium truncate flex-1 min-w-0">{summary}</span>
+                      <span className="text-xs font-medium truncate flex-1 min-w-0 whitespace-pre-line">{summary}</span>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -758,19 +758,22 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </SelectContent>
                     </Select>
                     {((step.config.action as string) === "add_tag" || (step.config.action as string) === "remove_tag") && (
-                      <Select
-                        value={(step.config.tag as string) || ""}
-                        onValueChange={(v) => updateStep(i, { tag: v })}
-                      >
-                        <SelectTrigger className="w-[160px] bg-background">
-                          <SelectValue placeholder="Select tag" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {AUTOMATION_TAG_OPTIONS.map((t) => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <>
+                        <div className="basis-full h-0" />
+                        <Select
+                          value={(step.config.tag as string) || ""}
+                          onValueChange={(v) => updateStep(i, { tag: v })}
+                        >
+                          <SelectTrigger className="w-[160px] bg-background">
+                            <SelectValue placeholder="Select tag" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AUTOMATION_TAG_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </>
                     )}
                     {(step.config.action as string) === "end_automation" && (
                       <Input
@@ -1105,7 +1108,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
