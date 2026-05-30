@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 import {
   Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
-  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus,
+  ChevronDown, ArrowRight, Check, CheckCircle2, CircleSlash
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, type ConditionOperator } from "@/hooks/useAutomations";
