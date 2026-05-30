@@ -224,7 +224,11 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
         
         return summary;
       }
-      if (a === "enroll_in_automation") return "Enroll in automation";
+      if (a === "enroll_in_automation") {
+        const targetId = (cfg.target_automation_id as string) || "";
+        const target = (allAutomations || []).find(a => a.id === targetId);
+        return `Enroll in Automation\n${target?.name || "…"}`;
+      }
       if (a === "end_automation") return "End automation";
       return a.replace(/_/g, " ");
     }
