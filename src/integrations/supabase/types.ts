@@ -2472,35 +2472,53 @@ export type Database = {
       whatsapp_settings: {
         Row: {
           access_token_encrypted: string
+          business_account_name: string | null
+          connection_method: string
           created_at: string
           default_reengagement_template_id: string | null
+          display_phone_number: string | null
           id: string
           is_active: boolean
           phone_number_id: string
+          token_expires_at: string | null
           updated_at: string
+          verified_name: string | null
           verify_token_encrypted: string
+          waba_id: string | null
           workspace_id: string
         }
         Insert: {
           access_token_encrypted: string
+          business_account_name?: string | null
+          connection_method?: string
           created_at?: string
           default_reengagement_template_id?: string | null
+          display_phone_number?: string | null
           id?: string
           is_active?: boolean
           phone_number_id: string
+          token_expires_at?: string | null
           updated_at?: string
+          verified_name?: string | null
           verify_token_encrypted: string
+          waba_id?: string | null
           workspace_id: string
         }
         Update: {
           access_token_encrypted?: string
+          business_account_name?: string | null
+          connection_method?: string
           created_at?: string
           default_reengagement_template_id?: string | null
+          display_phone_number?: string | null
           id?: string
           is_active?: boolean
           phone_number_id?: string
+          token_expires_at?: string | null
           updated_at?: string
+          verified_name?: string | null
           verify_token_encrypted?: string
+          waba_id?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -2524,10 +2542,13 @@ export type Database = {
         Row: {
           body_preview: string
           category: string
+          components: Json | null
           created_at: string
           created_by: string | null
           id: string
           language: string
+          last_synced_at: string | null
+          meta_template_id: string | null
           name: string
           notes: string | null
           status: string
@@ -2538,10 +2559,13 @@ export type Database = {
         Insert: {
           body_preview?: string
           category?: string
+          components?: Json | null
           created_at?: string
           created_by?: string | null
           id?: string
           language?: string
+          last_synced_at?: string | null
+          meta_template_id?: string | null
           name: string
           notes?: string | null
           status?: string
@@ -2552,10 +2576,13 @@ export type Database = {
         Update: {
           body_preview?: string
           category?: string
+          components?: Json | null
           created_at?: string
           created_by?: string | null
           id?: string
           language?: string
+          last_synced_at?: string | null
+          meta_template_id?: string | null
           name?: string
           notes?: string | null
           status?: string
