@@ -1,33 +1,53 @@
-# Fix WhatsApp "Opening Meta…" hang
+## Goal
 
-## Problem
-Clicking **Connect WhatsApp via Meta** leaves the button stuck on "Opening Meta…" indefinitely. Root cause: the Facebook JS SDK fails to load or initialize (typically blocked by ad-blocker, tracking protection, Brave Shields, corporate network, or a stale script tag), and the current code has no timeout or error path — so the React Query mutation never resolves, the button spins forever, and no toast is shown.
+Make the Condition step clearly show **what happens next** for both YES and NO outcomes — matching the reference screenshot ("Proceed to Step 3.", "Send WhatsApp…", "Wait 1 day.") — and add a one-click **"Proceed to next step"** option for the YES path so users don't always have to build a full branch.
 
-Three real bugs in `src/lib/meta/fbSdk.ts` make this happen:
-1. No timeout on SDK script load → hangs forever if `connect.facebook.net` is blocked.
-2. The `existing` script branch `return`s without resolving the promise → second click hangs.
-3. `fbAsyncInit` may never fire even if the script loads (privacy mode, third-party cookies disabled) → no rejection path.
-4. Popup-blocker / silent `FB.login` failures aren't surfaced.
+Scope: UI/UX changes inside `src/components/automations/AutomationStepEditor.tsx`. No backend changes — the engine already falls through to the next step when a YES branch is absent, so "Proceed to next step" is just making that default explicit.
 
-## Changes (frontend only)
+## What changes
 
-**`src/lib/meta/fbSdk.ts`**
-- Add a 15s timeout to `loadFbSdk`; reject with a clear, user-actionable message ("Facebook SDK was blocked. Disable ad-blocker / tracking protection for this site and try again.") if it doesn't initialize in time.
-- Fix the `existing` script branch: instead of bare `return`, poll for `window.FB` and resolve/reject correctly so retries work.
-- Reset `sdkPromise` to `null` on failure so the user can retry after disabling their blocker.
-- Wrap `FB.login` in a safety timeout (90s) that rejects with "Meta popup didn't respond — it may have been blocked. Allow popups for this site and try again."
-- Detect immediate popup-blocker by checking that `FB.login` actually opened a window (best-effort).
+### 1. New "Outcome summary" block inside every Condition card
 
-**`src/components/settings/WhatsAppConnectCard.tsx`**
-- No structural change; existing `toast.error(err?.message)` will now surface the new clearer messages.
-- Add a small helper text under the button: "If nothing happens, allow popups and disable ad-blockers for this page."
+Rendered just under the condition rule row (Email opened / has happened / in last 1 days), before Smart Actions. Two stacked rows:
+
+```text
+✅  If YES   →  Proceed to Step 3      [Change ▾]
+❌  If NO    →  Send WhatsApp · Wait 1 day   [Change ▾]
+```
+
+Logic for the right-hand summary text:
+- If a YES/NO branch exists for this condition → summarize the steps inside that branch in human language (e.g. "Send WhatsApp · Wait 1 day · Tag: engaged"), built from the existing `branchInfoForCondition` walker plus a small `summarizeStep(step)` helper.
+- If no branch exists → show **"Proceed to Step N"** where N is the 1-based index of the next non-branch step after this condition (or "End automation" if none follows).
+
+### 2. "Change ▾" dropdown per outcome
+
+Each row gets a small popover/menu with these options:
+- **Proceed to next step** — removes that branch (keeps inner steps if any were inside) so default fall-through applies. For a condition that already has no branch, this is the no-op current state and the option is shown as selected.
+- **Build a custom branch** — calls the existing `addBranch(i, 'yes' | 'no')` so the user can drop actions/delays inside.
+- **Stop automation** — inserts a tiny branch containing a single `end_automation` action.
+- **Jump to step…** — inserts a branch with a `jump_to_step` action and a numeric step picker (uses existing action type already in `ACTION_OPTIONS`).
+
+This replaces the current "+ If YES branch / + If NO branch" buttons (which become one of the menu options). The Fork row is removed; the new summary block is the single source of truth.
+
+### 3. Inline step numbering
+
+Compute a 1-based "Step N" label for every non-branch, non-trigger step and show it as a small badge in the card header (next to the existing type badge). This lets the "Proceed to Step 3" text actually reference a visible step number — matching the reference screenshot.
+
+### 4. Visual polish
+
+- YES row uses the existing emerald token (`bg-emerald-50 text-emerald-700 border-emerald-200`).
+- NO row uses the existing rose token.
+- Summary text truncates with `line-clamp-1` and shows a tooltip with the full list on hover.
+- Keeps the existing Smart Actions strip below — unchanged.
+
+## Files touched
+
+- `src/components/automations/AutomationStepEditor.tsx` — add `summarizeStep()` helper, `nextStepNumberAfter(i)` helper, new `OutcomeRow` sub-render inside the Condition block, step-number badge in the card header, remove the standalone Fork buttons row.
+
+No new files, no schema changes, no edge-function changes.
 
 ## Out of scope
-- No edge-function or DB changes. Meta secrets are already configured.
-- No change to the post-signup `whatsapp-embedded-signup` flow.
 
-## How the user can verify
-1. Click **Connect WhatsApp via Meta**.
-2. If SDK is blocked → within ~15s a toast appears explaining to disable ad-blocker.
-3. If popup is blocked → toast tells them to allow popups.
-4. If everything works → the Meta dialog opens as before.
+- Reworking the underlying `branch_yes_start`/`branch_yes_end` data model.
+- Engine changes to `execute-automation` — current fall-through already implements "Proceed to next step".
+- Touching workflow canvas (`WorkflowEditor` / React Flow) — this is the legacy step-list editor only.
