@@ -85,3 +85,11 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.meta-save-settings]
     verify_jwt = false
+  [functions.whatsapp-embedded-config]
+    verify_jwt = false
+  [functions.whatsapp-embedded-signup]
+    verify_jwt = false
+  [functions.whatsapp-sync-templates]
+    verify_jwt = false
+  [functions.whatsapp-disconnect]
+    verify_jwt = false

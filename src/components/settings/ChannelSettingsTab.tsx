@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApprovedWhatsAppTemplates, useWhatsAppSettings, useUpdateDefaultReengagementTemplate } from "@/hooks/useWhatsAppTemplates";
+import { WhatsAppConnectCard } from "@/components/settings/WhatsAppConnectCard";
 import {
   Mail, Smartphone, MessageCircle, Loader2, Save, ChevronDown,
   CheckCircle2, XCircle, Unplug, Send, Globe, Copy, RefreshCw,
@@ -916,7 +917,10 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         </Card>
       </Collapsible>
 
-      {/* ─── WhatsApp Channel ─── */}
+      {/* ─── WhatsApp One-Click Connect (Meta Embedded Signup) ─── */}
+      <WhatsAppConnectCard workspaceId={workspaceId} />
+
+      {/* ─── WhatsApp Channel — Advanced manual setup (fallback) ─── */}
       <Collapsible>
         <Card>
           <CollapsibleTrigger asChild>
