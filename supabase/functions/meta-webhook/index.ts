@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decryptMeta, matchKeyword } from "../_shared/meta-crypto.ts";
+import { verifyMetaSignature } from "../_shared/meta-hmac.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,11 +51,46 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = await req.json();
+  // Read raw body for HMAC verification before JSON-parsing
+  const rawBody = await req.text();
+  const sigHeader = req.headers.get("x-hub-signature-256") || req.headers.get("X-Hub-Signature-256");
+
+  const encryptionKey = Deno.env.get("META_SETTINGS_ENCRYPTION_KEY");
+  if (!encryptionKey) {
+    console.error("META_SETTINGS_ENCRYPTION_KEY not set; rejecting webhook");
+    return new Response("Server error", { status: 500 });
+  }
+
+  try {
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // Collect candidate app secrets from active meta_settings and verify HMAC
+    const { data: secretRows } = await adminClient
+      .from("meta_settings")
+      .select("app_secret_encrypted")
+      .eq("is_active", true);
+
+    const appSecrets: string[] = [];
+    for (const row of secretRows || []) {
+      if (!row.app_secret_encrypted) continue;
+      try {
+        const s = await decryptMeta(row.app_secret_encrypted, encryptionKey);
+        if (s) appSecrets.push(s);
+      } catch (_) { /* skip */ }
+    }
+    const envSecret = Deno.env.get("META_APP_SECRET");
+    if (envSecret) appSecrets.push(envSecret);
+
+    const valid = await verifyMetaSignature(rawBody, sigHeader, appSecrets);
+    if (!valid) {
+      console.warn("meta-webhook: invalid or missing X-Hub-Signature-256");
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    const payload = JSON.parse(rawBody);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

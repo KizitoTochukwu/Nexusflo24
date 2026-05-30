@@ -16,8 +16,22 @@ Deno.serve(async (req) => {
   const cid = url.searchParams.get("cid");
   const targetUrl = url.searchParams.get("url");
 
-  // Always redirect even if tracking fails
-  const redirectTo = targetUrl || "https://nexusflo24.lovable.app";
+  // Validate redirect target against allowlist to prevent open-redirect phishing
+  const FALLBACK = "https://nexusflo24.lovable.app";
+  const ALLOWED_HOSTS = new Set([
+    "nexusflo24.lovable.app",
+    "nexusflo24.com",
+    "www.nexusflo24.com",
+  ]);
+  let redirectTo = FALLBACK;
+  if (targetUrl) {
+    try {
+      const parsed = new URL(targetUrl);
+      if ((parsed.protocol === "https:" || parsed.protocol === "http:") && ALLOWED_HOSTS.has(parsed.hostname)) {
+        redirectTo = targetUrl;
+      }
+    } catch (_) { /* fall back */ }
+  }
 
   try {
     if (lid && wid) {

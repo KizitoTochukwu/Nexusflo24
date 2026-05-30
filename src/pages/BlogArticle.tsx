@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import DOMPurify from "dompurify";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
@@ -249,7 +250,7 @@ const BlogArticle = () => {
             prose-code:text-accent prose-code:bg-accent/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none
             [&_*]:!text-inherit [&_a]:!text-accent [&_strong]:!text-foreground
             [&_h1]:!text-foreground [&_h2]:!text-foreground [&_h3]:!text-primary [&_h4]:!text-foreground"
-          dangerouslySetInnerHTML={{ __html: article.content }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
         />
 
         {/* Share row */}

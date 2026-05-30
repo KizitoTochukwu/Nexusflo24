@@ -2,10 +2,11 @@
 // 1. Finds active workflows in this workspace whose trigger matches.
 // 2. For each (workflow, lead) pair: checks suppression + duplicate guard, creates enrollment, kicks off execute-workflow.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-secret",
 };
 
 function leadIsSuppressed(lead: any, suppression: any): boolean {
@@ -39,6 +40,9 @@ function triggerMatches(triggerNode: any, eventType: string, eventConfig: Record
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const guard = requireInternalCaller(req);
+  if (guard) return guard;
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
