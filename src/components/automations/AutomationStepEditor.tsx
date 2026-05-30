@@ -495,7 +495,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         If {isYes ? "YES" : "NO"}
                       </Badge>
                       <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
-                      <span className="text-xs font-medium truncate flex-1 min-w-0">{summary}</span>
+                      <span className="text-xs font-medium truncate flex-1 min-w-0 whitespace-pre-line">{summary}</span>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
