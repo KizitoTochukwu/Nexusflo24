@@ -173,6 +173,127 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
     return { hasYes, hasNo };
   };
 
+  // 1-based step numbers for non-branch, non-trigger steps (trigger isn't in steps[])
+  const stepNumbers: Record<number, number> = (() => {
+    const map: Record<number, number> = {};
+    let n = 0;
+    steps.forEach((s, idx) => {
+      if (!isBranchMarker(s.step_type)) { n++; map[idx] = n; }
+    });
+    return map;
+  })();
+
+  // Human-readable summary of a single step (used inside branch summaries)
+  const summarizeStep = (s: StepData): string => {
+    const cfg = (s.config ?? {}) as any;
+    if (s.step_type === "delay") return `Wait ${cfg.duration ?? "?"} ${cfg.unit ?? "min"}`;
+    if (s.step_type === "condition") return "Condition";
+    if (s.step_type === "action") {
+      const a = cfg.action as string | undefined;
+      if (!a) return "Action";
+      if (a === "send_email") return "Send Email";
+      if (a === "send_whatsapp") return "Send WhatsApp";
+      if (a === "send_sms") return "Send SMS";
+      if (a === "add_tag") return `Tag: ${cfg.tag || "…"}`;
+      if (a === "remove_tag") return `Remove tag: ${cfg.tag || "…"}`;
+      if (a === "adjust_score") {
+        const d = Number(cfg.score_delta ?? 0);
+        return `${d >= 0 ? "+" : ""}${d} score`;
+      }
+      if (a === "update_status") return `Status → ${cfg.new_status || "…"}`;
+      if (a === "notify_sales") return "Notify sales";
+      if (a === "assign_owner") return "Assign owner";
+      if (a === "enroll_in_automation") return "Enroll in automation";
+      if (a === "end_automation") return "End automation";
+      return a.replace(/_/g, " ");
+    }
+    return s.step_type;
+  };
+
+  const findBranchStartFor = (conditionIdx: number, kind: "yes" | "no"): number => {
+    const target = kind === "yes" ? "branch_yes_start" : "branch_no_start";
+    let j = conditionIdx + 1;
+    while (j < steps.length) {
+      const t = steps[j].step_type;
+      if (t === target) return j;
+      if (t === "branch_yes_start" || t === "branch_no_start") {
+        const end = findBranchEnd(j);
+        j = end === -1 ? steps.length : end + 1;
+      } else break;
+    }
+    return -1;
+  };
+
+  const collectBranchSteps = (startIdx: number): StepData[] => {
+    const end = findBranchEnd(startIdx);
+    if (end === -1) return [];
+    return steps.slice(startIdx + 1, end).filter((s) => !isBranchMarker(s.step_type));
+  };
+
+  // 1-based step number of the next step execution falls through to after this condition's branches
+  const nextFallthroughStepNumber = (conditionIdx: number): number | null => {
+    let j = conditionIdx + 1;
+    while (j < steps.length) {
+      const t = steps[j].step_type;
+      if (t === "branch_yes_start" || t === "branch_no_start") {
+        const end = findBranchEnd(j);
+        j = end === -1 ? steps.length : end + 1;
+      } else break;
+    }
+    if (j >= steps.length) return null;
+    return stepNumbers[j] ?? null;
+  };
+
+  // Remove a branch INCLUDING its inner contents (vs. removeBranch which keeps inner steps)
+  const removeBranchWithContents = (startIdx: number) => {
+    const end = findBranchEnd(startIdx);
+    if (end === -1) return;
+    const updated = [...steps];
+    updated.splice(startIdx, end - startIdx + 1);
+    onChange(updated);
+  };
+
+  const setOutcomeProceed = (conditionIdx: number, kind: "yes" | "no") => {
+    const existing = findBranchStartFor(conditionIdx, kind);
+    if (existing !== -1) removeBranchWithContents(existing);
+  };
+
+  const setOutcomeStop = (conditionIdx: number, kind: "yes" | "no") => {
+    // Remove any existing branch of this kind, then insert one containing end_automation
+    const existing = findBranchStartFor(conditionIdx, kind);
+    let working = [...steps];
+    if (existing !== -1) {
+      const end = findBranchEnd(existing);
+      working.splice(existing, end - existing + 1);
+    }
+    // Recompute insert location after remaining branches of the opposite kind
+    let insertAt = conditionIdx + 1;
+    while (insertAt < working.length) {
+      const t = working[insertAt].step_type;
+      if (t === "branch_yes_start" || t === "branch_no_start") {
+        const sType = t;
+        const eType = t === "branch_yes_start" ? "branch_yes_end" : "branch_no_end";
+        let d = 1, k = insertAt + 1;
+        while (k < working.length && d > 0) {
+          if (working[k].step_type === sType) d++;
+          else if (working[k].step_type === eType) d--;
+          k++;
+        }
+        insertAt = k;
+      } else break;
+    }
+    const startType = kind === "yes" ? "branch_yes_start" : "branch_no_start";
+    const endType = kind === "yes" ? "branch_yes_end" : "branch_no_end";
+    working.splice(insertAt, 0,
+      { step_type: startType, config: {} },
+      { step_type: "action", config: { action: "end_automation", reason: kind === "yes" ? "Condition met — stopping" : "Condition not met — stopping" } },
+      { step_type: endType, config: {} },
+    );
+    onChange(working);
+  };
+
+
+
   const addBranch = (conditionIdx: number, kind: "yes" | "no") => {
     // Insert after any existing branches that already follow this condition
     let insertAt = conditionIdx + 1;
