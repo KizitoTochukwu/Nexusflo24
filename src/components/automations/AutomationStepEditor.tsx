@@ -437,6 +437,11 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   </span>
                   {meta.icon}
                   <Badge variant="outline" className={meta.color}>{meta.label}</Badge>
+                  {stepNumbers[i] !== undefined && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
+                      Step {stepNumbers[i]}
+                    </Badge>
+                  )}
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(i)}>
                   <Trash2 className="h-3.5 w-3.5" />
