@@ -861,6 +861,8 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       const targetId = (step.config.target_automation_id as string) || "";
                       const options = (allAutomations || []).filter((a) => a.status === "active");
                       return (
+                        <>
+                          <div className="basis-full h-0" />
                         <Select
                           value={targetId}
                           onValueChange={(v) => updateStep(i, { target_automation_id: v })}
