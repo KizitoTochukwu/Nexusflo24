@@ -106,22 +106,7 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
     let wabaId = "";
     let phoneNumberId = "";
     let settled = false;
-
-    const messageHandler = (event: MessageEvent) => {
-      if (typeof event.data !== "string") return;
-      // Meta sends WA signup events as JSON strings from facebook.com.
-      if (!event.origin.endsWith("facebook.com")) return;
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "WA_EMBEDDED_SIGNUP" && data.event === "FINISH") {
-          wabaId = data?.data?.waba_id || wabaId;
-          phoneNumberId = data?.data?.phone_number_id || phoneNumberId;
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-    window.addEventListener("message", messageHandler);
+    let metaError: string | null = null;
 
     const cleanup = () => {
       settled = true;
@@ -129,12 +114,42 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
       clearTimeout(timeoutId);
     };
 
+    const messageHandler = (event: MessageEvent) => {
+      if (typeof event.data !== "string") return;
+      if (!event.origin.endsWith("facebook.com")) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type !== "WA_EMBEDDED_SIGNUP") return;
+        if (data.event === "FINISH") {
+          wabaId = data?.data?.waba_id || wabaId;
+          phoneNumberId = data?.data?.phone_number_id || phoneNumberId;
+        } else if (data.event === "CANCEL") {
+          metaError =
+            "You closed the Meta popup before finishing. Click Connect again and complete every step (Business → WABA → Phone number).";
+        } else if (data.event === "ERROR") {
+          const reason =
+            data?.data?.error_message ||
+            data?.data?.current_step ||
+            "Meta rejected the onboarding request.";
+          metaError = `Meta error: ${reason}. The NexusFlo24 Meta App likely isn't fully approved for WhatsApp Embedded Signup yet — see the setup checklist below.`;
+          if (!settled) {
+            cleanup();
+            reject(new Error(metaError));
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("message", messageHandler);
+
     const timeoutId = setTimeout(() => {
       if (settled) return;
       cleanup();
       reject(
         new Error(
-          "Meta didn't respond. The popup may have been blocked — allow popups for this site, disable any ad-blocker, and try again.",
+          metaError ||
+            "Meta didn't respond. The popup may have been blocked — allow popups for this site, disable any ad-blocker, and try again.",
         ),
       );
     }, LOGIN_TIMEOUT_MS);
@@ -149,14 +164,15 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
             if (!wabaId || !phoneNumberId) {
               reject(
                 new Error(
-                  "Connected, but Meta didn't return your WhatsApp Business Account. Complete every step of the Meta popup (Business → WABA → Phone number) before closing it.",
+                  metaError ||
+                    "Connected, but Meta didn't return your WhatsApp Business Account. Complete every step of the Meta popup (Business → WABA → Phone number) before closing it.",
                 ),
               );
               return;
             }
             resolve({ code, wabaId, phoneNumberId });
           } else {
-            reject(new Error("Connection cancelled."));
+            reject(new Error(metaError || "Connection cancelled."));
           }
         },
         {
