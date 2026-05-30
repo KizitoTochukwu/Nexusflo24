@@ -224,7 +224,11 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
         
         return summary;
       }
-      if (a === "enroll_in_automation") return "Enroll in automation";
+      if (a === "enroll_in_automation") {
+        const targetId = (cfg.target_automation_id as string) || "";
+        const target = (allAutomations || []).find(a => a.id === targetId);
+        return `Enroll in Automation\n${target?.name || "…"}`;
+      }
       if (a === "end_automation") return "End automation";
       return a.replace(/_/g, " ");
     }
@@ -857,6 +861,8 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       const targetId = (step.config.target_automation_id as string) || "";
                       const options = (allAutomations || []).filter((a) => a.status === "active");
                       return (
+                        <>
+                          <div className="basis-full h-0" />
                         <Select
                           value={targetId}
                           onValueChange={(v) => updateStep(i, { target_automation_id: v })}
@@ -875,8 +881,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                             ))}
                           </SelectContent>
                         </Select>
-                      );
-                    })()}
+                      </>
+                    );
+                  })()}
                     {(step.config.action as string) === "assign_owner" && (() => {
                       const mode = ((step.config.assign_mode as string) || "round_robin");
                       const userId = (step.config.assign_user_id as string) || "";
@@ -1129,7 +1136,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score", "assign_owner"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score", "assign_owner", "enroll_in_automation"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
