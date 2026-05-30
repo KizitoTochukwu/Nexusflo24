@@ -18,6 +18,7 @@ declare global {
     _fbq?: any;
     dataLayer?: any[];
     gtag?: (...args: any[]) => void;
+    __nf24_inited_pixels?: string[];
   }
 }
 
@@ -77,13 +78,8 @@ export function injectMetaPixel(pixelId: string, workspaceId: string) {
   }
   // Skip if already initialized in this session (avoids "Duplicate Pixel ID"
   // warnings when index.html — or a previous call — already booted the same id).
-  if (initedPixelIds.has(pixelId)) return;
-  const fbqAny = window.fbq as any;
-  const existingIds: string[] =
-    (fbqAny?._pixelsByID && Object.keys(fbqAny._pixelsByID)) ||
-    (Array.isArray(fbqAny?.instance?.pixelsByID) ? fbqAny.instance.pixelsByID : []) ||
-    [];
-  if (existingIds.includes(pixelId)) {
+  const globalInited = (window.__nf24_inited_pixels = window.__nf24_inited_pixels || []);
+  if (initedPixelIds.has(pixelId) || globalInited.includes(pixelId)) {
     initedPixelIds.add(pixelId);
     return;
   }
@@ -91,6 +87,7 @@ export function injectMetaPixel(pixelId: string, workspaceId: string) {
     window.fbq!("init", pixelId);
     window.fbq!("track", "PageView");
     initedPixelIds.add(pixelId);
+    globalInited.push(pixelId);
   } catch (err) {
     console.warn("[ws-pixel] meta init failed", err);
   }
