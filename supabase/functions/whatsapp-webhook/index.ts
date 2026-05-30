@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { findWorkspaceByWhatsAppPhoneNumberId } from "../_shared/channel-credentials.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
+import { verifyMetaSignature } from "../_shared/meta-hmac.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -131,7 +132,18 @@ Deno.serve(async (req) => {
   // POST = inbound messages + status updates from Meta
   if (req.method === "POST") {
     try {
-      const payload = await req.json();
+      // Verify Meta HMAC signature on raw body before parsing JSON
+      const rawBody = await req.text();
+      const sigHeader = req.headers.get("x-hub-signature-256") || req.headers.get("X-Hub-Signature-256");
+      const appSecret = Deno.env.get("META_APP_SECRET") || Deno.env.get("WHATSAPP_APP_SECRET") || "";
+      const valid = appSecret
+        ? await verifyMetaSignature(rawBody, sigHeader, [appSecret])
+        : false;
+      if (!valid) {
+        console.warn("whatsapp-webhook: invalid or missing X-Hub-Signature-256");
+        return new Response("Forbidden", { status: 403 });
+      }
+      const payload = JSON.parse(rawBody);
       const adminClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
