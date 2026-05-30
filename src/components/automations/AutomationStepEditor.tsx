@@ -194,7 +194,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
       if (a === "send_email") return "Send Email";
       if (a === "send_whatsapp") return "Send WhatsApp";
       if (a === "send_sms") return "Send SMS";
-      if (a === "add_tag") return `Tag: ${cfg.tag || "…"}`;
+      if (a === "add_tag") return `Add Tag\n${cfg.tag || "…"}`;
       if (a === "remove_tag") return `Remove tag: ${cfg.tag || "…"}`;
       if (a === "adjust_score") {
         const d = Number(cfg.score_delta ?? 0);
