@@ -229,7 +229,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
         const target = (allAutomations || []).find(a => a.id === targetId);
         return `Enroll in Automation\n${target?.name || "…"}`;
       }
-      if (a === "end_automation") return "End automation";
+      if (a === "end_automation") return "End Automation (stop here)\n\n\n\n";
       return a.replace(/_/g, " ");
     }
     return s.step_type;
@@ -1136,7 +1136,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score", "assign_owner", "enroll_in_automation"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score", "assign_owner", "enroll_in_automation", "end_automation"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
