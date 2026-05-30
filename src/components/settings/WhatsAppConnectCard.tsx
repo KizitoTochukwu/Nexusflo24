@@ -204,6 +204,32 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
               If nothing happens within ~15 seconds, allow popups and disable any ad-blocker /
               tracking protection (Brave Shields, uBlock, Safari ITP) for this site, then retry.
             </p>
+            <Alert variant="default" className="border-amber-500/40 bg-amber-500/5">
+              <AlertDescription className="text-xs space-y-1.5">
+                <p className="font-semibold text-foreground">
+                  Seeing "NexusFlo24 can't onboard customers at the moment"?
+                </p>
+                <p>
+                  That's a Meta-side block. The NexusFlo24 Meta App needs the following completed
+                  by the platform admin before any customer can connect:
+                </p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li>App switched to <strong>Live mode</strong> (not Development)</li>
+                  <li><strong>Business Verification</strong> approved in Meta Business Manager</li>
+                  <li>
+                    <strong>WhatsApp Business Management</strong> &amp;{" "}
+                    <strong>whatsapp_business_messaging</strong> permissions granted with Advanced
+                    Access
+                  </li>
+                  <li>
+                    A <strong>Tech Provider / Solution</strong> created and its ID set as
+                    META_EMBEDDED_SIGNUP_CONFIG_ID
+                  </li>
+                </ul>
+                <p>If you're the platform owner, complete those steps then retry.</p>
+              </AlertDescription>
+            </Alert>
+
           </>
         )}
       </CardContent>
