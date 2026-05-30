@@ -204,7 +204,26 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
       }
       if (a === "update_status") return `Update Lead Status\n${cfg.new_status || "…"}`;
       if (a === "notify_sales") return "Notify sales";
-      if (a === "assign_owner") return "Assign owner";
+      if (a === "assign_owner") {
+        const mode = (cfg.assign_mode as string) === "round_robin" ? "Round-robin" : "Specific user";
+        let userPart = "";
+        if (cfg.assign_mode === "specific" && cfg.assign_user_id) {
+          const member = (workspaceMembers || []).find((m: any) => m.user_id === cfg.assign_user_id);
+          userPart = `\n${member?.profile?.full_name || member?.profile?.email || "Unknown user"}`;
+        }
+        const notifyPart = cfg.notify_new_owner !== false ? "\nNotify the new owner when assigned" : "";
+        const channels = (cfg.channels as string[]) || ["inapp", "email"];
+        const channelNames = channels.map(c => c === "inapp" ? "In-app" : c.charAt(0).toUpperCase() + c.slice(1)).join("\n");
+        const alsoNotify = (cfg.also_notify as string[]) || [];
+        const alsoNames = alsoNotify.map(n => n.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())).join("\n");
+        
+        let summary = `Assign Owner\n${mode}${userPart}${notifyPart}\n\nCHANNELS\n${channelNames}`;
+        if (alsoNames) summary += `\n\nALSO NOTIFY\n${alsoNames}`;
+        if (cfg.notify_title) summary += `\n\nTITLE\n${cfg.notify_title}`;
+        if (cfg.notify_message) summary += `\n\nMESSAGE\n${cfg.notify_message}`;
+        
+        return summary;
+      }
       if (a === "enroll_in_automation") return "Enroll in automation";
       if (a === "end_automation") return "End automation";
       return a.replace(/_/g, " ");
@@ -859,6 +878,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       );
                     })()}
                     {(step.config.action as string) === "assign_owner" && (() => {
+                      return (
+                        <>
+                          <div className="basis-full h-0" />
                       const mode = ((step.config.assign_mode as string) || "round_robin");
                       const userId = (step.config.assign_user_id as string) || "";
                       const notifyNewOwner = step.config.notify_new_owner !== false;
@@ -1116,7 +1138,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score", "assign_owner"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
