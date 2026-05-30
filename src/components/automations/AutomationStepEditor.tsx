@@ -447,35 +447,118 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              {condBranchInfo && (!condBranchInfo.hasYes || !condBranchInfo.hasNo) && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  <span className="text-[11px] font-medium text-muted-foreground inline-flex items-center gap-1">
-                    <GitBranch className="h-3 w-3" /> Fork:
-                  </span>
-                  {!condBranchInfo.hasYes && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[11px] gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                      onClick={() => addBranch(i, "yes")}
+              {step.step_type === "condition" && (() => {
+                const fallthroughN = nextFallthroughStepNumber(i);
+                const renderOutcome = (kind: "yes" | "no") => {
+                  const startIdx = findBranchStartFor(i, kind);
+                  const hasBranch = startIdx !== -1;
+                  const branchSteps = hasBranch ? collectBranchSteps(startIdx) : [];
+                  const isStopBranch =
+                    hasBranch &&
+                    branchSteps.length === 1 &&
+                    branchSteps[0].step_type === "action" &&
+                    (branchSteps[0].config as any)?.action === "end_automation";
+
+                  let summary: string;
+                  let mode: "proceed" | "branch" | "stop";
+                  if (!hasBranch) {
+                    summary = fallthroughN ? `Proceed to Step ${fallthroughN}` : "End of automation";
+                    mode = "proceed";
+                  } else if (isStopBranch) {
+                    summary = "Stop automation";
+                    mode = "stop";
+                  } else if (branchSteps.length === 0) {
+                    summary = "Custom branch (empty — add steps below)";
+                    mode = "branch";
+                  } else {
+                    summary = branchSteps.map(summarizeStep).join(" · ");
+                    mode = "branch";
+                  }
+
+                  const isYes = kind === "yes";
+                  const tone = isYes
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    : "bg-rose-50 border-rose-200 text-rose-800";
+                  const pill = isYes
+                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                    : "bg-rose-100 text-rose-700 border-rose-200";
+                  const Icon = isYes ? CheckCircle2 : CircleSlash;
+
+                  return (
+                    <div
+                      key={kind}
+                      className={cn("flex items-center gap-2 rounded-md border px-2.5 py-1.5", tone)}
+                      title={summary}
                     >
-                      <Plus className="h-3 w-3" /> If YES branch
-                    </Button>
-                  )}
-                  {!condBranchInfo.hasNo && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[11px] gap-1 bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                      onClick={() => addBranch(i, "no")}
-                    >
-                      <Plus className="h-3 w-3" /> If NO branch
-                    </Button>
-                  )}
-                </div>
-              )}
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] font-semibold", pill)}>
+                        If {isYes ? "YES" : "NO"}
+                      </Badge>
+                      <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
+                      <span className="text-xs font-medium truncate flex-1 min-w-0">{summary}</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[11px] gap-1 shrink-0 hover:bg-background/60"
+                          >
+                            Change <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-popover">
+                          <DropdownMenuLabel className="text-[11px]">
+                            If condition is {isYes ? "TRUE" : "FALSE"}…
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setOutcomeProceed(i, kind)}>
+                            {mode === "proceed" && <Check className="h-3.5 w-3.5 mr-2" />}
+                            <span className={mode !== "proceed" ? "ml-[22px]" : ""}>
+                              Proceed to next step
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (mode === "stop") {
+                                // Already stop — convert to empty custom branch
+                                const s = findBranchStartFor(i, kind);
+                                if (s !== -1) removeBranchWithContents(s);
+                                addBranch(i, kind);
+                              } else if (!hasBranch) {
+                                addBranch(i, kind);
+                              }
+                            }}
+                          >
+                            {mode === "branch" && <Check className="h-3.5 w-3.5 mr-2" />}
+                            <span className={mode !== "branch" ? "ml-[22px]" : ""}>
+                              Build a custom branch
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setOutcomeStop(i, kind)}>
+                            {mode === "stop" && <Check className="h-3.5 w-3.5 mr-2" />}
+                            <span className={mode !== "stop" ? "ml-[22px]" : ""}>
+                              Stop automation
+                            </span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                };
+
+                return (
+                  <div className="space-y-1.5 mb-2">
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <GitBranch className="h-3 w-3" /> Next action
+                    </div>
+                    {renderOutcome("yes")}
+                    {renderOutcome("no")}
+                  </div>
+                );
+              })()}
+
+
 
               {step.step_type === "condition" && (() => {
                 const currentValue = (step.config.condition as string) || "";
