@@ -200,6 +200,10 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
                 </>
               )}
             </Button>
+            <p className="text-xs text-muted-foreground">
+              If nothing happens within ~15 seconds, allow popups and disable any ad-blocker /
+              tracking protection (Brave Shields, uBlock, Safari ITP) for this site, then retry.
+            </p>
           </>
         )}
       </CardContent>
