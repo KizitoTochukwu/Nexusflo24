@@ -231,11 +231,13 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         const defaultTplId = waSettings?.default_reengagement_template_id;
-        let defaultTpl: { name: string; language: string; variable_count: number } | null = null;
+        let defaultTpl:
+          | { name: string; language: string; variable_count: number; components: any[] | null }
+          | null = null;
         if (defaultTplId) {
           const { data: tpl } = await adminClient
             .from("whatsapp_templates")
-            .select("name, language, variable_count, status")
+            .select("name, language, variable_count, status, components")
             .eq("id", defaultTplId)
             .eq("workspace_id", workspaceId)
             .maybeSingle();
@@ -244,16 +246,28 @@ Deno.serve(async (req) => {
 
         if (defaultTpl) {
           autoTemplated = true;
-          const components = defaultTpl.variable_count > 0
-            ? [{
-                type: "body",
-                parameters: [{ type: "text", text: msgBody.slice(0, 1024) }],
-              }]
-            : undefined;
+          // Build components: if the synced template defines its own BODY/HEADER/BUTTON
+          // components, pass through any non-body components unchanged (e.g. header image,
+          // CTA URL params) and inject the user's text as the BODY {{1}} variable. If the
+          // template has no variables, we send it without parameters.
+          //
+          // Meta rejects newlines/tabs/4+ consecutive spaces in body params — collapse them.
+          const safeBody = msgBody
+            .replace(/[\r\n\t]+/g, " ")
+            .replace(/\s{4,}/g, "   ")
+            .slice(0, 1024);
+
+          const components: any[] = [];
+          if (defaultTpl.variable_count > 0) {
+            components.push({
+              type: "body",
+              parameters: [{ type: "text", text: safeBody }],
+            });
+          }
           effectiveTemplate = {
             name: defaultTpl.name,
             language: defaultTpl.language || "en",
-            ...(components ? { components } : {}),
+            ...(components.length ? { components } : {}),
           };
           console.log("WA window closed — auto-sending via default template", {
             workspaceId, template: defaultTpl.name,
