@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 import {
   Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
-  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus
+  Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus,
+  ChevronDown, ArrowRight, Check, CheckCircle2, CircleSlash
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, type ConditionOperator } from "@/hooks/useAutomations";
@@ -171,6 +173,127 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
     return { hasYes, hasNo };
   };
 
+  // 1-based step numbers for non-branch, non-trigger steps (trigger isn't in steps[])
+  const stepNumbers: Record<number, number> = (() => {
+    const map: Record<number, number> = {};
+    let n = 0;
+    steps.forEach((s, idx) => {
+      if (!isBranchMarker(s.step_type)) { n++; map[idx] = n; }
+    });
+    return map;
+  })();
+
+  // Human-readable summary of a single step (used inside branch summaries)
+  const summarizeStep = (s: StepData): string => {
+    const cfg = (s.config ?? {}) as any;
+    if (s.step_type === "delay") return `Wait ${cfg.duration ?? "?"} ${cfg.unit ?? "min"}`;
+    if (s.step_type === "condition") return "Condition";
+    if (s.step_type === "action") {
+      const a = cfg.action as string | undefined;
+      if (!a) return "Action";
+      if (a === "send_email") return "Send Email";
+      if (a === "send_whatsapp") return "Send WhatsApp";
+      if (a === "send_sms") return "Send SMS";
+      if (a === "add_tag") return `Tag: ${cfg.tag || "…"}`;
+      if (a === "remove_tag") return `Remove tag: ${cfg.tag || "…"}`;
+      if (a === "adjust_score") {
+        const d = Number(cfg.score_delta ?? 0);
+        return `${d >= 0 ? "+" : ""}${d} score`;
+      }
+      if (a === "update_status") return `Status → ${cfg.new_status || "…"}`;
+      if (a === "notify_sales") return "Notify sales";
+      if (a === "assign_owner") return "Assign owner";
+      if (a === "enroll_in_automation") return "Enroll in automation";
+      if (a === "end_automation") return "End automation";
+      return a.replace(/_/g, " ");
+    }
+    return s.step_type;
+  };
+
+  const findBranchStartFor = (conditionIdx: number, kind: "yes" | "no"): number => {
+    const target = kind === "yes" ? "branch_yes_start" : "branch_no_start";
+    let j = conditionIdx + 1;
+    while (j < steps.length) {
+      const t = steps[j].step_type;
+      if (t === target) return j;
+      if (t === "branch_yes_start" || t === "branch_no_start") {
+        const end = findBranchEnd(j);
+        j = end === -1 ? steps.length : end + 1;
+      } else break;
+    }
+    return -1;
+  };
+
+  const collectBranchSteps = (startIdx: number): StepData[] => {
+    const end = findBranchEnd(startIdx);
+    if (end === -1) return [];
+    return steps.slice(startIdx + 1, end).filter((s) => !isBranchMarker(s.step_type));
+  };
+
+  // 1-based step number of the next step execution falls through to after this condition's branches
+  const nextFallthroughStepNumber = (conditionIdx: number): number | null => {
+    let j = conditionIdx + 1;
+    while (j < steps.length) {
+      const t = steps[j].step_type;
+      if (t === "branch_yes_start" || t === "branch_no_start") {
+        const end = findBranchEnd(j);
+        j = end === -1 ? steps.length : end + 1;
+      } else break;
+    }
+    if (j >= steps.length) return null;
+    return stepNumbers[j] ?? null;
+  };
+
+  // Remove a branch INCLUDING its inner contents (vs. removeBranch which keeps inner steps)
+  const removeBranchWithContents = (startIdx: number) => {
+    const end = findBranchEnd(startIdx);
+    if (end === -1) return;
+    const updated = [...steps];
+    updated.splice(startIdx, end - startIdx + 1);
+    onChange(updated);
+  };
+
+  const setOutcomeProceed = (conditionIdx: number, kind: "yes" | "no") => {
+    const existing = findBranchStartFor(conditionIdx, kind);
+    if (existing !== -1) removeBranchWithContents(existing);
+  };
+
+  const setOutcomeStop = (conditionIdx: number, kind: "yes" | "no") => {
+    // Remove any existing branch of this kind, then insert one containing end_automation
+    const existing = findBranchStartFor(conditionIdx, kind);
+    let working = [...steps];
+    if (existing !== -1) {
+      const end = findBranchEnd(existing);
+      working.splice(existing, end - existing + 1);
+    }
+    // Recompute insert location after remaining branches of the opposite kind
+    let insertAt = conditionIdx + 1;
+    while (insertAt < working.length) {
+      const t = working[insertAt].step_type;
+      if (t === "branch_yes_start" || t === "branch_no_start") {
+        const sType = t;
+        const eType = t === "branch_yes_start" ? "branch_yes_end" : "branch_no_end";
+        let d = 1, k = insertAt + 1;
+        while (k < working.length && d > 0) {
+          if (working[k].step_type === sType) d++;
+          else if (working[k].step_type === eType) d--;
+          k++;
+        }
+        insertAt = k;
+      } else break;
+    }
+    const startType = kind === "yes" ? "branch_yes_start" : "branch_no_start";
+    const endType = kind === "yes" ? "branch_yes_end" : "branch_no_end";
+    working.splice(insertAt, 0,
+      { step_type: startType, config: {} },
+      { step_type: "action", config: { action: "end_automation", reason: kind === "yes" ? "Condition met — stopping" : "Condition not met — stopping" } },
+      { step_type: endType, config: {} },
+    );
+    onChange(working);
+  };
+
+
+
   const addBranch = (conditionIdx: number, kind: "yes" | "no") => {
     // Insert after any existing branches that already follow this condition
     let insertAt = conditionIdx + 1;
@@ -285,7 +408,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
           );
         }
         const meta = STEP_TYPE_META[step.step_type] || STEP_TYPE_META.action;
-        const condBranchInfo = step.step_type === "condition" ? branchInfoForCondition(i) : null;
+        // condition branch state is rendered inline by the new outcome rows below
         return (
           <div key={i} className={inBranchClass}>
             <div className="flex justify-center py-1">
@@ -314,40 +437,128 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   </span>
                   {meta.icon}
                   <Badge variant="outline" className={meta.color}>{meta.label}</Badge>
+                  {stepNumbers[i] !== undefined && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
+                      Step {stepNumbers[i]}
+                    </Badge>
+                  )}
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(i)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              {condBranchInfo && (!condBranchInfo.hasYes || !condBranchInfo.hasNo) && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  <span className="text-[11px] font-medium text-muted-foreground inline-flex items-center gap-1">
-                    <GitBranch className="h-3 w-3" /> Fork:
-                  </span>
-                  {!condBranchInfo.hasYes && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[11px] gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                      onClick={() => addBranch(i, "yes")}
+              {step.step_type === "condition" && (() => {
+                const fallthroughN = nextFallthroughStepNumber(i);
+                const renderOutcome = (kind: "yes" | "no") => {
+                  const startIdx = findBranchStartFor(i, kind);
+                  const hasBranch = startIdx !== -1;
+                  const branchSteps = hasBranch ? collectBranchSteps(startIdx) : [];
+                  const isStopBranch =
+                    hasBranch &&
+                    branchSteps.length === 1 &&
+                    branchSteps[0].step_type === "action" &&
+                    (branchSteps[0].config as any)?.action === "end_automation";
+
+                  let summary: string;
+                  let mode: "proceed" | "branch" | "stop";
+                  if (!hasBranch) {
+                    summary = fallthroughN ? `Proceed to Step ${fallthroughN}` : "End of automation";
+                    mode = "proceed";
+                  } else if (isStopBranch) {
+                    summary = "Stop automation";
+                    mode = "stop";
+                  } else if (branchSteps.length === 0) {
+                    summary = "Custom branch (empty — add steps below)";
+                    mode = "branch";
+                  } else {
+                    summary = branchSteps.map(summarizeStep).join(" · ");
+                    mode = "branch";
+                  }
+
+                  const isYes = kind === "yes";
+                  const tone = isYes
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    : "bg-rose-50 border-rose-200 text-rose-800";
+                  const pill = isYes
+                    ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                    : "bg-rose-100 text-rose-700 border-rose-200";
+                  const Icon = isYes ? CheckCircle2 : CircleSlash;
+
+                  return (
+                    <div
+                      key={kind}
+                      className={cn("flex items-center gap-2 rounded-md border px-2.5 py-1.5", tone)}
+                      title={summary}
                     >
-                      <Plus className="h-3 w-3" /> If YES branch
-                    </Button>
-                  )}
-                  {!condBranchInfo.hasNo && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[11px] gap-1 bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                      onClick={() => addBranch(i, "no")}
-                    >
-                      <Plus className="h-3 w-3" /> If NO branch
-                    </Button>
-                  )}
-                </div>
-              )}
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] font-semibold", pill)}>
+                        If {isYes ? "YES" : "NO"}
+                      </Badge>
+                      <ArrowRight className="h-3 w-3 opacity-60 shrink-0" />
+                      <span className="text-xs font-medium truncate flex-1 min-w-0">{summary}</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-[11px] gap-1 shrink-0 hover:bg-background/60"
+                          >
+                            Change <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-popover">
+                          <DropdownMenuLabel className="text-[11px]">
+                            If condition is {isYes ? "TRUE" : "FALSE"}…
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setOutcomeProceed(i, kind)}>
+                            {mode === "proceed" && <Check className="h-3.5 w-3.5 mr-2" />}
+                            <span className={mode !== "proceed" ? "ml-[22px]" : ""}>
+                              Proceed to next step
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (mode === "stop") {
+                                // Already stop — convert to empty custom branch
+                                const s = findBranchStartFor(i, kind);
+                                if (s !== -1) removeBranchWithContents(s);
+                                addBranch(i, kind);
+                              } else if (!hasBranch) {
+                                addBranch(i, kind);
+                              }
+                            }}
+                          >
+                            {mode === "branch" && <Check className="h-3.5 w-3.5 mr-2" />}
+                            <span className={mode !== "branch" ? "ml-[22px]" : ""}>
+                              Build a custom branch
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setOutcomeStop(i, kind)}>
+                            {mode === "stop" && <Check className="h-3.5 w-3.5 mr-2" />}
+                            <span className={mode !== "stop" ? "ml-[22px]" : ""}>
+                              Stop automation
+                            </span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  );
+                };
+
+                return (
+                  <div className="space-y-1.5 mb-2">
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <GitBranch className="h-3 w-3" /> Next action
+                    </div>
+                    {renderOutcome("yes")}
+                    {renderOutcome("no")}
+                  </div>
+                );
+              })()}
+
+
 
               {step.step_type === "condition" && (() => {
                 const currentValue = (step.config.condition as string) || "";
