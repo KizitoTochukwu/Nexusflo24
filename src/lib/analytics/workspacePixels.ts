@@ -18,6 +18,7 @@ declare global {
     _fbq?: any;
     dataLayer?: any[];
     gtag?: (...args: any[]) => void;
+    __nf24_inited_pixels?: string[];
   }
 }
 
