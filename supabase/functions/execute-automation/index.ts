@@ -4,10 +4,11 @@ import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { blocksToHtml, parseBlocksFromMessage, interpolateBlocks } from "../_shared/email-blocks.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
+import { requireInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-secret",
 };
 
 function interpolate(template: string, lead: Record<string, any>): string {
@@ -122,6 +123,9 @@ async function evaluateExitCriteria(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const guard = requireInternalCaller(req);
+  if (guard) return guard;
 
   try {
     const supabase = createClient(
