@@ -39,7 +39,7 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
 export const useWorkspace = () => useContext(WorkspaceContext);
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [memberships, setMemberships] = useState<WorkspaceMember[]>([]);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
@@ -52,6 +52,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
+
+    // Mark loading at the start so consumers don't see a stale empty state
+    // between user changing and the new fetch completing.
+    setLoading(true);
 
     const [wsResult, memResult] = await Promise.all([
       supabase.from("workspaces").select("*").order("created_at", { ascending: true }),
@@ -67,8 +71,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    // Wait for auth to finish resolving before fetching, so we don't run a
+    // "user=null" fetch (which sets loading=false with empty workspaces) and
+    // then a second "user=X" fetch that leaves loading=false during the
+    // in-flight window — that gap is what causes guards to bounce back to
+    // /login and produce the "Setting up your workspace…" redirect loop.
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
     fetchWorkspaces();
-  }, [user]);
+  }, [user, authLoading]);
+
 
   const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId) ?? null;
   const currentMembership = memberships.find((m) => m.workspace_id === currentWorkspaceId) ?? null;
