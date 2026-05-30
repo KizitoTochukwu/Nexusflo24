@@ -200,7 +200,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
         const d = Number(cfg.score_delta ?? 0);
         return `${d >= 0 ? "+" : ""}${d} score`;
       }
-      if (a === "update_status") return `Status → ${cfg.new_status || "…"}`;
+      if (a === "update_status") return `Update Lead Status\n${cfg.new_status || "…"}`;
       if (a === "notify_sales") return "Notify sales";
       if (a === "assign_owner") return "Assign owner";
       if (a === "enroll_in_automation") return "Enroll in automation";
@@ -784,17 +784,19 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       />
                     )}
                     {(step.config.action as string) === "update_status" && (
-                      <Select
-                        value={(step.config.new_status as string) || ""}
-                        onValueChange={(v) => updateStep(i, { new_status: v })}
-                      >
-                        <SelectTrigger className="w-[140px] bg-background">
-                          <SelectValue placeholder="New status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {["New", "Warm", "Hot", "Won", "Customer", "Lost"].map((s) => (
-                            <SelectItem key={s} value={s}>{s}</SelectItem>
-                          ))}
+                      <>
+                        <div className="basis-full h-0" />
+                        <Select
+                          value={(step.config.new_status as string) || ""}
+                          onValueChange={(v) => updateStep(i, { new_status: v })}
+                        >
+                          <SelectTrigger className="w-[140px] bg-background">
+                            <SelectValue placeholder="New status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["New", "Warm", "Hot", "Won", "Customer", "Lost"].map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     )}
@@ -1108,7 +1110,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
