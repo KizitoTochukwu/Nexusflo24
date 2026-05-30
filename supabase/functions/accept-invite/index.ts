@@ -69,6 +69,9 @@ Deno.serve(async (req) => {
     return Response.redirect(dashUrl, 302);
   } catch (err: any) {
     console.error("accept-invite error:", err);
-    return new Response(`<h2>Error</h2><p>${err.message}</p>`, { status: 500, headers: { "Content-Type": "text/html" } });
+    return new Response(
+      `<h2>Error</h2><p>Something went wrong. Please try again or contact support.</p>`,
+      { status: 500, headers: { "Content-Type": "text/html" } },
+    );
   }
 });
