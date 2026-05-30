@@ -70,6 +70,7 @@ import WorkflowEditor from "./pages/dashboard/WorkflowEditor";
 import Unsubscribe from "./pages/Unsubscribe";
 import MetaPixelRouteTracker from "./components/analytics/MetaPixelRouteTracker";
 import SiteCustomCodeInjector from "./components/analytics/SiteCustomCodeInjector";
+import AiSeoVisibilityEngine from "./pages/AiSeoVisibilityEngine";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -106,6 +107,7 @@ const App = () => (
               <Route path="/disclaimer" element={<Disclaimer />} />
               <Route path="/anti-spam-policy" element={<AntiSpamPolicy />} />
               <Route path="/gdpr-rights" element={<GdprRights />} />
+              <Route path="/ai-seo-visibility-engine" element={<AiSeoVisibilityEngine />} />
               <Route path="/how-it-works/capture" element={<HowCapture />} />
               <Route path="/how-it-works/nurture" element={<HowNurture />} />
               <Route path="/how-it-works/convert" element={<HowConvert />} />

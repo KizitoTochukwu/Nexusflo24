@@ -1,120 +1,57 @@
-# WhatsApp Integration — HubSpot-style wiring
+# AI SEO & Search Visibility Engine — Service Page
 
-Goal: any workspace can click **Connect WhatsApp**, complete Meta's Embedded Signup, and immediately send/receive messages with their approved templates synced automatically — exactly like HubSpot, Wati, ManyChat.
+A new standalone marketing page at `/ai-seo-visibility-engine`, built into the existing NexusFlo24 site (same Header, Footer, Seo component, navy/gold tokens, container/section rhythm used by `/coaches-creators`, `/marketing-agencies`, etc.).
 
-## What's already in place
-- `whatsapp_settings` (per-workspace phone_number_id + encrypted access_token + default re-engagement template)
-- `whatsapp_templates` (manual entry today)
-- `whatsapp_messages` (inbound + outbound log, with `auto_templated` / `template_name`)
-- `whatsapp-send` edge function with credentials resolver, credit deduction, auto-template-on-window-closed logic (already drafted)
-- `whatsapp-webhook` edge function (inbound + status callbacks)
-- `whatsapp-save-settings` edge function (manual paste flow)
-- Settings → Channels tab with manual phone-id/token form + templates marketplace
+## Files to create
 
-## What's missing / broken
-1. No one-click Meta connect — users must manually create a Meta app, get a Phone Number ID + permanent token, paste them. >90% drop-off.
-2. Templates are typed by hand — they drift from what Meta actually approved.
-3. Re-engagement auto-template path is coded but never verified end-to-end.
-4. No proof inbound webhook + statuses surface in the dashboard inbox in real time.
-5. Workspaces have no visible "connection health" — token expiry, WABA ID, display name, business verification status are all hidden.
+1. **`src/pages/AiSeoVisibilityEngine.tsx`** — full page component with all 11 sections.
+2. **`src/assets/ai-seo-visibility-hero.jpg`** — hero illustration generated via imagegen (navy + gold; Google search box, AI answer bubble, ranking chart, content cards, CRM/automation flow lines connecting them).
 
-## Plan
+## Files to edit
 
-### 1. Meta Embedded Signup (one-click connect)
-**Frontend** (`ChannelSettingsTab.tsx` → new `WhatsAppConnectCard`):
-- Load Facebook JS SDK (`https://connect.facebook.net/en_US/sdk.js`) on demand.
-- "Connect WhatsApp" button calls `FB.login(...)` with `config_id=<META_EMBEDDED_SIGNUP_CONFIG_ID>`, `response_type='code'`, scope `whatsapp_business_management,whatsapp_business_messaging,business_management`.
-- On success, capture the short-lived `code` + the WABA/phone payload returned via `FB.AppEvents` / `message` event listener.
-- POST `{ code, waba_id, phone_number_id }` to new edge function `whatsapp-embedded-signup`.
+1. **`src/App.tsx`** — add `<Route path="/ai-seo-visibility-engine" element={<AiSeoVisibilityEngine />} />` alongside the other sector/how-it-works routes.
+2. **`public/sitemap.xml`** — add the new URL.
 
-**New edge function `whatsapp-embedded-signup`**:
-- Exchange `code` → access token via `GET /v21.0/oauth/access_token` using `META_APP_ID` + `META_APP_SECRET`.
-- Call `POST /v21.0/{waba_id}/subscribed_apps` to subscribe our app to the WABA (required for inbound webhooks).
-- Call `POST /v21.0/{phone_number_id}/register` with a PIN to register the phone with Cloud API.
-- Encrypt token, upsert `whatsapp_settings` (workspace_id, phone_number_id, access_token_encrypted, waba_id, display_phone_number, verified_name, is_active=true).
-- Trigger initial template sync (call internal `whatsapp-sync-templates`).
+## Page architecture
 
-**Schema additions** to `whatsapp_settings`:
-- `waba_id text`, `display_phone_number text`, `verified_name text`, `business_account_name text`, `token_expires_at timestamptz null`, `connection_method text default 'manual'` ('manual' | 'embedded_signup').
+Reuse the visual language of `SectorPage.tsx` (hero with eyebrow chip + image, trust strip, cards grid, numbered workflow, FAQ accordion, final CTA card). Build it inline rather than parameterizing `SectorPage`, because this page has 11 sections including pricing tiers and a lead form that the sector template doesn't support.
 
-**Required new secrets** (will request via `add_secret`):
-- `META_APP_ID` (public — also exposed as `VITE_META_APP_ID` for FB.init)
-- `META_APP_SECRET` (server-only, for code exchange)
-- `META_EMBEDDED_SIGNUP_CONFIG_ID` (public — also `VITE_META_EMBEDDED_SIGNUP_CONFIG_ID`)
+Sections, in order:
 
-User must, in Meta App dashboard: add "WhatsApp" product, set up "Embedded Signup" configuration, whitelist callback domain `nexusflo24.com` + `*.lovable.app`. We'll provide a short setup doc in-app.
+1. **Hero** — eyebrow "AI SEO & SEARCH VISIBILITY", H1 headline, subheadline, primary CTA (smooth-scrolls to `#audit-form`), secondary CTA (smooth-scrolls to `#how-it-works`), hero image, 4 trust pills.
+2. **Problem** — intro copy + 3 cards (Low traffic / Poor Google visibility / Not in AI answers) using destructive-tinted icons like `SectorPage` pain points.
+3. **Solution** — title, copy, then a horizontal 5-node flow: Visibility → Traffic → Leads → Automation → Sales (arrows between, accent color).
+4. **What's Included** — 6 service cards in 3-col grid with lucide icons (Search, FileText, Sparkles, Wrench, Workflow, BarChart3).
+5. **Who It's For** — 8 chip/cards in 4-col grid.
+6. **How It Works** — 5 numbered steps (reuse the `SectorPage` workflow pattern with primary-bg circle + arrow between).
+7. **Benefits** — 8 benefit cards with check icons, 4-col grid.
+8. **Packages** — 3 pricing-style cards (middle one highlighted with accent border + "Most Popular" badge). Each lists name, tagline, bullet list with check icons, CTA button. No payments — buttons link to `/contact` or scroll to form.
+9. **Lead Magnet form** (`id="audit-form"`) — controlled React form with fields: full_name, business_name, email, website_url, service_offered (text), main_goal (select). Validates with zod (matching the input-validation guideline). On submit: insert into a `seo_audit_requests` table OR simply call existing `/contact` mailto / `notify-form-submission` edge function — see open question below. On success, replace form with thank-you message.
+10. **FAQ** — 6 Q&As using the shadcn Accordion (same as `SectorPage`).
+11. **Final CTA** — navy band with headline, sub, two CTAs (Book Audit → scrolls to form; Speak to NexusFlo24 → `/contact`).
 
-Manual paste form stays as a fallback ("Advanced: connect with your own token").
+Use `<Seo>` with the supplied title, description, path `/ai-seo-visibility-engine`, and a `Service` JSON-LD block (provider = NexusFlo24 Organization, serviceType = "AI SEO & Search Visibility").
 
-### 2. Auto-sync approved templates from Meta
-**New edge function `whatsapp-sync-templates`**:
-- Input: `{ workspace_id }`.
-- Reads `waba_id` + decrypted access_token from `whatsapp_settings`.
-- Fetches `GET /v21.0/{waba_id}/message_templates?limit=100` (paginated).
-- For each template, upsert into `whatsapp_templates` on `(workspace_id, name, language)` with `status` (APPROVED/PENDING/REJECTED → lowercased), `category`, `body_preview` (extracted from BODY component), `variable_count` (count of `{{n}}` in body), and a new `components jsonb` column storing the full Meta component array so `whatsapp-send` can build the exact `components` payload with header/body/button params.
-- Mark templates that exist locally but no longer in Meta as `status='deleted'`.
+## Styling
 
-**Schema addition** to `whatsapp_templates`: `components jsonb`, `meta_template_id text`, `last_synced_at timestamptz`.
+- All colors via semantic tokens (`bg-primary`, `text-accent`, `bg-surface`, `border-border`, `bg-card`) — no raw hex in JSX.
+- Match the spacing rhythm of `SectorPage`: `py-20` sections, `container` wrapper, alternating `bg-surface` bands.
+- Cards: `rounded-2xl border border-border bg-card p-6 shadow-sm` with hover lift, identical to existing pages.
+- Smooth scroll via `element.scrollIntoView({ behavior: 'smooth' })` handlers (the project already uses this pattern in anchor links per memory).
 
-**UI** — `WhatsAppTemplatesTab`:
-- Replace "Add template" with "Sync from Meta" button (manual add still available but secondary).
-- Show status badge (approved/pending/rejected) pulled from Meta.
-- Auto-trigger sync on connect, plus a 1×/day cron via `process-scheduled-jobs`.
+## Technical notes
 
-### 3. Finalize re-engagement fallback (end-to-end)
-- `whatsapp-send` already auto-falls-back to `default_reengagement_template_id`. Two remaining issues:
-  - For templates with variables, currently injects raw `msgBody` as `{{1}}`. Confirm length cap (1024) + escape newlines (Meta rejects `\n` in body params for some categories).
-  - When `effectiveTemplate.components` exists in the synced template, pass them through unchanged instead of rebuilding (handles HEADER + BUTTON params correctly).
-- Add settings UI: if no `default_reengagement_template_id` is set but at least one approved UTILITY/MARKETING template exists, prompt the user to pick one with a yellow banner ("Pick a default template so messages outside the 24h window still deliver").
+- Hero image generated at 1536×1024 JPG, imported as ES6 module.
+- Form state via `useState`; zod schema validates client-side; toast on error using existing `useToast`.
+- Component is one file (~600 lines) to match the convention of `SectorPage.tsx` consumers; no new shared primitives needed.
+- Page is purely presentational + one form submit — no business logic changes elsewhere.
 
-### 4. Inbound webhook + 2-way inbox verification
-- `whatsapp-webhook` already writes inbound rows. Audit it for:
-  - Handles `messages`, `statuses` (sent/delivered/read/failed), and updates matching `whatsapp_messages.status` by `wa_message_id`.
-  - Sets `lead_id` by matching `phone_number` (E.164) against `leads.phone`; creates a lead if none.
-- Realtime: enable `ALTER PUBLICATION supabase_realtime ADD TABLE public.whatsapp_messages` (if not already) so `DashboardMessages` updates live.
-- `DashboardMessages` WhatsApp tab: confirm it subscribes to the channel and renders inbound + outbound threaded by `phone_number`.
+## Open question (please confirm before I build)
 
-### 5. Connection health card
-Small card on Channels tab showing: connected number, verified business name, WABA ID, token age, "Test send to my number" button, "Disconnect" button (revokes `subscribed_apps`, nulls `is_active`).
+Where should the **lead audit form** submissions go? Options:
 
----
+- **A.** Insert into a new `seo_audit_requests` table (Lovable Cloud) and trigger `notify-form-submission` so the team gets an email. Adds a migration.
+- **B.** Reuse the existing `/contact` flow: POST to whatever the Contact page uses today (no new table, no migration).
+- **C.** Fire-and-forget mailto: opens the user's mail client to `info@…` with the fields prefilled. Zero backend.
 
-## Files / deliverables
-
-**New edge functions**
-- `supabase/functions/whatsapp-embedded-signup/index.ts`
-- `supabase/functions/whatsapp-sync-templates/index.ts`
-- `supabase/functions/whatsapp-disconnect/index.ts`
-
-**Edited edge functions**
-- `whatsapp-send`: use synced `components` for templates; tighten variable escaping.
-- `whatsapp-webhook`: audit + add status mapping + lead auto-link (if missing).
-
-**Schema (single migration)**
-- `whatsapp_settings`: add `waba_id`, `display_phone_number`, `verified_name`, `business_account_name`, `token_expires_at`, `connection_method`.
-- `whatsapp_templates`: add `components jsonb`, `meta_template_id text`, `last_synced_at timestamptz`; allow `status='deleted'`.
-- Add `whatsapp_messages` to `supabase_realtime` publication (idempotent).
-
-**Frontend**
-- `src/components/settings/WhatsAppConnectCard.tsx` (new) — embedded signup button + connection health.
-- `src/components/settings/ChannelSettingsTab.tsx` — mount the new card above the manual form, demote manual to "Advanced".
-- `src/components/settings/WhatsAppTemplatesTab.tsx` — "Sync from Meta" button, status badges.
-- `src/hooks/useWhatsAppConnection.ts` (new) — wraps connect / disconnect / sync / health query.
-- `src/lib/meta/fbSdk.ts` (new) — lazy-load FB JS SDK, `FB.init`, `FB.login` promise wrapper.
-
-**Cron**
-- `process-scheduled-jobs` enqueues a daily `whatsapp-sync-templates` per active workspace.
-
-**Secrets to add** (will prompt user after plan approval):
-- `META_APP_ID`, `META_APP_SECRET`, `META_EMBEDDED_SIGNUP_CONFIG_ID`
-
-**Setup prereq the user must do once in Meta dashboard** (we'll surface this as an in-app doc/link):
-- Create / pick a Meta App → add WhatsApp + Facebook Login for Business products.
-- Configure an Embedded Signup "config" → copy the Config ID.
-- Add `https://nexusflo24.com` and `https://id-preview--*.lovable.app` to Valid OAuth Redirect URIs.
-- Submit for Advanced Access on `whatsapp_business_management` + `whatsapp_business_messaging` (required to go live; dev mode works for testing with whitelisted users).
-
-## Out of scope (flag for later)
-- Template **creation** from inside NexusFlo24 (we sync existing, not author new ones).
-- Multi-number per workspace (one phone_number_id per workspace for now).
-- Tech Provider / Solution Partner billing pass-through (we just connect, Meta bills the user's WABA).
+I'll default to **B** (reuse contact flow) if you don't specify, since it's the lightest and matches "do not add backend code unless asked".
