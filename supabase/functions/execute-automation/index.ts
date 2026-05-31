@@ -944,24 +944,43 @@ Deno.serve(async (req) => {
               reply_check?: string;
             };
 
-            // Build the list of rows to evaluate. Prefer new `conditions[]` shape;
-            // otherwise fall back to the legacy single-row config fields.
-            const rawRows = Array.isArray((config as any).conditions)
-              ? ((config as any).conditions as Row[]).filter((r) => r && r.condition)
+            type Group = { logic?: string; rows: Row[] };
+
+            // Build groups[]. Precedence:
+            //   1) new `condition_groups` shape (guarded nested groups, max 1 level)
+            //   2) legacy `conditions[]` shape → one group
+            //   3) legacy single-row fields → one group / one row
+            let groups: Group[] = [];
+            const rawGroups = Array.isArray((config as any).condition_groups)
+              ? ((config as any).condition_groups as Group[])
               : [];
-            const rows: Row[] = rawRows.length
-              ? rawRows
-              : config.condition || config.field
-              ? [{
+            if (rawGroups.length) {
+              groups = rawGroups
+                .map((g) => ({
+                  logic: ((g?.logic as string) || "AND").toUpperCase() === "OR" ? "OR" : "AND",
+                  rows: Array.isArray(g?.rows) ? g.rows.filter((r) => r && r.condition) : [],
+                }))
+                .filter((g) => g.rows.length > 0);
+            } else if (Array.isArray((config as any).conditions)) {
+              const rs = ((config as any).conditions as Row[]).filter((r) => r && r.condition);
+              if (rs.length) groups = [{ logic: ((config as any).logic as string) || "AND", rows: rs }];
+            } else if (config.condition || config.field) {
+              groups = [{
+                logic: "AND",
+                rows: [{
                   condition: (config.condition as string) || (config.field as string),
                   operator: config.operator as string | undefined,
                   value: config.value,
                   value_to: config.value_to,
                   time_window_days: config.time_window_days as number | undefined,
                   reply_check: config.reply_check as string | undefined,
-                }]
-              : [];
-            const logic = (((config as any).logic as string) || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+                }],
+              }];
+            }
+            const groupLogic = (((config as any).group_logic as string) || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+            // Legacy single-group rows + logic, used by the reply-status branch below.
+            const rows: Row[] = groups[0]?.rows ?? [];
+            const logic = groups[0]?.logic ?? "AND";
 
             // Evaluate a single row → boolean.
             const evaluateRow = async (row: Row): Promise<{ passed: boolean; details: Record<string, unknown> }> => {
@@ -1073,7 +1092,6 @@ Deno.serve(async (req) => {
             };
 
             let passed = false;
-            let rowResults: Array<{ passed: boolean; details: Record<string, unknown> }> = [];
 
             // Reply-status is a special single-row case (it mutates pipeline_stage).
             const firstType = rows[0]?.condition;
@@ -1095,12 +1113,17 @@ Deno.serve(async (req) => {
                 details = { hasReply, movedTo: null, action: "continue_sequence" };
               }
               passed = true;
-            } else if (rows.length > 0) {
-              rowResults = await Promise.all(rows.map(evaluateRow));
-              passed = logic === "OR"
-                ? rowResults.some((r) => r.passed)
-                : rowResults.every((r) => r.passed);
-              details = { logic, rows: rowResults.map((r) => r.details), passed };
+            } else if (groups.length > 0) {
+              // Evaluate each group's rows, then combine groups by groupLogic.
+              const groupResults = await Promise.all(groups.map(async (g) => {
+                const rrs = await Promise.all(g.rows.map(evaluateRow));
+                const gPassed = g.logic === "OR" ? rrs.some((r) => r.passed) : rrs.every((r) => r.passed);
+                return { logic: g.logic, passed: gPassed, rows: rrs.map((r) => r.details) };
+              }));
+              passed = groupLogic === "OR"
+                ? groupResults.some((r) => r.passed)
+                : groupResults.every((r) => r.passed);
+              details = { group_logic: groupLogic, groups: groupResults, passed };
             } else {
               details = { message: "Condition step has no rows configured", passed: false };
             }
