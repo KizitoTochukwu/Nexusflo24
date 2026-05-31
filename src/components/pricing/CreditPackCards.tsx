@@ -3,8 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Minus, Plus, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CREDIT_PACKS, type CreditChannel } from "@/lib/stripe/creditPacks";
+import { formatPrice } from "@/lib/currency/config";
+import { startCreditCheckout } from "@/lib/billing/checkout";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
@@ -13,6 +16,7 @@ const channels: CreditChannel[] = ["email", "sms", "whatsapp"];
 
 export default function CreditPackCards() {
   const { user } = useAuth();
+  const { currency, convert } = useCurrency();
   const navigate = useNavigate();
   const [quantities, setQuantities] = useState<Record<CreditChannel, number>>({
     email: 1,
@@ -36,7 +40,6 @@ export default function CreditPackCards() {
 
     setLoadingChannel(ch);
     try {
-      // Resolve workspace
       const { data: membership, error: wsErr } = await supabase
         .from("workspace_members")
         .select("workspace_id")
@@ -50,21 +53,18 @@ export default function CreditPackCards() {
       fbqTrack("InitiateCheckout", {
         content_name: `${ch}_credit_pack`,
         content_category: "credit_pack",
-        value: pack.price * quantities[ch],
-        currency: "USD",
+        value: convert(pack.price * quantities[ch]),
+        currency,
         num_items: quantities[ch],
       });
 
-      const { data, error } = await supabase.functions.invoke("create-credit-purchase", {
-        body: { channel: ch, workspaceId: membership.workspace_id, quantity: quantities[ch] },
+      const result = await startCreditCheckout({
+        channel: ch,
+        workspaceId: membership.workspace_id,
+        quantity: quantities[ch],
+        currency,
       });
-
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
+      window.location.href = result.url;
     } catch (err: any) {
       toast.error(err.message || "Failed to start checkout");
     } finally {
@@ -101,7 +101,7 @@ export default function CreditPackCards() {
                 <p className="text-sm text-primary-foreground/60">{pack.unit} per pack</p>
 
                 <p className="text-lg font-semibold text-accent">
-                  ${pack.price}
+                  {formatPrice(convert(pack.price), currency, { compact: true })}
                   <span className="text-sm font-normal text-primary-foreground/60"> / pack</span>
                 </p>
 
@@ -128,7 +128,7 @@ export default function CreditPackCards() {
 
                 {qty > 1 && (
                   <p className="text-xs text-primary-foreground/60">
-                    {(pack.credits * qty).toLocaleString()} {pack.unit} · ${pack.price * qty}
+                    {(pack.credits * qty).toLocaleString()} {pack.unit} · {formatPrice(convert(pack.price * qty), currency, { compact: true })}
                   </p>
                 )}
 

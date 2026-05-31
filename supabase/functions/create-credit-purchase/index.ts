@@ -7,11 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CREDIT_PACKS: Record<string, { priceId: string; credits: number }> = {
-  email: { priceId: "price_1TOfYVE524oup9rkOupWd3vN", credits: 1000 },
-  sms: { priceId: "price_1TOfc8E524oup9rkWQWIhwrf", credits: 100 },
-  whatsapp: { priceId: "price_1TOfeBE524oup9rkcPlroL47", credits: 100 },
-};
+// Credit pack price IDs are looked up per currency in `regional_prices`
+// (plan_key = 'credit_email' | 'credit_sms' | 'credit_whatsapp', cycle = 'one_time').
+const CREDITS_PER_PACK: Record<string, number> = { email: 1000, sms: 100, whatsapp: 100 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,7 +18,7 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
   try {
@@ -30,11 +28,32 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
-    const { channel, workspaceId, quantity = 1 } = await req.json();
+    const { channel, workspaceId, quantity = 1, currency = "USD" } = await req.json();
     if (!channel || !workspaceId) throw new Error("Missing channel or workspaceId");
+    if (!CREDITS_PER_PACK[channel]) throw new Error("Invalid channel. Must be email, sms, or whatsapp.");
 
-    const pack = CREDIT_PACKS[channel];
-    if (!pack) throw new Error("Invalid channel. Must be email, sms, or whatsapp.");
+    const planKey = `credit_${channel}`;
+    let { data: priceRow } = await supabaseClient
+      .from("regional_prices")
+      .select("stripe_price_id")
+      .eq("plan_key", planKey)
+      .eq("billing_cycle", "one_time")
+      .eq("currency", currency)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!priceRow?.stripe_price_id) {
+      const { data: usdRow } = await supabaseClient
+        .from("regional_prices")
+        .select("stripe_price_id")
+        .eq("plan_key", planKey)
+        .eq("billing_cycle", "one_time")
+        .eq("currency", "USD")
+        .maybeSingle();
+      priceRow = usdRow ?? null;
+    }
+    const priceId = priceRow?.stripe_price_id;
+    if (!priceId) throw new Error("No Stripe price configured for this credit pack");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -51,16 +70,17 @@ serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
-      line_items: [{ price: pack.priceId, quantity }],
+      line_items: [{ price: priceId, quantity }],
       mode: "payment",
       success_url: `${origin}/dashboard/${workspaceId}/settings?tab=usage&purchase=success`,
       cancel_url: `${origin}/dashboard/${workspaceId}/settings?tab=usage&purchase=cancel`,
       metadata: {
         type: "credit_purchase",
         channel,
-        credits: String(pack.credits * quantity),
+        credits: String(CREDITS_PER_PACK[channel] * quantity),
         workspaceId,
         userId: user.id,
+        currency,
       },
     });
 

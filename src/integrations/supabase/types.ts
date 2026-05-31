@@ -614,8 +614,10 @@ export type Database = {
       credit_transactions: {
         Row: {
           amount: number
+          amount_minor: number | null
           channel: string
           created_at: string
+          currency: string
           id: string
           reason: string
           reference_id: string | null
@@ -623,8 +625,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_minor?: number | null
           channel: string
           created_at?: string
+          currency?: string
           id?: string
           reason: string
           reference_id?: string | null
@@ -632,8 +636,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_minor?: number | null
           channel?: string
           created_at?: string
+          currency?: string
           id?: string
           reason?: string
           reference_id?: string | null
@@ -648,6 +654,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      currency_rates: {
+        Row: {
+          base: string
+          id: string
+          quote: string
+          rate: number
+          updated_at: string
+        }
+        Insert: {
+          base?: string
+          id?: string
+          quote: string
+          rate: number
+          updated_at?: string
+        }
+        Update: {
+          base?: string
+          id?: string
+          quote?: string
+          rate?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       email_logs: {
         Row: {
@@ -1706,6 +1736,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          preferred_currency: string
           updated_at: string
         }
         Insert: {
@@ -1716,6 +1747,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          preferred_currency?: string
           updated_at?: string
         }
         Update: {
@@ -1726,6 +1758,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          preferred_currency?: string
           updated_at?: string
         }
         Relationships: []
@@ -1773,6 +1806,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      regional_prices: {
+        Row: {
+          active: boolean
+          amount_minor: number
+          billing_cycle: string
+          created_at: string
+          currency: string
+          id: string
+          paystack_plan_code: string | null
+          plan_key: string
+          stripe_price_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          amount_minor: number
+          billing_cycle: string
+          created_at?: string
+          currency: string
+          id?: string
+          paystack_plan_code?: string | null
+          plan_key: string
+          stripe_price_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          amount_minor?: number
+          billing_cycle?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          paystack_plan_code?: string | null
+          plan_key?: string
+          stripe_price_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       sales_closer_settings: {
         Row: {
@@ -2261,13 +2333,18 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          amount_minor: number | null
           billing_cycle: string | null
           cancel_at_period_end: boolean
           created_at: string
+          currency: string
           current_period_end: string | null
           id: string
           plan: string
           price_id: string | null
+          provider: string
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -2276,13 +2353,18 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          amount_minor?: number | null
           billing_cycle?: string | null
           cancel_at_period_end?: boolean
           created_at?: string
+          currency?: string
           current_period_end?: string | null
           id?: string
           plan?: string
           price_id?: string | null
+          provider?: string
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -2291,13 +2373,18 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          amount_minor?: number | null
           billing_cycle?: string | null
           cancel_at_period_end?: boolean
           created_at?: string
+          currency?: string
           current_period_end?: string | null
           id?: string
           plan?: string
           price_id?: string | null
+          provider?: string
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
