@@ -49,6 +49,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   add_tag: <Tag className="h-4 w-4" />,
   remove_tag: <XCircle className="h-4 w-4" />,
   update_status: <RefreshCw className="h-4 w-4" />,
+  update_pipeline_stage: <GitBranch className="h-4 w-4" />,
   adjust_score: <TrendingUp className="h-4 w-4" />,
   notify_sales: <Bell className="h-4 w-4" />,
   assign_owner: <UserPlus className="h-4 w-4" />,
