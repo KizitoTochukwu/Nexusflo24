@@ -497,7 +497,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
 
                 const writeRows = (next: ConditionRow[], nextLogic?: ConditionLogic) => {
                   // Persist as rows[] + mirror first row into legacy fields for back-compat with existing UI bits.
-                  const first = next[0] || {};
+                  const first: Partial<ConditionRow> = next[0] || {};
                   updateStep(i, {
                     conditions: next,
                     logic: nextLogic ?? logic,
