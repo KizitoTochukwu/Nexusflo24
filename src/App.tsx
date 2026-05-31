@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import AdminPricing from "./pages/admin/AdminPricing";
 import RedirectIfAuth from "@/components/auth/RedirectIfAuth";
 import WorkspaceGuard from "@/components/auth/WorkspaceGuard";
 import Index from "./pages/Index";
@@ -80,6 +82,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <CurrencyProvider>
           <WorkspaceProvider>
             <MetaPixelRouteTracker />
             <SiteCustomCodeInjector />
@@ -141,6 +144,7 @@ const App = () => (
                   <Route path="admin" element={<AdminDashboard />} />
                   <Route path="admin/blog" element={<AdminBlogManager />} />
                   <Route path="admin/smart-actions" element={<AdminSmartActions />} />
+                  <Route path="admin/pricing" element={<AdminPricing />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
@@ -169,6 +173,7 @@ const App = () => (
             <ChatbotWidget />
             <CookieConsentBanner />
           </WorkspaceProvider>
+          </CurrencyProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
