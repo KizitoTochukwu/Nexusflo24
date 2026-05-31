@@ -776,7 +776,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   let summary: string;
                   let mode: "proceed" | "branch" | "stop";
                   if (!hasBranch) {
-                    summary = fallthroughN ? `Proceed to Step ${fallthroughN}` : "End of automation";
+                    summary = fallthroughN ? `Proceed to Step ${fallthroughN}` : "Select Action";
                     mode = "proceed";
                   } else if (isStopBranch) {
                     summary = "Stop automation";
