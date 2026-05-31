@@ -16,6 +16,7 @@ import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
   const workspaceId = useWorkspaceId();
   const createAutomation = useCreateAutomation();
