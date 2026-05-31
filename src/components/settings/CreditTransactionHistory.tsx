@@ -7,6 +7,7 @@ import { Loader2, History, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatMinor, isCurrencyCode } from "@/lib/currency/config";
 
 interface CreditTransaction {
   id: string;
@@ -15,6 +16,8 @@ interface CreditTransaction {
   reason: string;
   reference_id: string | null;
   created_at: string;
+  currency: string | null;
+  amount_minor: number | null;
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -84,37 +87,45 @@ export default function CreditTransactionHistory() {
                     <th className="px-3 py-2 font-medium text-muted-foreground">Date</th>
                     <th className="px-3 py-2 font-medium text-muted-foreground">Channel</th>
                     <th className="px-3 py-2 font-medium text-muted-foreground">Type</th>
-                    <th className="px-3 py-2 font-medium text-muted-foreground text-right">Amount</th>
+                    <th className="px-3 py-2 font-medium text-muted-foreground text-right">Credits</th>
+                    <th className="px-3 py-2 font-medium text-muted-foreground text-right">Cost</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.rows.map((tx) => (
-                    <tr key={tx.id} className="border-b last:border-0">
-                      <td className="px-3 py-2.5 text-muted-foreground">
-                        {format(new Date(tx.created_at), "MMM d, yyyy HH:mm")}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <Badge variant="outline" className="text-xs">
-                          {CHANNEL_LABELS[tx.channel] || tx.channel}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {REASON_LABELS[tx.reason] || tx.reason}
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        <span className={`inline-flex items-center gap-1 font-semibold ${
-                          tx.amount > 0 ? "text-emerald-600" : "text-red-500"
-                        }`}>
-                          {tx.amount > 0 ? (
-                            <ArrowUpCircle className="h-3.5 w-3.5" />
-                          ) : (
-                            <ArrowDownCircle className="h-3.5 w-3.5" />
-                          )}
-                          {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {data.rows.map((tx) => {
+                    const cur = tx.currency && isCurrencyCode(tx.currency) ? tx.currency : null;
+                    const showCost = tx.reason === "purchase" && cur && tx.amount_minor != null;
+                    return (
+                      <tr key={tx.id} className="border-b last:border-0">
+                        <td className="px-3 py-2.5 text-muted-foreground">
+                          {format(new Date(tx.created_at), "MMM d, yyyy HH:mm")}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant="outline" className="text-xs">
+                            {CHANNEL_LABELS[tx.channel] || tx.channel}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {REASON_LABELS[tx.reason] || tx.reason}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <span className={`inline-flex items-center gap-1 font-semibold ${
+                            tx.amount > 0 ? "text-emerald-600" : "text-red-500"
+                          }`}>
+                            {tx.amount > 0 ? (
+                              <ArrowUpCircle className="h-3.5 w-3.5" />
+                            ) : (
+                              <ArrowDownCircle className="h-3.5 w-3.5" />
+                            )}
+                            {tx.amount > 0 ? "+" : ""}{tx.amount.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">
+                          {showCost ? formatMinor(tx.amount_minor!, cur!) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
