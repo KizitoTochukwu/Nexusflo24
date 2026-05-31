@@ -33,8 +33,18 @@ const DashboardAutomations = () => {
   const { data: exitedCounts } = useWorkspaceExitedCounts(workspaceId);
   const backfill = useBackfillExitDefaults();
 
-  const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const selectedAutomation = useMemo(
+    () => automations?.find((a) => a.id === editId) ?? null,
+    [automations, editId],
+  );
+  const drawerOpen = !!editId;
+  const closeDrawer = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+  };
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Count nurture automations missing exit criteria — for the backfill banner.
