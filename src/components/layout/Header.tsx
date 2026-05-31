@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import logoFull from "@/assets/nexusflo24-logo-full.png";
+import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 
 const navLinks = [
   { label: "Dashboard", to: "/dashboard" },
@@ -90,7 +91,8 @@ const Header = () => {
           })}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-2 md:flex">
+          <CurrencySwitcher variant="compact" />
           <Link to="/login">
             <Button variant="ghost" size="sm">
               Log In
@@ -144,6 +146,7 @@ const Header = () => {
               </div>
             ))}
             <div className="mt-2 flex flex-col gap-2">
+              <div className="flex justify-center pb-1"><CurrencySwitcher /></div>
               <Link to="/login" onClick={() => setMobileOpen(false)}>
                 <Button variant="ghost" className="w-full">Log In</Button>
               </Link>
