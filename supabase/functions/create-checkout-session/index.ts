@@ -7,17 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Allowed price IDs (public Stripe identifiers, safe to hardcode)
-const ALLOWED_PRICE_IDS = new Set([
-  "price_1T9mXPE524oup9rkk8iIwV9V", // Starter Monthly
-  "price_1T9mYOE524oup9rkkZdWRQFx", // Starter Yearly
-  "price_1T9marE524oup9rkld15YfyQ", // Plus Monthly
-  "price_1T9mbVE524oup9rkVF3I4II2", // Plus Yearly
-  "price_1T9mcBE524oup9rkNpX4MfLj", // Pro Monthly
-  "price_1T9mdJE524oup9rkt4IgzlT6", // Pro Yearly
-  "price_1T9mf7E524oup9rkAFzF9Yae", // Enterprise Monthly
-  "price_1T9mfeE524oup9rk66YsGrWs", // Enterprise Yearly
-]);
+// Allowed price IDs are resolved dynamically from the regional_prices table.
+// Any new currency/plan combination an admin adds in the dashboard is accepted automatically.
 
 serve(async (req) => {
 
@@ -27,7 +18,7 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
   try {
@@ -37,13 +28,33 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
-    const { plan, billingCycle, priceId, workspaceId } = await req.json();
-    if (!priceId) throw new Error("Missing priceId");
+    const { plan, billingCycle, currency = "USD", workspaceId } = await req.json();
+    if (!plan || !billingCycle) throw new Error("Missing plan or billingCycle");
 
-    // Validate priceId against allowed values
-    if (!ALLOWED_PRICE_IDS.has(priceId)) {
-      throw new Error("Invalid priceId");
+    // Look up regional price (currency-specific Stripe price ID).
+    const { data: priceRow } = await supabaseClient
+      .from("regional_prices")
+      .select("stripe_price_id, amount_minor, currency")
+      .eq("plan_key", plan)
+      .eq("billing_cycle", billingCycle)
+      .eq("currency", currency)
+      .eq("active", true)
+      .maybeSingle();
+
+    let priceId = priceRow?.stripe_price_id;
+    // Fallback: if no currency-specific Stripe price exists yet, fall back to USD price.
+    if (!priceId) {
+      const { data: usdRow } = await supabaseClient
+        .from("regional_prices")
+        .select("stripe_price_id")
+        .eq("plan_key", plan)
+        .eq("billing_cycle", billingCycle)
+        .eq("currency", "USD")
+        .maybeSingle();
+      priceId = usdRow?.stripe_price_id ?? undefined;
     }
+
+    if (!priceId) throw new Error("No Stripe price configured for this plan");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -83,7 +94,7 @@ serve(async (req) => {
       allow_promotion_codes: true,
       success_url: successUrl,
       cancel_url: `${origin}/pricing?checkout=cancel`,
-      metadata: { userId: user.id, plan, billingCycle, priceId, workspaceId: workspaceId || "" },
+      metadata: { userId: user.id, plan, billingCycle, priceId, workspaceId: workspaceId || "", currency },
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
@@ -93,7 +104,7 @@ serve(async (req) => {
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[create-checkout-session] Error:", msg);
-    const safeMessages = ["User not authenticated", "Missing priceId", "Invalid priceId"];
+    const safeMessages = ["User not authenticated", "Missing plan or billingCycle", "No Stripe price configured for this plan"];
     const clientMsg = safeMessages.includes(msg) ? msg : "Unable to create checkout session.";
     return new Response(JSON.stringify({ error: clientMsg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
