@@ -10,6 +10,8 @@ export const AUTOMATION_TAG_OPTIONS = [
   "qualified",
   "customer",
   "re-engagement",
+  "monthly-newsletter",
 ] as const;
 
 export type AutomationTag = (typeof AUTOMATION_TAG_OPTIONS)[number];
+
