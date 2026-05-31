@@ -93,3 +93,7 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.whatsapp-disconnect]
     verify_jwt = false
+  [functions.paystack-checkout]
+    verify_jwt = false
+  [functions.paystack-webhook]
+    verify_jwt = false
