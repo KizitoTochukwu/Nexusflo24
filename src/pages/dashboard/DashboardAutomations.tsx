@@ -58,8 +58,9 @@ const DashboardAutomations = () => {
   }, [automations]);
 
   const openDetails = (a: Automation) => {
-    setSelectedAutomation(a);
-    setDrawerOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.set("edit", a.id);
+    setSearchParams(next, { replace: false });
   };
 
   const handleDuplicate = (a: Automation) => {
