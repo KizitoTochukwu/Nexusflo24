@@ -473,20 +473,57 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                 </Button>
               </div>
               {step.step_type === "condition" && (() => {
-                const currentValue = (step.config.condition as string) || "";
                 const allOptions = CONDITION_GROUPS.flatMap((g) => g.options);
-                const selectedOpt = allOptions.find((o) => o.value === currentValue);
-                const currentOperator = (step.config.operator as ConditionOperator) ||
-                  (selectedOpt?.operators?.[0] ?? "equals");
-                const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
-                const isBetween = currentOperator === "between";
+
+                // Normalize legacy single-row config into rows[] without writing to disk yet.
+                const legacyRow: ConditionRow | null = step.config.condition
+                  ? {
+                      condition: step.config.condition as string,
+                      operator: step.config.operator as ConditionOperator | undefined,
+                      value: (step.config.value as string) || "",
+                      value_to: (step.config.value_to as string) || "",
+                      time_window_days: step.config.time_window_days as number | undefined,
+                      reply_check: step.config.reply_check as string | undefined,
+                    }
+                  : null;
+                const rawRows = (step.config.conditions as ConditionRow[] | undefined);
+                const rows: ConditionRow[] = rawRows && rawRows.length
+                  ? rawRows
+                  : legacyRow
+                  ? [legacyRow]
+                  : [{ condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }];
+                const logic: ConditionLogic = (step.config.logic as ConditionLogic) || "AND";
+                const isReplyStatusFirst = rows[0]?.condition === "reply_status";
+
+                const writeRows = (next: ConditionRow[], nextLogic?: ConditionLogic) => {
+                  // Persist as rows[] + mirror first row into legacy fields for back-compat with existing UI bits.
+                  const first = next[0] || {};
+                  updateStep(i, {
+                    conditions: next,
+                    logic: nextLogic ?? logic,
+                    condition: first.condition,
+                    operator: first.operator,
+                    value: first.value ?? "",
+                    value_to: first.value_to ?? "",
+                    time_window_days: first.time_window_days,
+                    reply_check: first.reply_check,
+                  });
+                };
+
+                const updateRow = (idx: number, patch: Partial<ConditionRow>) => {
+                  const next = rows.map((r, k) => (k === idx ? { ...r, ...patch } : r));
+                  writeRows(next);
+                };
+                const addRow = () => writeRows([...rows, { condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }]);
+                const removeRow = (idx: number) => writeRows(rows.filter((_, k) => k !== idx));
+
+                const firstOpt = allOptions.find((o) => o.value === rows[0]?.condition);
 
                 const addSuggested = (sa: { action: string; defaults?: Record<string, unknown> }) => {
                   const newStep: StepData = {
                     step_type: "action",
                     config: { action: sa.action, ...(sa.defaults || {}) },
                   };
-                  // Insert immediately after the current condition step
                   const updated = [...steps];
                   updated.splice(i + 1, 0, newStep);
                   onChange(updated);
@@ -494,94 +531,166 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
 
                 return (
                   <div className="space-y-2 mb-2">
-                    <div className="flex flex-wrap gap-2 items-center">
-                      <Select
-                        value={currentValue}
-                        onValueChange={(v) => {
-                          const opt = allOptions.find((o) => o.value === v);
-                          const defaultOp = opt?.operators?.[0] ?? "equals";
-                          if (v === "reply_status") {
-                            updateStep(i, { condition: v, operator: undefined, reply_check: "has_replied", value: "", value_to: "", time_window_days: undefined });
-                          } else {
-                            updateStep(i, { condition: v, operator: defaultOp, reply_check: undefined, value: "", value_to: "", time_window_days: undefined });
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-[200px] bg-background">
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[360px]">
-                          {CONDITION_GROUPS.map((group) => (
-                            <SelectGroup key={group.label}>
-                              <SelectLabel className="text-xs uppercase tracking-wide text-muted-foreground">
-                                {group.label}
-                              </SelectLabel>
-                              {group.options.map((c) => (
-                                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                              ))}
-                            </SelectGroup>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    {rows.map((row, idx) => {
+                      const selectedOpt = allOptions.find((o) => o.value === row.condition);
+                      const currentOperator: ConditionOperator =
+                        row.operator || (selectedOpt?.operators?.[0] ?? "equals");
+                      const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
+                      const isBetween = currentOperator === "between";
 
-                      {/* Operator */}
-                      {selectedOpt && selectedOpt.operators.length > 0 && (
-                        <Select
-                          value={currentOperator}
-                          onValueChange={(v) => updateStep(i, { operator: v, ...(v === "between" ? {} : { value_to: "" }) })}
-                        >
-                          <SelectTrigger className="w-[170px] bg-background">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedOpt.operators.map((op) => (
-                              <SelectItem key={op} value={op}>{operatorLabel(op)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
+                      return (
+                        <div key={idx} className="space-y-1.5">
+                          {idx > 0 && (
+                            <div className="flex items-center gap-2 pl-1">
+                              <div className="h-px flex-1 bg-blue-200" />
+                              <div className="inline-flex rounded-full border border-blue-300 bg-background/70 overflow-hidden text-[10px] font-semibold">
+                                {(["AND", "OR"] as ConditionLogic[]).map((l) => (
+                                  <button
+                                    key={l}
+                                    type="button"
+                                    onClick={() => writeRows(rows, l)}
+                                    className={cn(
+                                      "px-2.5 py-0.5 transition-colors",
+                                      logic === l
+                                        ? "bg-blue-600 text-white"
+                                        : "text-blue-700 hover:bg-blue-50",
+                                    )}
+                                  >
+                                    {l}
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="h-px flex-1 bg-blue-200" />
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2 items-center">
+                            <Select
+                              value={row.condition}
+                              onValueChange={(v) => {
+                                const opt = allOptions.find((o) => o.value === v);
+                                const defaultOp = opt?.operators?.[0] ?? "equals";
+                                if (v === "reply_status") {
+                                  // Reply status is exclusive — collapse to single row
+                                  writeRows([{ condition: v, operator: undefined, reply_check: "has_replied", value: "", value_to: "", time_window_days: undefined }]);
+                                } else {
+                                  updateRow(idx, { condition: v, operator: defaultOp, reply_check: undefined, value: "", value_to: "", time_window_days: undefined });
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="w-[200px] bg-background">
+                                <SelectValue placeholder="Select condition" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[360px]">
+                                {CONDITION_GROUPS.map((group) => (
+                                  <SelectGroup key={group.label}>
+                                    <SelectLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                                      {group.label}
+                                    </SelectLabel>
+                                    {group.options.map((c) => (
+                                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                ))}
+                              </SelectContent>
+                            </Select>
 
-                      {/* Value(s) */}
-                      {selectedOpt && operatorNeedsValue && selectedOpt.input !== "none" && (
-                        <Input
-                          type={selectedOpt.input === "number" ? "number" : "text"}
-                          placeholder={selectedOpt.placeholder || "Value"}
-                          className="w-[160px] bg-background"
-                          value={(step.config.value as string) || ""}
-                          onChange={(e) => updateStep(i, { value: e.target.value })}
-                        />
-                      )}
-                      {selectedOpt && isBetween && selectedOpt.input !== "none" && (
-                        <>
-                          <span className="text-xs text-muted-foreground">and</span>
-                          <Input
-                            type={selectedOpt.input === "number" ? "number" : "text"}
-                            placeholder="Upper value"
-                            className="w-[120px] bg-background"
-                            value={(step.config.value_to as string) || ""}
-                            onChange={(e) => updateStep(i, { value_to: e.target.value })}
-                          />
-                        </>
-                      )}
+                            {selectedOpt && selectedOpt.operators.length > 0 && (
+                              <Select
+                                value={currentOperator}
+                                onValueChange={(v) =>
+                                  updateRow(idx, { operator: v as ConditionOperator, ...(v === "between" ? {} : { value_to: "" }) })
+                                }
+                              >
+                                <SelectTrigger className="w-[170px] bg-background">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {selectedOpt.operators.map((op) => (
+                                    <SelectItem key={op} value={op}>{operatorLabel(op)}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
 
-                      {/* Time window */}
-                      {selectedOpt?.timeWindow && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">in last</span>
-                          <Input
-                            type="number"
-                            min={1}
-                            placeholder="∞"
-                            className="w-[70px] bg-background"
-                            value={(step.config.time_window_days as number | string) ?? ""}
-                            onChange={(e) => updateStep(i, { time_window_days: e.target.value === "" ? undefined : parseInt(e.target.value) || undefined })}
-                          />
-                          <span className="text-xs text-muted-foreground">days</span>
+                            {selectedOpt && operatorNeedsValue && selectedOpt.input !== "none" && (
+                              <Input
+                                type={selectedOpt.input === "number" ? "number" : "text"}
+                                placeholder={selectedOpt.placeholder || "Value"}
+                                className="w-[160px] bg-background"
+                                value={row.value || ""}
+                                onChange={(e) => updateRow(idx, { value: e.target.value })}
+                              />
+                            )}
+                            {selectedOpt && isBetween && selectedOpt.input !== "none" && (
+                              <>
+                                <span className="text-xs text-muted-foreground">and</span>
+                                <Input
+                                  type={selectedOpt.input === "number" ? "number" : "text"}
+                                  placeholder="Upper value"
+                                  className="w-[120px] bg-background"
+                                  value={row.value_to || ""}
+                                  onChange={(e) => updateRow(idx, { value_to: e.target.value })}
+                                />
+                              </>
+                            )}
+
+                            {selectedOpt?.timeWindow && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">in last</span>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  placeholder="∞"
+                                  className="w-[70px] bg-background"
+                                  value={row.time_window_days ?? ""}
+                                  onChange={(e) =>
+                                    updateRow(idx, {
+                                      time_window_days: e.target.value === "" ? undefined : parseInt(e.target.value) || undefined,
+                                    })
+                                  }
+                                />
+                                <span className="text-xs text-muted-foreground">days</span>
+                              </div>
+                            )}
+
+                            {rows.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => removeRow(idx)}
+                                title="Remove this condition"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      );
+                    })}
 
-                    {currentValue === "reply_status" && (
+                    {/* Add condition + natural-language preview */}
+                    {!isReplyStatusFirst && (
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 text-xs bg-background/60 border-dashed"
+                          onClick={addRow}
+                        >
+                          <Plus className="h-3 w-3" /> Add condition
+                        </Button>
+                        {rows.some((r) => r.condition) && (
+                          <span className="text-[11px] text-muted-foreground italic truncate">
+                            {phraseConditionGroup(rows, logic)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {rows[0]?.condition === "reply_status" && (
                       <div className="w-full space-y-2 mt-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium min-w-[100px]">If replied →</span>
@@ -619,9 +728,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     )}
 
-                    {/* Smart actions — curated one-click follow-ups (workspace overrides → defaults) */}
+                    {/* Smart actions — driven by the first selected condition */}
                     {(() => {
-                      const effective = selectedOpt ? resolveSmartActions(selectedOpt.value, smartActionOverrides) : [];
+                      const effective = firstOpt ? resolveSmartActions(firstOpt.value, smartActionOverrides) : [];
                       if (!effective.length) return null;
                       return (
                         <div className="pt-1.5 space-y-1.5">
@@ -650,6 +759,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   </div>
                 );
               })()}
+
 
               {step.step_type === "condition" && (() => {
                 const fallthroughN = nextFallthroughStepNumber(i);
