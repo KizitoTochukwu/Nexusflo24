@@ -49,6 +49,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   add_tag: <Tag className="h-4 w-4" />,
   remove_tag: <XCircle className="h-4 w-4" />,
   update_status: <RefreshCw className="h-4 w-4" />,
+  update_pipeline_stage: <GitBranch className="h-4 w-4" />,
   adjust_score: <TrendingUp className="h-4 w-4" />,
   notify_sales: <Bell className="h-4 w-4" />,
   assign_owner: <UserPlus className="h-4 w-4" />,
@@ -203,6 +204,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
         return `Adjust Lead Score\n${matched?.label || `${d >= 0 ? "+" : ""}${d} score`}`;
       }
       if (a === "update_status") return `Update Lead Status\n${cfg.new_status || "…"}`;
+      if (a === "update_pipeline_stage") return `Update Pipeline Stage\n${cfg.new_pipeline_stage || "…"}`;
       if (a === "notify_sales") return "Notify sales";
       if (a === "assign_owner") {
         const mode = (cfg.assign_mode as string) === "round_robin" ? "Round-robin" : "Specific user";
@@ -934,6 +936,24 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         </Select>
                       </>
                     )}
+                    {(step.config.action as string) === "update_pipeline_stage" && (
+                      <>
+                        <div className="basis-full h-0" />
+                        <Select
+                          value={(step.config.new_pipeline_stage as string) || ""}
+                          onValueChange={(v) => updateStep(i, { new_pipeline_stage: v })}
+                        >
+                          <SelectTrigger className="w-[200px] bg-background">
+                            <SelectValue placeholder="Select pipeline stage" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PIPELINE_STAGES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </>
+                    )}
                     {(step.config.action as string) === "adjust_score" && (() => {
                       const delta = Number(step.config.score_delta ?? 5);
                       const reason = (step.config.score_reason as string) || "";
@@ -1244,7 +1264,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       </div>
                     );
                   })()}
-                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "adjust_score", "assign_owner", "enroll_in_automation", "end_automation"].includes(step.config.action as string) && (
+                  {(step.config.action as string) && !["send_email", "send_whatsapp", "send_sms", "notify_sales", "add_tag", "remove_tag", "update_status", "update_pipeline_stage", "adjust_score", "assign_owner", "enroll_in_automation", "end_automation"].includes(step.config.action as string) && (
                     <InsertDropdown onInsert={(v) => {
                       const action = step.config.action as string;
                       if (action === "add_tag" || action === "remove_tag") {
