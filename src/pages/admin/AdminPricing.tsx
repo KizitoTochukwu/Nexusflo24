@@ -137,6 +137,61 @@ export default function AdminPricing() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Live Paystack plans (NGN)</CardTitle>
+            <CardDescription>
+              Snapshot of NGN plans currently mapped to live Paystack plan codes. Edit amounts or codes in the matrix below.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Plan Name</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Interval</TableHead>
+                  <TableHead>Plan Code</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows
+                  .filter((r) => r.currency === "NGN" && r.billing_cycle !== "one_time" && r.paystack_plan_code)
+                  .sort((a, b) => {
+                    const order: Record<string, number> = { enterprise: 0, pro: 1, plus: 2, starter: 3 };
+                    const cycleRank = (c: string) => (c === "monthly" ? 0 : 1);
+                    return (
+                      cycleRank(a.billing_cycle) - cycleRank(b.billing_cycle) ||
+                      (order[a.plan_key] ?? 9) - (order[b.plan_key] ?? 9)
+                    );
+                  })
+                  .map((r) => (
+                    <TableRow key={`${r.plan_key}-${r.billing_cycle}`}>
+                      <TableCell className="font-medium">
+                        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" />
+                        NexusFlo24 {r.plan_key.charAt(0).toUpperCase() + r.plan_key.slice(1)}
+                      </TableCell>
+                      <TableCell>NGN {(r.amount_minor / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell>
+                        <span className="rounded-full border px-2 py-0.5 text-xs">
+                          {r.billing_cycle === "yearly" ? "Annually" : "Monthly"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{r.paystack_plan_code}</TableCell>
+                    </TableRow>
+                  ))}
+                {!loading && rows.filter((r) => r.currency === "NGN" && r.paystack_plan_code).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
+                      No live Paystack plan codes configured yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>FX rates (base: USD)</CardTitle>
             <CardDescription>Used to convert displayed prices when a currency-specific override is not set.</CardDescription>
           </CardHeader>
