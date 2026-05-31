@@ -101,7 +101,7 @@ export default function CreditPackCards() {
                 <p className="text-sm text-primary-foreground/60">{pack.unit} per pack</p>
 
                 <p className="text-lg font-semibold text-accent">
-                  ${pack.price}
+                  {formatPrice(convert(pack.price), currency, { compact: true })}
                   <span className="text-sm font-normal text-primary-foreground/60"> / pack</span>
                 </p>
 
@@ -128,7 +128,7 @@ export default function CreditPackCards() {
 
                 {qty > 1 && (
                   <p className="text-xs text-primary-foreground/60">
-                    {(pack.credits * qty).toLocaleString()} {pack.unit} · ${pack.price * qty}
+                    {(pack.credits * qty).toLocaleString()} {pack.unit} · {formatPrice(convert(pack.price * qty), currency, { compact: true })}
                   </p>
                 )}
 
