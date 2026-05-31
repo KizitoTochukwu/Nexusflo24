@@ -1,53 +1,71 @@
 ## Goal
 
-Make the Condition step clearly show **what happens next** for both YES and NO outcomes — matching the reference screenshot ("Proceed to Step 3.", "Send WhatsApp…", "Wait 1 day.") — and add a one-click **"Proceed to next step"** option for the YES path so users don't always have to build a full branch.
+Make the automation Condition step read and behave like the reference samples — multiple conditions stacked, joined by **AND** / **OR**, with friction-free authoring and natural-language summaries in YES/NO branches (e.g. `Email Opened AND Link Clicked`, `Visited Pricing Page OR Visited Demo Page OR Visited Course Page`, `Appointment Booked?`).
 
-Scope: UI/UX changes inside `src/components/automations/AutomationStepEditor.tsx`. No backend changes — the engine already falls through to the next step when a YES branch is absent, so "Proceed to next step" is just making that default explicit.
+Only the Condition step UI + its evaluation are touched. No changes to triggers, actions, or unrelated panes.
 
-## What changes
+## UI changes — `src/components/automations/AutomationStepEditor.tsx`
 
-### 1. New "Outcome summary" block inside every Condition card
+Replace the single-row condition editor (lines ~475–652) with a stacked group editor:
 
-Rendered just under the condition rule row (Email opened / has happened / in last 1 days), before Smart Actions. Two stacked rows:
+- Each condition step now stores `config.conditions: ConditionRow[]` and `config.logic: "AND" | "OR"` (default `AND`).
+  - `ConditionRow = { condition, operator, value, value_to, time_window_days, reply_check }`
+- Render rows vertically inside the existing blue Condition card:
+  - Row 1: condition selector + operator + value + optional time-window (same controls as today, just in a row component).
+  - Between rows: a small inline pill toggle `AND / OR` (single global join — switching it updates `config.logic`). Matches the samples (`AND`, `OR`).
+  - `+ Add condition` ghost button under the last row.
+  - Trash icon per row (hidden when only one row remains).
+- Keep the existing **Smart actions** chip strip; derive them from the *first* row's selected condition (unchanged behavior for single-row case).
+- Reply-status special case stays as-is but is only allowed as a single-row condition (hide "Add condition" when row 1 is `reply_status`).
 
-```text
-✅  If YES   →  Proceed to Step 3      [Change ▾]
-❌  If NO    →  Send WhatsApp · Wait 1 day   [Change ▾]
-```
+### Natural-language summary
 
-Logic for the right-hand summary text:
-- If a YES/NO branch exists for this condition → summarize the steps inside that branch in human language (e.g. "Send WhatsApp · Wait 1 day · Tag: engaged"), built from the existing `branchInfoForCondition` walker plus a small `summarizeStep(step)` helper.
-- If no branch exists → show **"Proceed to Step N"** where N is the 1-based index of the next non-branch step after this condition (or "End automation" if none follows).
+Add a small helper `phraseCondition(row)` that returns friendly text:
+- `email_opened / happened` → `Email Opened`
+- `email_opened / not_happened` → `Email Not Opened`
+- `link_clicked / happened` → `Link Clicked`
+- `pricing_visited / happened` → `Visited Pricing Page`
+- `checkout_visited / happened` → `Visited Checkout`
+- `appointment_booked / happened` → `Appointment Booked?` (question mark for boolean checks shown standalone)
+- `purchase_happened / happened` → `Purchase Made`
+- `score_gt / greater_than 50` → `Lead Score > 50`
+- `tag_contains / contains vip` → `Has tag "vip"`
+- `email_known / is_known` → `Email Known`
+- etc. (fallback: `<label> <operator> <value>`)
 
-### 2. "Change ▾" dropdown per outcome
+The condition card gets a subtle gray summary line under the rows reading e.g. `Email Opened AND Link Clicked` — read-only mirror so the user sees exactly what will appear in branches.
 
-Each row gets a small popover/menu with these options:
-- **Proceed to next step** — removes that branch (keeps inner steps if any were inside) so default fall-through applies. For a condition that already has no branch, this is the no-op current state and the option is shown as selected.
-- **Build a custom branch** — calls the existing `addBranch(i, 'yes' | 'no')` so the user can drop actions/delays inside.
-- **Stop automation** — inserts a tiny branch containing a single `end_automation` action.
-- **Jump to step…** — inserts a branch with a `jump_to_step` action and a numeric step picker (uses existing action type already in `ACTION_OPTIONS`).
+### YES/NO branch summary
 
-This replaces the current "+ If YES branch / + If NO branch" buttons (which become one of the menu options). The Fork row is removed; the new summary block is the single source of truth.
+In `renderOutcome` (lines ~654–763), update the "If YES → …" / "If NO → …" lines so that when the outcome is `proceed` and there is no custom branch, the text uses the joined natural phrasing for context:
+- `If YES → Proceed (Email Opened AND Link Clicked met)`
+- `If NO → End of automation`
 
-### 3. Inline step numbering
+For custom branches, keep current `summarizeStep` chain but ensure newlines render (already `whitespace-pre-line`).
 
-Compute a 1-based "Step N" label for every non-branch, non-trigger step and show it as a small badge in the card header (next to the existing type badge). This lets the "Proceed to Step 3" text actually reference a visible step number — matching the reference screenshot.
+## Backend evaluation — `supabase/functions/execute-automation/index.ts`
 
-### 4. Visual polish
+Extend the `case "condition"` block (~line 937) to support the new shape while staying backward-compatible:
 
-- YES row uses the existing emerald token (`bg-emerald-50 text-emerald-700 border-emerald-200`).
-- NO row uses the existing rose token.
-- Summary text truncates with `line-clamp-1` and shows a tooltip with the full list on hover.
-- Keeps the existing Smart Actions strip below — unchanged.
+1. If `config.conditions` is a non-empty array, evaluate each row using the existing per-type logic (refactor today's inline branches into a small `evaluateRow(row, lead, ctx)` helper inside the same case).
+2. Combine with `config.logic`:
+   - `AND` → `passed = rows.every(...)`
+   - `OR` → `passed = rows.some(...)`
+3. Otherwise fall through to existing single-row logic (legacy steps keep working).
+4. `details` payload becomes `{ logic, rows: [...perRow], passed }` so the execution timeline shows each sub-check.
 
-## Files touched
+## Data migration
 
-- `src/components/automations/AutomationStepEditor.tsx` — add `summarizeStep()` helper, `nextStepNumberAfter(i)` helper, new `OutcomeRow` sub-render inside the Condition block, step-number badge in the card header, remove the standalone Fork buttons row.
-
-No new files, no schema changes, no edge-function changes.
+No DB migration required — `config` is JSONB. New steps write the array shape; old steps are read via the legacy fallback. When the editor loads a legacy step it virtually wraps it into a one-row array in local state on first edit (no auto-write).
 
 ## Out of scope
 
-- Reworking the underlying `branch_yes_start`/`branch_yes_end` data model.
-- Engine changes to `execute-automation` — current fall-through already implements "Proceed to next step".
-- Touching workflow canvas (`WorkflowEditor` / React Flow) — this is the legacy step-list editor only.
+- Nested groups (AND of ORs). Single join operator only, matching all reference samples.
+- Changing trigger/action panes, smart-actions overrides, exit criteria, or styling tokens.
+- Changing the published `summarizeStep` for non-condition actions.
+
+## Files touched
+
+- `src/components/automations/AutomationStepEditor.tsx` — condition editor + branch summary phrasing.
+- `src/hooks/useAutomations.ts` — export `phraseCondition` helper + `ConditionRow` type (kept here so the same phrasing can be reused in timeline/details drawer later).
+- `supabase/functions/execute-automation/index.ts` — multi-row evaluator with AND/OR.
