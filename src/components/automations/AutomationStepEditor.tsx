@@ -864,7 +864,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                 return (
                   <div className="space-y-1.5 mb-2">
                     <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      <GitBranch className="h-3 w-3" /> Next action
+                      <GitBranch className="h-3 w-3" /> Branching (Logic)
                     </div>
                     {renderOutcome("yes")}
                     {renderOutcome("no")}
