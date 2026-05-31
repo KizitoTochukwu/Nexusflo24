@@ -347,35 +347,6 @@ export function phraseConditionGroup(rows: ConditionRow[], logic: ConditionLogic
   return parts.join(` ${logic} `);
 }
 
-/** Guarded nested-group structure. One level of nesting only. */
-export type ConditionGroup = {
-  logic: ConditionLogic;
-  rows: ConditionRow[];
-};
-
-/** Hard caps to keep nested logic readable. */
-export const CONDITION_LIMITS = {
-  maxGroups: 3,
-  maxRowsPerGroup: 5,
-} as const;
-
-/** Phrase nested groups: `(A AND B) OR C`. */
-export function phraseConditionGroups(
-  groups: ConditionGroup[],
-  groupLogic: ConditionLogic = "AND",
-): string {
-  const parts = (groups || [])
-    .map((g) => ({ g, txt: phraseConditionGroup(g.rows, g.logic) }))
-    .filter((p) => p.txt && p.txt !== "No condition set");
-  if (parts.length === 0) return "No condition set";
-  if (parts.length === 1) return parts[0].txt;
-  return parts
-    .map((p) =>
-      p.g.rows.filter((r) => r?.condition).length > 1 ? `(${p.txt})` : p.txt,
-    )
-    .join(` ${groupLogic} `);
-}
-
 
 export const ACTION_OPTIONS = [
   { value: "send_email", label: "Send Email", icon: "Mail" },
