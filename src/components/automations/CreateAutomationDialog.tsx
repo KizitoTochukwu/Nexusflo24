@@ -16,11 +16,6 @@ import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const SOCIAL_TRIGGERS = ["instagram_comment", "instagram_dm", "facebook_comment", "facebook_dm"] as const;
-type SocialTrigger = typeof SOCIAL_TRIGGERS[number];
-const isSocialTrigger = (t: string): t is SocialTrigger => (SOCIAL_TRIGGERS as readonly string[]).includes(t);
-
-export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
   const workspaceId = useWorkspaceId();
   const createAutomation = useCreateAutomation();
