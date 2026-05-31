@@ -1,71 +1,82 @@
-## Goal
+# Multi-Currency & Regional Pricing
 
-Make the automation Condition step read and behave like the reference samples — multiple conditions stacked, joined by **AND** / **OR**, with friction-free authoring and natural-language summaries in YES/NO branches (e.g. `Email Opened AND Link Clicked`, `Visited Pricing Page OR Visited Demo Page OR Visited Course Page`, `Appointment Booked?`).
+Add GBP, USD, EUR, NGN support across NexusFlo24 with auto-detection, manual switcher, Stripe (GBP/USD/EUR) and Paystack (NGN) checkout, and admin-managed regional pricing.
 
-Only the Condition step UI + its evaluation are touched. No changes to triggers, actions, or unrelated panes.
+## 1. Currency foundation
 
-## UI changes — `src/components/automations/AutomationStepEditor.tsx`
+**New file `src/lib/currency/config.ts`**
+- `CURRENCIES = { USD:{symbol:"$",locale:"en-US",stripeCode:"usd"}, GBP:{symbol:"£",locale:"en-GB",stripeCode:"gbp"}, EUR:{symbol:"€",locale:"en-IE",stripeCode:"eur"}, NGN:{symbol:"₦",locale:"en-NG",provider:"paystack"} }`
+- `COUNTRY_TO_CURRENCY` map (GB→GBP, US→USD, NG→NGN, EU countries→EUR, default USD).
+- `formatPrice(amount, currency)` using `Intl.NumberFormat`.
 
-Replace the single-row condition editor (lines ~475–652) with a stacked group editor:
+**New `src/contexts/CurrencyContext.tsx`**
+- Provides `{ currency, setCurrency, rates, convert(amountUSD) }`.
+- On mount: read order = profile.preferred_currency → localStorage → geo-IP (`https://ipapi.co/json/`) → USD fallback.
+- Persist to localStorage + (if authed) profile via Supabase update.
+- Wrap app in `src/App.tsx`.
 
-- Each condition step now stores `config.conditions: ConditionRow[]` and `config.logic: "AND" | "OR"` (default `AND`).
-  - `ConditionRow = { condition, operator, value, value_to, time_window_days, reply_check }`
-- Render rows vertically inside the existing blue Condition card:
-  - Row 1: condition selector + operator + value + optional time-window (same controls as today, just in a row component).
-  - Between rows: a small inline pill toggle `AND / OR` (single global join — switching it updates `config.logic`). Matches the samples (`AND`, `OR`).
-  - `+ Add condition` ghost button under the last row.
-  - Trash icon per row (hidden when only one row remains).
-- Keep the existing **Smart actions** chip strip; derive them from the *first* row's selected condition (unchanged behavior for single-row case).
-- Reply-status special case stays as-is but is only allowed as a single-row condition (hide "Add condition" when row 1 is `reply_status`).
+## 2. Header currency switcher
 
-### Natural-language summary
+Add a compact `<CurrencySwitcher />` dropdown in `src/components/layout/Header.tsx` (desktop + mobile) and `DashboardLayout.tsx` topbar. Shows flag + code; updates context.
 
-Add a small helper `phraseCondition(row)` that returns friendly text:
-- `email_opened / happened` → `Email Opened`
-- `email_opened / not_happened` → `Email Not Opened`
-- `link_clicked / happened` → `Link Clicked`
-- `pricing_visited / happened` → `Visited Pricing Page`
-- `checkout_visited / happened` → `Visited Checkout`
-- `appointment_booked / happened` → `Appointment Booked?` (question mark for boolean checks shown standalone)
-- `purchase_happened / happened` → `Purchase Made`
-- `score_gt / greater_than 50` → `Lead Score > 50`
-- `tag_contains / contains vip` → `Has tag "vip"`
-- `email_known / is_known` → `Email Known`
-- etc. (fallback: `<label> <operator> <value>`)
+## 3. Database
 
-The condition card gets a subtle gray summary line under the rows reading e.g. `Email Opened AND Link Clicked` — read-only mirror so the user sees exactly what will appear in branches.
+Migration:
+- `profiles.preferred_currency text default 'USD'`
+- `regional_prices` table: `(id, plan_key, billing_cycle, currency, amount_minor int, stripe_price_id text null, paystack_plan_code text null, active bool, updated_at)` with GRANTs + RLS (admin write, anon read).
+- `currency_rates` table: `(base text, quote text, rate numeric, updated_at)` seeded with static fallbacks (USD→GBP 0.79, USD→EUR 0.92, USD→NGN 1600).
 
-### YES/NO branch summary
+## 4. Pricing display
 
-In `renderOutcome` (lines ~654–763), update the "If YES → …" / "If NO → …" lines so that when the outcome is `proceed` and there is no custom branch, the text uses the joined natural phrasing for context:
-- `If YES → Proceed (Email Opened AND Link Clicked met)`
-- `If NO → End of automation`
+Update `src/lib/stripe/plans.ts` to expose USD base price; new `getLocalPrice(planKey, cycle, currency)` reads `regional_prices` (cached via React Query) else converts via rates.
 
-For custom branches, keep current `summarizeStep` chain but ensure newlines render (already `whitespace-pre-line`).
+Update `src/pages/Pricing.tsx`, `src/components/pricing/CreditPackCards.tsx`, `UpgradeModal`, `UsageCreditsTab`, dashboard credit widget, billing history, invoices view — all read currency from `useCurrency()` and call `formatPrice`.
 
-## Backend evaluation — `supabase/functions/execute-automation/index.ts`
+## 5. Checkout routing
 
-Extend the `case "condition"` block (~line 937) to support the new shape while staying backward-compatible:
+`src/lib/billing/checkout.ts` → `startCheckout(planKey, cycle, currency)`:
+- NGN → invoke new `paystack-checkout` edge function.
+- Others → existing `create-checkout-session` (extended to accept `currency` and resolve correct Stripe price ID from `regional_prices`).
 
-1. If `config.conditions` is a non-empty array, evaluate each row using the existing per-type logic (refactor today's inline branches into a small `evaluateRow(row, lead, ctx)` helper inside the same case).
-2. Combine with `config.logic`:
-   - `AND` → `passed = rows.every(...)`
-   - `OR` → `passed = rows.some(...)`
-3. Otherwise fall through to existing single-row logic (legacy steps keep working).
-4. `details` payload becomes `{ logic, rows: [...perRow], passed }` so the execution timeline shows each sub-check.
+Same pattern for `create-credit-purchase` (multi-currency price IDs from `regional_prices`).
 
-## Data migration
+## 6. Stripe multi-currency
 
-No DB migration required — `config` is JSONB. New steps write the array shape; old steps are read via the legacy fallback. When the editor loads a legacy step it virtually wraps it into a one-row array in local state on first edit (no auto-write).
+Extend `create-checkout-session` + `create-credit-purchase`:
+- Look up `regional_prices` row by `(plan_key, cycle, currency)`. If `stripe_price_id` present use it; else error asking admin to configure.
+- Allowed price ID set becomes dynamic (loaded from DB).
 
-## Out of scope
+Admin must create matching prices in Stripe for GBP/EUR (USD already exists). Pricing page UI shows "Configure in admin" if missing.
 
-- Nested groups (AND of ORs). Single join operator only, matching all reference samples.
-- Changing trigger/action panes, smart-actions overrides, exit criteria, or styling tokens.
-- Changing the published `summarizeStep` for non-condition actions.
+## 7. Paystack integration
 
-## Files touched
+- Secret `PAYSTACK_SECRET_KEY` (request via add_secret when user confirms).
+- New edge function `supabase/functions/paystack-checkout/index.ts`: creates transaction (`/transaction/initialize`) for one-off credit packs and subscription (`/subscription/create` with plan_code) for plans. Returns `authorization_url`.
+- New edge function `paystack-webhook` verifying `x-paystack-signature` (HMAC SHA512 of body w/ secret); upserts `subscriptions` / credit ledger same shape as Stripe webhook.
+- Update `subscriptions` table to include `provider text default 'stripe'` and `provider_customer_id`, `provider_subscription_id` (migration).
 
-- `src/components/automations/AutomationStepEditor.tsx` — condition editor + branch summary phrasing.
-- `src/hooks/useAutomations.ts` — export `phraseCondition` helper + `ConditionRow` type (kept here so the same phrasing can be reused in timeline/details drawer later).
-- `supabase/functions/execute-automation/index.ts` — multi-row evaluator with AND/OR.
+## 8. Admin pricing manager
+
+New page `src/pages/admin/AdminPricing.tsx` (route under AdminGuard):
+- Table per plan × cycle × currency with amount, Stripe price ID, Paystack plan code, active toggle.
+- "Auto-fill from base + rate" helper.
+- Edit `currency_rates` inline.
+Uses `regional_prices` + `currency_rates` tables.
+
+## 9. Invoices / receipts / billing history
+
+`UsageCreditsTab` + any billing history component: render stored `currency` from subscription / credit_transactions rows (add `currency` column to `credit_transactions` migration). Stripe/Paystack webhooks write currency at time of purchase so history stays accurate even if user later switches display currency.
+
+## Technical notes
+
+- Geo-IP: `ipapi.co/json/` (free 1k/day, no key) with 24h localStorage cache; fall back silently.
+- Rates refresh: cron edge function `refresh-fx-rates` (daily) pulling from `exchangerate.host` (no key) → upsert `currency_rates`. Manual fallback values seeded.
+- Display conversion only — actual charge always uses currency-matched Stripe/Paystack price (no FX drift in billing).
+- All amounts stored as minor units (cents/kobo).
+- Keep Navy/Gold styling; switcher uses existing DropdownMenu primitives.
+
+## Open items needing user input
+
+1. **Paystack secret key** — I'll request `PAYSTACK_SECRET_KEY` via add_secret when you approve.
+2. **Stripe prices for GBP / EUR** — do you want me to auto-create them via Stripe tools using converted amounts from current USD prices, or will you create them manually and paste IDs?
+3. Scope check: this is ~15 files + 3 migrations + 2 edge functions. OK to proceed in one pass, or split into phases (Phase A: display + switcher + detection; Phase B: Stripe multi-currency; Phase C: Paystack; Phase D: admin UI)?
