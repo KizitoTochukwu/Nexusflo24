@@ -8,6 +8,7 @@ export const AUTOMATION_SCORE_OPTIONS = [
   { value: 20, reason: "link-clicked", label: "+20 — Link clicked" },
   { value: 30, reason: "checkout-visited", label: "+30 — Checkout visited" },
   { value: 50, reason: "purchase", label: "+50 — Purchase" },
+  { value: -20, reason: "cold-lead", label: "-20 — Cold lead" },
 ] as const;
 
 export type AutomationScorePreset = (typeof AUTOMATION_SCORE_OPTIONS)[number];
