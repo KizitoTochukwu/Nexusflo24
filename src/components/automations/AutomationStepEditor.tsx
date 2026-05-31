@@ -204,6 +204,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
         return `Adjust Lead Score\n${matched?.label || `${d >= 0 ? "+" : ""}${d} score`}`;
       }
       if (a === "update_status") return `Update Lead Status\n${cfg.new_status || "…"}`;
+      if (a === "update_pipeline_stage") return `Update Pipeline Stage\n${cfg.new_pipeline_stage || "…"}`;
       if (a === "notify_sales") return "Notify sales";
       if (a === "assign_owner") {
         const mode = (cfg.assign_mode as string) === "round_robin" ? "Round-robin" : "Specific user";
