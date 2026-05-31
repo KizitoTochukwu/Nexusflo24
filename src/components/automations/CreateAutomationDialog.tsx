@@ -34,11 +34,6 @@ export default function CreateAutomationDialog() {
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>(() => getDefaultExitCriteria("new_lead"));
 
-  // Social trigger config
-  const [socialKeyword, setSocialKeyword] = useState("");
-  const [socialMatchMode, setSocialMatchMode] = useState<"contains" | "exact" | "starts_with">("contains");
-  const [socialPostId, setSocialPostId] = useState("");
-
   const reset = () => {
     setName("");
     setDescription("");
@@ -49,9 +44,6 @@ export default function CreateAutomationDialog() {
     setSelectedFormId("any");
     setSteps([]);
     setExitCriteria(getDefaultExitCriteria("new_lead"));
-    setSocialKeyword("");
-    setSocialMatchMode("contains");
-    setSocialPostId("");
   };
 
   // When the user picks a different trigger type, refresh suggested defaults
@@ -77,16 +69,6 @@ export default function CreateAutomationDialog() {
     } else if (triggerType === "form_submitted") {
       if (selectedFormId !== "any") triggerConfig.form_id = selectedFormId;
       if (selectedFunnelId !== "all") triggerConfig.funnel_id = selectedFunnelId;
-    } else if (isSocialTrigger(triggerType)) {
-      if (!socialKeyword.trim()) {
-        toast.error("Please enter a keyword (e.g. START)");
-        return;
-      }
-      triggerConfig.keyword = socialKeyword.trim();
-      triggerConfig.match_mode = socialMatchMode;
-      if (socialPostId.trim()) triggerConfig.post_id = socialPostId.trim();
-      triggerConfig.platform = triggerType.startsWith("instagram") ? "instagram" : "facebook";
-      triggerConfig.trigger_source = triggerType.endsWith("_dm") ? "dm" : "comment";
     } else if (selectedFunnelId !== "all") {
       triggerConfig.funnel_id = selectedFunnelId;
     }
@@ -102,24 +84,6 @@ export default function CreateAutomationDialog() {
       },
       {
         onSuccess: async (created: any) => {
-          // For social triggers, also write a row in social_keyword_triggers so the webhook can route inbound events.
-          if (isSocialTrigger(triggerType) && created?.id && workspaceId) {
-            const platform = triggerType.startsWith("instagram") ? "instagram" : "facebook";
-            const trigger_source = triggerType.endsWith("_dm") ? "dm" : "comment";
-            const { error: kwErr } = await supabase.from("social_keyword_triggers").insert({
-              workspace_id: workspaceId,
-              automation_id: created.id,
-              platform,
-              trigger_source,
-              keyword: socialKeyword.trim(),
-              match_mode: socialMatchMode,
-              post_id: socialPostId.trim() || null,
-              is_active: true,
-            });
-            if (kwErr) {
-              toast.error("Automation created but keyword binding failed: " + kwErr.message);
-            }
-          }
           reset();
           setOpen(false);
         },
@@ -129,9 +93,8 @@ export default function CreateAutomationDialog() {
 
   const showFolderPicker = triggerType === "lead_added_to_folder";
   const showTagInput = triggerType === "lead_tagged";
-  const showSocialConfig = isSocialTrigger(triggerType);
   const showFormPicker = triggerType === "form_submitted";
-  const showFunnelScope = !showFolderPicker && !showTagInput && !showSocialConfig && !showFormPicker;
+  const showFunnelScope = !showFolderPicker && !showTagInput && !showFormPicker;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
