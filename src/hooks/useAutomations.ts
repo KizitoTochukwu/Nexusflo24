@@ -269,6 +269,85 @@ export const REPLY_STATUS_OPTIONS = [
   { value: "no_reply", label: "Lead has not replied" },
 ] as const;
 
+export type ConditionRow = {
+  condition: string;
+  operator?: ConditionOperator;
+  value?: string;
+  value_to?: string;
+  time_window_days?: number;
+  reply_check?: string;
+};
+
+export type ConditionLogic = "AND" | "OR";
+
+/** Turn a single condition row into friction-free natural language. */
+export function phraseCondition(row: ConditionRow): string {
+  if (!row?.condition) return "Select condition";
+  const opt = CONDITION_GROUPS.flatMap((g) => g.options).find((o) => o.value === row.condition);
+  const label = opt?.label ?? row.condition;
+  const op = row.operator;
+  const val = row.value ?? "";
+  const valTo = row.value_to ?? "";
+  const tw = row.time_window_days ? ` (last ${row.time_window_days}d)` : "";
+
+  // Event-style booleans
+  const eventMap: Record<string, string> = {
+    email_opened: "Email Opened",
+    link_clicked: "Link Clicked",
+    form_submitted: "Form Submitted",
+    checkout_visited: "Visited Checkout",
+    pricing_visited: "Visited Pricing Page",
+    whatsapp_replied: "WhatsApp Replied",
+    appointment_booked: "Appointment Booked",
+    purchase_happened: "Purchase Made",
+  };
+  if (eventMap[row.condition]) {
+    const base = eventMap[row.condition];
+    if (op === "not_happened") return `${base.replace(/^(\w+)/, "$1 Not").replace("Visited Not", "Did Not Visit").replace("Email Not Opened", "Email Not Opened")}${tw}`;
+    return `${base}${tw}`;
+  }
+
+  // Identity checks
+  if (row.condition === "email_known") return op === "is_unknown" ? "Email Unknown" : "Email Known";
+  if (row.condition === "phone_known") return op === "is_unknown" ? "Phone Unknown" : "Phone Known";
+
+  // Score
+  if (row.condition === "score_gt") {
+    if (op === "between") return `Lead Score between ${val} and ${valTo}`;
+    const sym = op === "less_than" ? "<" : op === "equals" ? "=" : ">";
+    return `Lead Score ${sym} ${val || "?"}`;
+  }
+
+  // Tag / source / generic text
+  if (row.condition === "tag_contains") {
+    if (op === "not_contains") return `Does not have tag "${val}"`;
+    if (op === "equals") return `Tag = "${val}"`;
+    return `Has tag "${val}"`;
+  }
+  if (row.condition === "source_equals") {
+    if (op === "not_equals") return `Source ≠ "${val}"`;
+    if (op === "contains") return `Source contains "${val}"`;
+    return `Source = "${val}"`;
+  }
+
+  // Reply status
+  if (row.condition === "reply_status") return "Reply status";
+
+  // Fallback
+  const opTxt = op ? ` ${operatorLabel(op)}` : "";
+  const valTxt = val ? ` "${val}"` : "";
+  return `${label}${opTxt}${valTxt}${tw}`;
+}
+
+/** Phrase a multi-row condition group as a natural sentence. */
+export function phraseConditionGroup(rows: ConditionRow[], logic: ConditionLogic = "AND"): string {
+  const parts = (rows || []).filter((r) => r?.condition).map(phraseCondition);
+  if (parts.length === 0) return "No condition set";
+  if (parts.length === 1) return parts[0];
+  return parts.join(` ${logic} `);
+}
+
+
 export const ACTION_OPTIONS = [
   { value: "send_email", label: "Send Email", icon: "Mail" },
   { value: "send_whatsapp", label: "Send WhatsApp", icon: "MessageCircle" },
