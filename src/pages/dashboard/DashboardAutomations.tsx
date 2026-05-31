@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,8 +33,18 @@ const DashboardAutomations = () => {
   const { data: exitedCounts } = useWorkspaceExitedCounts(workspaceId);
   const backfill = useBackfillExitDefaults();
 
-  const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
+  const selectedAutomation = useMemo(
+    () => automations?.find((a) => a.id === editId) ?? null,
+    [automations, editId],
+  );
+  const drawerOpen = !!editId;
+  const closeDrawer = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+  };
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Count nurture automations missing exit criteria — for the backfill banner.
@@ -47,8 +58,9 @@ const DashboardAutomations = () => {
   }, [automations]);
 
   const openDetails = (a: Automation) => {
-    setSelectedAutomation(a);
-    setDrawerOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.set("edit", a.id);
+    setSearchParams(next, { replace: false });
   };
 
   const handleDuplicate = (a: Automation) => {
@@ -261,7 +273,7 @@ const DashboardAutomations = () => {
       <AutomationDetailsDrawer
         automation={selectedAutomation}
         open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setSelectedAutomation(null); }}
+        onClose={closeDrawer}
       />
     </DashboardLayout>
   );
