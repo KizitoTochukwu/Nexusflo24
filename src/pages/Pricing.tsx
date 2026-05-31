@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Check, Zap, Loader2, Crown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPrice, CURRENCIES } from "@/lib/currency/config";
 import {
   PLANS,
   type PlanKey,
@@ -22,6 +24,7 @@ import { PLAN_CREDITS } from "@/lib/stripe/creditPacks";
 import CreditPackCards from "@/components/pricing/CreditPackCards";
 import { toast } from "sonner";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
+import { startSubscriptionCheckout } from "@/lib/billing/checkout";
 
 interface PlanFeatureGroup {
   title: string;
@@ -170,6 +173,8 @@ const Pricing = () => {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { currency, convert } = useCurrency();
+  const symbol = CURRENCIES[currency].symbol;
 
   const handleSubscribe = async (planKey: PlanKey) => {
     if (!user) {
@@ -179,33 +184,28 @@ const Pricing = () => {
 
     setLoadingPlan(planKey);
     const plan = PLANS[planKey];
-    const priceId =
-      billingCycle === "yearly" ? plan.yearlyPriceId : plan.monthlyPriceId;
-    const value =
-      billingCycle === "yearly"
-        ? getYearlyTotal(plan.monthlyPrice)
-        : plan.monthlyPrice;
+    const usdMonthly = getDisplayPrice(plan.monthlyPrice, billingCycle);
+    const valueUsd = billingCycle === "yearly" ? getYearlyTotal(plan.monthlyPrice) : plan.monthlyPrice;
+    const localValue = convert(valueUsd);
 
     fbqTrack("InitiateCheckout", {
       content_name: planKey,
       content_category: "subscription",
-      content_ids: [priceId],
-      value,
-      currency: "USD",
+      value: localValue,
+      currency,
       num_items: 1,
     });
 
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { plan: planKey, billingCycle, priceId },
+      // Resolve current workspace (best-effort)
+      const { data: m } = await supabase.from("workspace_members").select("workspace_id").eq("user_id", user.id).limit(1).maybeSingle();
+      const result = await startSubscriptionCheckout({
+        planKey,
+        billingCycle,
+        currency,
+        workspaceId: m?.workspace_id,
       });
-
-      if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
+      window.location.href = result.url;
     } catch (err: any) {
       toast.error(err.message || "Failed to start checkout");
     } finally {
@@ -298,7 +298,7 @@ const Pricing = () => {
                   </div>
 
                   <div className="mb-1">
-                    <span className="text-4xl font-extrabold">${displayPrice}</span>
+                    <span className="text-4xl font-extrabold">{formatPrice(convert(displayPrice), currency, { compact: true })}</span>
                     <span className="text-muted-foreground">/mo</span>
                   </div>
 
@@ -306,9 +306,9 @@ const Pricing = () => {
                     <p className="mb-4 text-xs font-medium text-accent">{tier.trialNote}</p>
                   ) : billingCycle === "yearly" ? (
                     <p className="mb-4 text-xs text-muted-foreground">
-                      Billed ${getYearlyTotal(plan.monthlyPrice)}/yr&nbsp;
+                      Billed {formatPrice(convert(getYearlyTotal(plan.monthlyPrice)), currency, { compact: true })}/yr&nbsp;
                       <span className="font-semibold text-accent">
-                        — Save ${savings}/yr
+                        — Save {formatPrice(convert(savings), currency, { compact: true })}/yr
                       </span>
                     </p>
                   ) : (
