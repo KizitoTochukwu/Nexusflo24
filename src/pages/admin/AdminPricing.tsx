@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import Seo from "@/components/seo/Seo";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,7 +123,7 @@ export default function AdminPricing() {
 
   return (
     <DashboardLayout>
-      <Helmet><title>Admin · Regional Pricing</title></Helmet>
+      <Seo title="Admin · Regional Pricing" description="Manage multi-currency pricing and FX rates." />
       <div className="container max-w-6xl space-y-6 py-6">
         <div className="flex items-start justify-between gap-4">
           <div>
