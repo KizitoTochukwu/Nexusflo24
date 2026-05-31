@@ -273,7 +273,7 @@ const DashboardAutomations = () => {
       <AutomationDetailsDrawer
         automation={selectedAutomation}
         open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setSelectedAutomation(null); }}
+        onClose={closeDrawer}
       />
     </DashboardLayout>
   );
