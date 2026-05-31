@@ -1092,7 +1092,6 @@ Deno.serve(async (req) => {
             };
 
             let passed = false;
-            let rowResults: Array<{ passed: boolean; details: Record<string, unknown> }> = [];
 
             // Reply-status is a special single-row case (it mutates pipeline_stage).
             const firstType = rows[0]?.condition;
@@ -1114,12 +1113,17 @@ Deno.serve(async (req) => {
                 details = { hasReply, movedTo: null, action: "continue_sequence" };
               }
               passed = true;
-            } else if (rows.length > 0) {
-              rowResults = await Promise.all(rows.map(evaluateRow));
-              passed = logic === "OR"
-                ? rowResults.some((r) => r.passed)
-                : rowResults.every((r) => r.passed);
-              details = { logic, rows: rowResults.map((r) => r.details), passed };
+            } else if (groups.length > 0) {
+              // Evaluate each group's rows, then combine groups by groupLogic.
+              const groupResults = await Promise.all(groups.map(async (g) => {
+                const rrs = await Promise.all(g.rows.map(evaluateRow));
+                const gPassed = g.logic === "OR" ? rrs.some((r) => r.passed) : rrs.every((r) => r.passed);
+                return { logic: g.logic, passed: gPassed, rows: rrs.map((r) => r.details) };
+              }));
+              passed = groupLogic === "OR"
+                ? groupResults.some((r) => r.passed)
+                : groupResults.every((r) => r.passed);
+              details = { group_logic: groupLogic, groups: groupResults, passed };
             } else {
               details = { message: "Condition step has no rows configured", passed: false };
             }
