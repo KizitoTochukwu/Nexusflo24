@@ -936,6 +936,24 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         </Select>
                       </>
                     )}
+                    {(step.config.action as string) === "update_pipeline_stage" && (
+                      <>
+                        <div className="basis-full h-0" />
+                        <Select
+                          value={(step.config.new_pipeline_stage as string) || ""}
+                          onValueChange={(v) => updateStep(i, { new_pipeline_stage: v })}
+                        >
+                          <SelectTrigger className="w-[200px] bg-background">
+                            <SelectValue placeholder="Select pipeline stage" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PIPELINE_STAGES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </>
+                    )}
                     {(step.config.action as string) === "adjust_score" && (() => {
                       const delta = Number(step.config.score_delta ?? 5);
                       const reason = (step.config.score_reason as string) || "";
