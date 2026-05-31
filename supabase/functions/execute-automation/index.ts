@@ -935,100 +935,149 @@ Deno.serve(async (req) => {
           }
 
           case "condition": {
-            const conditionType = config.condition;
-            const value = config.value;
-            const valueTo = config.value_to;
-            const operator = config.operator as string | undefined;
-            const timeWindowDays = config.time_window_days
-              ? Number(config.time_window_days)
-              : undefined;
-            const sinceIso = timeWindowDays && timeWindowDays > 0
-              ? new Date(Date.now() - timeWindowDays * 86_400_000).toISOString()
-              : undefined;
+            type Row = {
+              condition?: string;
+              operator?: string;
+              value?: unknown;
+              value_to?: unknown;
+              time_window_days?: number | string;
+              reply_check?: string;
+            };
+
+            // Build the list of rows to evaluate. Prefer new `conditions[]` shape;
+            // otherwise fall back to the legacy single-row config fields.
+            const rawRows = Array.isArray((config as any).conditions)
+              ? ((config as any).conditions as Row[]).filter((r) => r && r.condition)
+              : [];
+            const rows: Row[] = rawRows.length
+              ? rawRows
+              : config.condition || config.field
+              ? [{
+                  condition: (config.condition as string) || (config.field as string),
+                  operator: config.operator as string | undefined,
+                  value: config.value,
+                  value_to: config.value_to,
+                  time_window_days: config.time_window_days as number | undefined,
+                  reply_check: config.reply_check as string | undefined,
+                }]
+              : [];
+            const logic = (((config as any).logic as string) || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+
+            // Evaluate a single row → boolean.
+            const evaluateRow = async (row: Row): Promise<{ passed: boolean; details: Record<string, unknown> }> => {
+              const conditionType = row.condition;
+              const value = row.value;
+              const valueTo = row.value_to;
+              const operator = row.operator;
+              const twDays = row.time_window_days ? Number(row.time_window_days) : undefined;
+              const sinceIso = twDays && twDays > 0
+                ? new Date(Date.now() - twDays * 86_400_000).toISOString()
+                : undefined;
+
+              const countActivities = async (filters: (qb: any) => any) => {
+                let q = supabase.from("lead_activities")
+                  .select("id", { count: "exact", head: true })
+                  .eq("workspace_id", workspace_id).eq("lead_id", lead_id);
+                q = filters(q);
+                if (sinceIso) q = q.gte("created_at", sinceIso);
+                const { count } = await q;
+                return count ?? 0;
+              };
+              const evalHappened = (count: number) =>
+                operator === "not_happened" ? count === 0 : count > 0;
+
+              let passed = false;
+
+              if (conditionType === "score_gt") {
+                const score = Number(lead.score || 0);
+                const v = Number(value);
+                if (operator === "less_than") passed = score < v;
+                else if (operator === "equals") passed = score === v;
+                else if (operator === "between") passed = score >= v && score <= Number(valueTo);
+                else passed = score > v;
+              } else if (conditionType === "has_tag") {
+                passed = (lead.tags || []).includes(String(value));
+              } else if (conditionType === "tag_contains") {
+                const v = String(value || "").toLowerCase();
+                const has = !!v && (lead.tags || []).some((t: string) => String(t).toLowerCase().includes(v));
+                if (operator === "not_contains") passed = !has;
+                else if (operator === "equals") passed = (lead.tags || []).map((t: string) => String(t).toLowerCase()).includes(v);
+                else passed = has;
+              } else if (conditionType === "source_equals") {
+                const src = String(lead.source || "").toLowerCase();
+                const v = String(value || "").toLowerCase();
+                if (operator === "not_equals") passed = src !== v;
+                else if (operator === "contains") passed = !!v && src.includes(v);
+                else passed = src === v;
+              } else if (conditionType === "email_known") {
+                const known = !!(lead.email && String(lead.email).trim() !== "");
+                passed = operator === "is_unknown" ? !known : known;
+              } else if (conditionType === "phone_known") {
+                const known = !!(lead.phone && String(lead.phone).trim() !== "");
+                passed = operator === "is_unknown" ? !known : known;
+              } else if (conditionType === "email_opened") {
+                passed = evalHappened(await countActivities((q) => q.eq("type", "email_open")));
+              } else if (conditionType === "link_clicked") {
+                passed = evalHappened(await countActivities((q) => q.eq("type", "link_click")));
+              } else if (conditionType === "form_submitted") {
+                const slug = String(value || "").trim();
+                passed = evalHappened(await countActivities((q) => {
+                  let qq = q.eq("type", "form_submit");
+                  if (slug) qq = qq.contains("meta", { funnel_slug: slug });
+                  return qq;
+                }));
+              } else if (conditionType === "checkout_visited") {
+                passed = evalHappened(await countActivities((q) => q.eq("type", "checkout_visit")));
+              } else if (conditionType === "pricing_visited") {
+                passed = evalHappened(await countActivities((q) => q.in("type", ["pricing_page_visit", "pricing_click"])));
+              } else if (conditionType === "whatsapp_replied") {
+                let q = supabase.from("sales_conversations")
+                  .select("id", { count: "exact", head: true })
+                  .eq("lead_id", lead_id).eq("direction", "inbound").eq("channel", "whatsapp");
+                if (sinceIso) q = q.gte("created_at", sinceIso);
+                const { count } = await q;
+                passed = evalHappened(count ?? 0);
+              } else if (conditionType === "appointment_booked") {
+                let q = supabase.from("bookings")
+                  .select("id", { count: "exact", head: true })
+                  .eq("workspace_id", workspace_id).eq("lead_id", lead_id);
+                if (sinceIso) q = q.gte("created_at", sinceIso);
+                const { count } = await q;
+                passed = evalHappened(count ?? 0);
+              } else if (conditionType === "purchase_happened") {
+                passed = evalHappened(await countActivities((q) => q.eq("type", "purchase")));
+              } else if (conditionType === "has_replied" || conditionType === "no_reply") {
+                const { data: replies } = await supabase
+                  .from("sales_conversations")
+                  .select("id")
+                  .eq("lead_id", lead_id)
+                  .eq("direction", "inbound")
+                  .limit(1);
+                const hasReply = !!(replies && replies.length > 0);
+                passed = conditionType === "has_replied" ? hasReply : !hasReply;
+              } else if (config.field && config.operator) {
+                const leadValue = (lead as any)[config.field as string];
+                if (config.operator === "equals") passed = String(leadValue) === String(value);
+                else if (config.operator === "not_equals") passed = String(leadValue) !== String(value);
+                else if (config.operator === "contains") passed = String(leadValue || "").includes(String(value));
+                else if (config.operator === "greater_than") passed = Number(leadValue) > Number(value);
+                else if (config.operator === "less_than") passed = Number(leadValue) < Number(value);
+                else if (config.operator === "has_tag") passed = (lead.tags || []).includes(value);
+                else if (config.operator === "not_has_tag") passed = !(lead.tags || []).includes(value);
+              }
+
+              return {
+                passed,
+                details: { conditionType, operator, value, value_to: valueTo, time_window_days: twDays, passed },
+              };
+            };
+
             let passed = false;
+            let rowResults: Array<{ passed: boolean; details: Record<string, unknown> }> = [];
 
-            // Helper: count rows in lead_activities for given lead/workspace, optionally with time filter and extra filters
-            const countActivities = async (filters: (qb: any) => any) => {
-              let q = supabase.from("lead_activities")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id);
-              q = filters(q);
-              if (sinceIso) q = q.gte("created_at", sinceIso);
-              const { count } = await q;
-              return count ?? 0;
-            };
-
-            // Apply "happened" / "not_happened" semantics around a count check
-            const evalHappened = (count: number) => {
-              if (operator === "not_happened") return count === 0;
-              return count > 0; // default + "happened"
-            };
-
-            if (conditionType === "score_gt") {
-              const score = Number(lead.score || 0);
-              const v = Number(value);
-              if (operator === "less_than") passed = score < v;
-              else if (operator === "equals") passed = score === v;
-              else if (operator === "between") passed = score >= v && score <= Number(valueTo);
-              else passed = score > v; // default: greater_than
-            } else if (conditionType === "has_tag") {
-              passed = (lead.tags || []).includes(String(value));
-            } else if (conditionType === "tag_contains") {
-              const v = String(value || "").toLowerCase();
-              const has = !!v && (lead.tags || []).some((t: string) => String(t).toLowerCase().includes(v));
-              if (operator === "not_contains") passed = !has;
-              else if (operator === "equals") passed = (lead.tags || []).map((t: string) => String(t).toLowerCase()).includes(v);
-              else passed = has; // default: contains
-            } else if (conditionType === "source_equals") {
-              const src = String(lead.source || "").toLowerCase();
-              const v = String(value || "").toLowerCase();
-              if (operator === "not_equals") passed = src !== v;
-              else if (operator === "contains") passed = !!v && src.includes(v);
-              else passed = src === v; // default: equals
-            } else if (conditionType === "email_known") {
-              const known = !!(lead.email && String(lead.email).trim() !== "");
-              passed = operator === "is_unknown" ? !known : known;
-            } else if (conditionType === "phone_known") {
-              const known = !!(lead.phone && String(lead.phone).trim() !== "");
-              passed = operator === "is_unknown" ? !known : known;
-            } else if (conditionType === "email_opened") {
-              const c = await countActivities((q) => q.eq("type", "email_open"));
-              passed = evalHappened(c);
-            } else if (conditionType === "link_clicked") {
-              const c = await countActivities((q) => q.eq("type", "link_click"));
-              passed = evalHappened(c);
-            } else if (conditionType === "form_submitted") {
-              const slug = String(value || "").trim();
-              const c = await countActivities((q) => {
-                let qq = q.eq("type", "form_submit");
-                if (slug) qq = qq.contains("meta", { funnel_slug: slug });
-                return qq;
-              });
-              passed = evalHappened(c);
-            } else if (conditionType === "checkout_visited") {
-              const c = await countActivities((q) => q.eq("type", "checkout_visit"));
-              passed = evalHappened(c);
-            } else if (conditionType === "pricing_visited") {
-              const c = await countActivities((q) => q.in("type", ["pricing_page_visit", "pricing_click"]));
-              passed = evalHappened(c);
-            } else if (conditionType === "whatsapp_replied") {
-              let q = supabase.from("sales_conversations")
-                .select("id", { count: "exact", head: true })
-                .eq("lead_id", lead_id).eq("direction", "inbound").eq("channel", "whatsapp");
-              if (sinceIso) q = q.gte("created_at", sinceIso);
-              const { count } = await q;
-              passed = evalHappened(count ?? 0);
-            } else if (conditionType === "appointment_booked") {
-              let q = supabase.from("bookings")
-                .select("id", { count: "exact", head: true })
-                .eq("workspace_id", workspace_id).eq("lead_id", lead_id);
-              if (sinceIso) q = q.gte("created_at", sinceIso);
-              const { count } = await q;
-              passed = evalHappened(count ?? 0);
-            } else if (conditionType === "purchase_happened") {
-              const c = await countActivities((q) => q.eq("type", "purchase"));
-              passed = evalHappened(c);
-            } else if (conditionType === "reply_status" || conditionType === "has_replied" || conditionType === "no_reply") {
+            // Reply-status is a special single-row case (it mutates pipeline_stage).
+            const firstType = rows[0]?.condition;
+            if (firstType === "reply_status") {
               const { data: replies } = await supabase
                 .from("sales_conversations")
                 .select("id")
@@ -1036,56 +1085,35 @@ Deno.serve(async (req) => {
                 .eq("direction", "inbound")
                 .limit(1);
               const hasReply: boolean = !!(replies && replies.length > 0);
-
-              if (conditionType === "reply_status") {
-                const targetStage = hasReply
-                  ? String(config.replied_action || "")
-                  : String(config.no_reply_action || "continue");
-                if (targetStage && targetStage !== "continue") {
-                  await supabase.from("leads").update({ pipeline_stage: targetStage }).eq("id", lead_id);
-                  details = { hasReply, movedTo: targetStage };
-                } else {
-                  details = { hasReply, movedTo: null, action: "continue_sequence" };
-                }
-                passed = true; // Always pass — both outcomes handled, sequence continues
+              const targetStage = hasReply
+                ? String(config.replied_action || "")
+                : String(config.no_reply_action || "continue");
+              if (targetStage && targetStage !== "continue") {
+                await supabase.from("leads").update({ pipeline_stage: targetStage }).eq("id", lead_id);
+                details = { hasReply, movedTo: targetStage };
               } else {
-                // Legacy: has_replied / no_reply as gate conditions
-                passed = conditionType === "has_replied" ? hasReply : !hasReply;
+                details = { hasReply, movedTo: null, action: "continue_sequence" };
               }
-            }
-            // Fallback: legacy field/operator format
-            else if (config.field && config.operator) {
-              const leadValue = (lead as any)[config.field];
-              if (config.operator === "equals") passed = String(leadValue) === String(value);
-              else if (config.operator === "not_equals") passed = String(leadValue) !== String(value);
-              else if (config.operator === "contains") passed = String(leadValue || "").includes(String(value));
-              else if (config.operator === "greater_than") passed = Number(leadValue) > Number(value);
-              else if (config.operator === "less_than") passed = Number(leadValue) < Number(value);
-              else if (config.operator === "has_tag") passed = (lead.tags || []).includes(value);
-              else if (config.operator === "not_has_tag") passed = !(lead.tags || []).includes(value);
+              passed = true;
+            } else if (rows.length > 0) {
+              rowResults = await Promise.all(rows.map(evaluateRow));
+              passed = logic === "OR"
+                ? rowResults.some((r) => r.passed)
+                : rowResults.every((r) => r.passed);
+              details = { logic, rows: rowResults.map((r) => r.details), passed };
+            } else {
+              details = { message: "Condition step has no rows configured", passed: false };
             }
 
-            // Conditions are branching/wait points, NOT gates.
-            // A failed condition (e.g. "link_clicked has_happened" right after
-            // sending the email) must NOT halt the rest of the automation —
-            // subsequent steps (delays, follow-up emails, SMS, WhatsApp,
-            // tag updates, status changes) must still run. The condition's
-            // result is logged for analytics + smart-action branching, but
-            // the sequence always continues.
-            //
-            // Exception: legacy halting behavior is preserved ONLY when the
-            // step config explicitly opts in via `halt_on_fail: true` — this
-            // keeps backwards compatibility for users who deliberately built
-            // gate-style conditions.
+            // Conditions are branching/wait points, NOT gates (legacy halt opt-in preserved).
             if (!passed && config.halt_on_fail === true) {
               skipRemaining = true;
             }
-            // Record result so the next branch_yes_start / branch_no_start marker can fork.
             lastConditionPassed = passed;
-            details = { conditionType: conditionType || config.field, operator, value, value_to: valueTo, time_window_days: timeWindowDays, passed };
             status = passed ? "success" : "condition_not_met";
             break;
           }
+
 
           case "delay": {
             console.log("Delay step config:", JSON.stringify(config));
