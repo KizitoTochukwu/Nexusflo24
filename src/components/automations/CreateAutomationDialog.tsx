@@ -13,12 +13,6 @@ import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-
-const SOCIAL_TRIGGERS = ["instagram_comment", "instagram_dm", "facebook_comment", "facebook_dm"] as const;
-type SocialTrigger = typeof SOCIAL_TRIGGERS[number];
-const isSocialTrigger = (t: string): t is SocialTrigger => (SOCIAL_TRIGGERS as readonly string[]).includes(t);
 
 export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
@@ -38,11 +32,6 @@ export default function CreateAutomationDialog() {
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>(() => getDefaultExitCriteria("new_lead"));
 
-  // Social trigger config
-  const [socialKeyword, setSocialKeyword] = useState("");
-  const [socialMatchMode, setSocialMatchMode] = useState<"contains" | "exact" | "starts_with">("contains");
-  const [socialPostId, setSocialPostId] = useState("");
-
   const reset = () => {
     setName("");
     setDescription("");
@@ -53,9 +42,6 @@ export default function CreateAutomationDialog() {
     setSelectedFormId("any");
     setSteps([]);
     setExitCriteria(getDefaultExitCriteria("new_lead"));
-    setSocialKeyword("");
-    setSocialMatchMode("contains");
-    setSocialPostId("");
   };
 
   // When the user picks a different trigger type, refresh suggested defaults
@@ -81,16 +67,6 @@ export default function CreateAutomationDialog() {
     } else if (triggerType === "form_submitted") {
       if (selectedFormId !== "any") triggerConfig.form_id = selectedFormId;
       if (selectedFunnelId !== "all") triggerConfig.funnel_id = selectedFunnelId;
-    } else if (isSocialTrigger(triggerType)) {
-      if (!socialKeyword.trim()) {
-        toast.error("Please enter a keyword (e.g. START)");
-        return;
-      }
-      triggerConfig.keyword = socialKeyword.trim();
-      triggerConfig.match_mode = socialMatchMode;
-      if (socialPostId.trim()) triggerConfig.post_id = socialPostId.trim();
-      triggerConfig.platform = triggerType.startsWith("instagram") ? "instagram" : "facebook";
-      triggerConfig.trigger_source = triggerType.endsWith("_dm") ? "dm" : "comment";
     } else if (selectedFunnelId !== "all") {
       triggerConfig.funnel_id = selectedFunnelId;
     }
@@ -106,24 +82,6 @@ export default function CreateAutomationDialog() {
       },
       {
         onSuccess: async (created: any) => {
-          // For social triggers, also write a row in social_keyword_triggers so the webhook can route inbound events.
-          if (isSocialTrigger(triggerType) && created?.id && workspaceId) {
-            const platform = triggerType.startsWith("instagram") ? "instagram" : "facebook";
-            const trigger_source = triggerType.endsWith("_dm") ? "dm" : "comment";
-            const { error: kwErr } = await supabase.from("social_keyword_triggers").insert({
-              workspace_id: workspaceId,
-              automation_id: created.id,
-              platform,
-              trigger_source,
-              keyword: socialKeyword.trim(),
-              match_mode: socialMatchMode,
-              post_id: socialPostId.trim() || null,
-              is_active: true,
-            });
-            if (kwErr) {
-              toast.error("Automation created but keyword binding failed: " + kwErr.message);
-            }
-          }
           reset();
           setOpen(false);
         },
@@ -133,9 +91,8 @@ export default function CreateAutomationDialog() {
 
   const showFolderPicker = triggerType === "lead_added_to_folder";
   const showTagInput = triggerType === "lead_tagged";
-  const showSocialConfig = isSocialTrigger(triggerType);
   const showFormPicker = triggerType === "form_submitted";
-  const showFunnelScope = !showFolderPicker && !showTagInput && !showSocialConfig && !showFormPicker;
+  const showFunnelScope = !showFolderPicker && !showTagInput && !showFormPicker;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
@@ -206,41 +163,6 @@ export default function CreateAutomationDialog() {
               <p className="text-xs text-muted-foreground mt-1">
                 Fires whenever this exact tag is added to a lead. Leave blank to match any tag.
               </p>
-            </div>
-          )}
-
-          {showSocialConfig && (
-            <div className="rounded-md border bg-muted/30 p-3 space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Fires when a {triggerType.startsWith("instagram") ? "Instagram" : "Facebook"} {triggerType.endsWith("_dm") ? "DM" : "comment"} matches your keyword.
-                Make sure you've connected your Meta account in <strong>Settings → Instagram & Facebook</strong>.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-foreground">Keyword</label>
-                  <Input placeholder="e.g. START" value={socialKeyword} onChange={(e) => setSocialKeyword(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Match mode</label>
-                  <Select value={socialMatchMode} onValueChange={(v) => setSocialMatchMode(v as any)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="contains">Contains keyword</SelectItem>
-                      <SelectItem value="exact">Exact match</SelectItem>
-                      <SelectItem value="starts_with">Starts with keyword</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {triggerType.endsWith("_comment") && (
-                <div>
-                  <label className="text-sm font-medium text-foreground">Specific post ID (optional)</label>
-                  <Input placeholder="Leave blank to match any post" value={socialPostId} onChange={(e) => setSocialPostId(e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Get the post ID from the post URL or via Meta Graph API. Leave blank to fire on comments to any of your posts.
-                  </p>
-                </div>
-              )}
             </div>
           )}
 
