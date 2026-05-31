@@ -475,7 +475,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
               {step.step_type === "condition" && (() => {
                 const allOptions = CONDITION_GROUPS.flatMap((g) => g.options);
 
-                // Normalize legacy single-row config into rows[] without writing to disk yet.
+                // ── Normalize config into groups[] without persisting until edit ──
                 const legacyRow: ConditionRow | null = step.config.condition
                   ? {
                       condition: step.config.condition as string,
@@ -486,38 +486,70 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       reply_check: step.config.reply_check as string | undefined,
                     }
                   : null;
-                const rawRows = (step.config.conditions as ConditionRow[] | undefined);
-                const rows: ConditionRow[] = rawRows && rawRows.length
-                  ? rawRows
+                const rawGroups = step.config.condition_groups as ConditionGroup[] | undefined;
+                const rawRows = step.config.conditions as ConditionRow[] | undefined;
+                const groups: ConditionGroup[] = (rawGroups && rawGroups.length)
+                  ? rawGroups
+                  : (rawRows && rawRows.length)
+                  ? [{ logic: (step.config.logic as ConditionLogic) || "AND", rows: rawRows }]
                   : legacyRow
-                  ? [legacyRow]
-                  : [{ condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }];
-                const logic: ConditionLogic = (step.config.logic as ConditionLogic) || "AND";
-                const isReplyStatusFirst = rows[0]?.condition === "reply_status";
+                  ? [{ logic: "AND", rows: [legacyRow] }]
+                  : [{ logic: "AND", rows: [{ condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }] }];
+                const groupLogic: ConditionLogic = (step.config.group_logic as ConditionLogic) || "AND";
+                const isReplyStatusFirst = groups[0]?.rows?.[0]?.condition === "reply_status";
 
-                const writeRows = (next: ConditionRow[], nextLogic?: ConditionLogic) => {
-                  // Persist as rows[] + mirror first row into legacy fields for back-compat with existing UI bits.
-                  const first: Partial<ConditionRow> = next[0] || {};
+                const writeGroups = (next: ConditionGroup[], nextGroupLogic?: ConditionLogic) => {
+                  const firstGroup = next[0] || { logic: "AND", rows: [] };
+                  const firstRow: Partial<ConditionRow> = firstGroup.rows[0] || {};
                   updateStep(i, {
-                    conditions: next,
-                    logic: nextLogic ?? logic,
-                    condition: first.condition,
-                    operator: first.operator,
-                    value: first.value ?? "",
-                    value_to: first.value_to ?? "",
-                    time_window_days: first.time_window_days,
-                    reply_check: first.reply_check,
+                    condition_groups: next,
+                    group_logic: nextGroupLogic ?? groupLogic,
+                    // Mirror first group into legacy fields for back-compat with execution + smart actions
+                    conditions: firstGroup.rows,
+                    logic: firstGroup.logic,
+                    condition: firstRow.condition,
+                    operator: firstRow.operator,
+                    value: firstRow.value ?? "",
+                    value_to: firstRow.value_to ?? "",
+                    time_window_days: firstRow.time_window_days,
+                    reply_check: firstRow.reply_check,
                   });
                 };
 
-                const updateRow = (idx: number, patch: Partial<ConditionRow>) => {
-                  const next = rows.map((r, k) => (k === idx ? { ...r, ...patch } : r));
-                  writeRows(next);
+                const updateGroup = (gi: number, patch: Partial<ConditionGroup>) => {
+                  writeGroups(groups.map((g, k) => (k === gi ? { ...g, ...patch } : g)));
                 };
-                const addRow = () => writeRows([...rows, { condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }]);
-                const removeRow = (idx: number) => writeRows(rows.filter((_, k) => k !== idx));
+                const updateRow = (gi: number, ri: number, patch: Partial<ConditionRow>) => {
+                  const next = groups.map((g, k) =>
+                    k === gi ? { ...g, rows: g.rows.map((r, j) => (j === ri ? { ...r, ...patch } : r)) } : g,
+                  );
+                  writeGroups(next);
+                };
+                const addRow = (gi: number) => {
+                  if (groups[gi].rows.length >= CONDITION_LIMITS.maxRowsPerGroup) return;
+                  updateGroup(gi, {
+                    rows: [...groups[gi].rows, { condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }],
+                  });
+                };
+                const removeRow = (gi: number, ri: number) => {
+                  const nextRows = groups[gi].rows.filter((_, k) => k !== ri);
+                  if (nextRows.length === 0) {
+                    // Drop the group entirely if empty (but always keep at least 1 group/1 row).
+                    const nextGroups = groups.filter((_, k) => k !== gi);
+                    writeGroups(nextGroups.length ? nextGroups : [{ logic: "AND", rows: [{ condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }] }]);
+                  } else {
+                    updateGroup(gi, { rows: nextRows });
+                  }
+                };
+                const addGroup = () => {
+                  if (groups.length >= CONDITION_LIMITS.maxGroups) return;
+                  writeGroups([
+                    ...groups,
+                    { logic: "AND", rows: [{ condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }] },
+                  ]);
+                };
 
-                const firstOpt = allOptions.find((o) => o.value === rows[0]?.condition);
+                const firstOpt = allOptions.find((o) => o.value === groups[0]?.rows?.[0]?.condition);
 
                 const addSuggested = (sa: { action: string; defaults?: Record<string, unknown> }) => {
                   const newStep: StepData = {
@@ -529,168 +561,268 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   onChange(updated);
                 };
 
+                // Validation summary — surface obviously-broken rows so users aren't surprised at runtime.
+                const validationIssues: string[] = [];
+                groups.forEach((g, gi) => {
+                  g.rows.forEach((r, ri) => {
+                    if (!r.condition) return;
+                    const opt = allOptions.find((o) => o.value === r.condition);
+                    const op = r.operator || opt?.operators?.[0];
+                    const needsValue = !!opt && opt.input !== "none" && !["is_known", "is_unknown", "happened", "not_happened"].includes(op || "");
+                    if (needsValue && !String(r.value ?? "").trim()) {
+                      validationIssues.push(`Group ${gi + 1}, row ${ri + 1}: missing value`);
+                    }
+                    if (op === "between" && !String(r.value_to ?? "").trim()) {
+                      validationIssues.push(`Group ${gi + 1}, row ${ri + 1}: missing upper value`);
+                    }
+                  });
+                });
+
                 return (
-                  <div className="space-y-2 mb-2">
-                    {rows.map((row, idx) => {
-                      const selectedOpt = allOptions.find((o) => o.value === row.condition);
-                      const currentOperator: ConditionOperator =
-                        row.operator || (selectedOpt?.operators?.[0] ?? "equals");
-                      const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
-                      const isBetween = currentOperator === "between";
-
-                      return (
-                        <div key={idx} className="space-y-1.5">
-                          {idx > 0 && (
-                            <div className="flex items-center gap-2 pl-1">
-                              <div className="h-px flex-1 bg-blue-200" />
-                              <div className="inline-flex rounded-full border border-blue-300 bg-background/70 overflow-hidden text-[10px] font-semibold">
-                                {(["AND", "OR"] as ConditionLogic[]).map((l) => (
-                                  <button
-                                    key={l}
-                                    type="button"
-                                    onClick={() => writeRows(rows, l)}
-                                    className={cn(
-                                      "px-2.5 py-0.5 transition-colors",
-                                      logic === l
-                                        ? "bg-blue-600 text-white"
-                                        : "text-blue-700 hover:bg-blue-50",
-                                    )}
-                                  >
-                                    {l}
-                                  </button>
-                                ))}
-                              </div>
-                              <div className="h-px flex-1 bg-blue-200" />
+                  <div className="space-y-3 mb-2">
+                    {groups.map((group, gi) => (
+                      <div key={gi} className="space-y-2">
+                        {/* Outer group join pill */}
+                        {gi > 0 && (
+                          <div className="flex items-center gap-2 pl-1">
+                            <div className="h-px flex-1 bg-blue-300" />
+                            <div className="inline-flex rounded-full border border-blue-400 bg-background overflow-hidden text-[11px] font-bold shadow-sm">
+                              {(["AND", "OR"] as ConditionLogic[]).map((l) => (
+                                <button
+                                  key={l}
+                                  type="button"
+                                  onClick={() => writeGroups(groups, l)}
+                                  className={cn(
+                                    "px-3 py-0.5 transition-colors",
+                                    groupLogic === l ? "bg-blue-700 text-white" : "text-blue-700 hover:bg-blue-50",
+                                  )}
+                                >
+                                  {l}
+                                </button>
+                              ))}
                             </div>
-                          )}
-                          <div className="flex flex-wrap gap-2 items-center">
-                            <Select
-                              value={row.condition}
-                              onValueChange={(v) => {
-                                const opt = allOptions.find((o) => o.value === v);
-                                const defaultOp = opt?.operators?.[0] ?? "equals";
-                                if (v === "reply_status") {
-                                  // Reply status is exclusive — collapse to single row
-                                  writeRows([{ condition: v, operator: undefined, reply_check: "has_replied", value: "", value_to: "", time_window_days: undefined }]);
-                                } else {
-                                  updateRow(idx, { condition: v, operator: defaultOp, reply_check: undefined, value: "", value_to: "", time_window_days: undefined });
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-[200px] bg-background">
-                                <SelectValue placeholder="Select condition" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-[360px]">
-                                {CONDITION_GROUPS.map((group) => (
-                                  <SelectGroup key={group.label}>
-                                    <SelectLabel className="text-xs uppercase tracking-wide text-muted-foreground">
-                                      {group.label}
-                                    </SelectLabel>
-                                    {group.options.map((c) => (
-                                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                                    ))}
-                                  </SelectGroup>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="h-px flex-1 bg-blue-300" />
+                          </div>
+                        )}
 
-                            {selectedOpt && selectedOpt.operators.length > 0 && (
-                              <Select
-                                value={currentOperator}
-                                onValueChange={(v) =>
-                                  updateRow(idx, { operator: v as ConditionOperator, ...(v === "between" ? {} : { value_to: "" }) })
-                                }
-                              >
-                                <SelectTrigger className="w-[170px] bg-background">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {selectedOpt.operators.map((op) => (
-                                    <SelectItem key={op} value={op}>{operatorLabel(op)}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-
-                            {selectedOpt && operatorNeedsValue && selectedOpt.input !== "none" && (
-                              <Input
-                                type={selectedOpt.input === "number" ? "number" : "text"}
-                                placeholder={selectedOpt.placeholder || "Value"}
-                                className="w-[160px] bg-background"
-                                value={row.value || ""}
-                                onChange={(e) => updateRow(idx, { value: e.target.value })}
-                              />
-                            )}
-                            {selectedOpt && isBetween && selectedOpt.input !== "none" && (
-                              <>
-                                <span className="text-xs text-muted-foreground">and</span>
-                                <Input
-                                  type={selectedOpt.input === "number" ? "number" : "text"}
-                                  placeholder="Upper value"
-                                  className="w-[120px] bg-background"
-                                  value={row.value_to || ""}
-                                  onChange={(e) => updateRow(idx, { value_to: e.target.value })}
-                                />
-                              </>
-                            )}
-
-                            {selectedOpt?.timeWindow && (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">in last</span>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  placeholder="∞"
-                                  className="w-[70px] bg-background"
-                                  value={row.time_window_days ?? ""}
-                                  onChange={(e) =>
-                                    updateRow(idx, {
-                                      time_window_days: e.target.value === "" ? undefined : parseInt(e.target.value) || undefined,
-                                    })
-                                  }
-                                />
-                                <span className="text-xs text-muted-foreground">days</span>
-                              </div>
-                            )}
-
-                            {rows.length > 1 && (
+                        {/* Group card */}
+                        <div className={cn(
+                          "space-y-2",
+                          groups.length > 1 && "rounded-md border border-blue-200/70 bg-background/60 p-2",
+                        )}>
+                          {groups.length > 1 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-700/70">
+                                Group {gi + 1}
+                              </span>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                onClick={() => removeRow(idx)}
-                                title="Remove this condition"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  const next = groups.filter((_, k) => k !== gi);
+                                  writeGroups(next.length ? next : [{ logic: "AND", rows: [{ condition: "", operator: undefined, value: "", value_to: "", time_window_days: undefined }] }]);
+                                }}
+                                title="Remove group"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                <X className="h-3.5 w-3.5" />
                               </Button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                            </div>
+                          )}
 
-                    {/* Add condition + natural-language preview */}
+                          {group.rows.map((row, ri) => {
+                            const selectedOpt = allOptions.find((o) => o.value === row.condition);
+                            const currentOperator: ConditionOperator =
+                              row.operator || (selectedOpt?.operators?.[0] ?? "equals");
+                            const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
+                            const isBetween = currentOperator === "between";
+
+                            return (
+                              <div key={ri} className="space-y-1.5">
+                                {ri > 0 && (
+                                  <div className="flex items-center gap-2 pl-1">
+                                    <div className="h-px flex-1 bg-blue-200" />
+                                    <div className="inline-flex rounded-full border border-blue-300 bg-background/70 overflow-hidden text-[10px] font-semibold">
+                                      {(["AND", "OR"] as ConditionLogic[]).map((l) => (
+                                        <button
+                                          key={l}
+                                          type="button"
+                                          onClick={() => updateGroup(gi, { logic: l })}
+                                          className={cn(
+                                            "px-2.5 py-0.5 transition-colors",
+                                            group.logic === l
+                                              ? "bg-blue-600 text-white"
+                                              : "text-blue-700 hover:bg-blue-50",
+                                          )}
+                                        >
+                                          {l}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="h-px flex-1 bg-blue-200" />
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap gap-2 items-center">
+                                  <Select
+                                    value={row.condition}
+                                    onValueChange={(v) => {
+                                      const opt = allOptions.find((o) => o.value === v);
+                                      const defaultOp = opt?.operators?.[0] ?? "equals";
+                                      if (v === "reply_status") {
+                                        // Reply status is exclusive — collapse to single group/row
+                                        writeGroups([{ logic: "AND", rows: [{ condition: v, operator: undefined, reply_check: "has_replied", value: "", value_to: "", time_window_days: undefined }] }]);
+                                      } else {
+                                        updateRow(gi, ri, { condition: v, operator: defaultOp, reply_check: undefined, value: "", value_to: "", time_window_days: undefined });
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-[200px] bg-background">
+                                      <SelectValue placeholder="Select condition" />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[360px]">
+                                      {CONDITION_GROUPS.map((cg) => (
+                                        <SelectGroup key={cg.label}>
+                                          <SelectLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                                            {cg.label}
+                                          </SelectLabel>
+                                          {cg.options.map((c) => (
+                                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                          ))}
+                                        </SelectGroup>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+
+                                  {selectedOpt && selectedOpt.operators.length > 0 && (
+                                    <Select
+                                      value={currentOperator}
+                                      onValueChange={(v) =>
+                                        updateRow(gi, ri, { operator: v as ConditionOperator, ...(v === "between" ? {} : { value_to: "" }) })
+                                      }
+                                    >
+                                      <SelectTrigger className="w-[170px] bg-background">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {selectedOpt.operators.map((op) => (
+                                          <SelectItem key={op} value={op}>{operatorLabel(op)}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
+
+                                  {selectedOpt && operatorNeedsValue && selectedOpt.input !== "none" && (
+                                    <Input
+                                      type={selectedOpt.input === "number" ? "number" : "text"}
+                                      placeholder={selectedOpt.placeholder || "Value"}
+                                      className="w-[160px] bg-background"
+                                      value={row.value || ""}
+                                      onChange={(e) => updateRow(gi, ri, { value: e.target.value })}
+                                    />
+                                  )}
+                                  {selectedOpt && isBetween && selectedOpt.input !== "none" && (
+                                    <>
+                                      <span className="text-xs text-muted-foreground">and</span>
+                                      <Input
+                                        type={selectedOpt.input === "number" ? "number" : "text"}
+                                        placeholder="Upper value"
+                                        className="w-[120px] bg-background"
+                                        value={row.value_to || ""}
+                                        onChange={(e) => updateRow(gi, ri, { value_to: e.target.value })}
+                                      />
+                                    </>
+                                  )}
+
+                                  {selectedOpt?.timeWindow && (
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs text-muted-foreground whitespace-nowrap">in last</span>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        placeholder="∞"
+                                        className="w-[70px] bg-background"
+                                        value={row.time_window_days ?? ""}
+                                        onChange={(e) =>
+                                          updateRow(gi, ri, {
+                                            time_window_days: e.target.value === "" ? undefined : parseInt(e.target.value) || undefined,
+                                          })
+                                        }
+                                      />
+                                      <span className="text-xs text-muted-foreground">days</span>
+                                    </div>
+                                  )}
+
+                                  {(group.rows.length > 1 || groups.length > 1) && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                      onClick={() => removeRow(gi, ri)}
+                                      title="Remove this condition"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Add condition within this group */}
+                          {!isReplyStatusFirst && group.rows.length < CONDITION_LIMITS.maxRowsPerGroup && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1.5 text-xs text-blue-700 hover:bg-blue-50"
+                              onClick={() => addRow(gi)}
+                            >
+                              <Plus className="h-3 w-3" /> Add condition
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add group + natural-language preview */}
                     {!isReplyStatusFirst && (
                       <div className="flex items-center justify-between gap-2 pt-0.5">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
+                          disabled={groups.length >= CONDITION_LIMITS.maxGroups}
                           className="h-7 gap-1.5 text-xs bg-background/60 border-dashed"
-                          onClick={addRow}
+                          onClick={addGroup}
+                          title={groups.length >= CONDITION_LIMITS.maxGroups ? `Limit: max ${CONDITION_LIMITS.maxGroups} groups` : "Add a nested group (joined by AND/OR)"}
                         >
-                          <Plus className="h-3 w-3" /> Add condition
+                          <GitBranch className="h-3 w-3" /> Add group
+                          {groups.length >= CONDITION_LIMITS.maxGroups && (
+                            <span className="text-[10px] text-muted-foreground">(max {CONDITION_LIMITS.maxGroups})</span>
+                          )}
                         </Button>
-                        {rows.some((r) => r.condition) && (
-                          <span className="text-[11px] text-muted-foreground italic truncate">
-                            {phraseConditionGroup(rows, logic)}
+                        {groups.some((g) => g.rows.some((r) => r.condition)) && (
+                          <span className="text-[11px] text-muted-foreground italic truncate max-w-[60%]">
+                            {phraseConditionGroups(groups, groupLogic)}
                           </span>
                         )}
                       </div>
                     )}
 
-                    {rows[0]?.condition === "reply_status" && (
+                    {validationIssues.length > 0 && (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+                        {validationIssues.slice(0, 3).map((msg, k) => (
+                          <div key={k}>⚠ {msg}</div>
+                        ))}
+                        {validationIssues.length > 3 && (
+                          <div className="text-amber-700/70">+{validationIssues.length - 3} more</div>
+                        )}
+                      </div>
+                    )}
+
+                    {groups[0]?.rows?.[0]?.condition === "reply_status" && (
                       <div className="w-full space-y-2 mt-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium min-w-[100px]">If replied →</span>
