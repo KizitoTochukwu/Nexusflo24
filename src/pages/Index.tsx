@@ -22,6 +22,7 @@ import stepConvert from "@/assets/step-convert.png";
 import { useState } from "react";
 import { toast } from "sonner";
 import MotionShowcaseSection from "@/components/home/MotionShowcaseSection";
+import ExitIntentPopup from "@/components/home/ExitIntentPopup";
 
 
 const features = [
@@ -461,6 +462,7 @@ const Index = () => {
         </div>
       </div>
     </section>
+    <ExitIntentPopup />
   </Layout>
   );
 };
