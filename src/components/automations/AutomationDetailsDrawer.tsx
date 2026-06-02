@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExecutionTimeline from "./ExecutionTimeline";
+import ExecutionHistoryTable from "./ExecutionHistoryTable";
 import SequenceHealthPanel from "./SequenceHealthPanel";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
@@ -67,6 +68,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const [testCriterionIdx, setTestCriterionIdx] = useState<string>("0");
   const [testRunning, setTestRunning] = useState(false);
   const [logsFilter, setLogsFilter] = useState<"all" | "exit" | "errors" | "email_issues">("all");
+  const [activeTab, setActiveTab] = useState<string>("builder");
   const { data: leads } = useLeads(workspaceId);
   const qc = useQueryClient();
 
@@ -154,10 +156,11 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
 
       {/* Content */}
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs defaultValue="builder">
-          <TabsList className="grid w-full max-w-xl grid-cols-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="health">Health</TabsTrigger>
             <TabsTrigger value="logs">Logs ({logs?.length || 0})</TabsTrigger>
           </TabsList>
@@ -304,6 +307,29 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               />
             )}
           </TabsContent>
+
+          <TabsContent value="history" className="mt-5 space-y-3">
+            {logsLoading ? (
+              <div className="rounded-lg border bg-card p-4 space-y-3" aria-busy="true">
+                {Array.from({ length: 3 }).map((_, i) => (<Skeleton key={i} className="h-10 w-full" />))}
+              </div>
+            ) : (
+              <ExecutionHistoryTable
+                automationId={automation.id}
+                workspaceId={workspaceId}
+                logs={logs ?? []}
+                stepsCount={savedSteps?.filter((s) => !s.step_type.startsWith("branch_")).length ?? 0}
+                leadLabelFor={(leadId) => {
+                  if (!leadId) return "Unknown lead";
+                  const lead = leads?.find((l) => l.id === leadId);
+                  if (!lead) return `Lead ${leadId.slice(0, 8)}`;
+                  return lead.full_name || lead.email || lead.phone || `Lead ${leadId.slice(0, 8)}`;
+                }}
+                onJumpToTimeline={() => setActiveTab("timeline")}
+              />
+            )}
+          </TabsContent>
+
 
           <TabsContent value="health" className="mt-5 space-y-3">
             {automation && workspaceId ? (
