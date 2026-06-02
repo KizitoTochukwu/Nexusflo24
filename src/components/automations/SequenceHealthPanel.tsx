@@ -232,6 +232,113 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
     }
   };
 
+  const metrics = useMemo(() => {
+    const now = Date.now();
+    let queued = 0, failed = 0, stuck = 0, overdueWarn = 0, overdueCrit = 0, maxOverdueMin = 0;
+    for (const r of rows) {
+      if (r.job_status === "pending" || r.job_status === "running") queued++;
+      if (r.job_status === "failed") failed++;
+      const isStuck = r.job_status === "failed" || (!r.job_status && r.last_log_event?.includes("delay"));
+      if (isStuck) stuck++;
+      if (r.next_run_at && (r.job_status === "pending" || r.job_status === "running")) {
+        const lateMin = (now - new Date(r.next_run_at).getTime()) / 60000;
+        if (lateMin >= THRESHOLDS.overdueMinutes.crit) overdueCrit++;
+        else if (lateMin >= THRESHOLDS.overdueMinutes.warn) overdueWarn++;
+        if (lateMin > maxOverdueMin) maxOverdueMin = lateMin;
+      }
+    }
+    const failureRate = recentStats.total > 0 ? (recentStats.failed / recentStats.total) * 100 : 0;
+    const overdue = overdueWarn + overdueCrit;
+    const stuckSev = sevFromCount(stuck, THRESHOLDS.stuckCount);
+    const queueSev = sevFromCount(queued, THRESHOLDS.queueBacklog);
+    const overdueSev: Severity = overdueCrit > 0 ? "crit" : overdueWarn > 0 ? "warn" : "ok";
+    const failSev: Severity =
+      failureRate >= THRESHOLDS.failureRate.crit ? "crit" :
+      failureRate >= THRESHOLDS.failureRate.warn ? "warn" : "ok";
+    const overall: Severity =
+      [stuckSev, queueSev, overdueSev, failSev].includes("crit") ? "crit" :
+      [stuckSev, queueSev, overdueSev, failSev].includes("warn") ? "warn" : "ok";
+
+    const recs: { id: string; sev: Severity; title: string; body: string }[] = [];
+    if (failSev !== "ok") {
+      recs.push({
+        id: "fail-rate",
+        sev: failSev,
+        title: `${failureRate.toFixed(0)}% of recent steps failed (24h)`,
+        body: emailKeyBroken
+          ? "Most failures are from an invalid email API key — fix Settings → Channels → Email first, then re-trigger affected leads."
+          : "Open the Logs tab, group by error, and fix the root cause (missing template, low credits, invalid channel). Then use 'Re-trigger all stuck'.",
+      });
+    }
+    if (stuckSev !== "ok") {
+      recs.push({
+        id: "stuck",
+        sev: stuckSev,
+        title: `${stuck} lead${stuck === 1 ? "" : "s"} stuck`,
+        body: "Click 'Re-trigger all stuck' below to push these leads to their next step. If the same leads keep failing, check the step's configuration.",
+      });
+    }
+    if (overdueSev !== "ok") {
+      recs.push({
+        id: "overdue",
+        sev: overdueSev,
+        title: `${overdue} job${overdue === 1 ? "" : "s"} overdue (max ${Math.round(maxOverdueMin)} min late)`,
+        body: "The scheduler may be backed up. Refresh in 1–2 minutes; if jobs are still overdue, re-trigger them manually.",
+      });
+    }
+    if (queueSev !== "ok") {
+      recs.push({
+        id: "queue",
+        sev: queueSev,
+        title: `${queued} queued jobs`,
+        body: "Large queues are usually fine, but check that delay steps aren't longer than intended.",
+      });
+    }
+    if (emptySteps.length > 0) {
+      recs.push({
+        id: "empty",
+        sev: "warn",
+        title: `${emptySteps.length} step${emptySteps.length === 1 ? "" : "s"} have no action configured`,
+        body: `Open the editor and configure step${emptySteps.length === 1 ? "" : "s"} #${emptySteps.map((n) => n + 1).join(", #")} — they will be skipped at runtime.`,
+      });
+    }
+
+    return { queued, failed, stuck, overdue, maxOverdueMin, failureRate, overall, stuckSev, queueSev, overdueSev, failSev, recs };
+  }, [rows, recentStats, emailKeyBroken, emptySteps]);
+
+  const stuckRows = useMemo(
+    () => rows.filter((r) => r.job_status === "failed" || (!r.job_status && r.last_log_event?.includes("delay"))),
+    [rows]
+  );
+
+  const reTriggerAllStuck = async () => {
+    if (stuckRows.length === 0) return;
+    setBulkRunning(true);
+    let ok = 0, fail = 0;
+    for (const r of stuckRows) {
+      try {
+        const stepArg = r.next_step_index ?? undefined;
+        const { error } = await supabase.functions.invoke("execute-automation", {
+          body: {
+            automation_id: automationId,
+            workspace_id: workspaceId,
+            lead_id: r.lead_id,
+            ...(stepArg !== undefined ? { start_from_step: stepArg } : {}),
+          },
+        });
+        if (error) throw error;
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkRunning(false);
+    if (fail === 0) toast.success(`Re-triggered ${ok} lead${ok === 1 ? "" : "s"}`);
+    else toast.warning(`Re-triggered ${ok}, ${fail} failed`);
+    setTimeout(load, 1200);
+  };
+
+
   if (loading) {
     return (
       <div className="space-y-2">
