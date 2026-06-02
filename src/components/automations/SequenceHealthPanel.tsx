@@ -363,6 +363,72 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         </Button>
       </div>
 
+      {/* Health summary with thresholds */}
+      <div className={cn(
+        "rounded-lg border p-3",
+        metrics.overall === "crit" && "border-destructive/40 bg-destructive/5",
+        metrics.overall === "warn" && "border-amber-400/40 bg-amber-50 dark:bg-amber-950/20",
+        metrics.overall === "ok" && "border-emerald-300/40 bg-emerald-50 dark:bg-emerald-950/20",
+      )}>
+        <div className="flex items-center gap-2 mb-2">
+          <Activity className={cn(
+            "h-4 w-4",
+            metrics.overall === "crit" && "text-destructive",
+            metrics.overall === "warn" && "text-amber-600",
+            metrics.overall === "ok" && "text-emerald-600",
+          )} />
+          <span className="text-sm font-semibold">
+            {metrics.overall === "ok" && "All systems healthy"}
+            {metrics.overall === "warn" && "Needs attention"}
+            {metrics.overall === "crit" && "Action required"}
+          </span>
+          {stuckRows.length > 0 && (
+            <Button
+              size="sm"
+              variant={metrics.overall === "crit" ? "default" : "outline"}
+              className="ml-auto h-7"
+              disabled={bulkRunning}
+              onClick={reTriggerAllStuck}
+            >
+              <Zap className="h-3.5 w-3.5 mr-1.5" />
+              {bulkRunning ? "Re-triggering…" : `Re-trigger all stuck (${stuckRows.length})`}
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <MetricCard label="Stuck / failed" value={metrics.stuck} sev={metrics.stuckSev}
+            hint={`warn ≥${THRESHOLDS.stuckCount.warn} · crit ≥${THRESHOLDS.stuckCount.crit}`} />
+          <MetricCard label="Failure rate (24h)" value={`${metrics.failureRate.toFixed(0)}%`} sev={metrics.failSev}
+            hint={`warn ≥${THRESHOLDS.failureRate.warn}% · crit ≥${THRESHOLDS.failureRate.crit}%`} />
+          <MetricCard label="Overdue jobs" value={metrics.overdue} sev={metrics.overdueSev}
+            hint={`>${THRESHOLDS.overdueMinutes.warn}m late = warn`} />
+          <MetricCard label="Queued" value={metrics.queued} sev={metrics.queueSev}
+            hint={`warn ≥${THRESHOLDS.queueBacklog.warn} · crit ≥${THRESHOLDS.queueBacklog.crit}`} />
+        </div>
+
+        {metrics.recs.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {metrics.recs.map((r) => (
+              <div key={r.id} className="flex items-start gap-2 text-xs">
+                <Wrench className={cn(
+                  "h-3.5 w-3.5 mt-0.5 shrink-0",
+                  r.sev === "crit" && "text-destructive",
+                  r.sev === "warn" && "text-amber-600",
+                  r.sev === "ok" && "text-emerald-600",
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{r.title}</div>
+                  <div className="text-muted-foreground">{r.body}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+
+
       {emailKeyBroken && !dismissedEmailAlert && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-3">
           <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
