@@ -76,6 +76,16 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         return hasAuthError;
       });
 
+      // Failure rate over last 24h (excludes scheduled/branch markers)
+      const recent24 = (logs || []).filter((l: any) => new Date(l.created_at).getTime() > dayAgo);
+      const countable = recent24.filter((l: any) =>
+        ["success", "completed", "failed", "error", "insufficient_credits"].includes(l.status)
+      );
+      const failedCount = countable.filter((l: any) =>
+        ["failed", "error", "insufficient_credits"].includes(l.status)
+      ).length;
+      setRecentStats({ total: countable.length, failed: failedCount });
+
       const leadIdsSet = new Set<string>();
       const lastByLead: Record<string, { event_type: string; status: string; created_at: string }> = {};
       for (const l of logs || []) {
