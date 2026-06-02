@@ -1,11 +1,27 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle, X, Activity, Wrench, Zap } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+// Health thresholds — tweak here to tune sensitivity
+const THRESHOLDS = {
+  failureRate: { warn: 10, crit: 25 }, // % of recent logs that failed (24h)
+  overdueMinutes: { warn: 15, crit: 60 }, // pending job past run_at
+  stuckCount: { warn: 1, crit: 5 }, // failed + stuck rows
+  queueBacklog: { warn: 25, crit: 100 }, // queued jobs
+};
+
+type Severity = "ok" | "warn" | "crit";
+function sevFromCount(n: number, t: { warn: number; crit: number }): Severity {
+  if (n >= t.crit) return "crit";
+  if (n >= t.warn) return "warn";
+  return "ok";
+}
 
 interface Props {
   automationId: string;
@@ -30,10 +46,12 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
   const [rows, setRows] = useState<RowData[]>([]);
   const [loading, setLoading] = useState(true);
   const [retriggering, setRetriggering] = useState<string | null>(null);
+  const [bulkRunning, setBulkRunning] = useState(false);
   const [emailKeyBroken, setEmailKeyBroken] = useState(false);
   const [emptySteps, setEmptySteps] = useState<number[]>([]);
   const [dismissedEmailAlert, setDismissedEmailAlert] = useState(false);
   const [dismissedStepsAlert, setDismissedStepsAlert] = useState(false);
+  const [recentStats, setRecentStats] = useState<{ total: number; failed: number }>({ total: 0, failed: 0 });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,6 +75,16 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
         if (prev !== hasAuthError) setDismissedEmailAlert(false);
         return hasAuthError;
       });
+
+      // Failure rate over last 24h (excludes scheduled/branch markers)
+      const recent24 = (logs || []).filter((l: any) => new Date(l.created_at).getTime() > dayAgo);
+      const countable = recent24.filter((l: any) =>
+        ["success", "completed", "failed", "error", "insufficient_credits"].includes(l.status)
+      );
+      const failedCount = countable.filter((l: any) =>
+        ["failed", "error", "insufficient_credits"].includes(l.status)
+      ).length;
+      setRecentStats({ total: countable.length, failed: failedCount });
 
       const leadIdsSet = new Set<string>();
       const lastByLead: Record<string, { event_type: string; status: string; created_at: string }> = {};
@@ -204,6 +232,113 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
     }
   };
 
+  const metrics = useMemo(() => {
+    const now = Date.now();
+    let queued = 0, failed = 0, stuck = 0, overdueWarn = 0, overdueCrit = 0, maxOverdueMin = 0;
+    for (const r of rows) {
+      if (r.job_status === "pending" || r.job_status === "running") queued++;
+      if (r.job_status === "failed") failed++;
+      const isStuck = r.job_status === "failed" || (!r.job_status && r.last_log_event?.includes("delay"));
+      if (isStuck) stuck++;
+      if (r.next_run_at && (r.job_status === "pending" || r.job_status === "running")) {
+        const lateMin = (now - new Date(r.next_run_at).getTime()) / 60000;
+        if (lateMin >= THRESHOLDS.overdueMinutes.crit) overdueCrit++;
+        else if (lateMin >= THRESHOLDS.overdueMinutes.warn) overdueWarn++;
+        if (lateMin > maxOverdueMin) maxOverdueMin = lateMin;
+      }
+    }
+    const failureRate = recentStats.total > 0 ? (recentStats.failed / recentStats.total) * 100 : 0;
+    const overdue = overdueWarn + overdueCrit;
+    const stuckSev = sevFromCount(stuck, THRESHOLDS.stuckCount);
+    const queueSev = sevFromCount(queued, THRESHOLDS.queueBacklog);
+    const overdueSev: Severity = overdueCrit > 0 ? "crit" : overdueWarn > 0 ? "warn" : "ok";
+    const failSev: Severity =
+      failureRate >= THRESHOLDS.failureRate.crit ? "crit" :
+      failureRate >= THRESHOLDS.failureRate.warn ? "warn" : "ok";
+    const overall: Severity =
+      [stuckSev, queueSev, overdueSev, failSev].includes("crit") ? "crit" :
+      [stuckSev, queueSev, overdueSev, failSev].includes("warn") ? "warn" : "ok";
+
+    const recs: { id: string; sev: Severity; title: string; body: string }[] = [];
+    if (failSev !== "ok") {
+      recs.push({
+        id: "fail-rate",
+        sev: failSev,
+        title: `${failureRate.toFixed(0)}% of recent steps failed (24h)`,
+        body: emailKeyBroken
+          ? "Most failures are from an invalid email API key — fix Settings → Channels → Email first, then re-trigger affected leads."
+          : "Open the Logs tab, group by error, and fix the root cause (missing template, low credits, invalid channel). Then use 'Re-trigger all stuck'.",
+      });
+    }
+    if (stuckSev !== "ok") {
+      recs.push({
+        id: "stuck",
+        sev: stuckSev,
+        title: `${stuck} lead${stuck === 1 ? "" : "s"} stuck`,
+        body: "Click 'Re-trigger all stuck' below to push these leads to their next step. If the same leads keep failing, check the step's configuration.",
+      });
+    }
+    if (overdueSev !== "ok") {
+      recs.push({
+        id: "overdue",
+        sev: overdueSev,
+        title: `${overdue} job${overdue === 1 ? "" : "s"} overdue (max ${Math.round(maxOverdueMin)} min late)`,
+        body: "The scheduler may be backed up. Refresh in 1–2 minutes; if jobs are still overdue, re-trigger them manually.",
+      });
+    }
+    if (queueSev !== "ok") {
+      recs.push({
+        id: "queue",
+        sev: queueSev,
+        title: `${queued} queued jobs`,
+        body: "Large queues are usually fine, but check that delay steps aren't longer than intended.",
+      });
+    }
+    if (emptySteps.length > 0) {
+      recs.push({
+        id: "empty",
+        sev: "warn",
+        title: `${emptySteps.length} step${emptySteps.length === 1 ? "" : "s"} have no action configured`,
+        body: `Open the editor and configure step${emptySteps.length === 1 ? "" : "s"} #${emptySteps.map((n) => n + 1).join(", #")} — they will be skipped at runtime.`,
+      });
+    }
+
+    return { queued, failed, stuck, overdue, maxOverdueMin, failureRate, overall, stuckSev, queueSev, overdueSev, failSev, recs };
+  }, [rows, recentStats, emailKeyBroken, emptySteps]);
+
+  const stuckRows = useMemo(
+    () => rows.filter((r) => r.job_status === "failed" || (!r.job_status && r.last_log_event?.includes("delay"))),
+    [rows]
+  );
+
+  const reTriggerAllStuck = async () => {
+    if (stuckRows.length === 0) return;
+    setBulkRunning(true);
+    let ok = 0, fail = 0;
+    for (const r of stuckRows) {
+      try {
+        const stepArg = r.next_step_index ?? undefined;
+        const { error } = await supabase.functions.invoke("execute-automation", {
+          body: {
+            automation_id: automationId,
+            workspace_id: workspaceId,
+            lead_id: r.lead_id,
+            ...(stepArg !== undefined ? { start_from_step: stepArg } : {}),
+          },
+        });
+        if (error) throw error;
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkRunning(false);
+    if (fail === 0) toast.success(`Re-triggered ${ok} lead${ok === 1 ? "" : "s"}`);
+    else toast.warning(`Re-triggered ${ok}, ${fail} failed`);
+    setTimeout(load, 1200);
+  };
+
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -227,6 +362,72 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
         </Button>
       </div>
+
+      {/* Health summary with thresholds */}
+      <div className={cn(
+        "rounded-lg border p-3",
+        metrics.overall === "crit" && "border-destructive/40 bg-destructive/5",
+        metrics.overall === "warn" && "border-amber-400/40 bg-amber-50 dark:bg-amber-950/20",
+        metrics.overall === "ok" && "border-emerald-300/40 bg-emerald-50 dark:bg-emerald-950/20",
+      )}>
+        <div className="flex items-center gap-2 mb-2">
+          <Activity className={cn(
+            "h-4 w-4",
+            metrics.overall === "crit" && "text-destructive",
+            metrics.overall === "warn" && "text-amber-600",
+            metrics.overall === "ok" && "text-emerald-600",
+          )} />
+          <span className="text-sm font-semibold">
+            {metrics.overall === "ok" && "All systems healthy"}
+            {metrics.overall === "warn" && "Needs attention"}
+            {metrics.overall === "crit" && "Action required"}
+          </span>
+          {stuckRows.length > 0 && (
+            <Button
+              size="sm"
+              variant={metrics.overall === "crit" ? "default" : "outline"}
+              className="ml-auto h-7"
+              disabled={bulkRunning}
+              onClick={reTriggerAllStuck}
+            >
+              <Zap className="h-3.5 w-3.5 mr-1.5" />
+              {bulkRunning ? "Re-triggering…" : `Re-trigger all stuck (${stuckRows.length})`}
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <MetricCard label="Stuck / failed" value={metrics.stuck} sev={metrics.stuckSev}
+            hint={`warn ≥${THRESHOLDS.stuckCount.warn} · crit ≥${THRESHOLDS.stuckCount.crit}`} />
+          <MetricCard label="Failure rate (24h)" value={`${metrics.failureRate.toFixed(0)}%`} sev={metrics.failSev}
+            hint={`warn ≥${THRESHOLDS.failureRate.warn}% · crit ≥${THRESHOLDS.failureRate.crit}%`} />
+          <MetricCard label="Overdue jobs" value={metrics.overdue} sev={metrics.overdueSev}
+            hint={`>${THRESHOLDS.overdueMinutes.warn}m late = warn`} />
+          <MetricCard label="Queued" value={metrics.queued} sev={metrics.queueSev}
+            hint={`warn ≥${THRESHOLDS.queueBacklog.warn} · crit ≥${THRESHOLDS.queueBacklog.crit}`} />
+        </div>
+
+        {metrics.recs.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {metrics.recs.map((r) => (
+              <div key={r.id} className="flex items-start gap-2 text-xs">
+                <Wrench className={cn(
+                  "h-3.5 w-3.5 mt-0.5 shrink-0",
+                  r.sev === "crit" && "text-destructive",
+                  r.sev === "warn" && "text-amber-600",
+                  r.sev === "ok" && "text-emerald-600",
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{r.title}</div>
+                  <div className="text-muted-foreground">{r.body}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+
 
       {emailKeyBroken && !dismissedEmailAlert && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 flex items-start gap-3">
@@ -359,6 +560,25 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, sev, hint }: { label: string; value: number | string; sev: Severity; hint: string }) {
+  return (
+    <div className={cn(
+      "rounded-md border bg-background/60 p-2",
+      sev === "crit" && "border-destructive/40",
+      sev === "warn" && "border-amber-400/40",
+      sev === "ok" && "border-border",
+    )}>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={cn(
+        "text-lg font-semibold tabular-nums",
+        sev === "crit" && "text-destructive",
+        sev === "warn" && "text-amber-700 dark:text-amber-400",
+      )}>{value}</div>
+      <div className="text-[10px] text-muted-foreground">{hint}</div>
     </div>
   );
 }
