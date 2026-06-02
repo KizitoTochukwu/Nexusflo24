@@ -52,6 +52,8 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
   const [dismissedEmailAlert, setDismissedEmailAlert] = useState(false);
   const [dismissedStepsAlert, setDismissedStepsAlert] = useState(false);
   const [recentStats, setRecentStats] = useState<{ total: number; failed: number }>({ total: 0, failed: 0 });
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       // Pull recent logs to figure out which leads are enrolled in this automation
