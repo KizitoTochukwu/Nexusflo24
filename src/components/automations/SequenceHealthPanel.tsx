@@ -563,3 +563,22 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
     </div>
   );
 }
+
+function MetricCard({ label, value, sev, hint }: { label: string; value: number | string; sev: Severity; hint: string }) {
+  return (
+    <div className={cn(
+      "rounded-md border bg-background/60 p-2",
+      sev === "crit" && "border-destructive/40",
+      sev === "warn" && "border-amber-400/40",
+      sev === "ok" && "border-border",
+    )}>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={cn(
+        "text-lg font-semibold tabular-nums",
+        sev === "crit" && "text-destructive",
+        sev === "warn" && "text-amber-700 dark:text-amber-400",
+      )}>{value}</div>
+      <div className="text-[10px] text-muted-foreground">{hint}</div>
+    </div>
+  );
+}
