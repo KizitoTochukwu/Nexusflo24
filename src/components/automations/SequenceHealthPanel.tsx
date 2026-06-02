@@ -46,12 +46,12 @@ export default function SequenceHealthPanel({ automationId, workspaceId }: Props
   const [rows, setRows] = useState<RowData[]>([]);
   const [loading, setLoading] = useState(true);
   const [retriggering, setRetriggering] = useState<string | null>(null);
+  const [bulkRunning, setBulkRunning] = useState(false);
   const [emailKeyBroken, setEmailKeyBroken] = useState(false);
   const [emptySteps, setEmptySteps] = useState<number[]>([]);
   const [dismissedEmailAlert, setDismissedEmailAlert] = useState(false);
   const [dismissedStepsAlert, setDismissedStepsAlert] = useState(false);
-
-  const load = useCallback(async () => {
+  const [recentStats, setRecentStats] = useState<{ total: number; failed: number }>({ total: 0, failed: 0 });
     setLoading(true);
     try {
       // Pull recent logs to figure out which leads are enrolled in this automation
