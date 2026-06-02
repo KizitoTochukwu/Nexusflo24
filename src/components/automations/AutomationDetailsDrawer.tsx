@@ -308,6 +308,29 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             )}
           </TabsContent>
 
+          <TabsContent value="history" className="mt-5 space-y-3">
+            {logsLoading ? (
+              <div className="rounded-lg border bg-card p-4 space-y-3" aria-busy="true">
+                {Array.from({ length: 3 }).map((_, i) => (<Skeleton key={i} className="h-10 w-full" />))}
+              </div>
+            ) : (
+              <ExecutionHistoryTable
+                automationId={automation.id}
+                workspaceId={workspaceId}
+                logs={logs ?? []}
+                stepsCount={savedSteps?.filter((s) => !s.step_type.startsWith("branch_")).length ?? 0}
+                leadLabelFor={(leadId) => {
+                  if (!leadId) return "Unknown lead";
+                  const lead = leads?.find((l) => l.id === leadId);
+                  if (!lead) return `Lead ${leadId.slice(0, 8)}`;
+                  return lead.full_name || lead.email || lead.phone || `Lead ${leadId.slice(0, 8)}`;
+                }}
+                onJumpToTimeline={() => setActiveTab("timeline")}
+              />
+            )}
+          </TabsContent>
+
+
           <TabsContent value="health" className="mt-5 space-y-3">
             {automation && workspaceId ? (
               <SequenceHealthPanel automationId={automation.id} workspaceId={workspaceId} />
