@@ -1,57 +1,54 @@
-# Exit-Intent Helper Popup — Homepage
+## Goal
 
-Add a friendly, conversion-focused popup that triggers when a first-time / inexperienced visitor tries to leave the homepage without engaging (no form submission, no signup, low time-on-page or no meaningful scroll).
+Add a **History** tab to the Automation Details drawer that lists every run of the automation as a flat, sortable table — complementing Timeline (branch view per lead), Logs (raw events), and Health (current state).
 
-## Who it targets
+Tabs after change: **Overview · Timeline · History · Health · Logs**.
 
-A visitor is considered "naive / unconverted" if ALL of the following are true (stored in `localStorage`):
-- Not authenticated (no Supabase session)
-- Has not submitted any form / lead capture (`nf24_lead_submitted` flag absent)
-- Has not previously dismissed or converted on this popup (`nf24_exit_popup_state` absent)
-- Is on `/` (homepage only, per request)
+## Columns
 
-Optional "inexperienced" signal (any one triggers eligibility):
-- First-ever visit (no `nf24_visited` flag), OR
-- Session time on page < 90s, OR
-- Scroll depth < 40%, OR
-- No clicks on primary CTAs (`Start Free Trial`, `Book a Demo`, pricing links)
+| Column | Source |
+|---|---|
+| Lead | `leads.full_name` / email fallback (resolved via existing `leadLabelFor`) |
+| Started | First `automation_logs.created_at` in the run |
+| Trigger | Derived: `payload.source` from the originating `scheduled_jobs` row (folder_trigger, tag_added, score_reached, manual, re-trigger, form_submit, webhook…) with a friendly label + icon |
+| Steps | `X / Y` — executed step events vs total steps in `automation.steps` (e.g. `4 / 7`) with a thin progress bar |
+| Status | Rollup: **Completed** (last log success and no pending job) · **Running** (open scheduled_job pending/running) · **Failed** (any failed log/job) · **Exited** (cancelled/exit-criteria) · **Out of credits** (`insufficient_credits`) |
+| Duration | First → last log delta, formatted (`2m 14s`, `1h 03m`, `—` if running) |
+| Actions | Row menu: View timeline (jumps to Timeline tab, auto-expands this run) · Re-trigger (failed/exited only) · Cancel pending (running only) · Open lead drawer |
 
-## Trigger
+## UX details
 
-- Desktop: mouse leaves the top of the viewport (`mouseout` with `e.clientY <= 0`)
-- Mobile: fast upward scroll near top OR `visibilitychange` to hidden after >15s on page
-- Only fires once per visitor (state persisted), 8s minimum delay after page load to avoid accidental fires
+- Newest first, default sort by Started desc. Column headers sortable for Started, Duration, Status.
+- Filters above the table: Status (all/completed/running/failed/exited), Trigger (all + list of distinct triggers seen), search by lead name/email.
+- Empty state mirrors Timeline's tone: "No runs yet. When a lead enters this automation, each run will appear here."
+- Status uses the same color tokens already in `ExecutionTimeline` (emerald / blue / red / rose / amber).
+- Row click = expand inline mini-timeline (reuses the existing `ExecutionTimeline` `layoutRows` helper for that single run) so users don't need to leave the tab for common drill-downs; "View full timeline" link in the expanded panel switches tabs.
+- Pagination: 25 rows per page, "Load more" button.
 
-## Popup content
+## Implementation
 
-Headline: "Not sure where to start?"
-Sub: "Get our free 2-minute Quick Start guide — we'll show you how to capture, nurture, and convert your first leads with NexusFlo24."
-Single email input + primary CTA "Send me the Quick Start" (Navy/Gold per brand)
-Secondary text link: "No thanks, I'll explore on my own" (dismiss)
-Trust line: "Free. No credit card. Unsubscribe anytime."
+**New file:** `src/components/automations/ExecutionHistoryTable.tsx`
+- Props: `logs: AutomationLog[]`, `jobs: ScheduledJob[]`, `stepsCount: number`, `leadLabelFor`, `onOpenTimeline(runKey)`, `onReTrigger(run)`, `onCancel(run)`, `onOpenLead(leadId)`.
+- Reuses the `groupByRun` logic already in `ExecutionTimeline.tsx` — extract it to a small shared helper `src/components/automations/runGrouping.ts` and import from both files (no behavior change for Timeline).
+- Adds a `summarizeRun(entries, jobs)` helper that returns `{ status, duration, executedSteps, trigger }`. Trigger label resolution order: explicit `payload.source` → first log's `event_type` → `"manual"`.
+- Uses shadcn `Table`, `Badge`, `DropdownMenu`, `Button`, and existing status color map from Timeline.
 
-On submit:
-- Call existing `useCaptureLead` hook to create a lead in the default/public workspace with source `exit_intent_homepage` and tag `quick-start-guide`
-- Set `nf24_lead_submitted=true` and `nf24_exit_popup_state=converted`
-- Show success state inside the modal ("Check your inbox — and here's a head start:" + buttons to `/academy` and `/register`)
+**Edited:** `src/components/automations/AutomationDetailsDrawer.tsx`
+- Add a `"history"` value to the existing tabs list and render `<ExecutionHistoryTable />` inside it.
+- Pass the already-fetched `logs`, `scheduled_jobs`, and `automation.steps?.length ?? 0` down. No new queries needed — the drawer already loads these.
+- Wire `onOpenTimeline(runKey)` to set the active tab to `"timeline"` and pre-open that run (extend `ExecutionTimeline` to accept an optional `initiallyOpenRunKey` prop).
+- Wire `onReTrigger` to the same `supabase.functions.invoke("execute-automation", { start_from_step })` pattern used by the new Health-tab "Re-trigger all stuck" action.
+- Wire `onCancel` to update `scheduled_jobs.status = 'cancelled'` for pending jobs of that lead+automation.
 
-On dismiss:
-- Set `nf24_exit_popup_state=dismissed` so it never shows again for that browser
+**Edited:** `src/components/automations/ExecutionTimeline.tsx`
+- Replace inlined `groupByRun` / `toRun` / `layoutRows` with imports from the new `runGrouping.ts`.
+- Accept optional `initiallyOpenRunKey` to auto-expand a specific run when navigated from History.
 
-## Files
+No DB migrations, no edge function changes, no new RLS — purely a presentation layer addition on top of data already in scope.
 
-New:
-- `src/components/home/ExitIntentPopup.tsx` — modal UI + trigger logic, uses existing `Dialog` and `useCaptureLead`
-- `src/hooks/useExitIntent.ts` — encapsulates eligibility checks, trigger listeners, localStorage state
+## Out of scope (explicitly not added)
 
-Edited:
-- `src/pages/Index.tsx` — mount `<ExitIntentPopup />` at the bottom (homepage only)
-
-No backend / schema changes — reuses existing lead capture pipeline and tagging.
-
-## Technical notes
-
-- Uses `Dialog` from `@/components/ui/dialog`, semantic tokens only (primary, accent, muted-foreground)
-- Listeners attached in `useEffect`, cleaned up on unmount
-- Respects `prefers-reduced-motion`
-- Tag `quick-start-guide` already lives in `AUTOMATION_TAG_OPTIONS`, so an automation can be wired to it later to send the actual guide email
+- Run name / synthetic Run ID column
+- Source run / parent-run column (no sub-automation chaining today)
+- Last activity column (covered by inline expanded timeline)
+- CSV export of runs (can be added later if requested)
