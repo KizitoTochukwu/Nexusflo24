@@ -1,11 +1,27 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { RefreshCw, RotateCcw, Clock, CheckCircle2, AlertTriangle, X, Activity, Wrench, Zap } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+// Health thresholds — tweak here to tune sensitivity
+const THRESHOLDS = {
+  failureRate: { warn: 10, crit: 25 }, // % of recent logs that failed (24h)
+  overdueMinutes: { warn: 15, crit: 60 }, // pending job past run_at
+  stuckCount: { warn: 1, crit: 5 }, // failed + stuck rows
+  queueBacklog: { warn: 25, crit: 100 }, // queued jobs
+};
+
+type Severity = "ok" | "warn" | "crit";
+function sevFromCount(n: number, t: { warn: number; crit: number }): Severity {
+  if (n >= t.crit) return "crit";
+  if (n >= t.warn) return "warn";
+  return "ok";
+}
 
 interface Props {
   automationId: string;
