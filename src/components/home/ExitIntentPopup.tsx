@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap, Clock } from "lucide-react";
+import { CheckCircle2, ArrowRight, ShieldCheck, Zap, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useCaptureLead } from "@/hooks/useCaptureLead";
 import { useExitIntent } from "@/hooks/useExitIntent";
+import exitPopupIcon from "@/assets/exit-popup-icon.jpeg.asset.json";
 
 const ExitIntentPopup = () => {
   const { open, setOpen, markDismissed, markConverted } = useExitIntent(true);
@@ -66,11 +67,13 @@ const ExitIntentPopup = () => {
         </div>
 
         {/* Floating icon badge */}
-        <div className="relative -mt-10 mx-auto h-20 w-20 rounded-2xl bg-gradient-gold shadow-gold flex items-center justify-center ring-4 ring-background">
+        <div className="relative -mt-10 mx-auto h-20 w-20 rounded-2xl overflow-hidden shadow-gold ring-4 ring-background">
           {submitted ? (
-            <CheckCircle2 className="h-9 w-9 text-primary" />
+            <div className="h-full w-full bg-gradient-gold flex items-center justify-center">
+              <CheckCircle2 className="h-9 w-9 text-primary" />
+            </div>
           ) : (
-            <Sparkles className="h-9 w-9 text-primary" />
+            <img src={exitPopupIcon.url} alt="NexusFlo24" className="h-full w-full object-cover" />
           )}
         </div>
 
