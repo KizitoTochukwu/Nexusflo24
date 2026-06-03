@@ -118,7 +118,7 @@ const ExitIntentPopup = () => {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-12 rounded-xl bg-gradient-gold text-primary font-semibold text-[15px] hover:opacity-95 shadow-gold transition-all hover:translate-y-[-1px]"
+                  className="w-full h-12 rounded-xl bg-gradient-gold text-primary font-semibold text-[15px] hover:opacity-95 shadow-gold transition-all hover:translate-y-[-1px] text-slate-50 bg-[#0b0c28]"
                 >
                   {loading ? "Sending..." : "Send me the Quick Start"}
                   <ArrowRight className="ml-1 h-4 w-4" />
@@ -148,7 +148,7 @@ const ExitIntentPopup = () => {
               </div>
               <div className="flex flex-col gap-2.5">
                 <Link to="/register">
-                  <Button className="w-full h-12 rounded-xl bg-gradient-gold text-primary font-semibold shadow-gold hover:opacity-95">
+                  <Button className="w-full h-12 rounded-xl bg-gradient-gold text-primary font-semibold text-[15px] hover:opacity-95 shadow-gold transition-all hover:translate-y-[-1px] text-slate-50 bg-[#0b0c28]">
                     Start your free trial
                     <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
