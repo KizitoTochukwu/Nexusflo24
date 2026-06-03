@@ -7,7 +7,7 @@ import { CheckCircle2, ArrowRight, ShieldCheck, Zap, Clock } from "lucide-react"
 import { toast } from "sonner";
 import { useCaptureLead } from "@/hooks/useCaptureLead";
 import { useExitIntent } from "@/hooks/useExitIntent";
-import exitPopupIcon from "@/assets/exit-popup-icon.jpeg.asset.json";
+const exitPopupIconUrl = "/exit-popup-icon-new.jpg";
 
 const ExitIntentPopup = () => {
   const { open, setOpen, markDismissed, markConverted } = useExitIntent(true);
@@ -73,7 +73,7 @@ const ExitIntentPopup = () => {
               <CheckCircle2 className="h-9 w-9 text-primary" />
             </div>
           ) : (
-            <img src={exitPopupIcon.url} alt="NexusFlo24" className="h-full w-full object-cover" />
+            <img src={exitPopupIconUrl} alt="NexusFlo24" className="h-full w-full object-cover" />
           )}
         </div>
 
