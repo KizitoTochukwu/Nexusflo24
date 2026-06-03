@@ -1,0 +1,1 @@
+REVOKE SELECT (google_token_id, google_calendar_id) ON public.booking_pages FROM anon, authenticated;
