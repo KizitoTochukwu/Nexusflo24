@@ -1,43 +1,25 @@
+## Plan
 
-## Problem
+1. **Update the Meta signup request payload**
+   - Include the current app origin as `redirectUri` when calling the `whatsapp-embedded-signup` backend function.
+   - This ensures the backend can exchange Meta’s verification code using the exact same redirect URI used by the OAuth popup.
 
-The toast "Connected, but Meta didn't return your WhatsApp Business Account…" fires in `src/lib/meta/fbSdk.ts` when `FB.login()` resolves with a valid `code` but the companion `WA_EMBEDDED_SIGNUP` `FINISH` postMessage never delivered `waba_id` / `phone_number_id`. This is common when:
+2. **Update the WhatsApp embedded signup backend**
+   - Accept an optional `redirectUri` field.
+   - Pass `redirect_uri` into Meta’s `/oauth/access_token` exchange when it is provided.
+   - Keep the existing recovery flow for missing WABA/phone IDs.
 
-- The user finishes onboarding in the popup but Meta's postMessage is blocked/missed (Brave Shields, Safari ITP, popup closes a beat too early).
-- The browser silently drops the cross-origin message.
+3. **Validate the function behavior**
+   - Redeploy the `whatsapp-embedded-signup` function.
+   - Test that the old required-field error stays gone.
+   - Confirm the backend now reaches Meta with the corrected code exchange parameters.
 
-We already hold a usable `code` — Meta's Graph API can derive the WABA + phone from the exchanged token, so the connect flow shouldn't dead-end here.
+## Technical details
 
-## Fix (frontend + backend)
+The visible error says:
 
-### 1. `src/lib/meta/fbSdk.ts`
-- When `FB.login()` returns a `code` but `wabaId` / `phoneNumberId` are empty AND no Meta `ERROR`/`CANCEL` was received, **resolve with empty `wabaId` / `phoneNumberId`** instead of rejecting. The backend will recover them.
-- Keep the existing reject path for real cancel/error events.
+```text
+Error validating verification code. Please make sure your redirect_uri is identical to the one you used in the OAuth dialog request
+```
 
-### 2. `src/hooks/useWhatsAppConnection.ts`
-- `useConnectWhatsApp` already forwards `code/wabaId/phoneNumberId`. No change needed beyond letting empty strings flow through.
-
-### 3. `supabase/functions/whatsapp-embedded-signup/index.ts`
-- Loosen validation: require only `workspaceId` + `code`; `wabaId` / `phoneNumberId` are optional.
-- After exchanging the `code` for `accessToken`, if either is missing:
-  - Call `GET /debug_token?input_token={accessToken}&access_token={appId}|{appSecret}` and read `data.granular_scopes` for `whatsapp_business_management` → `target_ids` → that's the WABA ID list. Pick the first.
-  - Call `GET /{wabaId}/phone_numbers?fields=id,display_phone_number,verified_name` and pick the first phone → that's the `phoneNumberId`.
-  - If still missing after both fallbacks, return a clear error guiding the user to retry with popups allowed.
-- Continue with existing subscribe/register/persist flow using the resolved IDs.
-
-### 4. `src/components/settings/WhatsAppConnectCard.tsx` (only if it surfaces the error string)
-- No change unless it hardcodes the old message. Will verify and adjust toast wording to a friendlier "Finishing setup…" if the recovery path runs.
-
-## Edge cases
-- User has multiple WABAs in the same Business: pick the first WABA + first phone; document that the user can re-run connect to switch. (Multi-WABA selector is out of scope for this fix.)
-- Token exchange returns a token with no `whatsapp_business_management` scope → return the original "complete every step" error.
-- `debug_token` call failure → log and fall back to the original error so the user retries.
-
-## Out of scope
-- Meta App approval / Tech Provider setup checklist UI (already shown).
-- Multi-WABA picker UI.
-- Webhook signature changes.
-
-## Validation
-- Manual: click **Connect WhatsApp via Meta**, complete the popup; confirm card flips to "Custom credentials active" and templates start syncing even when the postMessage is missed.
-- Edge function logs: confirm `debug_token` recovery branch runs without error when IDs were empty.
+That means Meta accepted the popup flow, but rejected the backend code exchange because `/oauth/access_token` did not include the same `redirect_uri`. The fix is to send `window.location.origin` from the frontend and include it in the backend token exchange request.
