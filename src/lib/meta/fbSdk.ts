@@ -161,13 +161,11 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
           cleanup();
           if (response?.authResponse?.code) {
             const code = response.authResponse.code;
-            if (!wabaId || !phoneNumberId) {
-              reject(
-                new Error(
-                  metaError ||
-                    "Connected, but Meta didn't return your WhatsApp Business Account. Complete every step of the Meta popup (Business → WABA → Phone number) before closing it.",
-                ),
-              );
+            // If Meta's postMessage didn't deliver waba/phone IDs but we have
+            // a usable code and no explicit error, let the backend recover the
+            // IDs via Graph API (/debug_token + /{waba}/phone_numbers).
+            if (metaError && (!wabaId || !phoneNumberId)) {
+              reject(new Error(metaError));
               return;
             }
             resolve({ code, wabaId, phoneNumberId });

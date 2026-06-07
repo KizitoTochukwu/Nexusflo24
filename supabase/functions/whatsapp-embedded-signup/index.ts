@@ -82,11 +82,11 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json()) as Body;
-    const { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
+    let { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
 
-    if (!workspaceId || !code || !wabaId || !phoneNumberId) {
+    if (!workspaceId || !code) {
       return new Response(
-        JSON.stringify({ error: "workspaceId, code, wabaId, phoneNumberId are required" }),
+        JSON.stringify({ error: "workspaceId and code are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -122,8 +122,6 @@ Deno.serve(async (req) => {
     }
 
     // 1. Exchange short-lived code for a business system-user access token.
-    //    For Embedded Signup, Meta returns a non-expiring token tied to the
-    //    customer's WABA + System User.
     const tokenRes = await graph<{ access_token: string; token_type: string; expires_in?: number }>(
       "/oauth/access_token",
       {
@@ -139,6 +137,60 @@ Deno.serve(async (req) => {
     const tokenExpiresAt = tokenRes.expires_in
       ? new Date(Date.now() + tokenRes.expires_in * 1000).toISOString()
       : null;
+
+    // 1b. If Meta's postMessage didn't return waba_id / phone_number_id,
+    //     recover them from the granted token via /debug_token + /phone_numbers.
+    if (!wabaId || !phoneNumberId) {
+      try {
+        const debug = await graph<{
+          data?: { granular_scopes?: Array<{ scope: string; target_ids?: string[] }> };
+        }>("/debug_token", {
+          method: "GET",
+          query: {
+            input_token: accessToken,
+            access_token: `${appId}|${appSecret}`,
+          },
+        });
+        const scopes = debug?.data?.granular_scopes || [];
+        const wabaScope = scopes.find(
+          (s) =>
+            s.scope === "whatsapp_business_management" ||
+            s.scope === "whatsapp_business_messaging",
+        );
+        const recoveredWabaId = wabaScope?.target_ids?.[0];
+        if (!wabaId && recoveredWabaId) wabaId = recoveredWabaId;
+      } catch (err) {
+        console.warn("debug_token recovery failed:", (err as Error).message);
+      }
+
+      if (wabaId && !phoneNumberId) {
+        try {
+          const phones = await graph<{ data?: Array<{ id: string }> }>(
+            `/${encodeURIComponent(wabaId)}/phone_numbers`,
+            {
+              method: "GET",
+              token: accessToken,
+              query: { fields: "id,display_phone_number,verified_name" },
+            },
+          );
+          const firstPhone = phones?.data?.[0]?.id;
+          if (firstPhone) phoneNumberId = firstPhone;
+        } catch (err) {
+          console.warn("phone_numbers recovery failed:", (err as Error).message);
+        }
+      }
+
+      if (!wabaId || !phoneNumberId) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error:
+              "Meta didn't return your WhatsApp Business Account or phone number. Reopen Connect, complete every step of the popup (Business → WABA → Phone number), and make sure popups/cookies are allowed for this site.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
 
     // 2. Subscribe our app to the WABA (required for inbound webhooks).
     try {
