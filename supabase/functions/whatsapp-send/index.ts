@@ -224,11 +224,16 @@ Deno.serve(async (req) => {
         // template configured, send that template with the user's text
         // injected as the {{1}} body variable. This mirrors how
         // HubSpot / ManyChat / Wati hide the 24h window from the user.
-        const { data: waSettings } = await adminClient
+        // Defensive: there may legacy duplicate rows per workspace; pick the
+        // active one (or most recent) instead of failing maybeSingle().
+        const { data: waSettingsRows } = await adminClient
           .from("whatsapp_settings")
-          .select("default_reengagement_template_id")
+          .select("default_reengagement_template_id, is_active, updated_at")
           .eq("workspace_id", workspaceId)
-          .maybeSingle();
+          .order("is_active", { ascending: false })
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        const waSettings = waSettingsRows?.[0];
 
         const defaultTplId = waSettings?.default_reengagement_template_id;
         let defaultTpl:
