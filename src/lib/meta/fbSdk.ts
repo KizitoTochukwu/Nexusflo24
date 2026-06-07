@@ -16,6 +16,7 @@ let sdkPromise: Promise<void> | null = null;
 
 const SDK_LOAD_TIMEOUT_MS = 15000;
 const LOGIN_TIMEOUT_MS = 120000;
+export const META_REDIRECT_URI = "https://nexusflo24.com/";
 
 const BLOCKED_SDK_MESSAGE =
   "Couldn't load Facebook (connect.facebook.net). It's likely blocked by an ad-blocker, tracking protection (Brave Shields / Safari ITP), or your network. Disable those for this site and try again.";
@@ -99,7 +100,10 @@ export interface EmbeddedSignupResult {
  * Launches FB.login() with the Embedded Signup config and listens for the
  * companion postMessage that carries the WABA + Phone Number IDs.
  */
-export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupResult> {
+export function launchEmbeddedSignup(
+  configId: string,
+  redirectUri = META_REDIRECT_URI,
+): Promise<EmbeddedSignupResult> {
   return new Promise((resolve, reject) => {
     if (!window.FB) return reject(new Error("Facebook SDK not loaded"));
 
@@ -155,6 +159,19 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
     }, LOGIN_TIMEOUT_MS);
 
     try {
+      const metaRedirectUri = redirectUri.trim();
+      if (!metaRedirectUri) {
+        cleanup();
+        reject(
+          new Error(
+            "Meta redirect URI is missing. Refresh NexusFlo24 and try Connect WhatsApp again.",
+          ),
+        );
+        return;
+      }
+
+      console.info("[Meta Embedded Signup] redirect_uri used in frontend:", metaRedirectUri);
+
       window.FB.login(
         (response: { authResponse?: { code?: string }; status?: string }) => {
           if (settled) return;
@@ -175,6 +192,7 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
         },
         {
           config_id: configId,
+          redirect_uri: metaRedirectUri,
           response_type: "code",
           override_default_response_type: true,
           extras: { setup: {} },
