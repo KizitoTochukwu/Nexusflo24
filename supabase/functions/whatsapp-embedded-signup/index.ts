@@ -16,6 +16,7 @@ const corsHeaders = {
 };
 
 const GRAPH = "https://graph.facebook.com/v21.0";
+const META_REDIRECT_URI = "https://nexusflo24.com/";
 
 interface Body {
   workspaceId: string;
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
 
     const body = (await req.json()) as Body;
     let { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
-    const redirectUri = body?.redirectUri ?? "";
+    const redirectUri = body?.redirectUri?.trim() ?? "";
 
     if (!workspaceId || !code) {
       return new Response(
@@ -92,6 +93,21 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+    if (!redirectUri) {
+      return new Response(
+        JSON.stringify({ error: "Meta redirect URI is missing. Refresh NexusFlo24 and retry Connect WhatsApp." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if (redirectUri !== META_REDIRECT_URI) {
+      return new Response(
+        JSON.stringify({
+          error: `Meta redirect URI mismatch. Frontend sent ${redirectUri}, but NexusFlo24 expects ${META_REDIRECT_URI}. Open https://nexusflo24.com/ and retry Connect WhatsApp.`,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    console.info("[Meta Embedded Signup] redirect_uri used in backend:", redirectUri);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -124,10 +140,9 @@ Deno.serve(async (req) => {
     }
 
     // 1. Exchange short-lived code for a business system-user access token.
-    // For FB.login() with response_type=code the redirect_uri sent to Meta is
-    // an empty string — the token exchange MUST match exactly or Meta returns
-    // "Error validating verification code. Please make sure your redirect_uri
-    // is identical to the one you used in the OAuth dialog request."
+    // This redirect_uri must exactly match the value sent to FB.login(), or Meta
+    // returns "Error validating verification code. Please make sure your
+    // redirect_uri is identical to the one you used in the OAuth dialog request."
     const tokenRes = await graph<{ access_token: string; token_type: string; expires_in?: number }>(
       "/oauth/access_token",
       {
@@ -140,6 +155,11 @@ Deno.serve(async (req) => {
         },
       },
     );
+    console.info("[Meta Embedded Signup] Meta code exchange response:", {
+      ok: Boolean(tokenRes.access_token),
+      token_type: tokenRes.token_type,
+      expires_in: tokenRes.expires_in ?? null,
+    });
     const accessToken = tokenRes.access_token;
     const tokenExpiresAt = tokenRes.expires_in
       ? new Date(Date.now() + tokenRes.expires_in * 1000).toISOString()
