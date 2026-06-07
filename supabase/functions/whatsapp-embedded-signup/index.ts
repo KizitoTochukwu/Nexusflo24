@@ -22,6 +22,7 @@ interface Body {
   code: string;
   wabaId: string;
   phoneNumberId: string;
+  redirectUri?: string;
 }
 
 async function graph<T = any>(
