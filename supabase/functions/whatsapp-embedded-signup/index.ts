@@ -143,23 +143,38 @@ Deno.serve(async (req) => {
     // This redirect_uri must exactly match the value sent to FB.login(), or Meta
     // returns "Error validating verification code. Please make sure your
     // redirect_uri is identical to the one you used in the OAuth dialog request."
-    const tokenRes = await graph<{ access_token: string; token_type: string; expires_in?: number }>(
-      "/oauth/access_token",
-      {
-        method: "GET",
-        query: {
-          client_id: appId,
-          client_secret: appSecret,
-          redirect_uri: redirectUri,
-          code,
-        },
-      },
-    );
+    const exchangeUrl = `${GRAPH}/oauth/access_token?${new URLSearchParams({
+      client_id: appId,
+      client_secret: appSecret,
+      redirect_uri: redirectUri,
+      code,
+    }).toString()}`;
+    const exchangeRes = await fetch(exchangeUrl, { headers: { "Content-Type": "application/json" } });
+    const tokenRes = await exchangeRes.json().catch(() => ({})) as {
+      access_token?: string;
+      token_type?: string;
+      expires_in?: number;
+      error?: { message?: string; type?: string; code?: number; error_subcode?: number };
+    };
     console.info("[Meta Embedded Signup] Meta code exchange response:", {
-      ok: Boolean(tokenRes.access_token),
+      ok: exchangeRes.ok,
+      status: exchangeRes.status,
       token_type: tokenRes.token_type,
       expires_in: tokenRes.expires_in ?? null,
+      error: tokenRes.error
+        ? {
+            message: tokenRes.error.message,
+            type: tokenRes.error.type,
+            code: tokenRes.error.code,
+            error_subcode: tokenRes.error.error_subcode,
+          }
+        : null,
     });
+    if (!exchangeRes.ok || !tokenRes.access_token) {
+      throw new Error(
+        tokenRes.error?.message || `Meta code exchange failed with status ${exchangeRes.status}`,
+      );
+    }
     const accessToken = tokenRes.access_token;
     const tokenExpiresAt = tokenRes.expires_in
       ? new Date(Date.now() + tokenRes.expires_in * 1000).toISOString()
