@@ -4,6 +4,9 @@
 //
 // Docs: https://developers.facebook.com/docs/whatsapp/embedded-signup
 
+export { META_REDIRECT_URI } from "../../../shared/meta";
+import { META_REDIRECT_URI } from "../../../shared/meta";
+
 declare global {
   interface Window {
     // deno-lint-ignore no-explicit-any
@@ -16,7 +19,6 @@ let sdkPromise: Promise<void> | null = null;
 
 const SDK_LOAD_TIMEOUT_MS = 15000;
 const LOGIN_TIMEOUT_MS = 120000;
-export const META_REDIRECT_URI = "https://nexusflo24.com/";
 
 const BLOCKED_SDK_MESSAGE =
   "Couldn't load Facebook (connect.facebook.net). It's likely blocked by an ad-blocker, tracking protection (Brave Shields / Safari ITP), or your network. Disable those for this site and try again.";
