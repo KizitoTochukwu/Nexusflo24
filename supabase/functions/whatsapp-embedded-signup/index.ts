@@ -124,22 +124,43 @@ Deno.serve(async (req) => {
     }
 
     // 1. Exchange short-lived code for a business system-user access token.
-    // For FB.login() with response_type=code the redirect_uri sent to Meta is
-    // an empty string — the token exchange MUST match exactly or Meta returns
-    // "Error validating verification code. Please make sure your redirect_uri
-    // is identical to the one you used in the OAuth dialog request."
-    const tokenRes = await graph<{ access_token: string; token_type: string; expires_in?: number }>(
-      "/oauth/access_token",
-      {
-        method: "GET",
-        query: {
-          client_id: appId,
-          client_secret: appSecret,
-          redirect_uri: redirectUri,
-          code,
-        },
-      },
+    // Meta's WhatsApp Embedded Signup docs exchange the JS SDK code without a
+    // redirect_uri. Sending an empty or guessed redirect_uri can trigger
+    // OAuthException 36008, so try the documented request first and only fall
+    // back to explicit redirect variants for older Meta app configurations.
+    const redirectCandidates = Array.from(
+      new Set(
+        [redirectUri, redirectUri?.replace(/\/$/, ""), redirectUri ? `${redirectUri.replace(/\/$/, "")}/` : ""].filter(
+          Boolean,
+        ) as string[],
+      ),
     );
+
+    let tokenRes: { access_token: string; token_type: string; expires_in?: number } | null = null;
+    let tokenExchangeError: Error | null = null;
+
+    for (const candidate of [null, ...redirectCandidates]) {
+      try {
+        tokenRes = await graph<{ access_token: string; token_type: string; expires_in?: number }>(
+          "/oauth/access_token",
+          {
+            method: "GET",
+            query: {
+              client_id: appId,
+              client_secret: appSecret,
+              code,
+              ...(candidate ? { redirect_uri: candidate } : {}),
+            },
+          },
+        );
+        break;
+      } catch (err) {
+        tokenExchangeError = err instanceof Error ? err : new Error("Token exchange failed");
+        if (!tokenExchangeError.message.includes("redirect_uri")) break;
+      }
+    }
+
+    if (!tokenRes) throw tokenExchangeError || new Error("Token exchange failed");
     const accessToken = tokenRes.access_token;
     const tokenExpiresAt = tokenRes.expires_in
       ? new Date(Date.now() + tokenRes.expires_in * 1000).toISOString()
