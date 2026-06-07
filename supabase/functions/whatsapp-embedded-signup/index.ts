@@ -22,6 +22,7 @@ interface Body {
   code: string;
   wabaId: string;
   phoneNumberId: string;
+  redirectUri?: string;
 }
 
 async function graph<T = any>(
@@ -83,6 +84,7 @@ Deno.serve(async (req) => {
 
     const body = (await req.json()) as Body;
     let { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
+    const redirectUri = body?.redirectUri ?? "";
 
     if (!workspaceId || !code) {
       return new Response(
@@ -122,6 +124,10 @@ Deno.serve(async (req) => {
     }
 
     // 1. Exchange short-lived code for a business system-user access token.
+    // For FB.login() with response_type=code the redirect_uri sent to Meta is
+    // an empty string — the token exchange MUST match exactly or Meta returns
+    // "Error validating verification code. Please make sure your redirect_uri
+    // is identical to the one you used in the OAuth dialog request."
     const tokenRes = await graph<{ access_token: string; token_type: string; expires_in?: number }>(
       "/oauth/access_token",
       {
@@ -129,6 +135,7 @@ Deno.serve(async (req) => {
         query: {
           client_id: appId,
           client_secret: appSecret,
+          redirect_uri: redirectUri,
           code,
         },
       },

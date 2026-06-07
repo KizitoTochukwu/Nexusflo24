@@ -90,6 +90,7 @@ export function useConnectWhatsApp(workspaceId: string) {
         code: result.code,
         wabaId: result.wabaId,
         phoneNumberId: result.phoneNumberId,
+        redirectUri: window.location.origin,
       });
       return res;
     },
