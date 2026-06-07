@@ -87,8 +87,13 @@ export function useConnectWhatsApp(workspaceId: string) {
       if (!META_REDIRECT_URI) {
         throw new Error("Meta redirect URI is missing. Refresh NexusFlo24 and try again.");
       }
+      console.info("[Meta Embedded Signup] configured redirect_uri:", META_REDIRECT_URI);
       const expectedOrigin = new URL(META_REDIRECT_URI).origin;
       if (window.location.origin !== expectedOrigin) {
+        console.warn("[Meta Embedded Signup] redirect_uri mismatch before popup:", {
+          currentOrigin: window.location.origin,
+          expectedRedirectUri: META_REDIRECT_URI,
+        });
         throw new Error(
           `Meta redirect URI mismatch. Open ${META_REDIRECT_URI} and retry Connect WhatsApp from that exact domain.`,
         );

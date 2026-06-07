@@ -86,6 +86,10 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as Body;
     let { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
     const redirectUri = body?.redirectUri?.trim() ?? "";
+    console.info("[Meta Embedded Signup] redirect_uri received by backend:", {
+      received: redirectUri || null,
+      expected: META_REDIRECT_URI,
+    });
 
     if (!workspaceId || !code) {
       return new Response(
@@ -100,9 +104,13 @@ Deno.serve(async (req) => {
       );
     }
     if (redirectUri !== META_REDIRECT_URI) {
+      console.warn("[Meta Embedded Signup] redirect_uri mismatch:", {
+        received: redirectUri,
+        expected: META_REDIRECT_URI,
+      });
       return new Response(
         JSON.stringify({
-          error: `Meta redirect URI mismatch. Frontend sent ${redirectUri}, but NexusFlo24 expects ${META_REDIRECT_URI}. Open https://nexusflo24.com/ and retry Connect WhatsApp.`,
+          error: `Meta redirect URI mismatch. Frontend sent ${redirectUri}, but NexusFlo24 expects ${META_REDIRECT_URI}. Open ${META_REDIRECT_URI} and retry Connect WhatsApp.`,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
