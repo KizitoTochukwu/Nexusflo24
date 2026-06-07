@@ -1,25 +1,18 @@
 ## Plan
 
-1. **Update the Meta signup request payload**
-   - Include the current app origin as `redirectUri` when calling the `whatsapp-embedded-signup` backend function.
-   - This ensures the backend can exchange Meta’s verification code using the exact same redirect URI used by the OAuth popup.
+Meta is rejecting the code exchange because `redirect_uri` in the token request doesn't match the one implicitly used by the FB.login popup. Fix by aligning both sides on `window.location.origin`.
 
-2. **Update the WhatsApp embedded signup backend**
-   - Accept an optional `redirectUri` field.
-   - Pass `redirect_uri` into Meta’s `/oauth/access_token` exchange when it is provided.
-   - Keep the existing recovery flow for missing WABA/phone IDs.
+1. **Frontend (`src/hooks/useWhatsAppConnection.ts`)**
+   - Add `redirectUri: window.location.origin` to the body sent to `whatsapp-embedded-signup`.
 
-3. **Validate the function behavior**
-   - Redeploy the `whatsapp-embedded-signup` function.
-   - Test that the old required-field error stays gone.
-   - Confirm the backend now reaches Meta with the corrected code exchange parameters.
+2. **Backend (`supabase/functions/whatsapp-embedded-signup/index.ts`)**
+   - Read optional `redirectUri` from request body.
+   - Pass `redirect_uri: redirectUri ?? ""` into the `/oauth/access_token` query (instead of the hardcoded empty string).
+
+3. **Deploy & verify**
+   - Redeploy `whatsapp-embedded-signup`.
+   - Retry Connect WhatsApp on the published URL; confirm the "Error validating verification code" message disappears and connection persists.
 
 ## Technical details
 
-The visible error says:
-
-```text
-Error validating verification code. Please make sure your redirect_uri is identical to the one you used in the OAuth dialog request
-```
-
-That means Meta accepted the popup flow, but rejected the backend code exchange because `/oauth/access_token` did not include the same `redirect_uri`. The fix is to send `window.location.origin` from the frontend and include it in the backend token exchange request.
+`FB.login({ response_type: "code", override_default_response_type: true })` uses the current page origin as the implicit redirect URI. Meta's `/oauth/access_token` requires the exact same value. Passing `""` only works in narrow cases; sending `window.location.origin` from the browser and forwarding it through guarantees a match across preview and published domains.
