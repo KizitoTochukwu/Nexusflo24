@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
         query: {
           client_id: appId,
           client_secret: appSecret,
-          redirect_uri: "",
+          redirect_uri: redirectUri,
           code,
         },
       },
