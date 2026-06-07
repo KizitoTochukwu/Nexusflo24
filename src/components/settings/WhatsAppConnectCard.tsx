@@ -41,15 +41,19 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
   const disconnect = useDisconnectWhatsApp(workspaceId);
   const sync = useSyncWhatsAppTemplates(workspaceId);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const handleConnect = async () => {
     try {
+      setConnectionError(null);
       const res = await connect.mutateAsync();
       toast.success(
         `Connected ${res?.displayPhoneNumber || "your WhatsApp number"} — fetching templates…`,
       );
     } catch (err: any) {
-      toast.error(err?.message || "Connection failed");
+      const message = err?.message || "Connection failed";
+      setConnectionError(message);
+      toast.error(message);
     }
   };
 
@@ -184,6 +188,11 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
                 seconds.
               </AlertDescription>
             </Alert>
+            {connectionError && (
+              <Alert variant="destructive">
+                <AlertDescription>{connectionError}</AlertDescription>
+              </Alert>
+            )}
             <Button
               size="lg"
               onClick={handleConnect}
