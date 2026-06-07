@@ -4,8 +4,8 @@
 //
 // Docs: https://developers.facebook.com/docs/whatsapp/embedded-signup
 
-export { META_REDIRECT_URI } from "../../../shared/meta";
-import { META_REDIRECT_URI } from "../../../shared/meta";
+export { META_REDIRECT_URI } from "../../../supabase/functions/_shared/meta.ts";
+import { META_REDIRECT_URI } from "../../../supabase/functions/_shared/meta.ts";
 
 declare global {
   interface Window {
