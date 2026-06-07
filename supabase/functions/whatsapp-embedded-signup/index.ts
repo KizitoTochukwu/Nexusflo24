@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
 
     const body = (await req.json()) as Body;
     let { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
+    const redirectUri = body?.redirectUri ?? "";
 
     if (!workspaceId || !code) {
       return new Response(
