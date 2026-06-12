@@ -135,6 +135,12 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: smsError }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
+    if (channel === "whatsapp") {
+      const waErr = validateWhatsAppConfig(cleanedConfig);
+      if (waErr) {
+        return new Response(JSON.stringify({ error: waErr }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
 
     const configEncrypted = await encrypt(JSON.stringify(cleanedConfig), encryptionKey);
 
