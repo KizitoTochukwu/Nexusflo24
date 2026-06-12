@@ -2504,6 +2504,8 @@ export type Database = {
           lead_id: string | null
           message_type: string
           phone_number: string
+          provider: string
+          provider_message_id: string | null
           status: string
           template_name: string | null
           wa_message_id: string | null
@@ -2519,6 +2521,8 @@ export type Database = {
           lead_id?: string | null
           message_type?: string
           phone_number: string
+          provider?: string
+          provider_message_id?: string | null
           status?: string
           template_name?: string | null
           wa_message_id?: string | null
@@ -2534,6 +2538,8 @@ export type Database = {
           lead_id?: string | null
           message_type?: string
           phone_number?: string
+          provider?: string
+          provider_message_id?: string | null
           status?: string
           template_name?: string | null
           wa_message_id?: string | null
