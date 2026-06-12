@@ -94,27 +94,25 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
         const { data: sess } = await supabase.auth.getSession();
         const accessToken = sess.session?.access_token;
         if (!accessToken) return;
-        const res = await fetch(`${SUPABASE_FN_BASE}/channel-settings-get`, {
-          method: "POST",
+        const url = `${SUPABASE_FN_BASE}/channel-settings-get?workspaceId=${encodeURIComponent(workspaceId)}`;
+        const res = await fetch(url, {
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ workspaceId, channel: "whatsapp" }),
         });
         const json = await res.json().catch(() => ({}));
         if (cancelled) return;
-        const incoming = json?.config || {};
-        if (incoming.provider === "twilio") {
-          setCfg({
-            provider: "twilio",
-            account_sid: incoming.account_sid || "",
-            auth_token: incoming.auth_token || "",
-            from_number: incoming.from_number || "",
-            messaging_service_sid: incoming.messaging_service_sid || "",
-          });
-          setIsActive(Boolean(json?.is_active));
+        const wa = json?.whatsapp;
+        // masked values (provider is not masked because it's not a secret-like string;
+        // it just gets first-4 / last-4 — but for short strings like "twilio" it
+        // returns "****". So infer from presence of account_sid masked + provider.
+        if (wa?.configured && wa?.masked) {
+          const looksLikeTwilio =
+            wa.masked.account_sid ||
+            wa.masked.from_number ||
+            String(wa.masked.provider || "").toLowerCase().includes("twil");
+          if (looksLikeTwilio) setIsActive(Boolean(wa.is_active));
         }
       } catch (err) {
         console.error("load twilio whatsapp settings", err);
