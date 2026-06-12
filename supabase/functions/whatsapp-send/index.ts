@@ -148,6 +148,40 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid phone number. Use E.164 format like +447517327597" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── Provider dispatch ─────────────────────────────────────────────
+    // Resolve workspace channel settings up-front so we can route to
+    // Twilio when provider="twilio" was selected in Settings → Channels.
+    // The Meta flow below is unchanged for "meta" (default) workspaces.
+    const dispatchCreds = await resolveChannelCredentials(workspaceId, "whatsapp", {});
+    const dispatchProvider = String(dispatchCreds.config.provider || "meta").toLowerCase();
+    if (dispatchProvider === "twilio") {
+      console.log("[whatsapp-send] routing to Twilio provider", { workspaceId });
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const fwd = await fetch(`${supabaseUrl}/functions/v1/twilio-whatsapp-send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify({
+          workspaceId,
+          to: normalizedTo,
+          body: msgBody,
+          leadId,
+          campaignId,
+          contentSid: (template as any)?.contentSid,
+          contentVariables: (template as any)?.contentVariables,
+          skipCredits,
+          preview: isPreview,
+        }),
+      });
+      const fwdData = await fwd.json().catch(() => ({}));
+      return new Response(JSON.stringify(fwdData), {
+        status: fwd.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
 
     let callerUserId: string | undefined;
