@@ -97,3 +97,9 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.paystack-webhook]
     verify_jwt = false
+  [functions.twilio-whatsapp-send]
+    verify_jwt = false
+  [functions.twilio-whatsapp-webhook]
+    verify_jwt = false
+  [functions.twilio-whatsapp-status]
+    verify_jwt = false
