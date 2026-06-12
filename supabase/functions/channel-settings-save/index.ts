@@ -52,6 +52,23 @@ function validateSmsConfig(config: Record<string, string>): string | null {
   return null;
 }
 
+function validateWhatsAppConfig(config: Record<string, string>): string | null {
+  const provider = (config.provider || "meta").toLowerCase();
+  if (provider === "twilio") {
+    if (!/^AC[0-9a-fA-F]{32}$/.test(config.account_sid || "")) {
+      return "Twilio Account SID must start with AC and be 34 characters long.";
+    }
+    if (!/^[0-9a-fA-F]{32}$/.test(config.auth_token || "")) {
+      return "Twilio Auth Token must be exactly 32 characters from the matching account.";
+    }
+    if (!config.from_number) {
+      return "Enter a WhatsApp-enabled From number (e.g. +14155238886) or Messaging Service SID.";
+    }
+  }
+  // Meta provider is configured via Embedded Signup, not this endpoint.
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
