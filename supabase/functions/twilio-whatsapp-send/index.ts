@@ -306,8 +306,18 @@ Deno.serve(async (req) => {
       message_type: contentSid ? "template" : "text",
       body: msgBody || `[Template: ${contentSid}]`,
       status: "sent",
+      sender_profile_id: resolvedSender?.profile?.id || null,
       ...(leadId ? { lead_id: leadId } : {}),
     });
+
+    if (!preview) {
+      await logCommunicationUsage({
+        workspaceId, channel: "whatsapp",
+        senderProfileId: resolvedSender?.profile?.id || null,
+        messageId: sid, country: toCountry,
+        creditsDeducted: deductAmount, status: "sent",
+      });
+    }
 
     if (campaignId && leadId) {
       await adminClient
