@@ -17,6 +17,26 @@ async function encrypt(plaintext: string, keyHex: string): Promise<string> {
   return bytesToBase64(combined);
 }
 
+async function decrypt(cipherB64: string, keyHex: string): Promise<string> {
+  const keyBytes = hexToBytes(keyHex.slice(0, 64));
+  const key = await crypto.subtle.importKey("raw", keyBytes as BufferSource, "AES-GCM", false, ["decrypt"]);
+  const binary = atob(cipherB64);
+  const combined = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) combined[i] = binary.charCodeAt(i);
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+  return new TextDecoder().decode(plainBuf);
+}
+
+// Secret fields per channel — when blank on save, keep existing value.
+const SECRET_FIELDS: Record<string, string[]> = {
+  email: ["api_key"],
+  sms: ["auth_token", "account_sid"],
+  whatsapp: ["access_token", "verify_token", "auth_token"],
+};
+
+
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
@@ -129,6 +149,29 @@ Deno.serve(async (req) => {
     }
 
     const cleanedConfig = trimConfig(config);
+
+    // Merge: if any secret field is blank and existing row has a stored value, keep it.
+    const secretKeys = SECRET_FIELDS[channel] || [];
+    const hasBlankSecret = secretKeys.some((k) => !cleanedConfig[k]);
+    if (hasBlankSecret) {
+      const { data: existing } = await adminClient
+        .from("workspace_channel_settings")
+        .select("config_encrypted")
+        .eq("workspace_id", workspaceId)
+        .eq("channel", channel)
+        .maybeSingle();
+      if (existing?.config_encrypted) {
+        try {
+          const prior = JSON.parse(await decrypt(existing.config_encrypted, encryptionKey));
+          for (const k of secretKeys) {
+            if (!cleanedConfig[k] && prior[k]) cleanedConfig[k] = String(prior[k]);
+          }
+        } catch (e) {
+          console.warn("channel-settings-save: failed to decrypt prior config", e);
+        }
+      }
+    }
+
     if (channel === "sms") {
       const smsError = validateSmsConfig(cleanedConfig);
       if (smsError) {
@@ -141,6 +184,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: waErr }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
+
 
     const configEncrypted = await encrypt(JSON.stringify(cleanedConfig), encryptionKey);
 

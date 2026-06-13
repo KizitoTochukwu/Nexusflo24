@@ -618,10 +618,22 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
           },
         }
       );
-      if (res.ok) setChannels(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        setChannels(data);
+        // Hydrate non-secret form fields so they persist across reloads
+        const eNS = data?.email?.non_secret || {};
+        if (eNS.from_email !== undefined) setEmailFrom(eNS.from_email || "");
+        if (eNS.from_name !== undefined) setEmailFromName(eNS.from_name || "");
+        const sNS = data?.sms?.non_secret || {};
+        if (sNS.from_number !== undefined) setSmsFromNumber(sNS.from_number || "");
+        const wNS = data?.whatsapp?.non_secret || {};
+        if (wNS.phone_number_id !== undefined) setWaPhoneNumberId(wNS.phone_number_id || "");
+      }
     } catch { /* ignore */ }
     setLoading(false);
   };
+
 
   const saveChannel = async (channel: string, config: Record<string, string>, setSaving: (v: boolean) => void) => {
     setSaving(true);
@@ -631,16 +643,21 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       );
 
       if (channel === "sms") {
-        if (!/^AC[0-9a-fA-F]{32}$/.test(cleanedConfig.account_sid || "")) {
+        const alreadyConfigured = !!channels?.sms?.configured;
+        if (cleanedConfig.account_sid && !/^AC[0-9a-fA-F]{32}$/.test(cleanedConfig.account_sid)) {
           throw new Error("Account SID must start with AC and be 34 characters long.");
         }
-        if (!/^[0-9a-fA-F]{32}$/.test(cleanedConfig.auth_token || "")) {
+        if (cleanedConfig.auth_token && !/^[0-9a-fA-F]{32}$/.test(cleanedConfig.auth_token)) {
           throw new Error("Auth Token must be exactly 32 characters from the matching Twilio account.");
+        }
+        if (!alreadyConfigured && (!cleanedConfig.account_sid || !cleanedConfig.auth_token)) {
+          throw new Error("Enter both Account SID and Auth Token.");
         }
         if (!cleanedConfig.from_number) {
           throw new Error("Enter a From Number or Messaging Service SID.");
         }
       }
+
 
       const session = (await supabase.auth.getSession()).data.session;
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/channel-settings-save`, {
@@ -816,7 +833,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Resend API Key</Label>
-                  <Input type="password" value={emailApiKey} onChange={(e) => setEmailApiKey(e.target.value)} placeholder="re_..." maxLength={200} />
+                  <Input type="password" value={emailApiKey} onChange={(e) => setEmailApiKey(e.target.value)} placeholder={channels?.email?.configured ? "•••••• (leave blank to keep current)" : "re_..."} maxLength={200} />
                 </div>
                 <div className="space-y-1">
                   <Label>From Email</Label>
@@ -828,7 +845,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => saveChannel("email", { provider: "resend", api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName }, setEmailSaving)} disabled={emailSaving || !emailApiKey}>
+                <Button size="sm" onClick={() => saveChannel("email", { provider: "resend", api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured)}>
                   {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.email?.configured && (
@@ -884,11 +901,12 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Account SID</Label>
-                  <Input type="password" value={smsAccountSid} onChange={(e) => setSmsAccountSid(e.target.value)} placeholder="AC..." maxLength={100} />
+                  <Input type="password" value={smsAccountSid} onChange={(e) => setSmsAccountSid(e.target.value)} placeholder={channels?.sms?.configured ? "•••••• (leave blank to keep current)" : "AC..."} maxLength={100} />
                 </div>
                 <div className="space-y-1">
                   <Label>Auth Token</Label>
-                  <Input type="password" value={smsAuthToken} onChange={(e) => setSmsAuthToken(e.target.value)} placeholder="••••••" maxLength={100} />
+                  <Input type="password" value={smsAuthToken} onChange={(e) => setSmsAuthToken(e.target.value)} placeholder={channels?.sms?.configured ? "•••••• (leave blank to keep current)" : "••••••"} maxLength={100} />
+
                 </div>
                 <div className="space-y-1">
                   <Label>From Number / Messaging Service SID</Label>
@@ -896,7 +914,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => saveChannel("sms", { account_sid: smsAccountSid, auth_token: smsAuthToken, from_number: smsFromNumber }, setSmsSaving)} disabled={smsSaving || !smsAccountSid}>
+                <Button size="sm" onClick={() => saveChannel("sms", { account_sid: smsAccountSid, auth_token: smsAuthToken, from_number: smsFromNumber }, setSmsSaving)} disabled={smsSaving || (!smsAccountSid && !channels?.sms?.configured)}>
                   {smsSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.sms?.configured && (
@@ -982,7 +1000,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
                       <Label>Access Token</Label>
-                      <Input type="password" value={waAccessToken} onChange={(e) => setWaAccessToken(e.target.value)} placeholder="EAA..." maxLength={500} />
+                      <Input type="password" value={waAccessToken} onChange={(e) => setWaAccessToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "EAA..."} maxLength={500} />
                     </div>
                     <div className="space-y-1">
                       <Label>Phone Number ID</Label>
@@ -990,11 +1008,12 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                     </div>
                     <div className="space-y-1">
                       <Label>Verify Token</Label>
-                      <Input type="password" value={waVerifyToken} onChange={(e) => setWaVerifyToken(e.target.value)} placeholder="your-verify-token" maxLength={200} />
+                      <Input type="password" value={waVerifyToken} onChange={(e) => setWaVerifyToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "your-verify-token"} maxLength={200} />
+
                     </div>
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" onClick={() => saveChannel("whatsapp", { access_token: waAccessToken, phone_number_id: waPhoneNumberId, verify_token: waVerifyToken }, setWaSaving)} disabled={waSaving || !waAccessToken}>
+                    <Button size="sm" onClick={() => saveChannel("whatsapp", { access_token: waAccessToken, phone_number_id: waPhoneNumberId, verify_token: waVerifyToken }, setWaSaving)} disabled={waSaving || (!waAccessToken && !channels?.whatsapp?.configured)}>
                       {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                     </Button>
                     {channels?.whatsapp?.configured && (
