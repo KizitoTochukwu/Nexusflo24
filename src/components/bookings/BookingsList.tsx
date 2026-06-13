@@ -2,8 +2,10 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { XCircle } from "lucide-react";
+import { XCircle, CalendarClock } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Booking, BookingPage } from "@/hooks/useBookings";
+
 
 interface Props {
   bookings: Booking[];
