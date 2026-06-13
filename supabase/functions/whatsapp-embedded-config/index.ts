@@ -10,7 +10,8 @@ Deno.serve((req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const appId = Deno.env.get("META_APP_ID") || "";
-  const configId = Deno.env.get("META_EMBEDDED_SIGNUP_CONFIG_ID") || "";
+  const configId = "945252895216570";
+  Deno.env.get("META_EMBEDDED_SIGNUP_CONFIG_ID") || "";
 
   return new Response(
     JSON.stringify({
