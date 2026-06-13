@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { resolveRestoreTarget } from "@/lib/routeMemory";
 import { Mail, Lock } from "lucide-react";
 
 const Login = () => {
@@ -23,10 +24,19 @@ const Login = () => {
       .from("workspace_members")
       .select("workspace_id")
       .eq("user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (memberships && memberships.length > 0) {
-      navigate(`/dashboard/${memberships[0].workspace_id}/overview`);
+      .order("created_at", { ascending: true });
+    const allowed = new Set((memberships ?? []).map((m) => m.workspace_id));
+    const preferred = memberships?.[0]?.workspace_id;
+    if (preferred) {
+      const restored = await resolveRestoreTarget(userId, preferred);
+      if (restored) {
+        const m = restored.match(/^\/dashboard\/([^/]+)\//);
+        if (m && allowed.has(m[1])) {
+          navigate(restored);
+          return;
+        }
+      }
+      navigate(`/dashboard/${preferred}/overview`);
       return;
     }
     navigate("/dashboard");

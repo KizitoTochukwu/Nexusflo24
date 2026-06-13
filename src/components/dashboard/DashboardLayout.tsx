@@ -31,6 +31,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const { data: isAdmin } = useIsAdmin();
   useNotificationWatcher();
   useLowCreditAlert();
+  useRouteMemory();
 
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
