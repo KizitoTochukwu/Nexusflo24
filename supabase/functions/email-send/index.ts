@@ -216,7 +216,16 @@ Deno.serve(async (req) => {
         status: "sent",
         provider_message_id: result.messageId,
         lead_id: leadId || null,
+        sender_profile_id: resolvedSender?.profile?.id || null,
       });
+      if (!isPreview) {
+        await logCommunicationUsage({
+          workspaceId, channel: "email",
+          senderProfileId: resolvedSender?.profile?.id || null,
+          messageId: result.messageId, country: null,
+          creditsDeducted: deductAmount, status: "sent",
+        });
+      }
     } catch (_) { /* ignore logging errors */ }
 
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
