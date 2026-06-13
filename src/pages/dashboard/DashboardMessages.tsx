@@ -116,6 +116,29 @@ export default function DashboardMessages() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [currentMessages]);
 
+  // Realtime inbox: refetch threads + messages when any related row changes
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!workspaceId) return;
+    const filter = `workspace_id=eq.${workspaceId}`;
+    const channel = supabase
+      .channel(`inbox-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter }, () => {
+        qc.invalidateQueries({ queryKey: ["whatsapp-threads", workspaceId] });
+        qc.invalidateQueries({ queryKey: ["whatsapp-messages", workspaceId] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "sms_logs", filter }, () => {
+        qc.invalidateQueries({ queryKey: ["sms-threads", workspaceId] });
+        qc.invalidateQueries({ queryKey: ["sms-messages", workspaceId] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_logs", filter }, () => {
+        qc.invalidateQueries({ queryKey: ["email-threads", workspaceId] });
+        qc.invalidateQueries({ queryKey: ["email-messages", workspaceId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [workspaceId, qc]);
+
   // ─── WhatsApp 24h window awareness ───
   // The backend auto-sends an approved template (workspace default) when the
   // window is closed, so the user can keep typing freely. We compute the
