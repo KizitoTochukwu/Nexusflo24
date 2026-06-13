@@ -413,10 +413,22 @@ Deno.serve(async (req) => {
                 footer: ts?.footer,
                 unsubUrl,
               });
+              const senderProfileId = (config as any).sender_profile_id || null;
               try {
-                const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
-                lastSendTime = Date.now();
-                details = { messageId: res.id, channel: "email" };
+                if (senderProfileId) {
+                  const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ workspaceId: workspace_id, to: lead.email, subject, html, leadId: lead_id, skipCredits: true, senderProfileId }),
+                  });
+                  const d = await r.json().catch(() => ({}));
+                  lastSendTime = Date.now();
+                  details = { messageId: d?.id || d?.messageId, channel: "email", senderProfileId };
+                } else {
+                  const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
+                  lastSendTime = Date.now();
+                  details = { messageId: res.id, channel: "email" };
+                }
               } catch (sendErr: any) {
                 const msg = String(sendErr?.message || "Email send failed");
                 const isAuth = isCredentialError("email", msg);
