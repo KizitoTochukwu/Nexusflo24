@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import type { SubscriptionData } from "@/lib/billing/access";
+import { clearLastRoute } from "@/lib/routeMemory";
 
 interface AuthContextType {
   user: User | null;
@@ -48,7 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    const uid = user?.id;
     await supabase.auth.signOut();
+    if (uid) clearLastRoute(uid);
     setUser(null);
     setSession(null);
     setSubscription(null);

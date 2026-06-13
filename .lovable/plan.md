@@ -1,56 +1,69 @@
-## Phase 3 — Finish Admin Communication UI
+## Goal
+When a user returns to NexusFlo24 — after refresh, login, browser reopen, or session timeout — automatically reopen the exact page they were last viewing (route, query params, hash). Fall back to the dashboard only if the page is unavailable.
 
-Wire all admin-side communication screens to live data and complete the remaining backend touch-points.
+## Scope (Phase 1 — Route + query + scroll)
+- Persist: full path + query string + hash + scroll position
+- Scope: per `(user_id, workspace_id)`
+- Restore on: post-login redirect, hitting `/dashboard` root, hitting `DashboardRedirect`, and on hard refresh of dashboard pages (scroll only)
+- Fall back to `/dashboard/:workspaceId/overview` if the stored route 404s or the workspace is missing
 
-### 1. Backend
-- **`twilio-whatsapp-send`** — bring in line with `whatsapp-send`: accept optional `sender_profile_id`, resolve via `_shared/sender-resolver.ts`, use the resolved Twilio WA SID as `from`, apply country-aware `getDeductionAmount()` deduction via `credit-guard`, write `communication_usage` row, and stamp `sender_profile_id` on the `whatsapp_messages` log.
-- **`admin-credit-package-save`** (new) — admin-only upsert/delete for `credit_packages` and `credit_pricing_rules` (channel, country, credits_per_message). Validates `has_role(admin)`.
-- **`admin-usage-export`** (new) — admin-only CSV stream of `communication_usage` joined with workspaces + sender_profiles, accepting `from`, `to`, `workspace_id`, `channel`, `country` filters.
+## Out of scope (deferred)
+- Persisting in-page state like table filters, search input, pagination, open drawers/tabs. (Most of these aren't currently URL-driven; persisting them safely needs per-page wiring. Can be a Phase 2 once each list page reflects state in the URL.)
 
-### 2. AdminOrgDetail wiring
-- Replace local Save handler in the WhatsApp / SMS / Email tabs with calls to `sender-profile-save`.
-- "Set as default" and "Delete" actions call `sender-profile-save` (mode: `set_default` / `delete`).
-- Email tab gets a **Verify DNS** button calling `email-domain-verify`; render SPF / DKIM / DMARC pill statuses returned by the function and persist them on `email_senders`.
-- Wallet adjust panel: keep existing `admin-wallet-adjust` call, surface recent `credit_transactions` (last 20) in a side list.
+## Storage strategy
+Hybrid:
+1. **localStorage** (`nf24:lastRoute:<userId>:<workspaceId>` → `{ path, scrollY, savedAt }`) — instant, no network on every navigation.
+2. **Supabase mirror** in `profiles` (`last_route jsonb`) — survives new device / cleared storage. Written debounced (every 5s of idle navigation).
 
-### 3. AdminCreditPackages
-- Two-tab layout:
-  - **Packages** — table of `credit_packages` (name, credits, price, currency, stripe_price_id, active). Create / edit / archive via `admin-credit-package-save`. Inline "Test checkout" button calls `credit-package-checkout` for a sample workspace.
-  - **Pricing Rules** — editable grid for `credit_pricing_rules` keyed by (channel, country). Empty value = fallback `1`. Bulk seed button preloads sensible defaults (US/UK/NG SMS, WA marketing/utility, email).
+`last_route` shape: `{ workspace_id, path, saved_at }`.
 
-### 4. AdminUsage
-- Filter bar: date range, workspace, channel, country, sender_profile.
-- KPI strip: total messages, total credits, avg credits/message, unique workspaces.
-- Table (paginated, 50/page) with channel badge, recipient (masked), credits, status, sender label, timestamp.
-- "Export CSV" button hits `admin-usage-export`.
-- Channel split bar chart (recharts) for the selected range.
+## Components to add
+1. **`useRouteMemory` hook** — `src/hooks/useRouteMemory.ts`
+   - Subscribes to `useLocation()`; on path change debounce-writes to localStorage + profile.
+   - Ignores `/login`, `/register`, `/auth/*`, `/unsubscribe`, public `/f/`, `/form/`, `/book/`.
+   - Saves `window.scrollY` on `beforeunload` + scroll-end debounce.
+2. **`getLastRoute(userId, workspaceId)` util** — `src/lib/routeMemory.ts`
+   - Reads localStorage first, falls back to `profiles.last_route`.
+   - Validates the path starts with `/dashboard/<workspaceId>/`.
+3. **Mount hook** inside `DashboardLayout` so every authenticated dashboard view records its location.
+4. **Update `DashboardRedirect`** (`src/pages/DashboardRedirect.tsx`):
+   - After resolving workspaces, check `getLastRoute()` for the chosen workspace. If valid → `<Navigate to={lastRoute} replace />`. Otherwise current behavior (overview).
+5. **Update `Login.tsx` post-login redirect** and **`RedirectIfAuth.tsx`**:
+   - If a `redirect` query param is present, honor it (existing behavior).
+   - Else look up last route → navigate there, else `/dashboard`.
+6. **Update `AuthCallback.tsx`** to do the same lookup.
+7. **Scroll restoration**: on mount of a dashboard page, if `path` matches saved entry, restore `scrollY` once (rAF after content renders).
 
-### 5. AdminMessagesInbox
-- Workspace switcher (combobox of all workspaces).
-- Three tabs: WhatsApp / SMS / Email — each lists last 200 messages with status, recipient, sender_profile label, body preview, sent_at.
-- Click a row → side drawer with full payload + delivery timeline (status events from existing logs).
-- No realtime in this phase (covered later if Phase 6 ships).
+## DB change
+Migration: add `last_route jsonb` column to `public.profiles` (nullable). No new table needed.
 
-### 6. AdminCommunicationOverview
-- KPI cards (last 30d): messages sent, credits consumed, approved senders, pending approvals, low-balance workspaces (< 20 credits).
-- "Pending approvals" mini-list linking to `/admin/sender-approvals`.
-- "Top workspaces by spend" mini-table.
-- "Channel mix" donut.
-- All data fetched through `useAdminCommunication` (extend hook with `useAdminKpis`, `useAdminUsage`, `useAdminMessages`, `useCreditPackages`).
+```sql
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_route jsonb;
+```
+(Existing RLS already allows users to update their own profile row.)
 
-### 7. Hook & component additions
-- Extend `src/hooks/useAdminCommunication.ts` with the queries above (react-query, 30s stale).
-- New components:
-  - `src/components/admin/comm/KpiCard.tsx`
-  - `src/components/admin/comm/UsageFilters.tsx`
-  - `src/components/admin/comm/MessageDrawer.tsx`
-  - `src/components/admin/comm/PricingRuleGrid.tsx`
-  - `src/components/admin/comm/DnsStatusPill.tsx`
+## Safety / edge cases
+- Never restore to a route belonging to a workspace the user no longer has access to → `WorkspaceGuard` already kicks them out; we additionally validate workspace ownership before issuing the `Navigate`.
+- Skip restore when the user explicitly navigates to `/login?logout=1` or signs out (clear localStorage entry on `signOut`).
+- Skip restore for admin-only routes if `isAdmin` is false → fallback to overview.
+- Don't loop: if the stored path equals the current path, no-op.
+- Strip volatile params (e.g. Stripe `session_id`) before saving.
 
-### Out of scope (later phases)
-- Customer-facing `/settings/*`, `/billing/credits`, `/messages` routes (Phase 5).
-- Automation / Campaign `sender_profile_id` plumbing (Phase 4).
-- Inbound webhooks & realtime inbox (Phase 6).
+## Files to touch
+- new `src/hooks/useRouteMemory.ts`
+- new `src/lib/routeMemory.ts`
+- edit `src/components/dashboard/DashboardLayout.tsx` (mount hook + scroll restore)
+- edit `src/pages/DashboardRedirect.tsx`
+- edit `src/pages/Login.tsx`
+- edit `src/components/auth/RedirectIfAuth.tsx`
+- edit `src/pages/AuthCallback.tsx`
+- edit `src/contexts/AuthContext.tsx` (clear key on signOut)
+- migration: add `profiles.last_route`
 
-### Acceptance
-- Admin can create a package + pricing rule, approve a sender, adjust wallet, view a usage row produced by a real `whatsapp-send` / `twilio-whatsapp-send` / `sms-send` / `email-send` call, and export usage CSV — all without touching SQL.
+## Acceptance
+- Navigate to `/dashboard/<ws>/leads/<leadId>`, refresh → same page reloads, scroll restored.
+- Log out, log back in → land on the last leads page, not overview.
+- Close browser, reopen tomorrow → same restore.
+- Visit a non-existent or unauthorized route → land on overview safely.
+
+Want me to also include **Phase 2 (persist filters / search / pagination per list page)** now, or ship Phase 1 first?

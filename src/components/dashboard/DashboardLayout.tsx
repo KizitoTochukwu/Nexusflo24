@@ -1,5 +1,6 @@
 import { useState } from "react";
 import SidebarLogo from "@/components/brand/SidebarLogo";
+import { useRouteMemory } from "@/hooks/useRouteMemory";
 import SidebarCreditWidget from "@/components/dashboard/SidebarCreditWidget";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLowCreditAlert } from "@/hooks/useLowCreditAlert";
@@ -30,6 +31,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const { data: isAdmin } = useIsAdmin();
   useNotificationWatcher();
   useLowCreditAlert();
+  useRouteMemory();
 
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
