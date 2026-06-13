@@ -597,6 +597,20 @@ export default function CreateCampaignDialog() {
               templateSettings={templateSettings}
               onTemplateSettingsChange={(type === "email" || type === "multi-channel") ? setTemplateSettings : undefined}
             />
+            {workspaceId && (
+              <div className="space-y-2 rounded-md border border-border bg-background/40 p-3">
+                <p className="text-xs font-medium text-foreground">Sender identity</p>
+                {(type === "email" || type === "multi-channel") && (
+                  <SenderProfilePicker workspaceId={workspaceId} channel="email" value={senderProfileEmail} onChange={setSenderProfileEmail} label="Email sender" />
+                )}
+                {(type === "whatsapp" || type === "multi-channel") && (
+                  <SenderProfilePicker workspaceId={workspaceId} channel="whatsapp" value={senderProfileWa} onChange={setSenderProfileWa} label="WhatsApp sender" />
+                )}
+                {(type === "sms" || type === "multi-channel") && (
+                  <SenderProfilePicker workspaceId={workspaceId} channel="sms" value={senderProfileSms} onChange={setSenderProfileSms} label="SMS sender" />
+                )}
+              </div>
+            )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
               <Button onClick={nextStep} disabled={!body.trim()} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
