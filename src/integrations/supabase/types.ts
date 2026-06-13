@@ -2852,6 +2852,62 @@ export type Database = {
           },
         ]
       }
+      whatsapp_accounts: {
+        Row: {
+          business_name: string | null
+          connected_at: string
+          connected_by: string | null
+          connection_method: string
+          created_at: string
+          display_phone_number: string | null
+          id: string
+          phone_number_id: string | null
+          updated_at: string
+          verification_status: string | null
+          verified_name: string | null
+          waba_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          business_name?: string | null
+          connected_at?: string
+          connected_by?: string | null
+          connection_method?: string
+          created_at?: string
+          display_phone_number?: string | null
+          id?: string
+          phone_number_id?: string | null
+          updated_at?: string
+          verification_status?: string | null
+          verified_name?: string | null
+          waba_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          business_name?: string | null
+          connected_at?: string
+          connected_by?: string | null
+          connection_method?: string
+          created_at?: string
+          display_phone_number?: string | null
+          id?: string
+          phone_number_id?: string | null
+          updated_at?: string
+          verification_status?: string | null
+          verified_name?: string | null
+          waba_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
           auto_templated: boolean
