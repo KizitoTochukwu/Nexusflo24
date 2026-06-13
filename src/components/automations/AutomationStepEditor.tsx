@@ -21,6 +21,7 @@ import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import type { ExitCriterion } from "@/lib/automations/exitCriteria";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import { AUTOMATION_SCORE_OPTIONS } from "@/lib/automations/scoreOptions";
+import { SenderProfilePicker } from "@/components/admin/SenderProfilePicker";
 
 export type StepData = {
   step_type:
