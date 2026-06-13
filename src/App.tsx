@@ -152,6 +152,13 @@ const App = () => (
                   <Route path="admin/blog" element={<AdminBlogManager />} />
                   <Route path="admin/smart-actions" element={<AdminSmartActions />} />
                   <Route path="admin/pricing" element={<AdminPricing />} />
+                  <Route path="admin/communication" element={<AdminCommunicationOverview />} />
+                  <Route path="admin/communication/organisations" element={<AdminOrganisations />} />
+                  <Route path="admin/communication/organisations/:orgId" element={<AdminOrgDetail />} />
+                  <Route path="admin/sender-approvals" element={<AdminSenderApprovals />} />
+                  <Route path="admin/usage" element={<AdminUsage />} />
+                  <Route path="admin/credit-packages" element={<AdminCreditPackages />} />
+                  <Route path="admin/messages" element={<AdminMessagesInbox />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
