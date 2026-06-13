@@ -168,6 +168,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    const { data: defSender } = await adminClient
+      .from("sender_profiles")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("channel", "whatsapp")
+      .eq("status", "approved")
+      .order("is_default", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     await adminClient.from("whatsapp_messages").insert({
       workspace_id: workspaceId,
       provider: "twilio",
@@ -177,6 +187,7 @@ Deno.serve(async (req) => {
       message_type: "text",
       body: msgBody,
       status: "received",
+      ...(defSender?.id ? { sender_profile_id: defSender.id } : {}),
       ...(lead?.id ? { lead_id: lead.id } : {}),
     });
 
