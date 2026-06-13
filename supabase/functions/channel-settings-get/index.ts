@@ -36,6 +36,14 @@ function maskValue(val: string | undefined | null): string {
   return val.slice(0, 4) + "..." + val.slice(-4);
 }
 
+// Fields safe to return in plaintext for form prefill (non-secret).
+const NON_SECRET_FIELDS: Record<string, string[]> = {
+  email: ["provider", "from_email", "from_name"],
+  sms: ["from_number"],
+  whatsapp: ["provider", "phone_number_id"],
+};
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
