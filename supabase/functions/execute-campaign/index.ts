@@ -173,6 +173,7 @@ Deno.serve(async (req) => {
               subject: messageSubject, html: messageBody,
               leadId: lead.id, campaignId: campaign_id,
               templateSettings: content.templateSettings || undefined,
+              senderProfileId: content.sender_profile_id_email || content.sender_profile_id || null,
               ...(ownerIsAdmin ? { skipCredits: true } : {}),
             }),
           });
@@ -189,6 +190,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               workspaceId, to: lead.phone, body: messageBody,
               leadId: lead.id, campaignId: campaign_id,
+              senderProfileId: content.sender_profile_id_whatsapp || content.sender_profile_id || null,
               ...(content.whatsappTemplate ? { template: content.whatsappTemplate } : {}),
               ...(ownerIsAdmin ? { skipCredits: true } : {}),
             }),
@@ -212,6 +214,8 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
               workspaceId, to: lead.phone, message: messageBody,
+              leadId: lead.id, campaignId: campaign_id,
+              senderProfileId: content.sender_profile_id_sms || content.sender_profile_id || null,
               ...(ownerIsAdmin ? { skipCredits: true } : {}),
             }),
           });
