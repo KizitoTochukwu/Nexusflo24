@@ -36,8 +36,10 @@ export type Booking = {
   status: string;
   google_event_id: string | null;
   notes: string | null;
+  reschedule_token: string | null;
   created_at: string;
 };
+
 
 export function useBookingPages(workspaceId: string) {
   const { user } = useAuth();
