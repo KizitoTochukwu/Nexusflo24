@@ -160,8 +160,7 @@ const Contact = () => {
                 </span>
 
                 <h1 className="mb-6 text-4xl font-bold leading-[1.1] text-primary-foreground md:text-5xl lg:text-6xl">
-                  Let's help you{" "}
-                  <span className="bg-gradient-gold bg-clip-text text-amber-400">automate your sales</span> & follow-up
+                  Let's help you <span className="text-amber-400">automate your sales</span> & follow-up
                 </h1>
                 <p className="max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl lg:mb-10">
                   Whether you need help getting started, booking a demo, or growing your business with automation — the
