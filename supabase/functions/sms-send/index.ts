@@ -264,7 +264,16 @@ Deno.serve(async (req) => {
       status: "sent",
       provider_message_id: result.providerMessageId,
       direction: "outbound",
+      sender_profile_id: resolvedSender?.profile?.id || null,
     });
+    if (!isPreview) {
+      await logCommunicationUsage({
+        workspaceId, channel: "sms",
+        senderProfileId: resolvedSender?.profile?.id || null,
+        messageId: result.providerMessageId, country: toCountry,
+        creditsDeducted: deductAmount, status: "sent",
+      });
+    }
 
     return new Response(JSON.stringify({ success: true, providerMessageId: result.providerMessageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
