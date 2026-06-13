@@ -483,7 +483,7 @@ Deno.serve(async (req) => {
                     Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
                     "Content-Type": "application/json",
                   },
-                  body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true }),
+                  body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true, senderProfileId: (config as any).sender_profile_id || null }),
                 });
                 waData = await waRes.json().catch(() => ({}));
               } catch (sendErr: any) {
