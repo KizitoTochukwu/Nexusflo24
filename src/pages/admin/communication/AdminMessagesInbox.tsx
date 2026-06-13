@@ -92,7 +92,10 @@ export default function AdminMessagesInbox() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Inbox className="h-6 w-6" /> Admin Inbox</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Inbox className="h-6 w-6" /> Admin Inbox
+          {orgId && <Badge variant="outline" className="ml-2 gap-1"><Radio className="h-3 w-3 text-emerald-500" />Live</Badge>}
+        </h1>
 
         <div className="flex gap-3 items-end">
           <div className="flex-1 max-w-md">
