@@ -1930,6 +1930,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          last_route: Json | null
           phone: string | null
           preferred_currency: string
           updated_at: string
@@ -1941,6 +1942,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          last_route?: Json | null
           phone?: string | null
           preferred_currency?: string
           updated_at?: string
@@ -1952,6 +1954,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          last_route?: Json | null
           phone?: string | null
           preferred_currency?: string
           updated_at?: string
