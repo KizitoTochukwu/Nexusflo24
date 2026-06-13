@@ -294,9 +294,9 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
     try {
       setConnectionError(null);
       const res = await connect.mutateAsync();
-      toast.success(
-        `Connected ${res?.displayPhoneNumber || "your WhatsApp number"} — fetching templates…`,
-      );
+      const name = res?.verifiedName || res?.businessAccountName || "WhatsApp";
+      const number = res?.displayPhoneNumber ? ` (${res.displayPhoneNumber})` : "";
+      toast.success(`WhatsApp connected — ${name}${number}`);
     } catch (err: any) {
       const message = err?.message || "Connection failed";
       setConnectionError(message);
