@@ -148,18 +148,15 @@ Deno.serve(async (req) => {
     }
 
     // 1. Exchange short-lived code for a business system-user access token.
-    // The FB.login() JS SDK popup uses https://www.facebook.com/connect/login_success.html
-    // as its internal redirect_uri (recorded by Meta during Phase 1 OAuth dialog). The
-    // token exchange in Phase 2 must send the SAME value, otherwise Meta returns
-    // error_subcode 36008 "Error validating verification code". The app-facing
-    // META_REDIRECT_URI (https://nexusflo24.com/auth/callback) is only used for our
-    // own domain/origin checks and the Meta App's Valid OAuth Redirect URIs list.
-    const JS_SDK_REDIRECT = "https://www.facebook.com/connect/login_success.html";
-    console.info("[Meta Embedded Signup] exchanging code with redirect_uri:", JS_SDK_REDIRECT);
+    // Meta requires the token exchange to use the exact redirect_uri passed into
+    // FB.login(). The frontend sends META_REDIRECT_URI, so exchange with that
+    // same app-owned callback instead of a Facebook-owned URL Meta will not save
+    // in the app's Valid OAuth Redirect URIs list.
+    console.info("[Meta Embedded Signup] exchanging code with redirect_uri:", redirectUri);
     const exchangeUrl = `${GRAPH}/oauth/access_token?${new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
-      redirect_uri: JS_SDK_REDIRECT,
+      redirect_uri: redirectUri,
       code,
     }).toString()}`;
     const exchangeRes = await fetch(exchangeUrl, { headers: { "Content-Type": "application/json" } });
