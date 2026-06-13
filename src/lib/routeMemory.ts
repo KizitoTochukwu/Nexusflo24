@@ -79,12 +79,15 @@ export async function fetchLastRouteRemote(userId: string): Promise<LastRoute | 
     .select("last_route")
     .eq("id", userId)
     .maybeSingle();
-  const v = (data as { last_route?: LastRoute | null } | null)?.last_route;
-  return v && typeof v === "object" && v.path ? v : null;
+  const v = (data as unknown as { last_route?: LastRoute | null } | null)?.last_route;
+  return v && typeof v === "object" && (v as LastRoute).path ? (v as LastRoute) : null;
 }
 
 export async function persistLastRouteRemote(userId: string, route: LastRoute) {
-  await supabase.from("profiles").update({ last_route: route as unknown as object }).eq("id", userId);
+  await supabase
+    .from("profiles")
+    .update({ last_route: route as unknown as never })
+    .eq("id", userId);
 }
 
 export function clearLastRoute(userId: string) {
