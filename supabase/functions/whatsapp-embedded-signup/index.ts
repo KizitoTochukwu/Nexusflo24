@@ -1,14 +1,14 @@
 // WhatsApp Meta Embedded Signup — exchanges the short-lived OAuth code for a
 // business system-user token, subscribes our app to the WABA so inbound webhooks
 // flow, registers the phone number with WhatsApp Cloud API, and persists the
-// connection in both `whatsapp_settings` (rich metadata + verify token) and
-// `workspace_channel_settings` (so resolveChannelCredentials() picks it up).
+// connection in whatsapp_settings, whatsapp_accounts, sender_profiles, and
+// workspace_channel_settings.
 //
-// Triggered by the frontend `WhatsAppConnectCard` after FB.login() succeeds.
+// Embedded Signup uses config_id; we DO NOT send a redirect_uri at code
+// exchange time. Meta uses the redirect bound to the configuration.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptWhatsApp, encryptChannelConfig } from "../_shared/whatsapp-crypto.ts";
-import { META_REDIRECT_URI } from "../_shared/meta.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,9 +21,8 @@ const GRAPH = "https://graph.facebook.com/v21.0";
 interface Body {
   workspaceId: string;
   code: string;
-  wabaId: string;
-  phoneNumberId: string;
-  redirectUri?: string;
+  wabaId?: string;
+  phoneNumberId?: string;
 }
 
 async function graph<T = any>(
@@ -85,10 +84,15 @@ Deno.serve(async (req) => {
 
     const body = (await req.json()) as Body;
     let { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
-    const redirectUri = body?.redirectUri?.trim() ?? "";
-    console.info("[Meta Embedded Signup] redirect_uri received by backend:", {
-      received: redirectUri || null,
-      expected: META_REDIRECT_URI,
+    wabaId = wabaId || "";
+    phoneNumberId = phoneNumberId || "";
+
+    console.info("[Meta Embedded Signup] incoming:", {
+      workspaceId,
+      codeLen: code?.length || 0,
+      wabaId: wabaId || null,
+      phoneNumberId: phoneNumberId || null,
+      redirect_uri_used: null,
     });
 
     if (!workspaceId || !code) {
@@ -97,31 +101,11 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (!redirectUri) {
-      return new Response(
-        JSON.stringify({ error: "Meta redirect URI is missing. Refresh NexusFlo24 and retry Connect WhatsApp." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    if (redirectUri !== META_REDIRECT_URI) {
-      console.warn("[Meta Embedded Signup] redirect_uri mismatch:", {
-        received: redirectUri,
-        expected: META_REDIRECT_URI,
-      });
-      return new Response(
-        JSON.stringify({
-          error: `Meta redirect URI mismatch. Frontend sent ${redirectUri}, but NexusFlo24 expects ${META_REDIRECT_URI}. Open ${META_REDIRECT_URI} and retry Connect WhatsApp.`,
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    console.info("[Meta Embedded Signup] redirect_uri used in backend:", redirectUri);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is workspace admin
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -147,14 +131,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Exchange short-lived code for a business system-user access token.
-    // This redirect_uri must exactly match the value sent to FB.login(), or Meta
-    // returns "Error validating verification code. Please make sure your
-    // redirect_uri is identical to the one you used in the OAuth dialog request."
+    // 1. Exchange short-lived code for an access token.
+    // With config_id-based Embedded Signup we do NOT send redirect_uri.
     const exchangeUrl = `${GRAPH}/oauth/access_token?${new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
-      redirect_uri: redirectUri,
       code,
     }).toString()}`;
     const exchangeRes = await fetch(exchangeUrl, { headers: { "Content-Type": "application/json" } });
@@ -164,19 +145,12 @@ Deno.serve(async (req) => {
       expires_in?: number;
       error?: { message?: string; type?: string; code?: number; error_subcode?: number };
     };
-    console.info("[Meta Embedded Signup] Meta code exchange response:", {
+    console.info("[Meta Embedded Signup] code exchange response:", {
       ok: exchangeRes.ok,
       status: exchangeRes.status,
       token_type: tokenRes.token_type,
       expires_in: tokenRes.expires_in ?? null,
-      error: tokenRes.error
-        ? {
-            message: tokenRes.error.message,
-            type: tokenRes.error.type,
-            code: tokenRes.error.code,
-            error_subcode: tokenRes.error.error_subcode,
-          }
-        : null,
+      error: tokenRes.error || null,
     });
     if (!exchangeRes.ok || !tokenRes.access_token) {
       throw new Error(
@@ -188,18 +162,14 @@ Deno.serve(async (req) => {
       ? new Date(Date.now() + tokenRes.expires_in * 1000).toISOString()
       : null;
 
-    // 1b. If Meta's postMessage didn't return waba_id / phone_number_id,
-    //     recover them from the granted token via /debug_token + /phone_numbers.
+    // 1b. Recover wabaId / phoneNumberId from token if postMessage didn't provide them.
     if (!wabaId || !phoneNumberId) {
       try {
         const debug = await graph<{
           data?: { granular_scopes?: Array<{ scope: string; target_ids?: string[] }> };
         }>("/debug_token", {
           method: "GET",
-          query: {
-            input_token: accessToken,
-            access_token: `${appId}|${appSecret}`,
-          },
+          query: { input_token: accessToken, access_token: `${appId}|${appSecret}` },
         });
         const scopes = debug?.data?.granular_scopes || [];
         const wabaScope = scopes.find(
@@ -210,7 +180,7 @@ Deno.serve(async (req) => {
         const recoveredWabaId = wabaScope?.target_ids?.[0];
         if (!wabaId && recoveredWabaId) wabaId = recoveredWabaId;
       } catch (err) {
-        console.warn("debug_token recovery failed:", (err as Error).message);
+        console.warn("[Meta Embedded Signup] debug_token recovery failed:", (err as Error).message);
       }
 
       if (wabaId && !phoneNumberId) {
@@ -226,7 +196,7 @@ Deno.serve(async (req) => {
           const firstPhone = phones?.data?.[0]?.id;
           if (firstPhone) phoneNumberId = firstPhone;
         } catch (err) {
-          console.warn("phone_numbers recovery failed:", (err as Error).message);
+          console.warn("[Meta Embedded Signup] phone_numbers recovery failed:", (err as Error).message);
         }
       }
 
@@ -235,25 +205,26 @@ Deno.serve(async (req) => {
           JSON.stringify({
             success: false,
             error:
-              "Meta didn't return your WhatsApp Business Account or phone number. Reopen Connect, complete every step of the popup (Business → WABA → Phone number), and make sure popups/cookies are allowed for this site.",
+              "Meta didn't return your WhatsApp Business Account or phone number. Reopen Connect, complete every step (Business → WABA → Phone number), and make sure popups/cookies are allowed.",
           }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
     }
 
-    // 2. Subscribe our app to the WABA (required for inbound webhooks).
+    console.info("[Meta Embedded Signup] resolved IDs:", { wabaId, phoneNumberId });
+
+    // 2. Subscribe our app to the WABA.
     try {
       await graph(`/${encodeURIComponent(wabaId)}/subscribed_apps`, {
         method: "POST",
         token: accessToken,
       });
     } catch (err) {
-      console.warn("subscribed_apps failed (may already be subscribed):", (err as Error).message);
+      console.warn("[Meta Embedded Signup] subscribed_apps failed:", (err as Error).message);
     }
 
-    // 3. Register the phone number with Cloud API (required before sending).
-    //    Use a deterministic PIN; user can change later via Meta UI.
+    // 3. Register the phone number with Cloud API.
     const pin = "123456";
     try {
       await graph(`/${encodeURIComponent(phoneNumberId)}/register`, {
@@ -262,29 +233,31 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ messaging_product: "whatsapp", pin }),
       });
     } catch (err) {
-      // Already registered or 2FA enabled — non-fatal, log and continue.
-      console.warn("phone /register failed (likely already registered):", (err as Error).message);
+      console.warn("[Meta Embedded Signup] phone /register failed:", (err as Error).message);
     }
 
-    // 4. Fetch phone number metadata for display.
+    // 4. Phone metadata.
     let displayPhone = "";
     let verifiedName = "";
+    let verificationStatus = "";
     try {
-      const phoneInfo = await graph<{ display_phone_number?: string; verified_name?: string }>(
-        `/${encodeURIComponent(phoneNumberId)}`,
-        {
-          method: "GET",
-          token: accessToken,
-          query: { fields: "display_phone_number,verified_name" },
-        },
-      );
+      const phoneInfo = await graph<{
+        display_phone_number?: string;
+        verified_name?: string;
+        code_verification_status?: string;
+      }>(`/${encodeURIComponent(phoneNumberId)}`, {
+        method: "GET",
+        token: accessToken,
+        query: { fields: "display_phone_number,verified_name,code_verification_status" },
+      });
       displayPhone = phoneInfo.display_phone_number || "";
       verifiedName = phoneInfo.verified_name || "";
+      verificationStatus = phoneInfo.code_verification_status || "";
     } catch (err) {
-      console.warn("phone fields fetch failed:", (err as Error).message);
+      console.warn("[Meta Embedded Signup] phone fields fetch failed:", (err as Error).message);
     }
 
-    // 5. Fetch WABA business name.
+    // 5. WABA business name.
     let businessName = "";
     try {
       const wabaInfo = await graph<{ name?: string }>(`/${encodeURIComponent(wabaId)}`, {
@@ -297,71 +270,135 @@ Deno.serve(async (req) => {
       /* ignore */
     }
 
-    // 6. Persist to whatsapp_settings.
+    console.info("[Meta Embedded Signup] metadata:", {
+      displayPhone,
+      verifiedName,
+      businessName,
+      verificationStatus,
+    });
+
+    // 6. whatsapp_settings (encrypted token + verify token).
     const accessTokenEncrypted = await encryptWhatsApp(accessToken, whatsappKey);
     const verifyToken = crypto.randomUUID().replace(/-/g, "");
     const verifyTokenEncrypted = await encryptWhatsApp(verifyToken, whatsappKey);
 
+    const settingsRow = {
+      workspace_id: workspaceId,
+      phone_number_id: phoneNumberId,
+      access_token_encrypted: accessTokenEncrypted,
+      verify_token_encrypted: verifyTokenEncrypted,
+      is_active: true,
+      waba_id: wabaId,
+      display_phone_number: displayPhone,
+      verified_name: verifiedName,
+      business_account_name: businessName,
+      token_expires_at: tokenExpiresAt,
+      connection_method: "embedded_signup",
+    };
+
     const { error: upsertErr } = await admin
       .from("whatsapp_settings")
-      .upsert(
-        {
-          workspace_id: workspaceId,
-          phone_number_id: phoneNumberId,
-          access_token_encrypted: accessTokenEncrypted,
-          verify_token_encrypted: verifyTokenEncrypted,
-          is_active: true,
-          waba_id: wabaId,
-          display_phone_number: displayPhone,
-          verified_name: verifiedName,
-          business_account_name: businessName,
-          token_expires_at: tokenExpiresAt,
-          connection_method: "embedded_signup",
-        },
-        { onConflict: "workspace_id" },
-      );
+      .upsert(settingsRow, { onConflict: "workspace_id" });
     if (upsertErr) {
-      // workspace_id may not have a unique constraint; fall back to update-or-insert.
       const { data: existing } = await admin
         .from("whatsapp_settings")
         .select("id")
         .eq("workspace_id", workspaceId)
         .maybeSingle();
       if (existing?.id) {
-        await admin
-          .from("whatsapp_settings")
-          .update({
-            phone_number_id: phoneNumberId,
-            access_token_encrypted: accessTokenEncrypted,
-            verify_token_encrypted: verifyTokenEncrypted,
-            is_active: true,
-            waba_id: wabaId,
-            display_phone_number: displayPhone,
-            verified_name: verifiedName,
-            business_account_name: businessName,
-            token_expires_at: tokenExpiresAt,
-            connection_method: "embedded_signup",
-          })
-          .eq("id", existing.id);
+        await admin.from("whatsapp_settings").update(settingsRow).eq("id", existing.id);
       } else {
-        await admin.from("whatsapp_settings").insert({
-          workspace_id: workspaceId,
-          phone_number_id: phoneNumberId,
-          access_token_encrypted: accessTokenEncrypted,
-          verify_token_encrypted: verifyTokenEncrypted,
-          is_active: true,
-          waba_id: wabaId,
-          display_phone_number: displayPhone,
-          verified_name: verifiedName,
-          business_account_name: businessName,
-          token_expires_at: tokenExpiresAt,
-          connection_method: "embedded_signup",
-        });
+        await admin.from("whatsapp_settings").insert(settingsRow);
       }
     }
 
-    // 7. Also mirror into workspace_channel_settings so the existing
-    //    resolveChannelCredentials() helper used by whatsapp-send picks it up.
+    // 6b. whatsapp_accounts canonical workspace record.
+    const accountRow = {
+      workspace_id: workspaceId,
+      waba_id: wabaId,
+      phone_number_id: phoneNumberId,
+      display_phone_number: displayPhone,
+      verified_name: verifiedName,
+      business_name: businessName,
+      verification_status: verificationStatus,
+      connection_method: "embedded_signup",
+      connected_by: userId,
+      connected_at: new Date().toISOString(),
+    };
+    const { error: accountErr } = await admin
+      .from("whatsapp_accounts")
+      .upsert(accountRow, { onConflict: "workspace_id" });
+    if (accountErr) {
+      console.warn("[Meta Embedded Signup] whatsapp_accounts upsert failed:", accountErr.message);
+    }
+
+    // 6c. sender_profiles (+ whatsapp_senders detail).
+    try {
+      const senderLabel = verifiedName || displayPhone || "WhatsApp";
+      const { data: existingSender } = await admin
+        .from("sender_profiles")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .eq("channel", "whatsapp")
+        .eq("address", displayPhone || phoneNumberId)
+        .maybeSingle();
+
+      let senderProfileId = existingSender?.id as string | undefined;
+      if (senderProfileId) {
+        await admin
+          .from("sender_profiles")
+          .update({
+            label: senderLabel,
+            display_name: verifiedName || senderLabel,
+            address: displayPhone || phoneNumberId,
+            status: "active",
+            is_default: true,
+          })
+          .eq("id", senderProfileId);
+      } else {
+        const { data: inserted, error: senderErr } = await admin
+          .from("sender_profiles")
+          .insert({
+            workspace_id: workspaceId,
+            channel: "whatsapp",
+            label: senderLabel,
+            display_name: verifiedName || senderLabel,
+            address: displayPhone || phoneNumberId,
+            status: "active",
+            is_default: true,
+          })
+          .select("id")
+          .single();
+        if (senderErr) throw senderErr;
+        senderProfileId = inserted.id;
+      }
+
+      // Clear other defaults for this workspace's WhatsApp channel.
+      await admin
+        .from("sender_profiles")
+        .update({ is_default: false })
+        .eq("workspace_id", workspaceId)
+        .eq("channel", "whatsapp")
+        .neq("id", senderProfileId!);
+
+      // Detail row.
+      await admin
+        .from("whatsapp_senders")
+        .upsert(
+          {
+            sender_profile_id: senderProfileId!,
+            phone_number_id: phoneNumberId,
+            waba_id: wabaId,
+            display_phone_number: displayPhone,
+            verified_name: verifiedName,
+          },
+          { onConflict: "sender_profile_id" },
+        );
+    } catch (senderErr) {
+      console.warn("[Meta Embedded Signup] sender_profiles upsert failed:", (senderErr as Error).message);
+    }
+
+    // 7. workspace_channel_settings mirror for resolveChannelCredentials().
     const channelConfigEncrypted = await encryptChannelConfig(
       JSON.stringify({ phone_number_id: phoneNumberId, access_token: accessToken }),
       channelKey,
@@ -408,11 +445,13 @@ Deno.serve(async (req) => {
         displayPhoneNumber: displayPhone,
         verifiedName,
         businessAccountName: businessName,
+        verificationStatus,
+        redirectUriUsed: null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error("whatsapp-embedded-signup error:", err);
+    console.error("[Meta Embedded Signup] error:", err);
     const message = err instanceof Error ? err.message : "Connection failed";
     return new Response(JSON.stringify({ success: false, error: message }), {
       status: 400,
