@@ -39,6 +39,7 @@ export async function deductCredit(
   channel: CreditChannel,
   referenceId?: string,
   userId?: string,
+  amount: number = 1,
 ): Promise<DeductResult> {
   const adminClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
