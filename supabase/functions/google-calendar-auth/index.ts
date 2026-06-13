@@ -282,34 +282,65 @@ Deno.serve(async (req) => {
       // Refresh if needed
       let accessToken = tokenRow.access_token;
       if (new Date(tokenRow.token_expires_at) <= new Date(Date.now() + 60000)) {
-        const res = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: clientId,
-            client_secret: clientSecret,
-            refresh_token: tokenRow.refresh_token,
-            grant_type: "refresh_token",
-          }),
-        });
-        const data = await res.json();
-        if (res.ok && data.access_token) {
-          accessToken = data.access_token;
-          await adminSb
-            .from("google_calendar_tokens")
-            .update({ access_token: data.access_token, token_expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString() })
-            .eq("id", token_id);
+        try {
+          const res = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              refresh_token: tokenRow.refresh_token,
+              grant_type: "refresh_token",
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.access_token) {
+            accessToken = data.access_token;
+            await adminSb
+              .from("google_calendar_tokens")
+              .update({ access_token: data.access_token, token_expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString() })
+              .eq("id", token_id);
+          } else {
+            console.error("Google token refresh failed:", res.status, data);
+            return new Response(JSON.stringify({
+              error: "REAUTH_REQUIRED",
+              message: "Your Google Calendar connection has expired. Please reconnect.",
+              fallback: true,
+              calendars: [],
+            }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        } catch (e) {
+          console.error("Token refresh error:", e);
+          return new Response(JSON.stringify({
+            error: "SERVICE_FAILED", fallback: true, calendars: [],
+          }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
       }
 
-      const calRes = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      let calRes: Response;
+      try {
+        calRes = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      } catch (e) {
+        console.error("Google calendarList fetch threw:", e);
+        return new Response(JSON.stringify({
+          error: "SERVICE_FAILED", fallback: true, calendars: [],
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
       if (!calRes.ok) {
-        return new Response(JSON.stringify({ error: "Failed to fetch calendars" }), {
-          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const errText = await calRes.text().catch(() => "");
+        console.error("Google calendarList error:", calRes.status, errText);
+        const needsReauth = calRes.status === 401 || calRes.status === 403;
+        return new Response(JSON.stringify({
+          error: needsReauth ? "REAUTH_REQUIRED" : "SERVICE_UNAVAILABLE",
+          message: needsReauth
+            ? "Your Google Calendar connection has expired. Please reconnect."
+            : "Google Calendar is temporarily unavailable. Please try again.",
+          fallback: true,
+          calendars: [],
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       const calData = await calRes.json();
