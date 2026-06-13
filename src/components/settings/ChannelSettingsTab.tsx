@@ -1000,7 +1000,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1">
                       <Label>Access Token</Label>
-                      <Input type="password" value={waAccessToken} onChange={(e) => setWaAccessToken(e.target.value)} placeholder="EAA..." maxLength={500} />
+                      <Input type="password" value={waAccessToken} onChange={(e) => setWaAccessToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "EAA..."} maxLength={500} />
                     </div>
                     <div className="space-y-1">
                       <Label>Phone Number ID</Label>
@@ -1008,7 +1008,8 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                     </div>
                     <div className="space-y-1">
                       <Label>Verify Token</Label>
-                      <Input type="password" value={waVerifyToken} onChange={(e) => setWaVerifyToken(e.target.value)} placeholder="your-verify-token" maxLength={200} />
+                      <Input type="password" value={waVerifyToken} onChange={(e) => setWaVerifyToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "your-verify-token"} maxLength={200} />
+
                     </div>
                   </div>
                   <div className="flex gap-2 flex-wrap">
