@@ -4,13 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Mail,
   MessageCircle,
@@ -38,12 +32,7 @@ const Contact = () => {
     phone: "",
     company: "",
     industry: "",
-    interest:
-      subject === "demo"
-        ? "Demo Request"
-        : subject === "sales"
-          ? "Automation Setup"
-          : "",
+    interest: subject === "demo" ? "Demo Request" : subject === "sales" ? "Automation Setup" : "",
     message:
       subject === "demo"
         ? "I'd like to book a demo of NexusFlo24."
@@ -65,7 +54,10 @@ const Contact = () => {
     }
     try {
       const tagSlug = (s: string) =>
-        s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        s
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
       const extraTags: string[] = ["contact-lead"];
       if (form.industry) extraTags.push(`industry-${tagSlug(form.industry)}`);
       if (form.interest) extraTags.push(`interest-${tagSlug(form.interest)}`);
@@ -77,12 +69,7 @@ const Contact = () => {
         email: form.email,
         phone: form.phone || undefined,
         source: "Contact",
-        tags: [
-          "website-signup",
-          "contact-form",
-          ...(subject ? [`contact-${subject}`] : []),
-          ...extraTags,
-        ],
+        tags: ["website-signup", "contact-form", ...(subject ? [`contact-${subject}`] : []), ...extraTags],
         notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Industry: ${form.industry || "N/A"}. Interested in: ${form.interest || "N/A"}. Message: ${form.message}`,
         formId: "contact-form",
         page: "/contact",
@@ -169,18 +156,16 @@ const Contact = () => {
               <div className="order-1 flex flex-col justify-center p-8 pb-0 md:p-14 md:pb-0 lg:col-start-1 lg:row-start-1 lg:p-16 lg:pb-0">
                 <span className="mb-8 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 backdrop-blur">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-accent">
-                    Get in touch
-                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-accent">Get in touch</span>
                 </span>
 
                 <h1 className="mb-6 text-4xl font-bold leading-[1.1] text-primary-foreground md:text-5xl lg:text-6xl">
                   Let's help you{" "}
-                  <span className="bg-gradient-gold bg-clip-text text-amber-400 bg-slate-200">automate your sales</span>{" "}
-                  & follow-up
+                  <span className="bg-gradient-gold bg-clip-text text-amber-400">automate your sales</span> & follow-up
                 </h1>
                 <p className="max-w-md text-lg leading-relaxed text-primary-foreground/70 md:text-xl lg:mb-10">
-                  Whether you need help getting started, booking a demo, or growing your business with automation — the NexusFlo24 team is here to help.
+                  Whether you need help getting started, booking a demo, or growing your business with automation — the
+                  NexusFlo24 team is here to help.
                 </p>
               </div>
 
@@ -217,7 +202,6 @@ const Contact = () => {
 
               {/* RIGHT — form */}
               <div className="order-2 flex items-center p-6 md:p-10 lg:order-3 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:p-12">
-
                 <div className="relative w-full overflow-hidden rounded-3xl bg-card p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.45)] md:p-10">
                   <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-gold" />
 
@@ -321,10 +305,7 @@ const Contact = () => {
                             >
                               Business Type / Industry
                             </Label>
-                            <Select
-                              value={form.industry}
-                              onValueChange={(v) => setForm({ ...form, industry: v })}
-                            >
+                            <Select value={form.industry} onValueChange={(v) => setForm({ ...form, industry: v })}>
                               <SelectTrigger
                                 id="industry"
                                 className="h-12 rounded-xl text-sm focus:border-accent focus:ring-4 focus:ring-accent/10"
@@ -360,10 +341,7 @@ const Contact = () => {
                             >
                               What are you interested in?
                             </Label>
-                            <Select
-                              value={form.interest}
-                              onValueChange={(v) => setForm({ ...form, interest: v })}
-                            >
+                            <Select value={form.interest} onValueChange={(v) => setForm({ ...form, interest: v })}>
                               <SelectTrigger
                                 id="interest"
                                 className="h-12 rounded-xl text-sm focus:border-accent focus:ring-4 focus:ring-accent/10"
@@ -407,7 +385,6 @@ const Contact = () => {
                             className="resize-none rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
                           />
                         </div>
-
 
                         <Button
                           type="submit"
