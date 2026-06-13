@@ -119,16 +119,16 @@ export async function deductCredit(
   }
 
   const currentBalance = (credits as Record<string, number>)[balCol] ?? 0;
-  if (currentBalance <= 0) {
-    return { allowed: false, remaining: 0, error: `Insufficient ${channel} credits. Buy more in Settings → Usage.` };
+  if (currentBalance < amount) {
+    return { allowed: false, remaining: currentBalance, error: `Insufficient ${channel} credits. Buy more in Settings → Usage.` };
   }
 
   // Atomically decrement balance and increment used
   const { error: updateErr } = await adminClient
     .from("message_credits")
     .update({
-      [balCol]: currentBalance - 1,
-      [usedCol]: ((credits as Record<string, number>)[usedCol] ?? 0) + 1,
+      [balCol]: currentBalance - amount,
+      [usedCol]: ((credits as Record<string, number>)[usedCol] ?? 0) + amount,
     })
     .eq("workspace_id", workspaceId)
     .eq(balCol, currentBalance); // optimistic lock
@@ -142,12 +142,12 @@ export async function deductCredit(
   await adminClient.from("credit_transactions").insert({
     workspace_id: workspaceId,
     channel,
-    amount: -1,
+    amount: -amount,
     reason: "message_sent",
     reference_id: referenceId || null,
   });
 
-  return { allowed: true, remaining: currentBalance - 1 };
+  return { allowed: true, remaining: currentBalance - amount };
 }
 
 /** Plan-included monthly credits */
