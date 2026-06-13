@@ -744,6 +744,8 @@ const DashboardSettings = () => {
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
             <TabsTrigger value="usage" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Usage</TabsTrigger>
             <TabsTrigger value="channels" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Channels</TabsTrigger>
+            <TabsTrigger value="senders" className="gap-1.5"><Mail className="h-3.5 w-3.5" />Sender Profiles</TabsTrigger>
+            <TabsTrigger value="buy-credits" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Buy Credits</TabsTrigger>
             <TabsTrigger value="wa-templates" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" />WA Templates</TabsTrigger>
             <TabsTrigger value="meta-channel" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Instagram & Facebook</TabsTrigger>
             <TabsTrigger value="tracking" className="gap-1.5"><Globe className="h-3.5 w-3.5" />Tracking & Pixels</TabsTrigger>
