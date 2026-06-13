@@ -526,12 +526,29 @@ Deno.serve(async (req) => {
 
       const sendEmail = async (to: string, subject: string, html: string) => {
         try {
-          await fetch("https://api.resend.com/emails", {
+          const resp = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({ from: `NexusFlo24 <${fromEmail}>`, to: [to], subject, html }),
           });
-        } catch (_) { /* best effort */ }
+          const data = await resp.json().catch(() => ({} as any));
+          if (!resp.ok) {
+            console.error("book-appointment email failed", to, resp.status, data);
+            await supabase.from("email_logs").insert({
+              workspace_id: page.workspace_id, to_email: to, from_email: fromEmail,
+              subject, direction: "outbound", status: "failed",
+              error: (data as any)?.message || `Resend ${resp.status}`,
+            });
+            return;
+          }
+          await supabase.from("email_logs").insert({
+            workspace_id: page.workspace_id, to_email: to, from_email: fromEmail,
+            subject, direction: "outbound", status: "sent",
+            provider_message_id: (data as any)?.id || null,
+          });
+        } catch (e) {
+          console.error("book-appointment email exception", to, e);
+        }
       };
 
       // Send guest email
