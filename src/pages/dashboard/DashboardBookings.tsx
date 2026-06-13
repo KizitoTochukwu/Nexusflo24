@@ -142,6 +142,7 @@ export default function DashboardBookings() {
                           </div>
                         </div>
                       )}
+                      <div className="flex items-center gap-2">
                         {page.slug && (
                           <Button variant="outline" size="sm" asChild>
                             <a href={`${baseUrl}/book/${page.slug}`} target="_blank" rel="noopener noreferrer">
