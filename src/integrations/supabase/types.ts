@@ -3462,6 +3462,15 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      get_public_funnel_steps: {
+        Args: { p_funnel_id: string }
+        Returns: {
+          id: string
+          page_content: Json
+          step_order: number
+          step_type: string
+        }[]
+      }
       get_workspace_public_pixels: {
         Args: { p_workspace_id: string }
         Returns: {
