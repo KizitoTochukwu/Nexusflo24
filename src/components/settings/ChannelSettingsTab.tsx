@@ -643,16 +643,21 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       );
 
       if (channel === "sms") {
-        if (!/^AC[0-9a-fA-F]{32}$/.test(cleanedConfig.account_sid || "")) {
+        const alreadyConfigured = !!channels?.sms?.configured;
+        if (cleanedConfig.account_sid && !/^AC[0-9a-fA-F]{32}$/.test(cleanedConfig.account_sid)) {
           throw new Error("Account SID must start with AC and be 34 characters long.");
         }
-        if (!/^[0-9a-fA-F]{32}$/.test(cleanedConfig.auth_token || "")) {
+        if (cleanedConfig.auth_token && !/^[0-9a-fA-F]{32}$/.test(cleanedConfig.auth_token)) {
           throw new Error("Auth Token must be exactly 32 characters from the matching Twilio account.");
+        }
+        if (!alreadyConfigured && (!cleanedConfig.account_sid || !cleanedConfig.auth_token)) {
+          throw new Error("Enter both Account SID and Auth Token.");
         }
         if (!cleanedConfig.from_number) {
           throw new Error("Enter a From Number or Messaging Service SID.");
         }
       }
+
 
       const session = (await supabase.auth.getSession()).data.session;
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/channel-settings-save`, {
