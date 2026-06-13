@@ -16,7 +16,9 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ExternalLink, Pencil, Trash2, CalendarDays, Loader2 } from "lucide-react";
+import { Plus, ExternalLink, Pencil, Trash2, CalendarDays, Loader2, Copy, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import BookingPageForm from "@/components/bookings/BookingPageForm";
 import BookingsList from "@/components/bookings/BookingsList";
