@@ -112,7 +112,10 @@ export default function AdminCreditPackages() {
 
           <TabsContent value="pricing" className="space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-base">Add / update pricing rule</CardTitle></CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Add / update pricing rule</CardTitle>
+                <Button size="sm" variant="outline" onClick={seed}><Sparkles className="h-4 w-4 mr-1" />Seed defaults</Button>
+              </CardHeader>
               <CardContent className="grid grid-cols-4 gap-3 items-end">
                 <div><Label>Channel</Label>
                   <Select value={rule.channel} onValueChange={(v)=>setRule({...rule,channel:v})}>
@@ -129,7 +132,7 @@ export default function AdminCreditPackages() {
               <CardContent className="p-0">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50"><tr>
-                    <th className="text-left p-2">Channel</th><th className="text-left p-2">Country</th><th className="text-right p-2">Credits / message</th>
+                    <th className="text-left p-2">Channel</th><th className="text-left p-2">Country</th><th className="text-right p-2">Credits / message</th><th></th>
                   </tr></thead>
                   <tbody>
                     {rules.map((r:any)=>(
@@ -137,6 +140,7 @@ export default function AdminCreditPackages() {
                         <td className="p-2 uppercase text-xs">{r.channel}</td>
                         <td className="p-2">{r.country || <span className="text-muted-foreground">default</span>}</td>
                         <td className="p-2 text-right">{r.credits_per_message}</td>
+                        <td className="p-2 text-right"><Button size="sm" variant="ghost" onClick={()=>deleteRule(r.id)}><Trash2 className="h-3 w-3" /></Button></td>
                       </tr>
                     ))}
                   </tbody>
