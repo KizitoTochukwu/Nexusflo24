@@ -833,7 +833,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Resend API Key</Label>
-                  <Input type="password" value={emailApiKey} onChange={(e) => setEmailApiKey(e.target.value)} placeholder="re_..." maxLength={200} />
+                  <Input type="password" value={emailApiKey} onChange={(e) => setEmailApiKey(e.target.value)} placeholder={channels?.email?.configured ? "•••••• (leave blank to keep current)" : "re_..."} maxLength={200} />
                 </div>
                 <div className="space-y-1">
                   <Label>From Email</Label>
