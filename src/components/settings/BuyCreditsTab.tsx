@@ -33,7 +33,7 @@ export default function BuyCreditsTab({ workspaceId }: Props) {
     queryFn: async () => {
       const { data } = await supabase
         .from("message_credits")
-        .select("credits_remaining, credits_used")
+        .select("email_balance, sms_balance, whatsapp_balance, email_used, sms_used, whatsapp_used")
         .eq("workspace_id", workspaceId)
         .maybeSingle();
       return data;
