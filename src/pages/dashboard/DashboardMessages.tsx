@@ -5,6 +5,7 @@ import { useWhatsAppThreads, useWhatsAppMessages } from "@/hooks/useWhatsAppInbo
 import { useEmailThreads, useEmailMessages } from "@/hooks/useEmailInbox";
 import { useSmsThreads, useSmsMessages } from "@/hooks/useSmsInbox";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
