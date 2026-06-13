@@ -1139,22 +1139,40 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                     })()}
                   </div>
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
-                    <AutomationEmailEditor
-                      isEmail={(step.config.action as string) === "send_email"}
-                      channel={
-                        (step.config.action as string) === "send_email"
-                          ? "email"
-                          : (step.config.action as string) === "send_whatsapp"
-                            ? "whatsapp"
-                            : "sms"
-                      }
-                      subject={(step.config.subject as string) || ""}
-                      message={(step.config.message as string) || ""}
-                      onSubjectChange={(v) => updateStep(i, { subject: v })}
-                      onMessageChange={(v) => updateStep(i, { message: v })}
-                      templateSettings={step.config.templateSettings as any}
-                      onTemplateSettingsChange={(ts) => updateStep(i, { templateSettings: ts })}
-                    />
+                    <>
+                      <AutomationEmailEditor
+                        isEmail={(step.config.action as string) === "send_email"}
+                        channel={
+                          (step.config.action as string) === "send_email"
+                            ? "email"
+                            : (step.config.action as string) === "send_whatsapp"
+                              ? "whatsapp"
+                              : "sms"
+                        }
+                        subject={(step.config.subject as string) || ""}
+                        message={(step.config.message as string) || ""}
+                        onSubjectChange={(v) => updateStep(i, { subject: v })}
+                        onMessageChange={(v) => updateStep(i, { message: v })}
+                        templateSettings={step.config.templateSettings as any}
+                        onTemplateSettingsChange={(ts) => updateStep(i, { templateSettings: ts })}
+                      />
+                      {workspaceId && (
+                        <div className="mt-3 rounded-md border border-border bg-background/40 p-3">
+                          <SenderProfilePicker
+                            workspaceId={workspaceId}
+                            channel={
+                              (step.config.action as string) === "send_email"
+                                ? "email"
+                                : (step.config.action as string) === "send_whatsapp"
+                                  ? "whatsapp"
+                                  : "sms"
+                            }
+                            value={(step.config.sender_profile_id as string) || null}
+                            onChange={(id) => updateStep(i, { sender_profile_id: id })}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                   {(step.config.action as string) === "notify_sales" && (() => {
                     const recipients = (step.config.recipients as string[]) || ["lead_owner", "creator"];
