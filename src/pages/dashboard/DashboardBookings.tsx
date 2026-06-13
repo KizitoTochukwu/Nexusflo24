@@ -16,7 +16,9 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ExternalLink, Pencil, Trash2, CalendarDays, Loader2 } from "lucide-react";
+import { Plus, ExternalLink, Pencil, Trash2, CalendarDays, Loader2, Copy, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import BookingPageForm from "@/components/bookings/BookingPageForm";
 import BookingsList from "@/components/bookings/BookingsList";
@@ -33,6 +35,14 @@ export default function DashboardBookings() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BookingPage | null>(null);
   const [pendingDelete, setPendingDelete] = useState<BookingPage | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyLink = (id: string, url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    toast.success("Booking link copied");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleCreate = (data: Partial<BookingPage>) => {
     createPage.mutate({ ...data, workspace_id: workspaceId, name: data.name! }, {
@@ -111,6 +121,27 @@ export default function DashboardBookings() {
                     <CardContent className="space-y-3">
                       {page.description && <p className="text-sm text-muted-foreground line-clamp-2">{page.description}</p>}
                       <p className="text-xs text-muted-foreground">{pageBookings.length} upcoming booking{pageBookings.length !== 1 ? "s" : ""}</p>
+                      {page.slug && (
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Public booking link</label>
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              readOnly
+                              value={`${baseUrl}/book/${page.slug}`}
+                              onFocus={(e) => e.currentTarget.select()}
+                              className="h-8 text-xs bg-muted/40"
+                            />
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 px-2 shrink-0"
+                              onClick={() => copyLink(page.id, `${baseUrl}/book/${page.slug}`)}
+                            >
+                              {copiedId === page.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         {page.slug && (
                           <Button variant="outline" size="sm" asChild>
