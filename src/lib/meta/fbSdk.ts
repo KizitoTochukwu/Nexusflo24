@@ -3,11 +3,9 @@
 // from our backend (the VITE_ prefix is reserved on this platform).
 //
 // Docs: https://developers.facebook.com/docs/whatsapp/embedded-signup
-//
-// IMPORTANT: When using config_id-based Embedded Signup, we deliberately do
-// NOT pass a redirect_uri. Meta uses the redirect bound to the configuration
-// and the backend exchanges the code without a redirect_uri parameter. This
-// eliminates the "Error validating verification code" byte-mismatch error.
+
+export { META_REDIRECT_URI } from "../../../supabase/functions/_shared/meta.ts";
+import { META_REDIRECT_URI } from "../../../supabase/functions/_shared/meta.ts";
 
 declare global {
   interface Window {
@@ -39,6 +37,7 @@ export function loadFbSdk(appId: string): Promise<void> {
     };
     const finishErr = (err: Error) => {
       clearTimeout(timeoutId);
+      // allow retry after failure
       sdkPromise = null;
       reject(err);
     };
@@ -47,8 +46,10 @@ export function loadFbSdk(appId: string): Promise<void> {
       finishErr(new Error(BLOCKED_SDK_MESSAGE));
     }, SDK_LOAD_TIMEOUT_MS);
 
+    // Already initialized
     if (window.FB) return finishOk();
 
+    // Script tag already exists from a previous attempt: poll for FB readiness
     const existing = document.getElementById("facebook-jssdk");
     if (existing) {
       const start = Date.now();
@@ -101,7 +102,10 @@ export interface EmbeddedSignupResult {
  * Launches FB.login() with the Embedded Signup config and listens for the
  * companion postMessage that carries the WABA + Phone Number IDs.
  */
-export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupResult> {
+export function launchEmbeddedSignup(
+  configId: string,
+  redirectUri = META_REDIRECT_URI,
+): Promise<EmbeddedSignupResult> {
   return new Promise((resolve, reject) => {
     if (!window.FB) return reject(new Error("Facebook SDK not loaded"));
 
@@ -122,7 +126,6 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
       try {
         const data = JSON.parse(event.data);
         if (data.type !== "WA_EMBEDDED_SIGNUP") return;
-        console.info("[Meta Embedded Signup] postMessage event:", data.event, data.data || null);
         if (data.event === "FINISH") {
           wabaId = data?.data?.waba_id || wabaId;
           phoneNumberId = data?.data?.phone_number_id || phoneNumberId;
@@ -134,7 +137,7 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
             data?.data?.error_message ||
             data?.data?.current_step ||
             "Meta rejected the onboarding request.";
-          metaError = `Meta error: ${reason}`;
+          metaError = `Meta error: ${reason}. The NexusFlo24 Meta App likely isn't fully approved for WhatsApp Embedded Signup yet — see the setup checklist below.`;
           if (!settled) {
             cleanup();
             reject(new Error(metaError));
@@ -158,10 +161,18 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
     }, LOGIN_TIMEOUT_MS);
 
     try {
-      console.info("[Meta Embedded Signup] launching FB.login with config_id:", configId, {
-        location: window.location.href,
-        origin: window.location.origin,
-      });
+      const metaRedirectUri = redirectUri.trim();
+      if (!metaRedirectUri) {
+        cleanup();
+        reject(
+          new Error(
+            "Meta redirect URI is missing. Refresh NexusFlo24 and try Connect WhatsApp again.",
+          ),
+        );
+        return;
+      }
+
+      console.info("[Meta Embedded Signup] redirect_uri used in frontend:", metaRedirectUri);
 
       window.FB.login(
         (response: { authResponse?: { code?: string }; status?: string }) => {
@@ -169,29 +180,24 @@ export function launchEmbeddedSignup(configId: string): Promise<EmbeddedSignupRe
           cleanup();
           if (response?.authResponse?.code) {
             const code = response.authResponse.code;
-            console.info("[Meta Embedded Signup] FB.login returned code (len):", code.length, {
-              wabaId: wabaId || null,
-              phoneNumberId: phoneNumberId || null,
-            });
+            // If Meta's postMessage didn't deliver waba/phone IDs but we have
+            // a usable code and no explicit error, let the backend recover the
+            // IDs via Graph API (/debug_token + /{waba}/phone_numbers).
             if (metaError && (!wabaId || !phoneNumberId)) {
               reject(new Error(metaError));
               return;
             }
             resolve({ code, wabaId, phoneNumberId });
           } else {
-            console.warn("[Meta Embedded Signup] FB.login returned no code:", response);
             reject(new Error(metaError || "Connection cancelled."));
           }
         },
         {
           config_id: configId,
+          redirect_uri: metaRedirectUri,
           response_type: "code",
           override_default_response_type: true,
-          extras: {
-            setup: {},
-            featureType: "whatsapp_business_app_onboarding",
-            sessionInfoVersion: "3",
-          },
+          extras: { setup: {} },
         },
       );
     } catch (e: any) {
