@@ -914,7 +914,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => saveChannel("sms", { account_sid: smsAccountSid, auth_token: smsAuthToken, from_number: smsFromNumber }, setSmsSaving)} disabled={smsSaving || !smsAccountSid}>
+                <Button size="sm" onClick={() => saveChannel("sms", { account_sid: smsAccountSid, auth_token: smsAuthToken, from_number: smsFromNumber }, setSmsSaving)} disabled={smsSaving || (!smsAccountSid && !channels?.sms?.configured)}>
                   {smsSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.sms?.configured && (
