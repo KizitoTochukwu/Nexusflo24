@@ -1013,7 +1013,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                     </div>
                   </div>
                   <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" onClick={() => saveChannel("whatsapp", { access_token: waAccessToken, phone_number_id: waPhoneNumberId, verify_token: waVerifyToken }, setWaSaving)} disabled={waSaving || !waAccessToken}>
+                    <Button size="sm" onClick={() => saveChannel("whatsapp", { access_token: waAccessToken, phone_number_id: waPhoneNumberId, verify_token: waVerifyToken }, setWaSaving)} disabled={waSaving || (!waAccessToken && !channels?.whatsapp?.configured)}>
                       {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                     </Button>
                     {channels?.whatsapp?.configured && (
