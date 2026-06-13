@@ -173,6 +173,7 @@ Deno.serve(async (req) => {
           campaignId,
           contentSid: (template as any)?.contentSid,
           contentVariables: (template as any)?.contentVariables,
+          sender_profile_id: (body as any).sender_profile_id,
           skipCredits,
           preview: isPreview,
         }),

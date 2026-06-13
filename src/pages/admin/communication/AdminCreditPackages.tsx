@@ -7,16 +7,52 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { PackageOpen, Plus } from "lucide-react";
+import { PackageOpen, Plus, Trash2, Sparkles } from "lucide-react";
 import { useCreditPackages, useUpsertCreditPackage, useCreditPricingRules, useUpsertPricingRule } from "@/hooks/useAdminCommunication";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+
+const SEED_RULES = [
+  { channel: "sms", country: "US", credits_per_message: 1 },
+  { channel: "sms", country: "GB", credits_per_message: 2 },
+  { channel: "sms", country: "NG", credits_per_message: 3 },
+  { channel: "sms", country: "IN", credits_per_message: 1 },
+  { channel: "whatsapp", country: "US", credits_per_message: 1 },
+  { channel: "whatsapp", country: "GB", credits_per_message: 2 },
+  { channel: "whatsapp", country: "BR", credits_per_message: 2 },
+  { channel: "whatsapp", country: "IN", credits_per_message: 1 },
+  { channel: "email", country: null, credits_per_message: 1 },
+];
 
 export default function AdminCreditPackages() {
+  const qc = useQueryClient();
   const { data: pkgs = [] } = useCreditPackages();
   const { data: rules = [] } = useCreditPricingRules();
   const upsertPkg = useUpsertCreditPackage();
   const upsertRule = useUpsertPricingRule();
   const [form, setForm] = useState<any>({ channel: "email", name: "", credits: 1000, price_cents: 500, currency: "usd", is_active: true, sort_order: 0 });
   const [rule, setRule] = useState<any>({ channel: "sms", country: "", credits_per_message: 1 });
+
+  const deletePkg = async (id: string) => {
+    if (!confirm("Delete package?")) return;
+    const { error } = await supabase.from("credit_packages" as any).delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["credit-packages-admin"] }); }
+  };
+  const deleteRule = async (id: string) => {
+    const { error } = await supabase.from("credit_pricing_rules" as any).delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["credit-pricing"] }); }
+  };
+  const seed = async () => {
+    for (const r of SEED_RULES) {
+      await supabase.from("credit_pricing_rules" as any).upsert(r, { onConflict: "channel,country" });
+    }
+    qc.invalidateQueries({ queryKey: ["credit-pricing"] });
+    toast.success("Defaults seeded");
+  };
+
 
   return (
     <DashboardLayout>
@@ -54,6 +90,7 @@ export default function AdminCreditPackages() {
                     <th className="text-left p-2">Channel</th><th className="text-left p-2">Name</th>
                     <th className="text-right p-2">Credits</th><th className="text-right p-2">Price</th>
                     <th className="text-left p-2">Stripe</th><th className="text-left p-2">Active</th>
+                    <th className="text-right p-2"></th>
                   </tr></thead>
                   <tbody>
                     {pkgs.map((p:any) => (
@@ -64,6 +101,7 @@ export default function AdminCreditPackages() {
                         <td className="p-2 text-right">${(p.price_cents/100).toFixed(2)}</td>
                         <td className="p-2 font-mono text-xs">{p.stripe_price_id || "—"}</td>
                         <td className="p-2"><Switch checked={p.is_active} onCheckedChange={(v)=>upsertPkg.mutate({...p,is_active:v})} /></td>
+                        <td className="p-2 text-right"><Button size="sm" variant="ghost" onClick={()=>deletePkg(p.id)}><Trash2 className="h-3 w-3" /></Button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -74,7 +112,10 @@ export default function AdminCreditPackages() {
 
           <TabsContent value="pricing" className="space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-base">Add / update pricing rule</CardTitle></CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Add / update pricing rule</CardTitle>
+                <Button size="sm" variant="outline" onClick={seed}><Sparkles className="h-4 w-4 mr-1" />Seed defaults</Button>
+              </CardHeader>
               <CardContent className="grid grid-cols-4 gap-3 items-end">
                 <div><Label>Channel</Label>
                   <Select value={rule.channel} onValueChange={(v)=>setRule({...rule,channel:v})}>
@@ -91,7 +132,7 @@ export default function AdminCreditPackages() {
               <CardContent className="p-0">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50"><tr>
-                    <th className="text-left p-2">Channel</th><th className="text-left p-2">Country</th><th className="text-right p-2">Credits / message</th>
+                    <th className="text-left p-2">Channel</th><th className="text-left p-2">Country</th><th className="text-right p-2">Credits / message</th><th></th>
                   </tr></thead>
                   <tbody>
                     {rules.map((r:any)=>(
@@ -99,6 +140,7 @@ export default function AdminCreditPackages() {
                         <td className="p-2 uppercase text-xs">{r.channel}</td>
                         <td className="p-2">{r.country || <span className="text-muted-foreground">default</span>}</td>
                         <td className="p-2 text-right">{r.credits_per_message}</td>
+                        <td className="p-2 text-right"><Button size="sm" variant="ghost" onClick={()=>deleteRule(r.id)}><Trash2 className="h-3 w-3" /></Button></td>
                       </tr>
                     ))}
                   </tbody>
