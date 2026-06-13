@@ -66,11 +66,22 @@ export default function BuyCreditsTab({ workspaceId }: Props) {
           <CardDescription>One-off message credit top-ups for this workspace.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-baseline gap-3">
-            <span className="text-3xl font-bold text-foreground">{wallet?.credits_remaining ?? 0}</span>
-            <span className="text-sm text-muted-foreground">credits remaining</span>
+          <div className="grid grid-cols-3 gap-3">
+            {(["email", "whatsapp", "sms"] as const).map((ch) => {
+              const Icon = CHANNEL_ICONS[ch];
+              const balance = (wallet as any)?.[`${ch}_balance`] ?? 0;
+              const used = (wallet as any)?.[`${ch}_used`] ?? 0;
+              return (
+                <div key={ch} className="rounded-md border p-3">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground capitalize">
+                    <Icon className="h-3.5 w-3.5" />{ch}
+                  </div>
+                  <div className="text-2xl font-bold text-foreground mt-1">{balance}</div>
+                  <div className="text-[11px] text-muted-foreground">used: {used}</div>
+                </div>
+              );
+            })}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Used this period: {wallet?.credits_used ?? 0}</p>
         </CardContent>
       </Card>
 
