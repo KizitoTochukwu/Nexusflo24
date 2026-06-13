@@ -769,6 +769,8 @@ const DashboardSettings = () => {
             <TabsContent value="billing"><BillingTab /></TabsContent>
             <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
+            <TabsContent value="senders">{workspaceId && <SenderProfilesTab workspaceId={workspaceId} />}</TabsContent>
+            <TabsContent value="buy-credits">{workspaceId && <BuyCreditsTab workspaceId={workspaceId} />}</TabsContent>
             <TabsContent value="wa-templates"><WhatsAppTemplatesTab /></TabsContent>
             <TabsContent value="meta-channel"><MetaChannelTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="tracking"><TrackingPixelsTab workspaceId={workspaceId} /></TabsContent>
