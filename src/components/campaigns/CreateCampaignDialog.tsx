@@ -70,6 +70,9 @@ export default function CreateCampaignDialog() {
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiVariants, setAiVariants] = useState<Array<{ subject: string; body: string; cta: string }>>([]);
   const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(DEFAULT_TEMPLATE_SETTINGS);
+  const [senderProfileEmail, setSenderProfileEmail] = useState<string | null>(null);
+  const [senderProfileWa, setSenderProfileWa] = useState<string | null>(null);
+  const [senderProfileSms, setSenderProfileSms] = useState<string | null>(null);
 
   // Step 3 (WhatsApp only) - Optional approved template for re-engagement (24h window closed)
   const [waTemplateId, setWaTemplateId] = useState<string>("none");
