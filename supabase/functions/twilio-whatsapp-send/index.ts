@@ -186,8 +186,22 @@ Deno.serve(async (req) => {
         shouldDeductCredits = false;
       }
     }
+
+    // Resolve sender profile (optional)
+    const senderProfileId: string | null = (body as any).sender_profile_id || null;
+    let resolvedSender: any = null;
+    try {
+      resolvedSender = await resolveSenderProfile(workspaceId, "whatsapp", senderProfileId);
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message || "Invalid sender profile" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const toCountry = countryFromE164(normalizedTo);
+    const deductAmount = shouldDeductCredits ? await getDeductionAmount("whatsapp", toCountry) : 0;
     if (shouldDeductCredits) {
-      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
+      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
         return new Response(
           JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }),
@@ -195,6 +209,10 @@ Deno.serve(async (req) => {
         );
       }
     }
+
+    // Prefer sender profile's Twilio WA SID if approved sender exists.
+    const senderDetail = resolvedSender?.detail || null;
+    const senderFrom = senderDetail?.twilio_wa_sender_sid || senderDetail?.phone_number || null;
 
     const creds = await resolveChannelCredentials(workspaceId, "whatsapp", {
       account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
@@ -204,7 +222,7 @@ Deno.serve(async (req) => {
 
     const accountSid = (creds.config.account_sid || "").trim();
     const authToken = (creds.config.auth_token || "").trim();
-    const fromRaw = (creds.config.from_number || creds.config.messaging_service_sid || "").trim();
+    const fromRaw = (senderFrom || creds.config.from_number || creds.config.messaging_service_sid || "").trim();
     if (!accountSid || !fromRaw) {
       return new Response(
         JSON.stringify({
