@@ -7,16 +7,52 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { PackageOpen, Plus } from "lucide-react";
+import { PackageOpen, Plus, Trash2, Sparkles } from "lucide-react";
 import { useCreditPackages, useUpsertCreditPackage, useCreditPricingRules, useUpsertPricingRule } from "@/hooks/useAdminCommunication";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+
+const SEED_RULES = [
+  { channel: "sms", country: "US", credits_per_message: 1 },
+  { channel: "sms", country: "GB", credits_per_message: 2 },
+  { channel: "sms", country: "NG", credits_per_message: 3 },
+  { channel: "sms", country: "IN", credits_per_message: 1 },
+  { channel: "whatsapp", country: "US", credits_per_message: 1 },
+  { channel: "whatsapp", country: "GB", credits_per_message: 2 },
+  { channel: "whatsapp", country: "BR", credits_per_message: 2 },
+  { channel: "whatsapp", country: "IN", credits_per_message: 1 },
+  { channel: "email", country: null, credits_per_message: 1 },
+];
 
 export default function AdminCreditPackages() {
+  const qc = useQueryClient();
   const { data: pkgs = [] } = useCreditPackages();
   const { data: rules = [] } = useCreditPricingRules();
   const upsertPkg = useUpsertCreditPackage();
   const upsertRule = useUpsertPricingRule();
   const [form, setForm] = useState<any>({ channel: "email", name: "", credits: 1000, price_cents: 500, currency: "usd", is_active: true, sort_order: 0 });
   const [rule, setRule] = useState<any>({ channel: "sms", country: "", credits_per_message: 1 });
+
+  const deletePkg = async (id: string) => {
+    if (!confirm("Delete package?")) return;
+    const { error } = await supabase.from("credit_packages" as any).delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["credit-packages-admin"] }); }
+  };
+  const deleteRule = async (id: string) => {
+    const { error } = await supabase.from("credit_pricing_rules" as any).delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["credit-pricing"] }); }
+  };
+  const seed = async () => {
+    for (const r of SEED_RULES) {
+      await supabase.from("credit_pricing_rules" as any).upsert(r, { onConflict: "channel,country" });
+    }
+    qc.invalidateQueries({ queryKey: ["credit-pricing"] });
+    toast.success("Defaults seeded");
+  };
+
 
   return (
     <DashboardLayout>
