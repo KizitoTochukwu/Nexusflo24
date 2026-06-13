@@ -35,6 +35,14 @@ export default function DashboardBookings() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BookingPage | null>(null);
   const [pendingDelete, setPendingDelete] = useState<BookingPage | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyLink = (id: string, url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    toast.success("Booking link copied");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleCreate = (data: Partial<BookingPage>) => {
     createPage.mutate({ ...data, workspace_id: workspaceId, name: data.name! }, {
