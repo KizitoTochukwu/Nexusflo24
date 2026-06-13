@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Inbox } from "lucide-react";
+import { Inbox, Radio } from "lucide-react";
 import { useAllOrganisations, useSenderProfiles } from "@/hooks/useAdminCommunication";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 function MessagesTable({ rows, channel, onPick }: any) {
@@ -41,6 +41,23 @@ export default function AdminMessagesInbox() {
   const [orgId, setOrgId] = useState<string>("");
   const { data: profiles = [] } = useSenderProfiles(orgId || undefined);
   const [picked, setPicked] = useState<any>(null);
+  const qc = useQueryClient();
+
+  // Realtime: refetch the relevant table on any inbound/outbound message change
+  useEffect(() => {
+    if (!orgId) return;
+    const filter = `workspace_id=eq.${orgId}`;
+    const channel = supabase
+      .channel(`admin-inbox-${orgId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter }, () =>
+        qc.invalidateQueries({ queryKey: ["admin-inbox-wa", orgId] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "sms_logs", filter }, () =>
+        qc.invalidateQueries({ queryKey: ["admin-inbox-sms", orgId] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_logs", filter }, () =>
+        qc.invalidateQueries({ queryKey: ["admin-inbox-email", orgId] }))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [orgId, qc]);
 
   const { data: wa = [] } = useQuery({
     queryKey: ["admin-inbox-wa", orgId],
@@ -75,7 +92,10 @@ export default function AdminMessagesInbox() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Inbox className="h-6 w-6" /> Admin Inbox</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Inbox className="h-6 w-6" /> Admin Inbox
+          {orgId && <Badge variant="outline" className="ml-2 gap-1"><Radio className="h-3 w-3 text-emerald-500" />Live</Badge>}
+        </h1>
 
         <div className="flex gap-3 items-end">
           <div className="flex-1 max-w-md">
