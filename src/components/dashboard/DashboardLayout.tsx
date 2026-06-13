@@ -45,6 +45,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   ...(isAdmin ? [
     { icon: Zap, label: "Workflow Builder", to: `/dashboard/${workspaceId}/workflows` },
     { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
+    { icon: Radio, label: "Communication", to: `/dashboard/${workspaceId}/admin/communication` },
     { icon: Sparkles, label: "Smart Actions", to: `/dashboard/${workspaceId}/admin/smart-actions` },
     { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
   ] : [])];
