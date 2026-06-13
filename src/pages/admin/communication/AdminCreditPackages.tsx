@@ -90,6 +90,7 @@ export default function AdminCreditPackages() {
                     <th className="text-left p-2">Channel</th><th className="text-left p-2">Name</th>
                     <th className="text-right p-2">Credits</th><th className="text-right p-2">Price</th>
                     <th className="text-left p-2">Stripe</th><th className="text-left p-2">Active</th>
+                    <th className="text-right p-2"></th>
                   </tr></thead>
                   <tbody>
                     {pkgs.map((p:any) => (
@@ -100,6 +101,7 @@ export default function AdminCreditPackages() {
                         <td className="p-2 text-right">${(p.price_cents/100).toFixed(2)}</td>
                         <td className="p-2 font-mono text-xs">{p.stripe_price_id || "—"}</td>
                         <td className="p-2"><Switch checked={p.is_active} onCheckedChange={(v)=>upsertPkg.mutate({...p,is_active:v})} /></td>
+                        <td className="p-2 text-right"><Button size="sm" variant="ghost" onClick={()=>deletePkg(p.id)}><Trash2 className="h-3 w-3" /></Button></td>
                       </tr>
                     ))}
                   </tbody>
