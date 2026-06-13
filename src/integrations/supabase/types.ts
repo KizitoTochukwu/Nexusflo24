@@ -611,6 +611,135 @@ export type Database = {
           },
         ]
       }
+      communication_usage: {
+        Row: {
+          channel: Database["public"]["Enums"]["sender_channel"]
+          cost_cents: number
+          country: string | null
+          created_at: string
+          credits_deducted: number
+          id: string
+          message_id: string | null
+          sender_profile_id: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["sender_channel"]
+          cost_cents?: number
+          country?: string | null
+          created_at?: string
+          credits_deducted?: number
+          id?: string
+          message_id?: string | null
+          sender_profile_id?: string | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["sender_channel"]
+          cost_cents?: number
+          country?: string | null
+          created_at?: string
+          credits_deducted?: number
+          id?: string
+          message_id?: string | null
+          sender_profile_id?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_usage_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "sender_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_usage_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_packages: {
+        Row: {
+          channel: Database["public"]["Enums"]["sender_channel"]
+          country: string | null
+          created_at: string
+          credits: number
+          currency: string
+          id: string
+          is_active: boolean
+          name: string
+          price_cents: number
+          sort_order: number
+          stripe_price_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["sender_channel"]
+          country?: string | null
+          created_at?: string
+          credits: number
+          currency?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_cents: number
+          sort_order?: number
+          stripe_price_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["sender_channel"]
+          country?: string | null
+          created_at?: string
+          credits?: number
+          currency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_cents?: number
+          sort_order?: number
+          stripe_price_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_pricing_rules: {
+        Row: {
+          channel: Database["public"]["Enums"]["sender_channel"]
+          country: string | null
+          created_at: string
+          credits_per_message: number
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["sender_channel"]
+          country?: string | null
+          created_at?: string
+          credits_per_message?: number
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["sender_channel"]
+          country?: string | null
+          created_at?: string
+          credits_per_message?: number
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -689,6 +818,7 @@ export type Database = {
           id: string
           lead_id: string | null
           provider_message_id: string | null
+          sender_profile_id: string | null
           status: string
           subject: string | null
           to_email: string
@@ -703,6 +833,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           provider_message_id?: string | null
+          sender_profile_id?: string | null
           status?: string
           subject?: string | null
           to_email: string
@@ -717,6 +848,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           provider_message_id?: string | null
+          sender_profile_id?: string | null
           status?: string
           subject?: string | null
           to_email?: string
@@ -728,6 +860,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_logs_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "sender_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -801,6 +940,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      email_senders: {
+        Row: {
+          created_at: string
+          dkim_status: string | null
+          dmarc_status: string | null
+          domain: string | null
+          from_email: string | null
+          from_name: string | null
+          id: string
+          provider: string
+          reply_to: string | null
+          sender_profile_id: string
+          spf_status: string | null
+          updated_at: string
+          verification_status: string | null
+        }
+        Insert: {
+          created_at?: string
+          dkim_status?: string | null
+          dmarc_status?: string | null
+          domain?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          provider?: string
+          reply_to?: string | null
+          sender_profile_id: string
+          spf_status?: string | null
+          updated_at?: string
+          verification_status?: string | null
+        }
+        Update: {
+          created_at?: string
+          dkim_status?: string | null
+          dmarc_status?: string | null
+          domain?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          provider?: string
+          reply_to?: string | null
+          sender_profile_id?: string
+          spf_status?: string | null
+          updated_at?: string
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_senders_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: true
+            referencedRelation: "sender_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_settings: {
         Row: {
@@ -2029,6 +2224,65 @@ export type Database = {
           },
         ]
       }
+      sender_profiles: {
+        Row: {
+          address: string
+          approved_at: string | null
+          approved_by: string | null
+          channel: Database["public"]["Enums"]["sender_channel"]
+          created_at: string
+          display_name: string
+          id: string
+          is_default: boolean
+          label: string
+          metadata: Json
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["sender_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          address: string
+          approved_at?: string | null
+          approved_by?: string | null
+          channel: Database["public"]["Enums"]["sender_channel"]
+          created_at?: string
+          display_name: string
+          id?: string
+          is_default?: boolean
+          label: string
+          metadata?: Json
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["sender_status"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          address?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: Database["public"]["Enums"]["sender_channel"]
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          metadata?: Json
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["sender_status"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sender_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_custom_code: {
         Row: {
           body_code: string
@@ -2113,6 +2367,7 @@ export type Database = {
           message: string
           provider: string
           provider_message_id: string | null
+          sender_profile_id: string | null
           status: string
           to_number: string
           workspace_id: string
@@ -2126,6 +2381,7 @@ export type Database = {
           message: string
           provider: string
           provider_message_id?: string | null
+          sender_profile_id?: string | null
           status?: string
           to_number: string
           workspace_id: string
@@ -2139,16 +2395,71 @@ export type Database = {
           message?: string
           provider?: string
           provider_message_id?: string | null
+          sender_profile_id?: string | null
           status?: string
           to_number?: string
           workspace_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "sms_logs_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "sender_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sms_logs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_senders: {
+        Row: {
+          country: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          monthly_fee_cents: number
+          phone_number: string | null
+          sender_profile_id: string
+          sender_type: string
+          updated_at: string
+          verification_status: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          monthly_fee_cents?: number
+          phone_number?: string | null
+          sender_profile_id: string
+          sender_type?: string
+          updated_at?: string
+          verification_status?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          monthly_fee_cents?: number
+          phone_number?: string | null
+          sender_profile_id?: string
+          sender_type?: string
+          updated_at?: string
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_senders_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: true
+            referencedRelation: "sender_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2493,6 +2804,51 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_settings: {
+        Row: {
+          auto_topup_enabled: boolean
+          auto_topup_min_balance: number
+          auto_topup_package_id: string | null
+          created_at: string
+          low_balance_threshold: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          auto_topup_enabled?: boolean
+          auto_topup_min_balance?: number
+          auto_topup_package_id?: string | null
+          created_at?: string
+          low_balance_threshold?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          auto_topup_enabled?: boolean
+          auto_topup_min_balance?: number
+          auto_topup_package_id?: string | null
+          created_at?: string
+          low_balance_threshold?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_settings_auto_topup_package_id_fkey"
+            columns: ["auto_topup_package_id"]
+            isOneToOne: false
+            referencedRelation: "credit_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
           auto_templated: boolean
@@ -2506,6 +2862,7 @@ export type Database = {
           phone_number: string
           provider: string
           provider_message_id: string | null
+          sender_profile_id: string | null
           status: string
           template_name: string | null
           wa_message_id: string | null
@@ -2523,6 +2880,7 @@ export type Database = {
           phone_number: string
           provider?: string
           provider_message_id?: string | null
+          sender_profile_id?: string | null
           status?: string
           template_name?: string | null
           wa_message_id?: string | null
@@ -2540,6 +2898,7 @@ export type Database = {
           phone_number?: string
           provider?: string
           provider_message_id?: string | null
+          sender_profile_id?: string | null
           status?: string
           template_name?: string | null
           wa_message_id?: string | null
@@ -2554,10 +2913,76 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "whatsapp_messages_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "sender_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "whatsapp_messages_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_senders: {
+        Row: {
+          address: string | null
+          approved_sender_name: string | null
+          business_name: string | null
+          category: string | null
+          created_at: string
+          id: string
+          meta_business_id: string | null
+          phone_number: string | null
+          provider: string
+          sender_profile_id: string
+          twilio_wa_sender_sid: string | null
+          updated_at: string
+          verification_status: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          approved_sender_name?: string | null
+          business_name?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          meta_business_id?: string | null
+          phone_number?: string | null
+          provider?: string
+          sender_profile_id: string
+          twilio_wa_sender_sid?: string | null
+          updated_at?: string
+          verification_status?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          approved_sender_name?: string | null
+          business_name?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          meta_business_id?: string | null
+          phone_number?: string | null
+          provider?: string
+          sender_profile_id?: string
+          twilio_wa_sender_sid?: string | null
+          updated_at?: string
+          verification_status?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_senders_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: true
+            referencedRelation: "sender_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3527,6 +3952,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      sender_channel: "whatsapp" | "sms" | "email"
+      sender_status: "pending" | "approved" | "rejected" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3655,6 +4082,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      sender_channel: ["whatsapp", "sms", "email"],
+      sender_status: ["pending", "approved", "rejected", "suspended"],
     },
   },
 } as const
