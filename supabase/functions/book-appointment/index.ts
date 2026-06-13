@@ -430,10 +430,12 @@ Deno.serve(async (req) => {
           </table>
         </body></html>`;
 
-      // Build reschedule + cancel links
+      // Build view + reschedule + cancel links
       const siteUrl = Deno.env.get("SITE_URL") || "https://nexusflo24.lovable.app";
+      const viewUrl = `${siteUrl}/reschedule/${booking.reschedule_token}`;
       const rescheduleUrl = `${siteUrl}/reschedule/${booking.reschedule_token}`;
       const cancelUrl = `${siteUrl}/cancel/${booking.reschedule_token}`;
+
 
       // Build "Join meeting" card based on location type
       const platformLabel = locationType === "google_meet"
