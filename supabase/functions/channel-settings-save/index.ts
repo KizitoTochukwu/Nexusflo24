@@ -17,6 +17,26 @@ async function encrypt(plaintext: string, keyHex: string): Promise<string> {
   return bytesToBase64(combined);
 }
 
+async function decrypt(cipherB64: string, keyHex: string): Promise<string> {
+  const keyBytes = hexToBytes(keyHex.slice(0, 64));
+  const key = await crypto.subtle.importKey("raw", keyBytes as BufferSource, "AES-GCM", false, ["decrypt"]);
+  const binary = atob(cipherB64);
+  const combined = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) combined[i] = binary.charCodeAt(i);
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const plainBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+  return new TextDecoder().decode(plainBuf);
+}
+
+// Secret fields per channel — when blank on save, keep existing value.
+const SECRET_FIELDS: Record<string, string[]> = {
+  email: ["api_key"],
+  sms: ["auth_token", "account_sid"],
+  whatsapp: ["access_token", "verify_token", "auth_token"],
+};
+
+
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
