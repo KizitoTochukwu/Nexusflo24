@@ -564,6 +564,9 @@ Deno.serve(async (req) => {
           <table cellpadding="0" cellspacing="0" class="action-btn-table" style="margin:0;">
             <tr>
               <td class="action-btn-cell" style="padding-right:10px;">
+                <a href="${viewUrl}" class="action-btn" style="display:inline-block;padding:12px 24px;background:${goldColor};color:${navyColor};text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;">View booking</a>
+              </td>
+              <td class="action-btn-cell" style="padding-right:10px;">
                 <a href="${rescheduleUrl}" class="action-btn" style="display:inline-block;padding:12px 24px;background:${navyColor};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Reschedule</a>
               </td>
               <td class="action-btn-cell">
@@ -571,6 +574,7 @@ Deno.serve(async (req) => {
               </td>
             </tr>
           </table>
+
           <p style="margin:20px 0 0;font-size:13px;color:${mutedColor};line-height:1.6;">
             Log in to your dashboard to manage this booking, message the guest, or update your availability.
           </p>
