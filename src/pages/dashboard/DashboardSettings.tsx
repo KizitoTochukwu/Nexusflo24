@@ -33,6 +33,8 @@ import CustomCodeTab from "@/components/settings/CustomCodeTab";
 import TrackingPixelsTab from "@/components/settings/TrackingPixelsTab";
 import WhatsAppTemplatesTab from "@/components/settings/WhatsAppTemplatesTab";
 import MetaChannelTab from "@/components/settings/MetaChannelTab";
+import SenderProfilesTab from "@/components/settings/SenderProfilesTab";
+import BuyCreditsTab from "@/components/settings/BuyCreditsTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -742,6 +744,8 @@ const DashboardSettings = () => {
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
             <TabsTrigger value="usage" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Usage</TabsTrigger>
             <TabsTrigger value="channels" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Channels</TabsTrigger>
+            <TabsTrigger value="senders" className="gap-1.5"><Mail className="h-3.5 w-3.5" />Sender Profiles</TabsTrigger>
+            <TabsTrigger value="buy-credits" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Buy Credits</TabsTrigger>
             <TabsTrigger value="wa-templates" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" />WA Templates</TabsTrigger>
             <TabsTrigger value="meta-channel" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Instagram & Facebook</TabsTrigger>
             <TabsTrigger value="tracking" className="gap-1.5"><Globe className="h-3.5 w-3.5" />Tracking & Pixels</TabsTrigger>
@@ -765,6 +769,8 @@ const DashboardSettings = () => {
             <TabsContent value="billing"><BillingTab /></TabsContent>
             <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
+            <TabsContent value="senders">{workspaceId && <SenderProfilesTab workspaceId={workspaceId} />}</TabsContent>
+            <TabsContent value="buy-credits">{workspaceId && <BuyCreditsTab workspaceId={workspaceId} />}</TabsContent>
             <TabsContent value="wa-templates"><WhatsAppTemplatesTab /></TabsContent>
             <TabsContent value="meta-channel"><MetaChannelTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="tracking"><TrackingPixelsTab workspaceId={workspaceId} /></TabsContent>
