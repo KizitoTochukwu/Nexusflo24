@@ -111,8 +111,9 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = creds.config.api_key;
-    const fromEmail = creds.config.from_email || "noreply@nexusflo24.com";
-    const fromName = creds.config.from_name || "NexusFlo24";
+    // Sender profile overrides workspace channel settings when provided + approved
+    const fromEmail = resolvedSender?.detail?.from_email || creds.config.from_email || "noreply@nexusflo24.com";
+    const fromName = resolvedSender?.detail?.from_name || creds.config.from_name || "NexusFlo24";
     const from = `${fromName} <${fromEmail}>`;
 
     // Inject tracking pixel and rewrite links for tracking
