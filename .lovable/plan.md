@@ -1,57 +1,67 @@
-## Goal
-When you switch to another browser tab/window and come back to NexusFlo24, the page should look exactly as you left it — no spinner, no data refetch, no scroll jump, no remount.
+## What's happening
 
-## What's happening today
-- Route memory (Phase 1) already restores the last URL on login/refresh and remembers scroll. That covers "close browser and come back".
-- The tab-switch flicker is a different issue: `src/App.tsx` creates `new QueryClient()` with default options. React Query's defaults are:
-  - `refetchOnWindowFocus: true`
-  - `refetchOnReconnect: true`
-  - `staleTime: 0` (every query is immediately stale)
-  - So every time you re-focus the tab, every visible query refires → loading states flash, lists reset to page 1 in some views, drawers re-fetch, etc.
-- A few hooks also force `refetchOnWindowFocus: true` (e.g. `useMessageCredits`).
+The exact `redirect_uri` sent to Meta in the OAuth dialog is hardcoded in `supabase/functions/_shared/meta.ts`:
 
-## Fix (Phase 2 — keep tab state on return)
-
-### 1. Tune the global QueryClient (`src/App.tsx`)
-Replace `new QueryClient()` with sensible defaults so cached data is reused on refocus:
-
-```ts
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      staleTime: 5 * 60 * 1000,   // 5 min — data considered fresh
-      gcTime: 30 * 60 * 1000,     // keep cache 30 min after unmount
-      retry: 1,
-    },
-    mutations: { retry: 0 },
-  },
-});
+```
+https://nexusflo24.com/
 ```
 
-### 2. Remove per-hook overrides that re-enable focus refetch
-- `src/hooks/useMessageCredits.ts` — drop `refetchOnWindowFocus: true`; rely on the existing realtime subscription / mutation invalidations to update the credit balance. Keep `staleTime: 5000`.
-- Scan the other `staleTime`-only hooks (`useSmsStatus`, `useEmailStatus`, `useSmartActions`, `useAdminRole`) — they already don't set focus refetch, so they'll inherit the new default. No change needed.
+(note the trailing slash). It is sent in three places that must all agree:
 
-### 3. Verify route memory's scroll restore plays nicely
-`useRouteMemory` only writes scroll on `beforeunload` / `pagehide`. Tab switches don't fire those, so scroll position is preserved naturally by the browser when no remount happens. With queries no longer refetching, no list will reset → scroll stays put.
+1. **Frontend `FB.login(...)` call** — `src/lib/meta/fbSdk.ts` → `redirect_uri: "https://nexusflo24.com/"`
+2. **Backend token exchange** — `supabase/functions/whatsapp-embedded-signup/index.ts` posts the same value to `graph.facebook.com/oauth/access_token` as `redirect_uri`
+3. **Meta App console** — must list this exact string under *WhatsApp → Configuration → Embedded Signup* AND under *App settings → Basic → App Domains / Valid OAuth Redirect URIs* (Facebook Login for Business product)
 
-### 4. Sanity checks (manual, after build)
-- Open `/dashboard/<ws>/leads`, scroll down, switch tab for 10s, return → no spinner, same scroll, same filters.
-- Open Messages > a thread, switch tab, return → conversation stays open, no flicker.
-- Mutate a lead → list still updates (mutations explicitly call `invalidateQueries`, which bypasses `staleTime`).
-- Realtime channels (messages, notifications) still push updates because they don't rely on focus refetch.
+Meta's error "Error validating verification code. Please make sure your redirect_uri is identical to the one you used in the OAuth dialog request" means the value sent at code-exchange time does NOT byte-for-byte match what's registered in the Meta App console for the **Embedded Signup configuration**.
 
-## Out of scope
-- Persisting in-page UI state (open drawers, unsubmitted form input, pagination) across full page reloads — that's a bigger Phase 3 and not what's broken here.
-- Changing route memory; Phase 1 already handles "leave the site and come back later".
+## Most likely cause
 
-## Files to touch
-- `src/App.tsx` — QueryClient defaults
-- `src/hooks/useMessageCredits.ts` — remove `refetchOnWindowFocus: true`
+Our code sends `https://nexusflo24.com/` (with trailing slash), but the Meta App's Embedded Signup config most likely has one of:
+- `https://nexusflo24.com` (no slash)
+- `https://www.nexusflo24.com/`
+- the old `*.lovable.app` preview URL
+- nothing at all under the Embedded Signup config
 
-## Acceptance
-- Switching tabs and coming back never triggers a visible loading state or layout reset on any dashboard page.
-- Data still updates after explicit user actions (create/edit/delete) and via existing realtime subscriptions.
+Meta does strict string comparison — even the trailing slash matters.
+
+## Plan
+
+### 1. Confirm the exact value being sent
+
+I'll add a one-line log echo to the backend response so we can see the exact `redirect_uri` Meta rejected, then you open browser DevTools → Network → `whatsapp-embedded-signup` → Response to read it. (Already partially logged server-side, but currently invisible to you.)
+
+Alternatively, before any code change, open DevTools → Network during a Connect attempt, find the call to `https://www.facebook.com/.../dialog/oauth?...` and copy the `redirect_uri=` query value. That is the literal string Meta is comparing against.
+
+### 2. Fix the Meta App console (most likely the only fix you need — no code change)
+
+In the Meta App used for NexusFlo24's Embedded Signup:
+
+- **App Dashboard → WhatsApp → Configuration → Embedded Signup → Configurations** → open the config whose ID is returned by `whatsapp-embedded-signup-config` → set **Redirect URI** to exactly:
+  ```
+  https://nexusflo24.com/
+  ```
+  (trailing slash, no `www`, https).
+- **Facebook Login for Business → Settings → Valid OAuth Redirect URIs** → add the same string.
+- **App settings → Basic → App Domains** → add `nexusflo24.com`.
+- Save and wait ~30s for propagation, then retry.
+
+### 3. (Optional, only if you also want www and preview to work)
+
+If you want both `nexusflo24.com` and `www.nexusflo24.com` to work, we'd need to:
+- Register BOTH redirect URIs in Meta (with matching trailing slashes).
+- Change `supabase/functions/_shared/meta.ts` to compute the redirect from `req.headers.get('origin')` instead of hardcoding, and validate against an allowlist.
+- Redeploy `whatsapp-embedded-signup` and `whatsapp-embedded-config`.
+
+I'd only do this if you confirm you want multiple domains supported. Otherwise step 2 alone fixes it.
+
+### 4. Verify
+
+After the Meta console save, click *Connect WhatsApp via Meta* again. Expected: popup completes, backend logs show `redirect_uri used in backend: https://nexusflo24.com/`, the connection row is written, and the WhatsApp card flips to *Connected*.
+
+## What I need from you
+
+Please confirm:
+- (a) The exact `redirect_uri` value currently registered in your Meta App's Embedded Signup configuration (copy/paste it).
+- (b) Whether NexusFlo24 should only support `https://nexusflo24.com/` (current behavior) or also `www` / preview / custom domains.
+
+Then I'll either tell you the one-line fix in Meta console (no code change) or implement the dynamic redirect option.
