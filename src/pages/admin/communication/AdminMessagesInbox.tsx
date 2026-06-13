@@ -41,6 +41,23 @@ export default function AdminMessagesInbox() {
   const [orgId, setOrgId] = useState<string>("");
   const { data: profiles = [] } = useSenderProfiles(orgId || undefined);
   const [picked, setPicked] = useState<any>(null);
+  const qc = useQueryClient();
+
+  // Realtime: refetch the relevant table on any inbound/outbound message change
+  useEffect(() => {
+    if (!orgId) return;
+    const filter = `workspace_id=eq.${orgId}`;
+    const channel = supabase
+      .channel(`admin-inbox-${orgId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_messages", filter }, () =>
+        qc.invalidateQueries({ queryKey: ["admin-inbox-wa", orgId] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "sms_logs", filter }, () =>
+        qc.invalidateQueries({ queryKey: ["admin-inbox-sms", orgId] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_logs", filter }, () =>
+        qc.invalidateQueries({ queryKey: ["admin-inbox-email", orgId] }))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [orgId, qc]);
 
   const { data: wa = [] } = useQuery({
     queryKey: ["admin-inbox-wa", orgId],
