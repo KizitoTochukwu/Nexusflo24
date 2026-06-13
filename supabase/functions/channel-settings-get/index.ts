@@ -86,11 +86,14 @@ Deno.serve(async (req) => {
 
     for (const row of rows || []) {
       let masked: Record<string, string> = {};
+      let non_secret: Record<string, string> = {};
       if (encryptionKey && row.config_encrypted) {
         try {
           const config = JSON.parse(await decrypt(row.config_encrypted, encryptionKey));
+          const safeKeys = NON_SECRET_FIELDS[row.channel] || [];
           for (const [k, v] of Object.entries(config)) {
             masked[k] = maskValue(v as string);
+            if (safeKeys.includes(k) && typeof v === "string") non_secret[k] = v;
           }
         } catch {
           masked = { error: "decryption_failed" };
@@ -100,6 +103,7 @@ Deno.serve(async (req) => {
         configured: true,
         is_active: row.is_active,
         masked,
+        non_secret,
         updated_at: row.updated_at,
       };
     }
@@ -107,9 +111,10 @@ Deno.serve(async (req) => {
     // Fill unconfigured channels
     for (const ch of ["email", "sms", "whatsapp"]) {
       if (!channels[ch]) {
-        channels[ch] = { configured: false, is_active: false, masked: {}, updated_at: null };
+        channels[ch] = { configured: false, is_active: false, masked: {}, non_secret: {}, updated_at: null };
       }
     }
+
 
     return new Response(JSON.stringify(channels), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
