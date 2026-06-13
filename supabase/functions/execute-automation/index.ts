@@ -413,10 +413,22 @@ Deno.serve(async (req) => {
                 footer: ts?.footer,
                 unsubUrl,
               });
+              const senderProfileId = (config as any).sender_profile_id || null;
               try {
-                const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
-                lastSendTime = Date.now();
-                details = { messageId: res.id, channel: "email" };
+                if (senderProfileId) {
+                  const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ workspaceId: workspace_id, to: lead.email, subject, html, leadId: lead_id, skipCredits: true, senderProfileId }),
+                  });
+                  const d = await r.json().catch(() => ({}));
+                  lastSendTime = Date.now();
+                  details = { messageId: d?.id || d?.messageId, channel: "email", senderProfileId };
+                } else {
+                  const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
+                  lastSendTime = Date.now();
+                  details = { messageId: res.id, channel: "email" };
+                }
               } catch (sendErr: any) {
                 const msg = String(sendErr?.message || "Email send failed");
                 const isAuth = isCredentialError("email", msg);
@@ -448,10 +460,22 @@ Deno.serve(async (req) => {
                 break;
               }
               const body = interpolate(config.message || "", lead);
+              const smsSenderProfileId = (config as any).sender_profile_id || null;
               try {
-                const res = await sendTwilio(sid, token, from, lead.phone, body);
-                lastSendTime = Date.now();
-                details = { sid: res.sid, channel: "sms" };
+                if (smsSenderProfileId) {
+                  const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, message: body, leadId: lead_id, skipCredits: true, senderProfileId: smsSenderProfileId }),
+                  });
+                  const d = await r.json().catch(() => ({}));
+                  lastSendTime = Date.now();
+                  details = { sid: d?.sid, channel: "sms", senderProfileId: smsSenderProfileId };
+                } else {
+                  const res = await sendTwilio(sid, token, from, lead.phone, body);
+                  lastSendTime = Date.now();
+                  details = { sid: res.sid, channel: "sms" };
+                }
               } catch (sendErr: any) {
                 const msg = String(sendErr?.message || "SMS send failed");
                 const isAuth = isCredentialError("sms", msg);
@@ -483,7 +507,7 @@ Deno.serve(async (req) => {
                     Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
                     "Content-Type": "application/json",
                   },
-                  body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true }),
+                  body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true, senderProfileId: (config as any).sender_profile_id || null }),
                 });
                 waData = await waRes.json().catch(() => ({}));
               } catch (sendErr: any) {
