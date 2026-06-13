@@ -49,6 +49,13 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBlogManager from "./pages/admin/AdminBlogManager";
 import AdminSmartActions from "./pages/admin/AdminSmartActions";
 import AdminGuard from "./components/admin/AdminGuard";
+import AdminCommunicationOverview from "./pages/admin/communication/AdminCommunicationOverview";
+import AdminOrganisations from "./pages/admin/communication/AdminOrganisations";
+import AdminOrgDetail from "./pages/admin/communication/AdminOrgDetail";
+import AdminSenderApprovals from "./pages/admin/communication/AdminSenderApprovals";
+import AdminUsage from "./pages/admin/communication/AdminUsage";
+import AdminCreditPackages from "./pages/admin/communication/AdminCreditPackages";
+import AdminMessagesInbox from "./pages/admin/communication/AdminMessagesInbox";
 import AuthCallback from "./pages/AuthCallback";
 import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
@@ -145,6 +152,13 @@ const App = () => (
                   <Route path="admin/blog" element={<AdminBlogManager />} />
                   <Route path="admin/smart-actions" element={<AdminSmartActions />} />
                   <Route path="admin/pricing" element={<AdminPricing />} />
+                  <Route path="admin/communication" element={<AdminCommunicationOverview />} />
+                  <Route path="admin/communication/organisations" element={<AdminOrganisations />} />
+                  <Route path="admin/communication/organisations/:orgId" element={<AdminOrgDetail />} />
+                  <Route path="admin/sender-approvals" element={<AdminSenderApprovals />} />
+                  <Route path="admin/usage" element={<AdminUsage />} />
+                  <Route path="admin/credit-packages" element={<AdminCreditPackages />} />
+                  <Route path="admin/messages" element={<AdminMessagesInbox />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
