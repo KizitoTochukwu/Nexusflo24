@@ -30,7 +30,6 @@ export function useMessageCredits() {
     },
     enabled: !!workspaceId,
     refetchInterval: 30000,
-    refetchOnWindowFocus: true,
     staleTime: 5000,
   });
 
