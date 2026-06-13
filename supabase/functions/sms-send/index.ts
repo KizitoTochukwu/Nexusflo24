@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
       !!Deno.env.get("LOVABLE_API_KEY") &&
       !!Deno.env.get("TWILIO_API_KEY");
 
-    const senderRaw = String(creds.config.from_number || Deno.env.get("TWILIO_FROM_NUMBER") || "").trim();
+    const senderRaw = String(resolvedSender?.detail?.phone_number || creds.config.from_number || Deno.env.get("TWILIO_FROM_NUMBER") || "").trim();
     if (!senderRaw) {
       return new Response(JSON.stringify({ error: "SMS sender not configured. Add TWILIO_FROM_NUMBER (E.164 number or MG... Messaging Service SID) or save your own Twilio credentials in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
