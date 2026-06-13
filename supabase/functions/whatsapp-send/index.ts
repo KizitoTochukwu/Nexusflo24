@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
         shouldDeductCredits = false;
       }
     }
-    const senderProfileId: string | null = (requestBody as any).sender_profile_id || null;
+    const senderProfileId: string | null = (body as any).sender_profile_id || null;
     let resolvedSender: any = null;
     try {
       resolvedSender = await resolveSenderProfile(workspaceId, "whatsapp", senderProfileId);
