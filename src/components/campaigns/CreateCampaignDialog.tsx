@@ -292,6 +292,9 @@ export default function CreateCampaignDialog() {
               return t ? { name: t.name, language: t.language } : undefined;
             })()
           : undefined,
+        sender_profile_id_email: senderProfileEmail || undefined,
+        sender_profile_id_whatsapp: senderProfileWa || undefined,
+        sender_profile_id_sms: senderProfileSms || undefined,
       } as any,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
