@@ -213,8 +213,17 @@ Deno.serve(async (req) => {
         shouldDeductCredits = false;
       }
     }
+    const senderProfileId: string | null = (requestBody as any).sender_profile_id || null;
+    let resolvedSender: any = null;
+    try {
+      resolvedSender = await resolveSenderProfile(workspaceId, "whatsapp", senderProfileId);
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message || "Invalid sender profile" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const toCountry = countryFromE164(normalizedTo);
+    const deductAmount = shouldDeductCredits ? await getDeductionAmount("whatsapp", toCountry) : 0;
     if (shouldDeductCredits) {
-      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
+      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
