@@ -54,11 +54,10 @@ export default function PublicFunnel() {
 
       setFunnel(funnelRow as FunnelData);
 
-      const { data: stepsData } = await supabase
-        .from("funnel_steps")
-        .select("id, step_order, step_type, page_content")
-        .eq("funnel_id", funnelRow.id)
-        .order("step_order", { ascending: true });
+      const { data: stepsData } = await supabase.rpc(
+        "get_public_funnel_steps" as any,
+        { p_funnel_id: funnelRow.id },
+      );
 
       setSteps((stepsData ?? []) as StepData[]);
       setLoading(false);
