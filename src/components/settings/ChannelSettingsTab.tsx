@@ -901,11 +901,12 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>Account SID</Label>
-                  <Input type="password" value={smsAccountSid} onChange={(e) => setSmsAccountSid(e.target.value)} placeholder="AC..." maxLength={100} />
+                  <Input type="password" value={smsAccountSid} onChange={(e) => setSmsAccountSid(e.target.value)} placeholder={channels?.sms?.configured ? "•••••• (leave blank to keep current)" : "AC..."} maxLength={100} />
                 </div>
                 <div className="space-y-1">
                   <Label>Auth Token</Label>
-                  <Input type="password" value={smsAuthToken} onChange={(e) => setSmsAuthToken(e.target.value)} placeholder="••••••" maxLength={100} />
+                  <Input type="password" value={smsAuthToken} onChange={(e) => setSmsAuthToken(e.target.value)} placeholder={channels?.sms?.configured ? "•••••• (leave blank to keep current)" : "••••••"} maxLength={100} />
+
                 </div>
                 <div className="space-y-1">
                   <Label>From Number / Messaging Service SID</Label>
