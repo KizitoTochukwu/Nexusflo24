@@ -845,7 +845,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => saveChannel("email", { provider: "resend", api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName }, setEmailSaving)} disabled={emailSaving || !emailApiKey}>
+                <Button size="sm" onClick={() => saveChannel("email", { provider: "resend", api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured)}>
                   {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.email?.configured && (
