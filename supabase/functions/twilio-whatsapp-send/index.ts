@@ -8,6 +8,8 @@ import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { notifyCredentialFailure } from "../_shared/credential-alert.ts";
+import { resolveSenderProfile } from "../_shared/sender-resolver.ts";
+import { logCommunicationUsage, getDeductionAmount, countryFromE164 } from "../_shared/usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
