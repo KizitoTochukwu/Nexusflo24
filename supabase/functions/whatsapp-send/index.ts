@@ -4,6 +4,8 @@ import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
+import { resolveSenderProfile } from "../_shared/sender-resolver.ts";
+import { logCommunicationUsage, getDeductionAmount, countryFromE164 } from "../_shared/usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -211,8 +213,17 @@ Deno.serve(async (req) => {
         shouldDeductCredits = false;
       }
     }
+    const senderProfileId: string | null = (body as any).sender_profile_id || null;
+    let resolvedSender: any = null;
+    try {
+      resolvedSender = await resolveSenderProfile(workspaceId, "whatsapp", senderProfileId);
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message || "Invalid sender profile" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const toCountry = countryFromE164(normalizedTo);
+    const deductAmount = shouldDeductCredits ? await getDeductionAmount("whatsapp", toCountry) : 0;
     if (shouldDeductCredits) {
-      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId);
+      const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -423,8 +434,17 @@ Deno.serve(async (req) => {
       status: "sent",
       auto_templated: autoTemplated,
       template_name: effectiveTemplate?.name || null,
+      sender_profile_id: resolvedSender?.profile?.id || null,
       ...(leadId ? { lead_id: leadId } : {}),
     });
+    if (!isPreview) {
+      await logCommunicationUsage({
+        workspaceId, channel: "whatsapp",
+        senderProfileId: resolvedSender?.profile?.id || null,
+        messageId: waMessageId, country: toCountry,
+        creditsDeducted: deductAmount, status: "sent",
+      });
+    }
 
     if (campaignId && leadId && waMessageId) {
       await adminClient

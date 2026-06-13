@@ -4,6 +4,8 @@ import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { blocksToHtml, parseBlocksFromMessage } from "../_shared/email-blocks.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
+import { resolveSenderProfile } from "../_shared/sender-resolver.ts";
+import { logCommunicationUsage, getDeductionAmount } from "../_shared/usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,8 +84,16 @@ Deno.serve(async (req) => {
         shouldDeductCredits = false;
       }
     }
+    const senderProfileId: string | null = (body as any).sender_profile_id || null;
+    let resolvedSender: any = null;
+    try {
+      resolvedSender = await resolveSenderProfile(workspaceId, "email", senderProfileId);
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message || "Invalid sender profile" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const deductAmount = shouldDeductCredits ? await getDeductionAmount("email", null) : 0;
     if (shouldDeductCredits) {
-      const creditResult = await deductCredit(workspaceId, "email", undefined, callerUserId);
+      const creditResult = await deductCredit(workspaceId, "email", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient email credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -101,8 +111,9 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = creds.config.api_key;
-    const fromEmail = creds.config.from_email || "noreply@nexusflo24.com";
-    const fromName = creds.config.from_name || "NexusFlo24";
+    // Sender profile overrides workspace channel settings when provided + approved
+    const fromEmail = resolvedSender?.detail?.from_email || creds.config.from_email || "noreply@nexusflo24.com";
+    const fromName = resolvedSender?.detail?.from_name || creds.config.from_name || "NexusFlo24";
     const from = `${fromName} <${fromEmail}>`;
 
     // Inject tracking pixel and rewrite links for tracking
@@ -205,7 +216,16 @@ Deno.serve(async (req) => {
         status: "sent",
         provider_message_id: result.messageId,
         lead_id: leadId || null,
+        sender_profile_id: resolvedSender?.profile?.id || null,
       });
+      if (!isPreview) {
+        await logCommunicationUsage({
+          workspaceId, channel: "email",
+          senderProfileId: resolvedSender?.profile?.id || null,
+          messageId: result.messageId, country: null,
+          creditsDeducted: deductAmount, status: "sent",
+        });
+      }
     } catch (_) { /* ignore logging errors */ }
 
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

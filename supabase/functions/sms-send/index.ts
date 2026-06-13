@@ -4,6 +4,8 @@ import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhoneNumber } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
+import { resolveSenderProfile } from "../_shared/sender-resolver.ts";
+import { logCommunicationUsage, getDeductionAmount, countryFromE164 } from "../_shared/usage-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -183,8 +185,17 @@ Deno.serve(async (req) => {
         shouldDeductCredits = false;
       }
     }
+    const senderProfileId: string | null = (requestBody as any).sender_profile_id || null;
+    let resolvedSender: any = null;
+    try {
+      resolvedSender = await resolveSenderProfile(workspaceId, "sms", senderProfileId);
+    } catch (e: any) {
+      return new Response(JSON.stringify({ error: e.message || "Invalid sender profile" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const toCountry = countryFromE164(normalizedTo);
+    const deductAmount = shouldDeductCredits ? await getDeductionAmount("sms", toCountry) : 0;
     if (shouldDeductCredits) {
-      const creditResult = await deductCredit(workspaceId, "sms", undefined, callerUserId);
+      const creditResult = await deductCredit(workspaceId, "sms", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient SMS credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -206,7 +217,7 @@ Deno.serve(async (req) => {
       !!Deno.env.get("LOVABLE_API_KEY") &&
       !!Deno.env.get("TWILIO_API_KEY");
 
-    const senderRaw = String(creds.config.from_number || Deno.env.get("TWILIO_FROM_NUMBER") || "").trim();
+    const senderRaw = String(resolvedSender?.detail?.phone_number || creds.config.from_number || Deno.env.get("TWILIO_FROM_NUMBER") || "").trim();
     if (!senderRaw) {
       return new Response(JSON.stringify({ error: "SMS sender not configured. Add TWILIO_FROM_NUMBER (E.164 number or MG... Messaging Service SID) or save your own Twilio credentials in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -253,7 +264,16 @@ Deno.serve(async (req) => {
       status: "sent",
       provider_message_id: result.providerMessageId,
       direction: "outbound",
+      sender_profile_id: resolvedSender?.profile?.id || null,
     });
+    if (!isPreview) {
+      await logCommunicationUsage({
+        workspaceId, channel: "sms",
+        senderProfileId: resolvedSender?.profile?.id || null,
+        messageId: result.providerMessageId, country: toCountry,
+        creditsDeducted: deductAmount, status: "sent",
+      });
+    }
 
     return new Response(JSON.stringify({ success: true, providerMessageId: result.providerMessageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
