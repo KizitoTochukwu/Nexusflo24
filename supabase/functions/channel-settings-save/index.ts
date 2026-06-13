@@ -149,6 +149,29 @@ Deno.serve(async (req) => {
     }
 
     const cleanedConfig = trimConfig(config);
+
+    // Merge: if any secret field is blank and existing row has a stored value, keep it.
+    const secretKeys = SECRET_FIELDS[channel] || [];
+    const hasBlankSecret = secretKeys.some((k) => !cleanedConfig[k]);
+    if (hasBlankSecret) {
+      const { data: existing } = await adminClient
+        .from("workspace_channel_settings")
+        .select("config_encrypted")
+        .eq("workspace_id", workspaceId)
+        .eq("channel", channel)
+        .maybeSingle();
+      if (existing?.config_encrypted) {
+        try {
+          const prior = JSON.parse(await decrypt(existing.config_encrypted, encryptionKey));
+          for (const k of secretKeys) {
+            if (!cleanedConfig[k] && prior[k]) cleanedConfig[k] = String(prior[k]);
+          }
+        } catch (e) {
+          console.warn("channel-settings-save: failed to decrypt prior config", e);
+        }
+      }
+    }
+
     if (channel === "sms") {
       const smsError = validateSmsConfig(cleanedConfig);
       if (smsError) {
@@ -161,6 +184,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: waErr }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
+
 
     const configEncrypted = await encrypt(JSON.stringify(cleanedConfig), encryptionKey);
 
