@@ -121,7 +121,27 @@ export default function DashboardBookings() {
                     <CardContent className="space-y-3">
                       {page.description && <p className="text-sm text-muted-foreground line-clamp-2">{page.description}</p>}
                       <p className="text-xs text-muted-foreground">{pageBookings.length} upcoming booking{pageBookings.length !== 1 ? "s" : ""}</p>
-                      <div className="flex items-center gap-2">
+                      {page.slug && (
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Public booking link</label>
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              readOnly
+                              value={`${baseUrl}/book/${page.slug}`}
+                              onFocus={(e) => e.currentTarget.select()}
+                              className="h-8 text-xs bg-muted/40"
+                            />
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 px-2 shrink-0"
+                              onClick={() => copyLink(page.id, `${baseUrl}/book/${page.slug}`)}
+                            >
+                              {copiedId === page.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                         {page.slug && (
                           <Button variant="outline" size="sm" asChild>
                             <a href={`${baseUrl}/book/${page.slug}`} target="_blank" rel="noopener noreferrer">
