@@ -2,8 +2,10 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { XCircle } from "lucide-react";
+import { XCircle, CalendarClock } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Booking, BookingPage } from "@/hooks/useBookings";
+
 
 interface Props {
   bookings: Booking[];
@@ -55,11 +57,21 @@ export default function BookingsList({ bookings, bookingPages, onCancel }: Props
             </TableCell>
             <TableCell>
               {b.status === "confirmed" && (
-                <Button variant="ghost" size="icon" onClick={() => onCancel(b.id)} title="Cancel">
-                  <XCircle className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {b.reschedule_token && (
+                    <Button asChild variant="ghost" size="icon" title="Reschedule">
+                      <Link to={`/reschedule/${b.reschedule_token}`} target="_blank" rel="noopener noreferrer">
+                        <CalendarClock className="h-4 w-4 text-primary" />
+                      </Link>
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => onCancel(b.id)} title="Cancel">
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               )}
             </TableCell>
+
           </TableRow>
         ))}
       </TableBody>
