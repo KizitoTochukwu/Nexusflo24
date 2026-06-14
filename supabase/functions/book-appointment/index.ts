@@ -114,6 +114,12 @@ Deno.serve(async (req) => {
 
     if (existingLead) {
       leadId = existingLead.id;
+      if (smsConsent) {
+        await supabase
+          .from("leads")
+          .update(consentFields)
+          .eq("id", existingLead.id);
+      }
     } else {
       const { data: newLead } = await supabase
         .from("leads")
@@ -126,6 +132,7 @@ Deno.serve(async (req) => {
           source: "Booking",
           status: "New",
           score: 0,
+          ...consentFields,
         })
         .select("id")
         .single();
