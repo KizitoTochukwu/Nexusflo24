@@ -392,6 +392,12 @@ const Contact = () => {
                           />
                         </div>
 
+                        <SmsConsentCheckbox
+                          checked={smsConsent}
+                          onCheckedChange={setSmsConsent}
+                          className="rounded-xl border border-border bg-muted/30 p-3"
+                        />
+
                         <Button
                           type="submit"
                           disabled={loading}
