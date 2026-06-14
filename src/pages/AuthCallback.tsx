@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { resolveRestoreTarget } from "@/lib/routeMemory";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -23,18 +22,9 @@ const AuthCallback = () => {
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: true });
 
-      const allowed = new Set((memberships ?? []).map((m) => m.workspace_id));
       const preferred = memberships?.[0]?.workspace_id;
 
       if (preferred) {
-        const restored = await resolveRestoreTarget(session.user.id, preferred);
-        if (restored) {
-          const m = restored.match(/^\/dashboard\/([^/]+)\//);
-          if (m && allowed.has(m[1])) {
-            navigate(restored, { replace: true });
-            return;
-          }
-        }
         navigate(`/dashboard/${preferred}/overview`, { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
