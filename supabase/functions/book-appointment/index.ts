@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
         start_time: startDt.toISOString(),
         end_time: endDt.toISOString(),
         status: "confirmed",
+        ...consentFields,
         notes: notes || null,
         meeting_url: meetingUrl,
         meeting_location: meetingLocation,
