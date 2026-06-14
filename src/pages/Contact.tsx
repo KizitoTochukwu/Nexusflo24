@@ -76,6 +76,10 @@ const Contact = () => {
         notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Industry: ${form.industry || "N/A"}. Interested in: ${form.interest || "N/A"}. Message: ${form.message}`,
         formId: "contact-form",
         page: "/contact",
+        sms_consent: smsConsent,
+        sms_consent_text: smsConsent ? SMS_CONSENT_TEXT : undefined,
+        sms_consent_timestamp: smsConsent ? new Date().toISOString() : undefined,
+        sms_consent_source: smsConsent ? "Contact Page" : undefined,
         lead_destination: {
           folder_name: "Contact Form",
           apply_tags: extraTags,
