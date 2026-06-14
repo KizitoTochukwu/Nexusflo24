@@ -194,6 +194,10 @@ const Register = () => {
             </Label>
           </div>
 
+          <SmsConsentCheckbox checked={smsConsent} onCheckedChange={setSmsConsent} />
+
+
+
           <Button
             type="submit"
             disabled={loading}
