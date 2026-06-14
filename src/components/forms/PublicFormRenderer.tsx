@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 /**
  * Normalize a user-provided redirect URL so we never accidentally navigate
