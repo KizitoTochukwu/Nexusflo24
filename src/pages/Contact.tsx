@@ -22,6 +22,8 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useCaptureLead } from "@/hooks/useCaptureLead";
 import { supabase } from "@/integrations/supabase/client";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 const Contact = () => {
   const [searchParams] = useSearchParams();
