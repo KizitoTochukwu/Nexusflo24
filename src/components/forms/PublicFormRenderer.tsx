@@ -50,7 +50,12 @@ export default function PublicFormRenderer({ form, preview }: Props) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
 
+  const allFieldsFlat = steps.flatMap((s) => s.fields);
+  const hasPhoneField = allFieldsFlat.some(
+    (f) => f.type === "phone" || f.map_to === "phone",
+  );
   const currentStep = steps[stepIdx];
   const isLast = stepIdx === steps.length - 1;
 
