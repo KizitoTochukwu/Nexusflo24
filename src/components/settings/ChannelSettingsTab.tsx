@@ -745,6 +745,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         throw new Error(err.error || "Failed to disconnect");
       }
       toast.success(`${channel} disconnected.`);
+      clearChannelDraft(channel);
       await fetchStatus();
     } catch (err: any) {
       toast.error(err.message || "Failed to disconnect");
