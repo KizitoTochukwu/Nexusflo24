@@ -15,6 +15,8 @@ import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
 import { readableForeground, safeAccent } from "@/lib/contrast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 // Format an ISO instant in a target IANA timezone using the given Intl options.
 function formatInZone(iso: string | Date, timeZone: string, opts: Intl.DateTimeFormatOptions): string {
