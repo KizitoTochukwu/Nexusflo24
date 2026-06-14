@@ -21,6 +21,7 @@ const Register = () => {
   const refCode = searchParams.get("ref") || "";
   const [form, setForm] = useState({ name: "", email: prefillEmail, password: "" });
   const [agreed, setAgreed] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
