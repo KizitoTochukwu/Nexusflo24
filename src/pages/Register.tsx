@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Mail, Lock, User } from "lucide-react";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 const Register = () => {
   const [searchParams] = useSearchParams();
