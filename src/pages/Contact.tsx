@@ -42,6 +42,7 @@ const Contact = () => {
           ? "I'm interested in the Agency plan."
           : "",
   });
+  const [smsConsent, setSmsConsent] = useState(false);
   const { capture, loading, success } = useCaptureLead();
 
   const handleSubmit = async (e: React.FormEvent) => {
