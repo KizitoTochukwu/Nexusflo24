@@ -21,13 +21,9 @@ const Blog = () => {
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ["blog-posts-public"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blog_posts")
-        .select("*")
-        .eq("status", "published")
-        .order("published_at", { ascending: false });
+      const { data, error } = await supabase.rpc("get_public_blog_posts" as any);
       if (error) throw error;
-      return data;
+      return (data ?? []) as any[];
     },
   });
 

@@ -34,11 +34,11 @@ export default function PublicFunnel() {
     (async () => {
       setLoading(true);
 
-      const { data: funnelRow, error } = await supabase
-        .from("funnels")
-        .select("id, name, status, workspace_id, slug")
-        .eq("slug", slug)
-        .maybeSingle();
+      const { data: funnelRows, error } = await supabase.rpc(
+        "get_public_funnel_by_slug" as any,
+        { p_slug: slug },
+      );
+      const funnelRow = Array.isArray(funnelRows) ? (funnelRows[0] as any) : null;
 
       if (error || !funnelRow) {
         setNotFound(true);
