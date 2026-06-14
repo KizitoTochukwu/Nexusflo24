@@ -35,7 +35,18 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { booking_page_id, guest_name, guest_email, guest_phone, start_time, notes } = await req.json();
+    const {
+      booking_page_id,
+      guest_name,
+      guest_email,
+      guest_phone,
+      start_time,
+      notes,
+      sms_consent,
+      sms_consent_text,
+      sms_consent_timestamp,
+      sms_consent_source,
+    } = await req.json();
 
     if (!booking_page_id || !guest_name || !guest_email || !start_time) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -44,6 +55,17 @@ Deno.serve(async (req) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest_email)) {
       return new Response(JSON.stringify({ error: "Invalid email" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    const smsConsent = sms_consent === true;
+    const consentFields = smsConsent
+      ? {
+          sms_consent: true,
+          sms_consent_text: typeof sms_consent_text === "string" ? sms_consent_text.slice(0, 2000) : null,
+          sms_consent_timestamp:
+            typeof sms_consent_timestamp === "string" ? sms_consent_timestamp : new Date().toISOString(),
+          sms_consent_source: typeof sms_consent_source === "string" ? sms_consent_source.slice(0, 200) : "Booking Page",
+        }
+      : {};
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
