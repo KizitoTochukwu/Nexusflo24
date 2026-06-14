@@ -716,6 +716,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       if (!response.ok) throw new Error(data?.error || `Save failed (${response.status})`);
       if (data?.error) throw new Error(data.error);
       toast.success(`${channel.charAt(0).toUpperCase() + channel.slice(1)} credentials saved.`);
+      clearChannelDraft(channel);
       await fetchStatus();
     } catch (err: any) {
       toast.error(err.message || "Failed to save");
