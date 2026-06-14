@@ -220,6 +220,12 @@ export default function PublicFormRenderer({ form, preview }: Props) {
         ))}
       </div>
 
+      {hasPhoneField && isLast && (
+        <SmsConsentCheckbox checked={smsConsent} onCheckedChange={setSmsConsent} />
+      )}
+
+
+
       <div className="flex items-center justify-between gap-2 pt-2">
         {steps.length > 1 && stepIdx > 0 ? (
           <Button type="button" variant="outline" onClick={() => setStepIdx((i) => i - 1)}>
