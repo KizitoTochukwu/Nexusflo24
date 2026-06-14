@@ -3906,6 +3906,40 @@ export type Database = {
           token_id: string
         }[]
       }
+      get_public_blog_post: {
+        Args: { p_slug: string }
+        Returns: {
+          author: string
+          category: string
+          content: string
+          created_at: string
+          excerpt: string
+          featured: boolean
+          id: string
+          image_url: string
+          published_at: string
+          read_time: string
+          slug: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      get_public_blog_posts: {
+        Args: never
+        Returns: {
+          author: string
+          category: string
+          created_at: string
+          excerpt: string
+          featured: boolean
+          id: string
+          image_url: string
+          published_at: string
+          read_time: string
+          slug: string
+          title: string
+        }[]
+      }
       get_public_booking_page: {
         Args: { p_slug: string }
         Returns: {
@@ -3943,6 +3977,16 @@ export type Database = {
           submission_count: number
           theme: Json
           updated_at: string
+          workspace_id: string
+        }[]
+      }
+      get_public_funnel_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          id: string
+          name: string
+          slug: string
+          status: string
           workspace_id: string
         }[]
       }
