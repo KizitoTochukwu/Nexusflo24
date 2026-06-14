@@ -232,6 +232,15 @@ Deno.serve(async (req) => {
           ...(funnelName ? { funnel_name: funnelName } : {}),
           // Backfill email if the existing lead had none
           ...(normalizedEmail ? { email: normalizedEmail } : {}),
+          // Only upgrade SMS consent — never downgrade or overwrite opt-out.
+          ...(smsConsent
+            ? {
+                sms_consent: true,
+                sms_consent_text: smsConsentText,
+                sms_consent_timestamp: smsConsentTimestamp,
+                sms_consent_source: smsConsentSource,
+              }
+            : {}),
         })
         .eq("id", existing.id);
       if (error) throw error;
