@@ -57,6 +57,7 @@ export default function PublicBooking() {
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [smsConsent, setSmsConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; reschedule_token: string; meeting_url?: string | null; meeting_location?: string | null } | null>(null);
