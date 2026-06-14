@@ -537,6 +537,14 @@ export default function PublicBooking() {
                       <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Share what you'd like to discuss..." rows={3} className="rounded-xl border-slate-200 resize-none" />
                     </div>
 
+                    <SmsConsentCheckbox
+                      checked={smsConsent}
+                      onCheckedChange={setSmsConsent}
+                      className="rounded-xl border border-slate-200 bg-slate-50/60 p-3"
+                    />
+
+
+
                     <Button
                       onClick={() => setStep("review")}
                       disabled={!guestName || !guestEmail}
