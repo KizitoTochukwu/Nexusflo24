@@ -176,6 +176,74 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Twilio A2P 10DLC consent gate ---
+    // Block outbound SMS unless a matching lead in this workspace has
+    // sms_consent=true AND sms_opt_out=false. We look up by leadId when
+    // provided (campaign / automation sends), else by phone number.
+    // Preview/test sends and explicit admin overrides are exempt.
+    const skipConsent =
+      isPreview === true ||
+      (requestBody as any).skip_consent_check === true ||
+      (requestBody as any).bypassConsent === true;
+    if (!skipConsent) {
+      const explicitLeadId: string | null =
+        typeof (requestBody as any).leadId === "string"
+          ? (requestBody as any).leadId
+          : typeof (requestBody as any).lead_id === "string"
+            ? (requestBody as any).lead_id
+            : null;
+
+      let consentRow: { sms_consent: boolean | null; sms_opt_out: boolean | null } | null = null;
+      if (explicitLeadId) {
+        const { data } = await adminClient
+          .from("leads")
+          .select("sms_consent, sms_opt_out")
+          .eq("id", explicitLeadId)
+          .eq("workspace_id", workspaceId)
+          .maybeSingle();
+        consentRow = (data as any) ?? null;
+      } else {
+        const { data } = await adminClient
+          .from("leads")
+          .select("sms_consent, sms_opt_out")
+          .eq("workspace_id", workspaceId)
+          .eq("phone", normalizedTo)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        consentRow = (data as any) ?? null;
+      }
+
+      if (!consentRow || consentRow.sms_consent !== true || consentRow.sms_opt_out === true) {
+        const reason = !consentRow
+          ? "no_consent_record"
+          : consentRow.sms_opt_out === true
+            ? "opted_out"
+            : "no_consent";
+        try {
+          await adminClient.from("sms_logs").insert({
+            workspace_id: workspaceId,
+            provider: "twilio",
+            to_number: normalizedTo,
+            from_number: null,
+            message,
+            status: "blocked",
+            error: `SMS consent check failed: ${reason}`,
+          });
+        } catch (_) { /* best effort */ }
+        return new Response(
+          JSON.stringify({
+            success: false,
+            blocked: true,
+            reason,
+            error: "Recipient has not consented to SMS. Sending blocked for Twilio A2P 10DLC compliance.",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+
     // Check and deduct credits — skip on preview tests, or if service-role + skipCredits + workspace owner is admin
     const skipCredits = (requestBody as any).skipCredits;
     let shouldDeductCredits = !isPreview;

@@ -10,6 +10,10 @@ interface CaptureLeadInput {
   notes: string;
   formId: string;
   page: string;
+  sms_consent?: boolean;
+  sms_consent_text?: string;
+  sms_consent_timestamp?: string;
+  sms_consent_source?: string;
   lead_destination?: {
     folder_name?: string;
     apply_tags?: string[];
@@ -57,6 +61,10 @@ export function useCaptureLead() {
           tags: input.tags,
           notes: `${input.notes}${utmNote}`,
           meta,
+          sms_consent: input.sms_consent ?? undefined,
+          sms_consent_text: input.sms_consent_text ?? undefined,
+          sms_consent_timestamp: input.sms_consent_timestamp ?? undefined,
+          sms_consent_source: input.sms_consent_source ?? undefined,
           ...(input.lead_destination ? { lead_destination: input.lead_destination } : {}),
         },
       });

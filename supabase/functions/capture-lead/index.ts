@@ -82,6 +82,15 @@ Deno.serve(async (req) => {
     const tags = sanitizeTags(body.tags);
     const meta = typeof body.meta === "object" && body.meta !== null ? body.meta : {};
 
+    // SMS consent (Twilio A2P compliance). Only persist when the visitor
+    // explicitly checked the box on the originating form.
+    const smsConsent = body.sms_consent === true;
+    const smsConsentText = smsConsent ? sanitizeString(body.sms_consent_text, 2000) : null;
+    const smsConsentSource = smsConsent ? sanitizeString(body.sms_consent_source, 200) : null;
+    const smsConsentTimestamp = smsConsent
+      ? (typeof body.sms_consent_timestamp === "string" ? body.sms_consent_timestamp : new Date().toISOString())
+      : null;
+
     // Lead destination config from funnel step
     const leadDest = typeof body.lead_destination === "object" && body.lead_destination !== null ? body.lead_destination : {};
     const destTags: string[] = Array.isArray(leadDest.apply_tags) ? leadDest.apply_tags : [];
@@ -223,6 +232,15 @@ Deno.serve(async (req) => {
           ...(funnelName ? { funnel_name: funnelName } : {}),
           // Backfill email if the existing lead had none
           ...(normalizedEmail ? { email: normalizedEmail } : {}),
+          // Only upgrade SMS consent — never downgrade or overwrite opt-out.
+          ...(smsConsent
+            ? {
+                sms_consent: true,
+                sms_consent_text: smsConsentText,
+                sms_consent_timestamp: smsConsentTimestamp,
+                sms_consent_source: smsConsentSource,
+              }
+            : {}),
         })
         .eq("id", existing.id);
       if (error) throw error;
@@ -246,6 +264,10 @@ Deno.serve(async (req) => {
           campaign_name: campaignName || null,
           funnel_name: funnelName || null,
           assigned_owner_id: assignedOwnerId,
+          sms_consent: smsConsent,
+          sms_consent_text: smsConsentText,
+          sms_consent_timestamp: smsConsentTimestamp,
+          sms_consent_source: smsConsentSource,
         })
         .select("id")
         .single();

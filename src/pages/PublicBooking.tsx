@@ -15,6 +15,8 @@ import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
 import { readableForeground, safeAccent } from "@/lib/contrast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 // Format an ISO instant in a target IANA timezone using the given Intl options.
 function formatInZone(iso: string | Date, timeZone: string, opts: Intl.DateTimeFormatOptions): string {
@@ -55,6 +57,7 @@ export default function PublicBooking() {
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [smsConsent, setSmsConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<{ id: string; reschedule_token: string; meeting_url?: string | null; meeting_location?: string | null } | null>(null);
@@ -106,6 +109,10 @@ export default function PublicBooking() {
           guest_phone: guestPhone || undefined,
           start_time: selectedSlot,
           notes: notes || undefined,
+          sms_consent: smsConsent,
+          sms_consent_text: smsConsent ? SMS_CONSENT_TEXT : undefined,
+          sms_consent_timestamp: smsConsent ? new Date().toISOString() : undefined,
+          sms_consent_source: smsConsent ? `Booking: ${page.name}` : undefined,
         }),
       });
       const data = await res.json();
@@ -529,6 +536,14 @@ export default function PublicBooking() {
                       <Label className="text-xs font-medium text-slate-600">Anything else? <span className="text-slate-400">(optional)</span></Label>
                       <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Share what you'd like to discuss..." rows={3} className="rounded-xl border-slate-200 resize-none" />
                     </div>
+
+                    <SmsConsentCheckbox
+                      checked={smsConsent}
+                      onCheckedChange={setSmsConsent}
+                      className="rounded-xl border border-slate-200 bg-slate-50/60 p-3"
+                    />
+
+
 
                     <Button
                       onClick={() => setStep("review")}

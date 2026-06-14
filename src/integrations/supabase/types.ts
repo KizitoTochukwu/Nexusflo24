@@ -409,6 +409,11 @@ export type Database = {
           meeting_url: string | null
           notes: string | null
           reschedule_token: string | null
+          sms_consent: boolean
+          sms_consent_source: string | null
+          sms_consent_text: string | null
+          sms_consent_timestamp: string | null
+          sms_opt_out: boolean
           start_time: string
           status: string
           workspace_id: string
@@ -427,6 +432,11 @@ export type Database = {
           meeting_url?: string | null
           notes?: string | null
           reschedule_token?: string | null
+          sms_consent?: boolean
+          sms_consent_source?: string | null
+          sms_consent_text?: string | null
+          sms_consent_timestamp?: string | null
+          sms_opt_out?: boolean
           start_time: string
           status?: string
           workspace_id: string
@@ -445,6 +455,11 @@ export type Database = {
           meeting_url?: string | null
           notes?: string | null
           reschedule_token?: string | null
+          sms_consent?: boolean
+          sms_consent_source?: string | null
+          sms_consent_text?: string | null
+          sms_consent_timestamp?: string | null
+          sms_opt_out?: boolean
           start_time?: string
           status?: string
           workspace_id?: string
@@ -1688,6 +1703,11 @@ export type Database = {
           phone: string | null
           pipeline_stage: string
           score: number | null
+          sms_consent: boolean
+          sms_consent_source: string | null
+          sms_consent_text: string | null
+          sms_consent_timestamp: string | null
+          sms_opt_out: boolean
           social_handles: Json | null
           source: string | null
           status: string | null
@@ -1710,6 +1730,11 @@ export type Database = {
           phone?: string | null
           pipeline_stage?: string
           score?: number | null
+          sms_consent?: boolean
+          sms_consent_source?: string | null
+          sms_consent_text?: string | null
+          sms_consent_timestamp?: string | null
+          sms_opt_out?: boolean
           social_handles?: Json | null
           source?: string | null
           status?: string | null
@@ -1732,6 +1757,11 @@ export type Database = {
           phone?: string | null
           pipeline_stage?: string
           score?: number | null
+          sms_consent?: boolean
+          sms_consent_source?: string | null
+          sms_consent_text?: string | null
+          sms_consent_timestamp?: string | null
+          sms_opt_out?: boolean
           social_handles?: Json | null
           source?: string | null
           status?: string | null

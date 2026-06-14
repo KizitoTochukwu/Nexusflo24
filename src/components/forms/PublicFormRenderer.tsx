@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 /**
  * Normalize a user-provided redirect URL so we never accidentally navigate
@@ -48,7 +50,12 @@ export default function PublicFormRenderer({ form, preview }: Props) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
 
+  const allFieldsFlat = steps.flatMap((s) => s.fields);
+  const hasPhoneField = allFieldsFlat.some(
+    (f) => f.type === "phone" || f.map_to === "phone",
+  );
   const currentStep = steps[stepIdx];
   const isLast = stepIdx === steps.length - 1;
 
@@ -109,6 +116,10 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           tags: settings.tags,
           form_id: form.id,
           form_data: values,
+          sms_consent: hasPhoneField ? smsConsent : undefined,
+          sms_consent_text: hasPhoneField && smsConsent ? SMS_CONSENT_TEXT : undefined,
+          sms_consent_timestamp: hasPhoneField && smsConsent ? new Date().toISOString() : undefined,
+          sms_consent_source: hasPhoneField && smsConsent ? `Form: ${form.name}` : undefined,
           lead_destination: {
             apply_tags: settings.tags,
             source: settings.source,
@@ -208,6 +219,12 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           <FieldRenderer key={f.id} field={f} value={values[f.name]} onChange={(v) => setVal(f.name, v)} accent={theme.accent_color} />
         ))}
       </div>
+
+      {hasPhoneField && isLast && (
+        <SmsConsentCheckbox checked={smsConsent} onCheckedChange={setSmsConsent} />
+      )}
+
+
 
       <div className="flex items-center justify-between gap-2 pt-2">
         {steps.length > 1 && stepIdx > 0 ? (

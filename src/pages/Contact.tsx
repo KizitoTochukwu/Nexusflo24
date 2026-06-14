@@ -22,6 +22,8 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useCaptureLead } from "@/hooks/useCaptureLead";
 import { supabase } from "@/integrations/supabase/client";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 const Contact = () => {
   const [searchParams] = useSearchParams();
@@ -40,6 +42,7 @@ const Contact = () => {
           ? "I'm interested in the Agency plan."
           : "",
   });
+  const [smsConsent, setSmsConsent] = useState(false);
   const { capture, loading, success } = useCaptureLead();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,6 +76,10 @@ const Contact = () => {
         notes: `Contact form submission (${subject || "general"}). Company: ${form.company || "N/A"}. Industry: ${form.industry || "N/A"}. Interested in: ${form.interest || "N/A"}. Message: ${form.message}`,
         formId: "contact-form",
         page: "/contact",
+        sms_consent: smsConsent,
+        sms_consent_text: smsConsent ? SMS_CONSENT_TEXT : undefined,
+        sms_consent_timestamp: smsConsent ? new Date().toISOString() : undefined,
+        sms_consent_source: smsConsent ? "Contact Page" : undefined,
         lead_destination: {
           folder_name: "Contact Form",
           apply_tags: extraTags,
@@ -384,6 +391,12 @@ const Contact = () => {
                             className="resize-none rounded-xl text-sm focus-visible:border-accent focus-visible:ring-4 focus-visible:ring-accent/10"
                           />
                         </div>
+
+                        <SmsConsentCheckbox
+                          checked={smsConsent}
+                          onCheckedChange={setSmsConsent}
+                          className="rounded-xl border border-border bg-muted/30 p-3"
+                        />
 
                         <Button
                           type="submit"

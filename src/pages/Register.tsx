@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Mail, Lock, User } from "lucide-react";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
+import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
+import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
 
 const Register = () => {
   const [searchParams] = useSearchParams();
@@ -19,6 +21,7 @@ const Register = () => {
   const refCode = searchParams.get("ref") || "";
   const [form, setForm] = useState({ name: "", email: prefillEmail, password: "" });
   const [agreed, setAgreed] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
@@ -38,11 +41,17 @@ const Register = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: signupData, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
-        data: { full_name: form.name },
+        data: {
+          full_name: form.name,
+          sms_consent: smsConsent,
+          sms_consent_text: smsConsent ? SMS_CONSENT_TEXT : null,
+          sms_consent_timestamp: smsConsent ? new Date().toISOString() : null,
+          sms_consent_source: smsConsent ? "Signup Page" : null,
+        },
         emailRedirectTo: window.location.origin,
       },
     });
@@ -184,6 +193,10 @@ const Register = () => {
               <Link to="/privacy-policy" className="text-accent hover:underline">Privacy Policy</Link>
             </Label>
           </div>
+
+          <SmsConsentCheckbox checked={smsConsent} onCheckedChange={setSmsConsent} />
+
+
 
           <Button
             type="submit"
