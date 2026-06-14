@@ -109,6 +109,10 @@ export default function PublicBooking() {
           guest_phone: guestPhone || undefined,
           start_time: selectedSlot,
           notes: notes || undefined,
+          sms_consent: smsConsent,
+          sms_consent_text: smsConsent ? SMS_CONSENT_TEXT : undefined,
+          sms_consent_timestamp: smsConsent ? new Date().toISOString() : undefined,
+          sms_consent_source: smsConsent ? `Booking: ${page.name}` : undefined,
         }),
       });
       const data = await res.json();
