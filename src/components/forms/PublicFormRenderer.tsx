@@ -116,6 +116,10 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           tags: settings.tags,
           form_id: form.id,
           form_data: values,
+          sms_consent: hasPhoneField ? smsConsent : undefined,
+          sms_consent_text: hasPhoneField && smsConsent ? SMS_CONSENT_TEXT : undefined,
+          sms_consent_timestamp: hasPhoneField && smsConsent ? new Date().toISOString() : undefined,
+          sms_consent_source: hasPhoneField && smsConsent ? `Form: ${form.name}` : undefined,
           lead_destination: {
             apply_tags: settings.tags,
             source: settings.source,
