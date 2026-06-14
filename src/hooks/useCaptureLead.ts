@@ -10,6 +10,10 @@ interface CaptureLeadInput {
   notes: string;
   formId: string;
   page: string;
+  sms_consent?: boolean;
+  sms_consent_text?: string;
+  sms_consent_timestamp?: string;
+  sms_consent_source?: string;
   lead_destination?: {
     folder_name?: string;
     apply_tags?: string[];
