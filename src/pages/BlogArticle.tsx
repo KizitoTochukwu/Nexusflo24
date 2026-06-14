@@ -31,14 +31,10 @@ const BlogArticle = () => {
   const { data: article, isLoading } = useQuery({
     queryKey: ["blog-post", slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("blog_posts")
-        .select("*")
-        .eq("slug", slug!)
-        .eq("status", "published")
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("get_public_blog_post" as any, { p_slug: slug! });
       if (error) throw error;
-      return data;
+      const rows = (data ?? []) as any[];
+      return rows[0] ?? null;
     },
     enabled: !!slug,
   });
