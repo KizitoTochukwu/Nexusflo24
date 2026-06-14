@@ -264,6 +264,10 @@ Deno.serve(async (req) => {
           campaign_name: campaignName || null,
           funnel_name: funnelName || null,
           assigned_owner_id: assignedOwnerId,
+          sms_consent: smsConsent,
+          sms_consent_text: smsConsentText,
+          sms_consent_timestamp: smsConsentTimestamp,
+          sms_consent_source: smsConsentSource,
         })
         .select("id")
         .single();
