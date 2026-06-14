@@ -595,6 +595,49 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [waTestSending, setWaTestSending] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
 
+  // Draft key for unsaved input persistence (per workspace, per browser session).
+  const draftKey = `nf24:channelDraft:${workspaceId}`;
+
+  // Restore any unsaved input from the current browser session immediately so
+  // returning to this page (or a remount) doesn't wipe in-progress credentials.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (typeof d.emailApiKey === "string") setEmailApiKey(d.emailApiKey);
+      if (typeof d.emailFrom === "string") setEmailFrom(d.emailFrom);
+      if (typeof d.emailFromName === "string") setEmailFromName(d.emailFromName);
+      if (typeof d.smsAccountSid === "string") setSmsAccountSid(d.smsAccountSid);
+      if (typeof d.smsAuthToken === "string") setSmsAuthToken(d.smsAuthToken);
+      if (typeof d.smsFromNumber === "string") setSmsFromNumber(d.smsFromNumber);
+      if (typeof d.waAccessToken === "string") setWaAccessToken(d.waAccessToken);
+      if (typeof d.waPhoneNumberId === "string") setWaPhoneNumberId(d.waPhoneNumberId);
+      if (typeof d.waVerifyToken === "string") setWaVerifyToken(d.waVerifyToken);
+    } catch { /* ignore */ }
+  }, [draftKey]);
+
+  // Persist a draft snapshot whenever fields change so it survives remounts.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({
+        emailApiKey, emailFrom, emailFromName,
+        smsAccountSid, smsAuthToken, smsFromNumber,
+        waAccessToken, waPhoneNumberId, waVerifyToken,
+      }));
+    } catch { /* ignore */ }
+  }, [draftKey, emailApiKey, emailFrom, emailFromName, smsAccountSid, smsAuthToken, smsFromNumber, waAccessToken, waPhoneNumberId, waVerifyToken]);
+
+  const clearChannelDraft = (channel: string) => {
+    if (channel === "email") {
+      setEmailApiKey("");
+    } else if (channel === "sms") {
+      setSmsAccountSid(""); setSmsAuthToken("");
+    } else if (channel === "whatsapp") {
+      setWaAccessToken(""); setWaVerifyToken("");
+    }
+  };
+
   useEffect(() => { fetchStatus(); }, [workspaceId]);
 
   const readFunctionPayload = async (response: Response) => {
@@ -673,6 +716,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       if (!response.ok) throw new Error(data?.error || `Save failed (${response.status})`);
       if (data?.error) throw new Error(data.error);
       toast.success(`${channel.charAt(0).toUpperCase() + channel.slice(1)} credentials saved.`);
+      clearChannelDraft(channel);
       await fetchStatus();
     } catch (err: any) {
       toast.error(err.message || "Failed to save");
@@ -701,6 +745,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         throw new Error(err.error || "Failed to disconnect");
       }
       toast.success(`${channel} disconnected.`);
+      clearChannelDraft(channel);
       await fetchStatus();
     } catch (err: any) {
       toast.error(err.message || "Failed to disconnect");

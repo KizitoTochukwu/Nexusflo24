@@ -705,18 +705,24 @@ function NotificationsTab() {
 
 /* ── Main Settings Page ──────────────────────────────────── */
 
-const VALID_TABS = ["profile", "billing", "usage", "channels", "branding", "team", "integrations", "webhooks", "automations", "notifications", "security", "ai-sales", "custom-code"] as const;
+const VALID_TABS = [
+  "profile", "billing", "usage", "channels", "senders", "buy-credits",
+  "wa-templates", "meta-channel", "tracking", "branding", "team",
+  "integrations", "webhooks", "automations", "notifications", "security",
+  "ai-sales", "custom-code",
+] as const;
 
 const DashboardSettings = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const workspaceId = useWorkspaceId();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
   const pathParts = location.pathname.split("/");
   const lastSegment = pathParts[pathParts.length - 1];
 
-  // If customer navigates to integrations, redirect to webhooks
-  const getInitialTab = () => {
-    // Support ?tab=usage query param (used by credit purchase redirects)
+  // Resolve the active tab from the URL so refresh / return-from-other-site
+  // re-opens the same tab instead of bouncing the user back to Profile.
+  const resolveTab = () => {
     const tabParam = new URLSearchParams(location.search).get("tab");
     if (tabParam && (VALID_TABS as readonly string[]).includes(tabParam)) {
       return tabParam;
@@ -728,7 +734,12 @@ const DashboardSettings = () => {
     return "profile";
   };
 
-  const initialTab = getInitialTab();
+  const activeTab = resolveTab();
+
+  const handleTabChange = (next: string) => {
+    if (!workspaceId || next === activeTab) return;
+    navigate(`/dashboard/${workspaceId}/settings/${next}`, { replace: true });
+  };
 
   return (
     <DashboardLayout>
@@ -738,7 +749,7 @@ const DashboardSettings = () => {
       {adminLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : (
-        <Tabs defaultValue={initialTab} className="mt-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="profile" className="gap-1.5"><User className="h-3.5 w-3.5" />Profile</TabsTrigger>
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
