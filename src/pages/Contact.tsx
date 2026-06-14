@@ -408,13 +408,7 @@ const Contact = () => {
                           <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </Button>
 
-                        <p className="px-4 text-center text-[10px] text-muted-foreground">
-                          By submitting, you agree to our{" "}
-                          <a href="https://nexusflo24.com/privacy-policy" className="underline hover:text-accent">
-                            Privacy Policy
-                          </a>
-                          . We never share your personal data.
-                        </p>
+                        <p className="px-4 text-center text-[10px] text-muted-foreground whitespace-pre-wrap">{"\n"}</p>
                       </form>
                     </>
                   )}
