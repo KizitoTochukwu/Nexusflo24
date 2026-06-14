@@ -1,28 +1,28 @@
-Plan to fix the Settings return/reset issue
+## Update Twilio WhatsApp credentials — both scopes
 
-1. Preserve the active Settings tab in the URL
-- Update the Settings page tabs from `defaultValue` to a controlled `value`.
-- When a user clicks Channels, Sender Profiles, Tracking, etc., update the route to `/dashboard/:workspaceId/settings/channels` instead of leaving the URL at `/settings`.
-- On refresh, browser return, or app remount, read the tab from the URL and reopen that same tab instead of defaulting to Profile.
-- Add missing tab route values to the valid tab list, including `senders`, `buy-credits`, `wa-templates`, `meta-channel`, and `tracking`, so those tabs also survive refresh/remount.
+### 1. Platform-wide fallback (used when no workspace credentials are set)
+Update the three Twilio runtime secrets via the secure secrets form:
+- `TWILIO_ACCOUNT_SID` — Twilio Account SID (starts with `AC`, 34 chars)
+- `TWILIO_AUTH_TOKEN` — 32-char Twilio Auth Token
+- `TWILIO_FROM_NUMBER` — your WhatsApp-enabled sender, e.g. `whatsapp:+14155238886` (or a Messaging Service SID in `MESSAGING_SERVICE_SID`)
 
-2. Avoid unnecessary navigation loops
-- Keep `/settings` as Profile by default only when no tab is specified.
-- Keep non-admin `integrations` redirecting to `webhooks`, but do it through the controlled tab/URL logic.
-- Do not add any browser-level reload behavior.
+You enter the values in the popup; nothing is shown in chat or stored in code. These are consumed by edge functions as the fallback when a workspace has not configured its own Twilio credentials.
 
-3. Protect Channel credentials from disruption during remounts
-- Add lightweight session draft persistence for unsaved Channel Settings fields.
-- Store only the form values the user is actively typing in the current browser session.
-- Clear the draft for that channel after a successful save or disconnect.
-- This keeps ongoing input from disappearing if the browser/app remounts while the user returns from another platform.
+### 2. Per-workspace credentials (Settings → Channels → WhatsApp)
+For each workspace that should use its own Twilio account:
+1. Open Dashboard → Settings → Channels → WhatsApp tab.
+2. Select provider = **Twilio**.
+3. Enter Account SID, Auth Token, and From Number (WhatsApp-enabled).
+4. Save — the `channel-settings-save` edge function validates the format, AES-GCM encrypts the config with `CHANNEL_SETTINGS_ENCRYPTION_KEY`, and upserts into `workspace_channel_settings` (channel = `whatsapp`, `is_active = true`).
 
-4. Finish removing old route restore behavior where it still exists
-- Remove remaining `resolveRestoreTarget` usage from Login and Google auth callback redirects.
-- After login/callback, continue sending users to workspace Overview instead of restoring stale deep pages.
+No code changes are needed — the save endpoint already validates and stores Twilio WhatsApp credentials, and `resolveChannelCredentials()` already prefers workspace credentials over platform fallback.
 
-5. Verify expected behavior
-- From Settings → Channels, leave the app and return: it should stay on Channels, not Profile.
-- Hard refresh on `/settings/channels`: it should reopen Channels.
-- Unsaved channel inputs should still be present after an app remount in the same browser session.
-- Login/callback should not restore a stale previous dashboard page.
+### Order of operations
+1. Switch to build mode so I can trigger the secret-update popup for the three platform secrets.
+2. You enter the new Twilio values and submit.
+3. You then update each workspace's WhatsApp tab in the UI (no agent action required).
+
+### Notes
+- I will not display, log, or echo any secret value.
+- `TWILIO_API_KEY` is connector-managed and is not touched here.
+- If you'd rather skip the platform fallback and only keep per-workspace credentials, say so and I'll only do step 2 (no agent action needed).
