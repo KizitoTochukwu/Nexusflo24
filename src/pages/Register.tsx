@@ -41,11 +41,17 @@ const Register = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: signupData, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
-        data: { full_name: form.name },
+        data: {
+          full_name: form.name,
+          sms_consent: smsConsent,
+          sms_consent_text: smsConsent ? SMS_CONSENT_TEXT : null,
+          sms_consent_timestamp: smsConsent ? new Date().toISOString() : null,
+          sms_consent_source: smsConsent ? "Signup Page" : null,
+        },
         emailRedirectTo: window.location.origin,
       },
     });
