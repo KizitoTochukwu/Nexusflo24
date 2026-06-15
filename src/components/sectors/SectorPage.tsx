@@ -43,7 +43,7 @@ const CtaButtons = ({ primaryLabel = "Start Free Trial" }: { primaryLabel?: stri
         <ArrowRight className="ml-1 h-4 w-4" />
       </Button>
     </Link>
-    <Link to="/contact">
+    <Link to="/book/30-minute-discovery-call-9f5d5f">
       <Button size="lg" variant="outline" className="w-full border-primary text-primary sm:w-auto">
         Book a Demo
       </Button>
