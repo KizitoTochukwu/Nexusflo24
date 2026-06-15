@@ -161,7 +161,7 @@ const Index = () => {
               Get Started Free
             </Button>
           </Link>
-          <Link to="/book/30-discovery-call-f8839f">
+          <Link to="/book/30-minute-discovery-call-9f5d5f">
             <Button size="lg" variant="outline" className="border-primary-foreground/40 bg-background/90 text-foreground hover:bg-background text-base px-10 py-6 text-lg rounded-lg">
               Get a Demo
             </Button>
@@ -454,7 +454,7 @@ const Index = () => {
               Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-          <Link to="/book/30-discovery-call-f8839f">
+          <Link to="/book/30-minute-discovery-call-9f5d5f">
             <Button size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-white hover:bg-primary hover:text-primary-foreground text-base px-8">
               Book a Demo
             </Button>

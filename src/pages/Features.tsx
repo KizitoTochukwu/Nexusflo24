@@ -112,7 +112,7 @@ const Features = () => (
                 Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/book/30-discovery-call-f8839f">
+            <Link to="/book/30-minute-discovery-call-9f5d5f">
               <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground px-8 text-base bg-navy-lighter">
                 Book a Demo
               </Button>
@@ -649,7 +649,7 @@ const Features = () => (
                 Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/book/30-discovery-call-f8839f">
+            <Link to="/book/30-minute-discovery-call-9f5d5f">
               <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground px-8 text-base bg-navy-lighter">
                 Book a Demo
               </Button>
