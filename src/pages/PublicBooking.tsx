@@ -367,7 +367,7 @@ export default function PublicBooking() {
                   <CalendarDays className="h-7 w-7 text-white" />
                 </div>
 
-                <h1 className="text-2xl font-bold leading-tight tracking-tight">{page.name}</h1>
+                <h1 className="text-3xl md:text-4xl font-extrabold leading-tight tracking-tight text-white drop-shadow-sm">{page.name}</h1>
 
                 {page.description && (
                   <p className="mt-3 text-sm leading-relaxed text-white/70 line-clamp-[10]">{page.description}</p>
