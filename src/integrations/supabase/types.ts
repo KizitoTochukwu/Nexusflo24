@@ -4029,6 +4029,15 @@ export type Database = {
           step_type: string
         }[]
       }
+      get_public_site_custom_code: {
+        Args: never
+        Returns: {
+          body_code: string
+          body_enabled: boolean
+          head_code: string
+          head_enabled: boolean
+        }[]
+      }
       get_workspace_public_pixels: {
         Args: { p_workspace_id: string }
         Returns: {

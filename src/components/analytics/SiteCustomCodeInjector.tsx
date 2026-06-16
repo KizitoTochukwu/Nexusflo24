@@ -40,23 +40,22 @@ function injectHtml(html: string, target: HTMLElement, mark: string) {
 }
 
 async function applyCustomCode() {
-  const { data, error } = await supabase
-    .from("site_custom_code")
-    .select("head_code, body_code, head_enabled, body_enabled")
-    .eq("id", "global")
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_public_site_custom_code");
   if (error || !data) return;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return;
 
   clearTagged(HEAD_MARK);
   clearTagged(BODY_MARK);
 
-  if (data.head_enabled && data.head_code) {
-    injectHtml(data.head_code, document.head, HEAD_MARK);
+  if (row.head_enabled && row.head_code) {
+    injectHtml(row.head_code, document.head, HEAD_MARK);
   }
-  if (data.body_enabled && data.body_code) {
-    injectHtml(data.body_code, document.body, BODY_MARK);
+  if (row.body_enabled && row.body_code) {
+    injectHtml(row.body_code, document.body, BODY_MARK);
   }
 }
+
 
 export default function SiteCustomCodeInjector() {
   useEffect(() => {
