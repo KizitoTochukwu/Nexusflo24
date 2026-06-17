@@ -83,6 +83,8 @@ export default function EmailTemplateSettings({ settings: rawSettings, onChange 
   };
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const workspaceId = useWorkspaceId();
+
 
   const update = <K extends keyof TemplateSettings>(
     section: K,
