@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Settings, Image, FileText, Type, ChevronDown, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 export interface TemplateSettings {
   header: {
