@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import type { SubscriptionData } from "@/lib/billing/access";
@@ -57,30 +57,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSubscription(null);
   };
 
+  const currentUserIdRef = useRef<string | null>(null);
+  const currentAccessTokenRef = useRef<string | null>(null);
+
   useEffect(() => {
-    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        if (session?.user) {
-          setTimeout(() => fetchSubscription(session.user.id), 0);
-        } else {
+    const applySession = (
+      nextSession: Session | null,
+      opts: { allowSubFetch: boolean }
+    ) => {
+      const nextUserId = nextSession?.user?.id ?? null;
+      const nextToken = nextSession?.access_token ?? null;
+      const userChanged = nextUserId !== currentUserIdRef.current;
+      const tokenChanged = nextToken !== currentAccessTokenRef.current;
+
+      // Token refresh on tab focus: keep the session fresh internally but
+      // don't trigger React re-renders / downstream refetches.
+      if (tokenChanged) {
+        currentAccessTokenRef.current = nextToken;
+        if (userChanged) setSession(nextSession);
+      }
+
+      if (userChanged) {
+        currentUserIdRef.current = nextUserId;
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+        if (nextSession?.user && opts.allowSubFetch) {
+          setTimeout(() => fetchSubscription(nextSession.user.id), 0);
+        } else if (!nextSession?.user) {
           setSubscription(null);
           setSubLoading(false);
+        }
+      }
+    };
+
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        // Only treat these as "auth changed"; TOKEN_REFRESHED / USER_UPDATED
+        // should NOT cause the dashboard to reload.
+        const meaningful =
+          event === "INITIAL_SESSION" ||
+          event === "SIGNED_IN" ||
+          event === "SIGNED_OUT";
+
+        if (meaningful) {
+          applySession(session, { allowSubFetch: true });
+          setLoading(false);
+        } else {
+          // Silently keep the access token ref in sync for future requests.
+          if (session?.access_token) {
+            currentAccessTokenRef.current = session.access_token;
+          }
         }
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      applySession(session, { allowSubFetch: true });
       setLoading(false);
-      if (session?.user) {
-        fetchSubscription(session.user.id);
-      } else {
-        setSubLoading(false);
-      }
+      if (!session?.user) setSubLoading(false);
     });
 
     return () => authSub.unsubscribe();
