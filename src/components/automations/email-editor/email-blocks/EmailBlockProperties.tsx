@@ -267,6 +267,7 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const workspaceId = useWorkspaceId();
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState("");
   const [linkUrl, setLinkUrl] = useState("https://");
