@@ -113,7 +113,7 @@ export default function EmailTemplateSettings({ settings: rawSettings, onChange 
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `logos/${Date.now()}.${ext}`;
+      const path = `${workspaceId}/logos/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("email-assets")
         .upload(path, file, { upsert: true });
