@@ -16,6 +16,7 @@ interface ImageInsertDialogProps {
 }
 
 export default function ImageInsertDialog({ open, onOpenChange, onInsert }: ImageInsertDialogProps) {
+  const workspaceId = useWorkspaceId();
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
   const [width, setWidth] = useState("600");
