@@ -322,7 +322,7 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
     setUploadingImg(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `images/${Date.now()}.${ext}`;
+      const path = `${workspaceId}/images/${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("email-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("email-assets").getPublicUrl(path);
