@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   EmailBlock, TextBlockProps, ImageBlockProps, ButtonBlockProps,
   DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
@@ -266,6 +267,7 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const workspaceId = useWorkspaceId();
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkText, setLinkText] = useState("");
   const [linkUrl, setLinkUrl] = useState("https://");
@@ -320,7 +322,7 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
     setUploadingImg(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `images/${Date.now()}.${ext}`;
+      const path = `${workspaceId}/images/${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("email-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("email-assets").getPublicUrl(path);
@@ -573,6 +575,8 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
 function ImageProps({ block, onChange }: { block: EmailBlock; onChange: (p: ImageBlockProps) => void }) {
   const p = block.props as ImageBlockProps;
   const [uploading, setUploading] = useState(false);
+  const workspaceId = useWorkspaceId();
+
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -589,7 +593,7 @@ function ImageProps({ block, onChange }: { block: EmailBlock; onChange: (p: Imag
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `images/${Date.now()}.${ext}`;
+      const path = `${workspaceId}/images/${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("email-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("email-assets").getPublicUrl(path);

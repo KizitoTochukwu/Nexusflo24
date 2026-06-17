@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Settings, Image, FileText, Type, ChevronDown, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 export interface TemplateSettings {
   header: {
@@ -82,6 +83,8 @@ export default function EmailTemplateSettings({ settings: rawSettings, onChange 
   };
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const workspaceId = useWorkspaceId();
+
 
   const update = <K extends keyof TemplateSettings>(
     section: K,
@@ -110,7 +113,7 @@ export default function EmailTemplateSettings({ settings: rawSettings, onChange 
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `logos/${Date.now()}.${ext}`;
+      const path = `${workspaceId}/logos/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("email-assets")
         .upload(path, file, { upsert: true });

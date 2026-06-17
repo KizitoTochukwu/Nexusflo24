@@ -1,32 +1,33 @@
-## Problem
+## Error
 
-When inserting an image in the automation Email Editor, Supabase Storage upload fails with:
+> insert into "objects" (...) — invalid input syntax for type uuid: "images"
 
-> invalid input syntax for type uuid: "images"
+## Cause
 
-## Root cause
-
-The `email-assets` bucket RLS policy is:
+The `email-assets` storage bucket has an RLS policy that requires the first folder segment of the upload path to be a workspace UUID:
 
 ```
-bucket_id = 'email-assets' AND is_workspace_member(auth.uid(), ((storage.foldername(name))[1])::uuid)
+is_workspace_member(auth.uid(), ((storage.foldername(name))[1])::uuid)
 ```
 
-It requires the **first folder segment** of the object name to be the current **workspace UUID**. `src/components/automations/email-editor/ImageInsertDialog.tsx` uploads with path `images/${Date.now()}.${ext}`, so Postgres tries to cast `"images"` to `uuid` and rejects the insert.
+`ImageInsertDialog.tsx` was uploading to `images/<timestamp>.<ext>` — Postgres tries to cast `"images"` to `uuid` and rejects the insert.
 
-## Fix
+## Fix (already applied last turn)
 
-Update `ImageInsertDialog.tsx`:
+`src/components/automations/email-editor/ImageInsertDialog.tsx`:
+- Imported `useWorkspaceId`
+- Changed upload path from `images/${ts}.${ext}` → `${workspaceId}/images/${ts}.${ext}`
 
-1. Pull the active workspace id from `useWorkspace()` (same hook other email-editor components use).
-2. Change the upload path from `images/${ts}.${ext}` to `${workspaceId}/images/${ts}.${ext}`.
-3. If `workspaceId` is missing, show a toast and abort the upload instead of letting it 400.
+## What's still needed
 
-No schema or policy changes — the policy is correct and is shared by other workspace assets.
+Confirm the same workspace-prefixed path pattern is used wherever else `email-assets` is uploaded to, so other editors don't hit the same error. Targets to audit and patch identically if affected:
+
+- `src/components/automations/email-editor/EmailTemplateSettings.tsx` (logo / header image upload)
+- `src/components/settings/BrandingTab.tsx` (workspace logo, if it writes to `email-assets`)
+- Any other `.from("email-assets").upload(...)` call in the repo
+
+For each occurrence using a non-UUID first segment (e.g. `logos/...`, `headers/...`), prefix with `${workspaceId}/`.
 
 ## Verification
 
-- Open an automation step → Send Email → Insert → Image → Upload.
-- Pick a PNG/JPEG.
-- Expect: success toast, image inserted, public URL like `…/email-assets/<workspaceId>/images/<ts>.png`.
-- Repeat with a second workspace to confirm scoping.
+In the automation Send Email step → Image → Upload a PNG. Expect success toast and inserted image. Repeat for any other editor that uploads to `email-assets`.
