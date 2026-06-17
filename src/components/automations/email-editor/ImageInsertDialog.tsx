@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Upload, Link2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 interface ImageInsertDialogProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface ImageInsertDialogProps {
 }
 
 export default function ImageInsertDialog({ open, onOpenChange, onInsert }: ImageInsertDialogProps) {
+  const workspaceId = useWorkspaceId();
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
   const [width, setWidth] = useState("600");
@@ -39,7 +41,7 @@ export default function ImageInsertDialog({ open, onOpenChange, onInsert }: Imag
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
-      const path = `images/${Date.now()}.${ext}`;
+      const path = `${workspaceId}/images/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("email-assets")
         .upload(path, file, { upsert: true });
