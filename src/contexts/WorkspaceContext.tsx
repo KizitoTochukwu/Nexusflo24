@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -70,18 +70,25 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   };
 
+  // Track which user id we've already loaded workspaces for so that a new
+  // `user` object reference (e.g. a Supabase token refresh on tab focus)
+  // does NOT retrigger a fetch and flash the "Setting up your workspace…"
+  // spinner across the dashboard.
+  const loadedForUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    // Wait for auth to finish resolving before fetching, so we don't run a
-    // "user=null" fetch (which sets loading=false with empty workspaces) and
-    // then a second "user=X" fetch that leaves loading=false during the
-    // in-flight window — that gap is what causes guards to bounce back to
-    // /login and produce the "Setting up your workspace…" redirect loop.
     if (authLoading) {
       setLoading(true);
       return;
     }
+    const uid = user?.id ?? null;
+    if (loadedForUserIdRef.current === uid) {
+      // Same user as last fetch (or still signed-out) — nothing to do.
+      return;
+    }
+    loadedForUserIdRef.current = uid;
     fetchWorkspaces();
-  }, [user, authLoading]);
+  }, [user?.id, authLoading]);
 
 
   const currentWorkspace = workspaces.find((w) => w.id === currentWorkspaceId) ?? null;
