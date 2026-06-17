@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   EmailBlock, TextBlockProps, ImageBlockProps, ButtonBlockProps,
   DividerBlockProps, SpacerBlockProps, SocialBlockProps, ColumnsBlockProps,
