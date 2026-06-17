@@ -575,6 +575,8 @@ function TextProps({ block, onChange }: { block: EmailBlock; onChange: (p: TextB
 function ImageProps({ block, onChange }: { block: EmailBlock; onChange: (p: ImageBlockProps) => void }) {
   const p = block.props as ImageBlockProps;
   const [uploading, setUploading] = useState(false);
+  const workspaceId = useWorkspaceId();
+
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
