@@ -104,7 +104,6 @@ export interface EmbeddedSignupResult {
  */
 export function launchEmbeddedSignup(
   configId: string,
-  redirectUri = META_REDIRECT_URI,
 ): Promise<EmbeddedSignupResult> {
   return new Promise((resolve, reject) => {
     if (!window.FB) return reject(new Error("Facebook SDK not loaded"));
@@ -161,18 +160,7 @@ export function launchEmbeddedSignup(
     }, LOGIN_TIMEOUT_MS);
 
     try {
-      const metaRedirectUri = redirectUri.trim();
-      if (!metaRedirectUri) {
-        cleanup();
-        reject(
-          new Error(
-            "Meta redirect URI is missing. Refresh NexusFlo24 and try Connect WhatsApp again.",
-          ),
-        );
-        return;
-      }
-
-      console.info("[Meta Embedded Signup] redirect_uri used in frontend:", metaRedirectUri);
+      console.info("[Meta Embedded Signup] launching FB.login without redirect_uri (SDK-managed)");
 
       window.FB.login(
         (response: { authResponse?: { code?: string }; status?: string }) => {
@@ -180,9 +168,6 @@ export function launchEmbeddedSignup(
           cleanup();
           if (response?.authResponse?.code) {
             const code = response.authResponse.code;
-            // If Meta's postMessage didn't deliver waba/phone IDs but we have
-            // a usable code and no explicit error, let the backend recover the
-            // IDs via Graph API (/debug_token + /{waba}/phone_numbers).
             if (metaError && (!wabaId || !phoneNumberId)) {
               reject(new Error(metaError));
               return;
@@ -194,7 +179,6 @@ export function launchEmbeddedSignup(
         },
         {
           config_id: configId,
-          redirect_uri: metaRedirectUri,
           response_type: "code",
           override_default_response_type: true,
           extras: { setup: {} },

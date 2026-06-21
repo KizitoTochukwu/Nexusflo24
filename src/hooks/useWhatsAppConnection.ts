@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { META_REDIRECT_URI, loadFbSdk, launchEmbeddedSignup } from "@/lib/meta/fbSdk";
+import { loadFbSdk, launchEmbeddedSignup } from "@/lib/meta/fbSdk";
 
 export interface WhatsAppConnection {
   configured: boolean;
@@ -84,28 +84,13 @@ export function useConnectWhatsApp(workspaceId: string) {
         );
       }
       await loadFbSdk(cfg.appId);
-      if (!META_REDIRECT_URI) {
-        throw new Error("Meta redirect URI is missing. Refresh NexusFlo24 and try again.");
-      }
-      console.info("[Meta Embedded Signup] configured redirect_uri:", META_REDIRECT_URI);
-      const expectedOrigin = new URL(META_REDIRECT_URI).origin;
-      if (window.location.origin !== expectedOrigin) {
-        console.warn("[Meta Embedded Signup] redirect_uri mismatch before popup:", {
-          currentOrigin: window.location.origin,
-          expectedRedirectUri: META_REDIRECT_URI,
-        });
-        throw new Error(
-          `Meta redirect URI mismatch. Open ${META_REDIRECT_URI} and retry Connect WhatsApp from that exact domain.`,
-        );
-      }
-      console.info("[Meta Embedded Signup] redirect_uri sent to backend:", META_REDIRECT_URI);
-      const result = await launchEmbeddedSignup(cfg.configId, META_REDIRECT_URI);
+      console.info("[Meta Embedded Signup] redirect_uri not sent — JS SDK manages its own redirect");
+      const result = await launchEmbeddedSignup(cfg.configId);
       const res = await invoke("whatsapp-embedded-signup", {
         workspaceId,
         code: result.code,
         wabaId: result.wabaId,
         phoneNumberId: result.phoneNumberId,
-        redirectUri: META_REDIRECT_URI,
       });
       return res;
     },

@@ -8,7 +8,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptWhatsApp, encryptChannelConfig } from "../_shared/whatsapp-crypto.ts";
-import { META_REDIRECT_URI } from "../_shared/meta.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,11 +85,6 @@ Deno.serve(async (req) => {
 
     const body = (await req.json()) as Body;
     let { workspaceId, code, wabaId, phoneNumberId } = body || ({} as Body);
-    const redirectUri = body?.redirectUri?.trim() ?? "";
-    console.info("[Meta Embedded Signup] redirect_uri received by backend:", {
-      received: redirectUri || null,
-      expected: META_REDIRECT_URI,
-    });
 
     if (!workspaceId || !code) {
       return new Response(
@@ -97,25 +92,6 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (!redirectUri) {
-      return new Response(
-        JSON.stringify({ error: "Meta redirect URI is missing. Refresh NexusFlo24 and retry Connect WhatsApp." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    if (redirectUri !== META_REDIRECT_URI) {
-      console.warn("[Meta Embedded Signup] redirect_uri mismatch:", {
-        received: redirectUri,
-        expected: META_REDIRECT_URI,
-      });
-      return new Response(
-        JSON.stringify({
-          error: `Meta redirect URI mismatch. Frontend sent ${redirectUri}, but NexusFlo24 expects ${META_REDIRECT_URI}. Open ${META_REDIRECT_URI} and retry Connect WhatsApp.`,
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    console.info("[Meta Embedded Signup] redirect_uri used in backend:", redirectUri);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -148,15 +124,13 @@ Deno.serve(async (req) => {
     }
 
     // 1. Exchange short-lived code for a business system-user access token.
-    // Meta requires the token exchange to use the exact redirect_uri passed into
-    // FB.login(). The frontend sends META_REDIRECT_URI, so exchange with that
-    // same app-owned callback instead of a Facebook-owned URL Meta will not save
-    // in the app's Valid OAuth Redirect URIs list.
-    console.info("[Meta Embedded Signup] exchanging code with redirect_uri:", redirectUri);
+    // The Facebook JS SDK's FB.login() binds the code to its own internal
+    // redirect — passing redirect_uri here would cause Meta to reject the
+    // exchange with "redirect_uri is not identical". Omit it entirely.
+    console.info("[Meta Embedded Signup] exchanging code (no redirect_uri)");
     const exchangeUrl = `${GRAPH}/oauth/access_token?${new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
-      redirect_uri: redirectUri,
       code,
     }).toString()}`;
     const exchangeRes = await fetch(exchangeUrl, { headers: { "Content-Type": "application/json" } });
