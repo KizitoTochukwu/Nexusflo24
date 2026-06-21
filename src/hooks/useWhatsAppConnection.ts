@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { META_REDIRECT_URI, loadFbSdk, launchEmbeddedSignup } from "@/lib/meta/fbSdk";
+import { loadFbSdk, launchEmbeddedSignup } from "@/lib/meta/fbSdk";
 
 export interface WhatsAppConnection {
   configured: boolean;
