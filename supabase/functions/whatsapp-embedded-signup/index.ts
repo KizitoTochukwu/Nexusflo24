@@ -124,15 +124,13 @@ Deno.serve(async (req) => {
     }
 
     // 1. Exchange short-lived code for a business system-user access token.
-    // Meta requires the token exchange to use the exact redirect_uri passed into
-    // FB.login(). The frontend sends META_REDIRECT_URI, so exchange with that
-    // same app-owned callback instead of a Facebook-owned URL Meta will not save
-    // in the app's Valid OAuth Redirect URIs list.
-    console.info("[Meta Embedded Signup] exchanging code with redirect_uri:", redirectUri);
+    // The Facebook JS SDK's FB.login() binds the code to its own internal
+    // redirect — passing redirect_uri here would cause Meta to reject the
+    // exchange with "redirect_uri is not identical". Omit it entirely.
+    console.info("[Meta Embedded Signup] exchanging code (no redirect_uri)");
     const exchangeUrl = `${GRAPH}/oauth/access_token?${new URLSearchParams({
       client_id: appId,
       client_secret: appSecret,
-      redirect_uri: redirectUri,
       code,
     }).toString()}`;
     const exchangeRes = await fetch(exchangeUrl, { headers: { "Content-Type": "application/json" } });
