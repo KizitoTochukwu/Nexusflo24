@@ -8,7 +8,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encryptWhatsApp, encryptChannelConfig } from "../_shared/whatsapp-crypto.ts";
-import { META_REDIRECT_URI } from "../_shared/meta.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
