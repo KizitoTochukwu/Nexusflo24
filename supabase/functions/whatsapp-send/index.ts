@@ -31,13 +31,20 @@ function buildWhatsAppError(waRes: Response, waData: any) {
 
   const isTokenOrPermissionError = graphCode === 190 || graphCode === 10 || graphCode === 200;
 
-  const errMsg = isCredentialMismatch
-    ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Contact platform admin."
+  // 132xxx = template-related errors (not approved, name/language mismatch,
+  // paused, disabled, etc). Surface a clear, actionable message instead of
+  // the generic Graph string.
+  const isTemplateError = graphCode >= 132000 && graphCode < 133000;
+
+  const errMsg = isTemplateError
+    ? `WhatsApp template error [${graphCode}]: ${graphMessage}. Open Settings → Channels → WhatsApp and click "Sync templates from Meta", then pick an APPROVED template (matching name + language) as your default re-engagement template.`
+    : isCredentialMismatch
+    ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Reconnect WhatsApp in Settings → Channels."
     : isTokenOrPermissionError
-      ? "WhatsApp token is invalid, expired, or missing required permissions (whatsapp_business_messaging). Contact platform admin."
+      ? "WhatsApp token is invalid, expired, or missing required permissions (whatsapp_business_messaging). Reconnect WhatsApp in Settings → Channels."
       : `[${graphType} ${graphCode}${graphSubcode ? `/${graphSubcode}` : ""}] ${graphMessage}`;
 
-  return { errMsg, graphCode, graphSubcode, isCredentialMismatch, isTokenOrPermissionError };
+  return { errMsg, graphCode, graphSubcode, isCredentialMismatch, isTokenOrPermissionError, isTemplateError };
 }
 
 interface TemplatePayload {
@@ -369,25 +376,12 @@ Deno.serve(async (req) => {
       effectiveTemplate,
     );
 
-    if (!attempt.ok && attempt.source === "workspace" && platformAccessToken && platformPhoneNumberId) {
-      const workspaceError = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
-      if (workspaceError.isCredentialMismatch || workspaceError.isTokenOrPermissionError) {
-        console.warn("Workspace WhatsApp credentials failed, retrying with platform credentials", {
-          workspaceId,
-          graphCode: workspaceError.graphCode,
-          graphSubcode: workspaceError.graphSubcode,
-        });
-
-        attempt = await sendWhatsAppMessage(
-          platformAccessToken,
-          platformPhoneNumberId,
-          normalizedTo,
-          msgBody || `[Template: ${effectiveTemplate?.name}]`,
-          "platform",
-          effectiveTemplate,
-        );
-      }
-    }
+    // NOTE: do NOT fall back from workspace → platform credentials.
+    // The platform access token does not own the workspace's phone_number_id,
+    // so any retry produces a misleading 100/33 "credentials mismatch" error.
+    // Workspace creds are a paired unit (token + phone + WABA + templates) and
+    // must surface their own failure so the user can fix it (e.g. sync/approve
+    // the template in their WABA, or reconnect via Embedded Signup).
 
     if (!attempt.ok) {
       const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
