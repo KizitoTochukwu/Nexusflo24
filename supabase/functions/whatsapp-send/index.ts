@@ -31,13 +31,20 @@ function buildWhatsAppError(waRes: Response, waData: any) {
 
   const isTokenOrPermissionError = graphCode === 190 || graphCode === 10 || graphCode === 200;
 
-  const errMsg = isCredentialMismatch
-    ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Contact platform admin."
+  // 132xxx = template-related errors (not approved, name/language mismatch,
+  // paused, disabled, etc). Surface a clear, actionable message instead of
+  // the generic Graph string.
+  const isTemplateError = graphCode >= 132000 && graphCode < 133000;
+
+  const errMsg = isTemplateError
+    ? `WhatsApp template error [${graphCode}]: ${graphMessage}. Open Settings → Channels → WhatsApp and click "Sync templates from Meta", then pick an APPROVED template (matching name + language) as your default re-engagement template.`
+    : isCredentialMismatch
+    ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Reconnect WhatsApp in Settings → Channels."
     : isTokenOrPermissionError
-      ? "WhatsApp token is invalid, expired, or missing required permissions (whatsapp_business_messaging). Contact platform admin."
+      ? "WhatsApp token is invalid, expired, or missing required permissions (whatsapp_business_messaging). Reconnect WhatsApp in Settings → Channels."
       : `[${graphType} ${graphCode}${graphSubcode ? `/${graphSubcode}` : ""}] ${graphMessage}`;
 
-  return { errMsg, graphCode, graphSubcode, isCredentialMismatch, isTokenOrPermissionError };
+  return { errMsg, graphCode, graphSubcode, isCredentialMismatch, isTokenOrPermissionError, isTemplateError };
 }
 
 interface TemplatePayload {
