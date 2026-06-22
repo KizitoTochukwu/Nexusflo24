@@ -369,25 +369,12 @@ Deno.serve(async (req) => {
       effectiveTemplate,
     );
 
-    if (!attempt.ok && attempt.source === "workspace" && platformAccessToken && platformPhoneNumberId) {
-      const workspaceError = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
-      if (workspaceError.isCredentialMismatch || workspaceError.isTokenOrPermissionError) {
-        console.warn("Workspace WhatsApp credentials failed, retrying with platform credentials", {
-          workspaceId,
-          graphCode: workspaceError.graphCode,
-          graphSubcode: workspaceError.graphSubcode,
-        });
-
-        attempt = await sendWhatsAppMessage(
-          platformAccessToken,
-          platformPhoneNumberId,
-          normalizedTo,
-          msgBody || `[Template: ${effectiveTemplate?.name}]`,
-          "platform",
-          effectiveTemplate,
-        );
-      }
-    }
+    // NOTE: do NOT fall back from workspace → platform credentials.
+    // The platform access token does not own the workspace's phone_number_id,
+    // so any retry produces a misleading 100/33 "credentials mismatch" error.
+    // Workspace creds are a paired unit (token + phone + WABA + templates) and
+    // must surface their own failure so the user can fix it (e.g. sync/approve
+    // the template in their WABA, or reconnect via Embedded Signup).
 
     if (!attempt.ok) {
       const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
