@@ -23,7 +23,7 @@ import {
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { useIsAdmin } from "@/hooks/useAdminRole";
-import { Bot, Radio } from "lucide-react";
+import { Bot, Radio, Key } from "lucide-react";
 import SalesCloserSettingsTab from "@/components/settings/SalesCloserSettingsTab";
 import ChannelSettingsTab from "@/components/settings/ChannelSettingsTab";
 import UsageCreditsTab from "@/components/settings/UsageCreditsTab";
