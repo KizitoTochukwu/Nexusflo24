@@ -3605,6 +3605,56 @@ export type Database = {
           },
         ]
       }
+      workspace_api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: string[]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_api_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_assignment_state: {
         Row: {
           last_assigned_user_id: string | null
@@ -4091,6 +4141,14 @@ export type Database = {
       }
       sync_admin_role: { Args: never; Returns: undefined }
       user_workspace_ids: { Args: { _user_id: string }; Returns: string[] }
+      verify_workspace_api_key: {
+        Args: { _key_hash: string }
+        Returns: {
+          key_id: string
+          scopes: string[]
+          workspace_id: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
