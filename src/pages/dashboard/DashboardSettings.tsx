@@ -35,6 +35,7 @@ import WhatsAppTemplatesTab from "@/components/settings/WhatsAppTemplatesTab";
 import MetaChannelTab from "@/components/settings/MetaChannelTab";
 import SenderProfilesTab from "@/components/settings/SenderProfilesTab";
 import BuyCreditsTab from "@/components/settings/BuyCreditsTab";
+import ApiKeysTab from "@/components/settings/ApiKeysTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -708,7 +709,7 @@ function NotificationsTab() {
 const VALID_TABS = [
   "profile", "billing", "usage", "channels", "senders", "buy-credits",
   "wa-templates", "meta-channel", "tracking", "branding", "team",
-  "integrations", "webhooks", "automations", "notifications", "security",
+  "integrations", "webhooks", "api-keys", "automations", "notifications", "security",
   "ai-sales", "custom-code",
 ] as const;
 
@@ -766,6 +767,7 @@ const DashboardSettings = () => {
               <TabsTrigger value="integrations" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" />Integrations</TabsTrigger>
             )}
             <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" />Webhooks</TabsTrigger>
+            <TabsTrigger value="api-keys" className="gap-1.5"><Key className="h-3.5 w-3.5" />API Keys</TabsTrigger>
             <TabsTrigger value="automations" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Automation</TabsTrigger>
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
             <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
@@ -791,6 +793,7 @@ const DashboardSettings = () => {
               {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
             </TabsContent>
             <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
+            <TabsContent value="api-keys"><ApiKeysTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="automations"><AutomationPrefsTab /></TabsContent>
             <TabsContent value="notifications"><NotificationsTab /></TabsContent>
             <TabsContent value="security"><SecurityTab /></TabsContent>
