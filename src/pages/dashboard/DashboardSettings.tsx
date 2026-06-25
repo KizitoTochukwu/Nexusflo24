@@ -35,6 +35,7 @@ import WhatsAppTemplatesTab from "@/components/settings/WhatsAppTemplatesTab";
 import MetaChannelTab from "@/components/settings/MetaChannelTab";
 import SenderProfilesTab from "@/components/settings/SenderProfilesTab";
 import BuyCreditsTab from "@/components/settings/BuyCreditsTab";
+import ApiKeysTab from "@/components/settings/ApiKeysTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
