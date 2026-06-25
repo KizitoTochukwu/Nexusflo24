@@ -767,6 +767,7 @@ const DashboardSettings = () => {
               <TabsTrigger value="integrations" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" />Integrations</TabsTrigger>
             )}
             <TabsTrigger value="webhooks" className="gap-1.5"><Webhook className="h-3.5 w-3.5" />Webhooks</TabsTrigger>
+            <TabsTrigger value="api-keys" className="gap-1.5"><Key className="h-3.5 w-3.5" />API Keys</TabsTrigger>
             <TabsTrigger value="automations" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Automation</TabsTrigger>
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
             <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
