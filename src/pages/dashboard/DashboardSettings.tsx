@@ -709,7 +709,7 @@ function NotificationsTab() {
 const VALID_TABS = [
   "profile", "billing", "usage", "channels", "senders", "buy-credits",
   "wa-templates", "meta-channel", "tracking", "branding", "team",
-  "integrations", "webhooks", "automations", "notifications", "security",
+  "integrations", "webhooks", "api-keys", "automations", "notifications", "security",
   "ai-sales", "custom-code",
 ] as const;
 
