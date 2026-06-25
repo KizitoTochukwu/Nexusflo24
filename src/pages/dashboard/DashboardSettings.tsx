@@ -793,6 +793,7 @@ const DashboardSettings = () => {
               {isAdmin ? <IntegrationsTab /> : <AccessDeniedCard />}
             </TabsContent>
             <TabsContent value="webhooks"><WebhooksTab /></TabsContent>
+            <TabsContent value="api-keys"><ApiKeysTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="automations"><AutomationPrefsTab /></TabsContent>
             <TabsContent value="notifications"><NotificationsTab /></TabsContent>
             <TabsContent value="security"><SecurityTab /></TabsContent>
