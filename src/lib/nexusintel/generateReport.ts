@@ -442,18 +442,23 @@ export async function fetchWebsiteContent(_websiteUrl: string): Promise<string> 
 }
 export async function analyseWithOpenAI(_companyData: unknown): Promise<unknown> {
   notConfigured("analyseWithOpenAI");
+  return null;
 }
 export async function fetchGoogleAdsInsights(_companyName: string): Promise<unknown> {
   notConfigured("fetchGoogleAdsInsights");
+  return null;
 }
 export async function fetchMetaAdsInsights(_companyName: string): Promise<unknown> {
   notConfigured("fetchMetaAdsInsights");
+  return null;
 }
 export async function fetchLinkedInAdsInsights(_companyName: string): Promise<unknown> {
   notConfigured("fetchLinkedInAdsInsights");
+  return null;
 }
 export async function detectTechStack(_websiteUrl: string): Promise<unknown> {
   notConfigured("detectTechStack");
+  return null;
 }
 export async function exportToGoogleSheets(_report: unknown): Promise<void> {
   notConfigured("exportToGoogleSheets");
