@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
+import { decryptWhatsApp, encryptChannelConfig } from "../_shared/whatsapp-crypto.ts";
 import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
@@ -18,6 +19,98 @@ type WhatsAppAttemptResult = {
   phoneNumberId: string;
   source: "workspace" | "platform";
 };
+
+function hasMetaCredentials(config: Record<string, string> | undefined): config is Record<string, string> {
+  return Boolean(config?.access_token?.trim() && config?.phone_number_id?.trim());
+}
+
+async function repairWorkspaceChannelSettings(
+  adminClient: any,
+  workspaceId: string,
+  config: Record<string, string>,
+) {
+  const channelKey = Deno.env.get("CHANNEL_SETTINGS_ENCRYPTION_KEY");
+  if (!channelKey || !hasMetaCredentials(config)) return;
+
+  const configEncrypted = await encryptChannelConfig(
+    JSON.stringify({
+      provider: "meta",
+      access_token: config.access_token,
+      phone_number_id: config.phone_number_id,
+    }),
+    channelKey,
+  );
+
+  const { data: existing } = await adminClient
+    .from("workspace_channel_settings")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("channel", "whatsapp")
+    .maybeSingle();
+
+  if (existing?.id) {
+    await adminClient
+      .from("workspace_channel_settings")
+      .update({ config_encrypted: configEncrypted, is_active: true, updated_at: new Date().toISOString() })
+      .eq("id", existing.id);
+  } else {
+    await adminClient.from("workspace_channel_settings").insert({
+      workspace_id: workspaceId,
+      channel: "whatsapp",
+      config_encrypted: configEncrypted,
+      is_active: true,
+    });
+  }
+}
+
+async function resolveMetaCredentials(
+  adminClient: any,
+  workspaceId: string,
+  platformFallback: Record<string, string | undefined>,
+) {
+  const workspaceCreds = await resolveChannelCredentials(workspaceId, "whatsapp", {});
+  if (hasMetaCredentials(workspaceCreds.config)) return workspaceCreds;
+
+  const whatsappKey = Deno.env.get("WHATSAPP_SETTINGS_ENCRYPTION_KEY");
+  if (whatsappKey) {
+    const { data: settingsRows } = await adminClient
+      .from("whatsapp_settings")
+      .select("phone_number_id, access_token_encrypted, is_active, updated_at")
+      .eq("workspace_id", workspaceId)
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    const settings = settingsRows?.[0];
+    if (settings?.phone_number_id && settings?.access_token_encrypted) {
+      try {
+        const config = {
+          access_token: await decryptWhatsApp(settings.access_token_encrypted, whatsappKey),
+          phone_number_id: String(settings.phone_number_id),
+        };
+        if (hasMetaCredentials(config)) {
+          await repairWorkspaceChannelSettings(adminClient, workspaceId, config).catch((err) => {
+            console.warn("whatsapp-send: failed to repair workspace channel settings", err);
+          });
+          return { source: "workspace" as const, config };
+        }
+      } catch (err) {
+        console.warn("whatsapp-send: failed to decrypt active WhatsApp settings", err);
+      }
+    }
+  }
+
+  const platformConfig: Record<string, string> = {};
+  for (const [key, value] of Object.entries(platformFallback)) {
+    if (value?.trim()) platformConfig[key] = value.trim();
+  }
+
+  if (hasMetaCredentials(platformConfig)) {
+    return { source: "platform" as const, config: platformConfig };
+  }
+
+  return { source: "none" as const, config: {} };
+}
 
 function buildWhatsAppError(waRes: Response, waData: any) {
   const graphMessage = waData?.error?.message || `WhatsApp API error: ${waRes.status}`;
@@ -240,7 +333,7 @@ Deno.serve(async (req) => {
     const platformAccessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")?.trim();
     const platformPhoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim();
 
-    const creds = await resolveChannelCredentials(workspaceId, "whatsapp", {
+    const creds = await resolveMetaCredentials(adminClient, workspaceId, {
       access_token: platformAccessToken,
       phone_number_id: platformPhoneNumberId,
     });

@@ -1,51 +1,37 @@
-# How to confirm your WhatsApp messages were delivered
+## Findings
 
-## ✅ Confirmed: your messages were received
+- Your latest WhatsApp message did reach NexusFlo24: the backend stored it at `18:42 UTC` as an inbound WhatsApp message from your number.
+- The webhook also triggered the AI Sales Closer for that lead.
+- The failure is after AI generation, at the outbound sender step:
+  - `ai-sales-closer` called `whatsapp-send`
+  - `whatsapp-send` returned: `WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels.`
+- The workspace has an active Meta WhatsApp connection in `whatsapp_settings` with WABA `2185231005596249` and phone number ID `1216811704842616`, but the older `workspace_channel_settings` mirror used by `whatsapp-send` appears stale/incomplete. That is why inbound works but outbound auto-reply does not.
 
-I checked the database for inbound WhatsApp messages from your number (`+447517327597`) into workspace `95bc7e99…`:
+## Plan
 
-| Time (UTC) | Direction | Body | Status |
-|---|---|---|---|
-| 27 Jun 18:08 | inbound | "I want to learn about nexusflo24" | received ✅ |
-| 27 Jun 18:07 | inbound | "hi" | received ✅ |
+1. **Fix outbound credential resolution**
+   - Update the WhatsApp sender path so `whatsapp-send` can use the active Meta connection stored in `whatsapp_settings` directly when the legacy `workspace_channel_settings` mirror is missing, stale, or incomplete.
+   - Decrypt `access_token_encrypted` using the WhatsApp settings encryption helper already used elsewhere.
+   - Prefer workspace-specific Meta credentials over platform fallback.
 
-Both rows exist in `whatsapp_messages` with a valid `wa_message_id` from Meta — that proves:
-1. Meta accepted your messages.
-2. Meta forwarded them to our webhook (`whatsapp-webhook`).
-3. The webhook authenticated, matched the WABA, and stored them against the existing lead.
+2. **Repair the stale mirror automatically**
+   - When valid credentials are found in `whatsapp_settings`, refresh `workspace_channel_settings` with the same phone number ID and access token.
+   - This keeps existing functions that depend on `workspace_channel_settings` working without requiring you to reconnect WhatsApp.
 
-## ⚠️ But: the AI auto-reply did NOT fire back
+3. **Make AI Sales Closer status honest**
+   - Update `ai-sales-closer` so an auto-reply is only marked `sent` after `whatsapp-send` returns success.
+   - If sending fails, store the AI reply as `failed` with the returned error instead of reporting `status: sent` while no WhatsApp message was delivered.
 
-`sales_closer_settings` is enabled (`mode = auto_send`, channels include `whatsapp`) and a lead exists, so the webhook should have called `ai-sales-closer` → which should have sent a reply via `whatsapp-send`. No outbound row was created after 18:08 — meaning the auto-reply chain broke silently somewhere between the webhook and the send.
+4. **Set the approved default template**
+   - Set the existing approved template `reengagement_followup_v1` as the workspace default re-engagement template.
+   - This allows outbound replies outside the 24-hour WhatsApp window to use an approved template instead of failing.
 
-## How to confirm delivery yourself (3 places in the app)
-
-1. **Dashboard → Messages** — filter by WhatsApp; you should see the two inbound bubbles from your number.
-2. **Admin → Inbox** (for admins) — pick the workspace; WhatsApp tab shows the same rows with status `received`.
-3. **Lead detail drawer** — open the lead matching `+447517327597`; the conversation timeline shows the inbound messages.
-
-## Proposed fix plan for the missing auto-reply
-
-### 1. Add structured logging + early-return reasons in `whatsapp-webhook`
-At the AI auto-reply block (lines 257–299), log every branch decision: `no_lead`, `not_text`, `closer_disabled`, `channel_not_enabled`, `ai_call_started`, `ai_call_response`, `ai_call_threw`. This makes the next failure traceable in one log search.
-
-### 2. Harden the `ai-sales-closer` → `whatsapp-send` handoff
-- Ensure `process_inbound` always returns a JSON body (even on failure) so the webhook log captures the reason.
-- When auto_send mode posts to `whatsapp-send`, capture the response (including `fallback:true` / `error`) and write it back to `sales_conversations.status` + `error`.
-
-### 3. Re-run a live test
-After deploy, you message the number again from your phone. I then re-query:
-- `whatsapp_messages` for the new inbound + outbound rows
-- `sales_conversations` for the AI intent + outbound draft
-- `whatsapp-webhook` and `ai-sales-closer` logs filtered by the new `lead_id`
-
-…and report exactly which step succeeded/failed.
-
-### 4. Only after diagnosis — apply the actual fix
-The fix depends on what step 3 reveals (most likely: `ai-sales-closer` hitting an AI gateway error, or `whatsapp-send` rejecting because no APPROVED template is selected as default re-engagement — though that wouldn't apply here because the 24h window is now open).
-
-## Out of scope for this plan
-- No UI changes.
-- No changes to message-sending logic until logs prove the root cause.
-
-Approve and I'll add the logging, redeploy, and ask you to send one more test message so I can pinpoint the exact failure.
+5. **Deploy and verify with one more live test**
+   - Deploy the changed backend functions.
+   - Ask you to send one final WhatsApp message.
+   - Confirm the full chain:
+     - inbound stored
+     - AI Sales Closer processed
+     - outbound WhatsApp row created
+     - Meta message ID returned
+     - status is `sent` or later updated to delivered/read
