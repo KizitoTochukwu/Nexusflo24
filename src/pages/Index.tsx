@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/accordion";
 import heroDashboard from "@/assets/hero-dashboard.png";
 import heroTeam from "@/assets/hero-team.jpg";
-import stepCapture from "@/assets/step-capture.png";
-import stepNurture from "@/assets/step-nurture.png";
-import stepConvert from "@/assets/step-convert.png";
+import stepCapture from "@/assets/step-capture.jpg";
+import stepNurture from "@/assets/step-nurture.jpg";
+import stepConvert from "@/assets/step-convert.jpg";
 import { useState } from "react";
 import { toast } from "sonner";
 import MotionShowcaseSection from "@/components/home/MotionShowcaseSection";
