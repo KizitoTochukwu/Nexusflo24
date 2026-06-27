@@ -193,22 +193,31 @@ const Index = () => {
     </section>
 
     {/* Social proof */}
-    <section className="border-b bg-surface py-8">
+    <section className="relative border-y border-border/60 bg-gradient-to-b from-white via-surface to-white py-14">
       <div className="container">
-        <p className="mb-4 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Trusted by teams using industry-leading tools
-        </p>
-        <div className="overflow-hidden">
-          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-6 items-center">
+        <div className="mx-auto mb-8 max-w-xl text-center">
+          <span className="text-[11px] font-bold uppercase tracking-[0.28em] text-accent">Trusted Integrations</span>
+          <p className="mt-2 text-sm font-medium tracking-wide text-muted-foreground">
+            Powering teams alongside industry-leading tools
+          </p>
+        </div>
+        <div
+          className="relative overflow-hidden"
+          style={{
+            maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+          }}
+        >
+          <div className="flex w-max animate-marquee items-center gap-8 hover:[animation-play-state:paused]">
             {[...integrations, ...integrations].map((item, i) => (
               <div
                 key={`${item.name}-${i}`}
-                className="flex-shrink-0 w-28 h-16 flex items-center justify-center rounded-xl border border-border bg-card shadow-sm"
+                className="group flex h-20 w-40 flex-shrink-0 items-center justify-center rounded-2xl border border-border bg-card px-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md"
               >
                 <img
                   src={item.logo}
-                  alt={item.name}
-                  className="h-7 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                  alt={`${item.name} logo`}
+                  className="max-h-10 w-auto object-contain opacity-85 transition-opacity duration-300 group-hover:opacity-100"
                   loading="lazy"
                 />
               </div>
@@ -217,6 +226,7 @@ const Index = () => {
         </div>
       </div>
     </section>
+
 
     {/* Features */}
     <section className="py-20 bg-white md:py-28" id="features">
