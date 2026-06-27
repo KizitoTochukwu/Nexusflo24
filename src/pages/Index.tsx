@@ -70,20 +70,15 @@ const faqs = [
 ];
 
 const integrations = [
-  { name: "Google", logo: "https://cdn.simpleicons.org/google" },
-  { name: "Zapier", logo: "https://cdn.simpleicons.org/zapier" },
-  { name: "Make", logo: "https://cdn.simpleicons.org/make" },
-  { name: "Meta", logo: "https://cdn.simpleicons.org/meta" },
-  { name: "Stripe", logo: "https://cdn.simpleicons.org/stripe" },
-  { name: "PayPal", logo: "https://cdn.simpleicons.org/paypal" },
-  { name: "HubSpot", logo: "https://cdn.simpleicons.org/hubspot" },
-  { name: "Mailchimp", logo: "https://cdn.simpleicons.org/mailchimp" },
-  { name: "Shopify", logo: "https://cdn.simpleicons.org/shopify" },
-  { name: "WordPress", logo: "https://cdn.simpleicons.org/wordpress" },
-  { name: "Salesforce", logo: "https://cdn.simpleicons.org/salesforce" },
-  { name: "Calendly", logo: "https://cdn.simpleicons.org/calendly" },
-  { name: "Notion", logo: "https://cdn.simpleicons.org/notion" },
-  { name: "Typeform", logo: "https://cdn.simpleicons.org/typeform" },
+  { name: "Monday.com", logo: logoMonday.url },
+  { name: "Zapier", logo: logoZapier.url },
+  { name: "HubSpot", logo: logoHubspot.url },
+  { name: "Mailchimp", logo: logoMailchimp.url },
+  { name: "Calendly", logo: logoCalendly.url },
+  { name: "Stripe", logo: logoStripe.url },
+  { name: "Meta", logo: logoMeta.url },
+  { name: "Shopify", logo: logoShopify.url },
+  { name: "Gmail", logo: logoGmail.url },
 ];
 
 const Index = () => {
