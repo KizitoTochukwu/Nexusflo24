@@ -81,6 +81,8 @@ const integrations = [
   { name: "Meta", logo: logoMeta.url },
   { name: "Shopify", logo: logoShopify.url },
   { name: "Gmail", logo: logoGmail.url },
+  { name: "WordPress", logo: logoWordpress.url },
+  { name: "Salesforce", logo: logoSalesforce.url },
 ];
 
 const Index = () => {
