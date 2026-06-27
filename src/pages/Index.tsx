@@ -215,44 +215,32 @@ const Index = () => {
     </section>
 
     {/* Features */}
-    <section className="py-20 text-gray-50 bg-slate-200 md:py-28" id="features">
+    <section className="py-20 bg-white md:py-28" id="features">
       <div className="container">
         <div className="mx-auto mb-16 max-w-2xl text-center">
-          <span className="text-sm font-semibold uppercase tracking-widest text-accent">Features</span>
-          <h2 className="mt-2 text-3xl font-bold md:text-4xl">Everything You Need to Grow</h2>
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Features</span>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">Everything You Need to Grow</h2>
           <p className="mt-4 text-muted-foreground">
             One platform for lead generation, nurturing, and conversion. Powered by AI.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((f, i) => (
+          {features.map((f) => (
             <div
               key={f.title}
-              className="group [perspective:1000px]"
-              style={{ animationDelay: `${i * 100}ms` }}
+              className="group relative flex flex-col items-center text-center rounded-xl border border-accent/15 bg-primary p-8 transition-all duration-500 hover:-translate-y-2 hover:border-accent/50 hover:shadow-[0_20px_40px_-15px_rgba(11,31,59,0.35)]"
             >
-              <div className="relative h-[280px] w-full transition-transform duration-500 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
-                {/* Front */}
-                <div className="absolute inset-0 rounded-xl border bg-card p-6 shadow-card [backface-visibility:hidden] flex flex-col">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                    <f.icon className="h-6 w-6 text-accent" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground flex-1">{f.desc}</p>
-                  <span className="mt-3 text-xs text-muted-foreground/60">Hover to explore →</span>
-                </div>
-                {/* Back */}
-                <div className="absolute inset-0 rounded-xl border bg-primary p-6 shadow-card [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col items-center justify-center text-center">
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/20">
-                    <f.icon className="h-7 w-7 text-accent" />
-                  </div>
-                  <h3 className="mb-2 text-lg font-semibold text-primary-foreground">{f.title}</h3>
-                  <p className="text-sm text-primary-foreground/70 mb-4">{f.desc}</p>
-                  <Link to={`/features#${f.slug}`} className="inline-flex items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-gold-dark transition-colors">
-                    Learn more <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
+              <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-full border border-accent/30 text-accent transition-colors duration-500 group-hover:bg-accent group-hover:text-primary">
+                <f.icon className="h-7 w-7" />
               </div>
+              <h3 className="mb-4 text-xl font-semibold tracking-tight text-white">{f.title}</h3>
+              <p className="mb-8 flex-grow text-sm leading-relaxed text-slate-400">{f.desc}</p>
+              <Link
+                to={`/features#${f.slug}`}
+                className="inline-flex items-center rounded-full bg-accent px-6 py-2 text-xs font-bold uppercase tracking-[0.18em] text-primary transition-all duration-300 hover:scale-105 hover:bg-white"
+              >
+                Learn More
+              </Link>
             </div>
           ))}
         </div>
