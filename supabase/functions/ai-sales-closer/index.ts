@@ -27,26 +27,36 @@ interface ProcessRequest {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Require authenticated caller + workspace membership
+  // Require authenticated caller + workspace membership.
+  // Internal callers (edge functions like whatsapp-webhook) pass the service-role
+  // key as Bearer; treat that as a trusted system call and skip user/membership checks.
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
-  const authedClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: claims } = await authedClient.auth.getClaims();
-  const userId = claims?.sub;
-  if (!userId) return json({ error: "Unauthorized" }, 401);
+  const bearer = authHeader.slice("Bearer ".length).trim();
+  const isInternal = bearer === SUPABASE_SERVICE_ROLE_KEY;
+
+  let userId: string | undefined;
+  if (!isInternal) {
+    const authedClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claims } = await authedClient.auth.getClaims();
+    userId = claims?.sub;
+    if (!userId) return json({ error: "Unauthorized" }, 401);
+  }
 
   try {
     const body: ProcessRequest = await req.json();
     const { action, workspace_id, lead_id } = body;
 
-    // Verify caller is a member of the requested workspace
-    const { data: isMember } = await supabase.rpc("is_workspace_member", {
-      _user_id: userId,
-      _workspace_id: workspace_id,
-    });
-    if (!isMember) return json({ error: "Forbidden" }, 403);
+    // Verify caller is a member of the requested workspace (skip for internal/system calls)
+    if (!isInternal) {
+      const { data: isMember } = await supabase.rpc("is_workspace_member", {
+        _user_id: userId,
+        _workspace_id: workspace_id,
+      });
+      if (!isMember) return json({ error: "Forbidden" }, 403);
+    }
 
     if (action === "get_conversations") {
       const { data, error } = await supabase
