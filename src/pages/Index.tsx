@@ -334,13 +334,29 @@ const Index = () => {
     </section>
 
     {/* Demo */}
-    <section className="py-20 text-gray-50 bg-slate-200 md:py-28">
-      <div className="container">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <span className="text-sm font-semibold uppercase tracking-widest text-accent">See It In Action</span>
-            <h2 className="mt-2 text-3xl font-bold md:text-4xl">Your Marketing Command Center</h2>
-            <ul className="mt-6 space-y-3">
+    <section className="relative overflow-hidden bg-[#f0f4f8] py-24 md:py-32">
+      {/* Ambient accents */}
+      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+
+      <div className="container relative">
+        <div className="grid items-center gap-16 lg:grid-cols-2">
+          {/* Copy */}
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <span className="inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.25em] text-accent">
+                <span className="h-px w-8 bg-accent/60" />
+                See It In Action
+              </span>
+              <h2 className="text-4xl font-bold leading-[1.1] tracking-tight text-primary md:text-5xl">
+                Your Marketing<br className="hidden md:block" /> Command Center
+              </h2>
+              <p className="max-w-md text-base text-slate-600">
+                Every lead, message, and campaign — orchestrated from one beautifully simple dashboard.
+              </p>
+            </div>
+
+            <ul className="space-y-4">
               {[
                 "Launch a nurture flow in minutes",
                 "AI writes your follow-ups",
@@ -348,36 +364,72 @@ const Index = () => {
                 "Multi-channel: Email + WhatsApp + SMS",
                 "Score and route leads automatically",
               ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                  <span>{item}</span>
+                <li key={item} className="flex items-center gap-4">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent shadow-[0_4px_12px_-2px_rgba(201,162,39,0.5)]">
+                    <CheckCircle className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                  </span>
+                  <span className="text-base font-medium text-slate-700 md:text-lg">{item}</span>
                 </li>
               ))}
             </ul>
-            <Link to="/dashboard" className="mt-8 inline-block">
-              <Button className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold">
-                Explore Demo Dashboard <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+
+            <div className="pt-2">
+              <Link to="/dashboard" className="inline-flex">
+                <Button className="group h-auto rounded-xl bg-accent px-8 py-4 text-base font-semibold text-accent-foreground shadow-[0_10px_24px_-6px_rgba(201,162,39,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-gold-dark hover:shadow-[0_14px_30px_-6px_rgba(201,162,39,0.6)]">
+                  Explore Demo Dashboard
+                  <ArrowRight className="ml-3 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                </Button>
+              </Link>
+            </div>
           </div>
-          <div className="group relative rounded-xl border bg-surface p-4 shadow-card hover:shadow-card-hover transition-shadow duration-500 cursor-pointer"
+
+          {/* Dashboard preview */}
+          <div
+            className="group relative cursor-pointer"
             onClick={() => navigate("/dashboard")}
           >
-            {/* Glow effect on hover */}
-            <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-accent/0 via-accent/20 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-xl -z-10" />
-            <div className="overflow-hidden rounded-lg">
-              <img
-                src={heroDashboard}
-                alt="NexusFlo24 dashboard demo preview"
-                className="rounded-lg transition-transform duration-700 group-hover:scale-105"
-                loading="lazy"
-              />
-            </div>
-            {/* Overlay CTA on hover */}
-            <div className="absolute inset-4 rounded-lg bg-primary/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-              <span className="flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground shadow-gold scale-90 group-hover:scale-100 transition-transform duration-500">
-                Explore Live Demo <ArrowRight className="h-4 w-4" />
-              </span>
+            {/* Outer glow */}
+            <div className="absolute -inset-2 rounded-3xl bg-gradient-to-br from-accent/20 via-white/0 to-primary/20 opacity-60 blur-2xl transition-opacity duration-700 group-hover:opacity-100" />
+
+            {/* Frame */}
+            <div className="relative rounded-3xl border border-white bg-white/80 p-2 shadow-[0_30px_60px_-20px_rgba(15,23,42,0.25)] backdrop-blur-sm transition-transform duration-500 group-hover:-translate-y-1">
+              <div className="overflow-hidden rounded-2xl ring-1 ring-slate-200/60">
+                <img
+                  src={heroDashboard}
+                  alt="NexusFlo24 dashboard demo preview"
+                  className="block w-full transition-transform duration-700 group-hover:scale-[1.03]"
+                  loading="lazy"
+                />
+              </div>
+
+              {/* Floating growth badge */}
+              <div className="absolute -top-5 -right-5 hidden items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3 pr-4 shadow-xl md:flex">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <TrendingUp className="h-4 w-4" strokeWidth={2.5} />
+                </span>
+                <div className="leading-tight">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Growth</p>
+                  <p className="text-lg font-extrabold text-primary">+28.5%</p>
+                </div>
+              </div>
+
+              {/* Floating leads badge */}
+              <div className="absolute -bottom-5 -left-5 hidden items-center gap-3 rounded-2xl bg-primary p-3 pr-4 shadow-2xl md:flex">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-accent">
+                  <Users className="h-4 w-4" strokeWidth={2.5} />
+                </span>
+                <div className="leading-tight">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/60">Active Leads</p>
+                  <p className="text-lg font-extrabold text-white">12,847</p>
+                </div>
+              </div>
+
+              {/* Hover CTA overlay */}
+              <div className="pointer-events-none absolute inset-2 flex items-center justify-center rounded-2xl bg-primary/55 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+                <span className="flex scale-90 items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground shadow-gold transition-transform duration-500 group-hover:scale-100">
+                  Explore Live Demo <ArrowRight className="h-4 w-4" />
+                </span>
+              </div>
             </div>
           </div>
         </div>
