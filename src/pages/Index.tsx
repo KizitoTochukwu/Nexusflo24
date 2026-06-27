@@ -23,6 +23,15 @@ import { useState } from "react";
 import { toast } from "sonner";
 import MotionShowcaseSection from "@/components/home/MotionShowcaseSection";
 import ExitIntentPopup from "@/components/home/ExitIntentPopup";
+import logoMonday from "@/assets/logos/monday.png.asset.json";
+import logoZapier from "@/assets/logos/zapier.png.asset.json";
+import logoHubspot from "@/assets/logos/hubspot.png.asset.json";
+import logoMailchimp from "@/assets/logos/mailchimp.png.asset.json";
+import logoCalendly from "@/assets/logos/calendly.png.asset.json";
+import logoStripe from "@/assets/logos/stripe.png.asset.json";
+import logoMeta from "@/assets/logos/meta.png.asset.json";
+import logoShopify from "@/assets/logos/shopify.png.asset.json";
+import logoGmail from "@/assets/logos/gmail.png.asset.json";
 
 
 const features = [
