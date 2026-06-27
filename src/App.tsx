@@ -80,6 +80,16 @@ import Unsubscribe from "./pages/Unsubscribe";
 import MetaPixelRouteTracker from "./components/analytics/MetaPixelRouteTracker";
 import SiteCustomCodeInjector from "./components/analytics/SiteCustomCodeInjector";
 import AiSeoVisibilityEngine from "./pages/AiSeoVisibilityEngine";
+import NexusIntelLanding from "./pages/nexusintel/NexusIntelLanding";
+import NexusIntelSample from "./pages/nexusintel/SampleReport";
+import NIOverview from "./pages/dashboard/nexusintel/NIOverview";
+import NIAnalyse from "./pages/dashboard/nexusintel/NIAnalyse";
+import NIReports from "./pages/dashboard/nexusintel/NIReports";
+import NIReportDetail from "./pages/dashboard/nexusintel/NIReportDetail";
+import NICompanies from "./pages/dashboard/nexusintel/NICompanies";
+import NICompanyDetail from "./pages/dashboard/nexusintel/NICompanyDetail";
+import NIIntegrations from "./pages/dashboard/nexusintel/NIIntegrations";
+import NIUsage from "./pages/dashboard/nexusintel/NIUsage";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
