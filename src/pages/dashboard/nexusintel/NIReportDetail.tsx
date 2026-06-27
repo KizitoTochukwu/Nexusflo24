@@ -30,7 +30,7 @@ export default function NIReportDetail() {
           </Link>
         </Button>
         <div className="flex flex-wrap gap-2">
-          {report.report.company_id && (
+          {report.company_id && (
             <Button asChild variant="outline" size="sm">
               <Link to={`/dashboard/${workspaceId}/nexusintel/companies/${report.company_id}`}>Open in CRM</Link>
             </Button>
