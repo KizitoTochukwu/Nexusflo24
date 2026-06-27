@@ -172,10 +172,10 @@ serve(async (req) => {
         }
       }
 
-      // Store AI reply. In auto-send mode, only mark as sent after the channel
-      // send function confirms delivery to the provider.
-      let replyStatus = settings.mode === "auto_send" ? "sending" : "pending_approval";
-      const { data: replyRecord } = await supabase
+      // Store AI reply using only statuses allowed by the database. In auto-send
+      // mode, start as draft, then update to sent/failed after provider response.
+      let replyStatus = settings.mode === "auto_send" ? "draft" : "pending_approval";
+      const { data: replyRecord, error: replyInsertError } = await supabase
         .from("sales_conversations")
         .insert({
           workspace_id,
@@ -192,6 +192,14 @@ serve(async (req) => {
         })
         .select()
         .single();
+
+      if (replyInsertError || !replyRecord) {
+        console.error("[ai-sales-closer] failed to store outbound AI reply:", replyInsertError);
+        return json({
+          error: "Failed to store outbound AI reply",
+          details: replyInsertError?.message || "No outbound reply record returned",
+        }, 500);
+      }
 
       // Auto-send if configured
       if (settings.mode === "auto_send" && replyRecord) {
@@ -229,8 +237,8 @@ serve(async (req) => {
         lead, history || [], activities || [], channel, settings, bookingSlug
       );
 
-      let replyStatus = settings.mode === "auto_send" ? "sending" : "pending_approval";
-      const { data: followUpRecord } = await supabase.from("sales_conversations").insert({
+      let replyStatus = settings.mode === "auto_send" ? "draft" : "pending_approval";
+      const { data: followUpRecord, error: followUpInsertError } = await supabase.from("sales_conversations").insert({
         workspace_id,
         lead_id,
         channel,
@@ -241,6 +249,14 @@ serve(async (req) => {
         status: replyStatus,
         meta: { type: "follow_up" },
       }).select().single();
+
+      if (followUpInsertError || !followUpRecord) {
+        console.error("[ai-sales-closer] failed to store outbound follow-up:", followUpInsertError);
+        return json({
+          error: "Failed to store outbound follow-up",
+          details: followUpInsertError?.message || "No follow-up record returned",
+        }, 500);
+      }
 
       if (settings.mode === "auto_send" && followUpRecord) {
         const sendResult = await sendMessage(channel, lead, reply, workspace_id);
