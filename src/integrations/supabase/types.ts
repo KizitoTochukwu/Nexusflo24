@@ -1884,6 +1884,351 @@ export type Database = {
         }
         Relationships: []
       }
+      nexusintel_companies: {
+        Row: {
+          business_model: string | null
+          created_at: string
+          id: string
+          industry: string | null
+          lead_score: number | null
+          location: string | null
+          name: string | null
+          next_action: string | null
+          recommended_offer: string | null
+          services: string | null
+          size: string | null
+          status: string
+          summary: string | null
+          target_customers: string | null
+          updated_at: string
+          urgency: string | null
+          user_id: string
+          website_url: string
+          workspace_id: string
+        }
+        Insert: {
+          business_model?: string | null
+          created_at?: string
+          id?: string
+          industry?: string | null
+          lead_score?: number | null
+          location?: string | null
+          name?: string | null
+          next_action?: string | null
+          recommended_offer?: string | null
+          services?: string | null
+          size?: string | null
+          status?: string
+          summary?: string | null
+          target_customers?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id: string
+          website_url: string
+          workspace_id: string
+        }
+        Update: {
+          business_model?: string | null
+          created_at?: string
+          id?: string
+          industry?: string | null
+          lead_score?: number | null
+          location?: string | null
+          name?: string | null
+          next_action?: string | null
+          recommended_offer?: string | null
+          services?: string | null
+          size?: string | null
+          status?: string
+          summary?: string | null
+          target_customers?: string | null
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string
+          website_url?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexusintel_companies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexusintel_integrations: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          provider: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          provider: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexusintel_integrations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexusintel_notes: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          note: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          note: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexusintel_notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "nexusintel_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nexusintel_notes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexusintel_outreach_history: {
+        Row: {
+          channel: string
+          company_id: string
+          created_at: string
+          id: string
+          message: string | null
+          sent_at: string | null
+          status: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          channel: string
+          company_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          sent_at?: string | null
+          status?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          channel?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          sent_at?: string | null
+          status?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexusintel_outreach_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "nexusintel_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nexusintel_outreach_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexusintel_reports: {
+        Row: {
+          analysis_depth: string | null
+          company_id: string | null
+          created_at: string
+          crm_deal_score: number | null
+          id: string
+          report_json: Json
+          report_title: string | null
+          user_id: string
+          user_offer: string | null
+          workspace_id: string
+        }
+        Insert: {
+          analysis_depth?: string | null
+          company_id?: string | null
+          created_at?: string
+          crm_deal_score?: number | null
+          id?: string
+          report_json: Json
+          report_title?: string | null
+          user_id: string
+          user_offer?: string | null
+          workspace_id: string
+        }
+        Update: {
+          analysis_depth?: string | null
+          company_id?: string | null
+          created_at?: string
+          crm_deal_score?: number | null
+          id?: string
+          report_json?: Json
+          report_title?: string | null
+          user_id?: string
+          user_offer?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexusintel_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "nexusintel_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nexusintel_reports_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexusintel_tasks: {
+        Row: {
+          company_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          status: string
+          title: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          status?: string
+          title: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          status?: string
+          title?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexusintel_tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "nexusintel_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nexusintel_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexusintel_usage: {
+        Row: {
+          monthly_report_limit: number
+          period_start: string
+          plan: string
+          reports_used: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          monthly_report_limit?: number
+          period_start?: string
+          plan?: string
+          reports_used?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          monthly_report_limit?: number
+          period_start?: string
+          plan?: string
+          reports_used?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexusintel_usage_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
