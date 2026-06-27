@@ -32,6 +32,8 @@ import logoStripe from "@/assets/logos/stripe.png.asset.json";
 import logoMeta from "@/assets/logos/meta.png.asset.json";
 import logoShopify from "@/assets/logos/shopify.png.asset.json";
 import logoGmail from "@/assets/logos/gmail.png.asset.json";
+import logoWordpress from "@/assets/logos/wordpress.png.asset.json";
+import logoSalesforce from "@/assets/logos/salesforce.png.asset.json";
 
 
 const features = [
@@ -79,6 +81,8 @@ const integrations = [
   { name: "Meta", logo: logoMeta.url },
   { name: "Shopify", logo: logoShopify.url },
   { name: "Gmail", logo: logoGmail.url },
+  { name: "WordPress", logo: logoWordpress.url },
+  { name: "Salesforce", logo: logoSalesforce.url },
 ];
 
 const Index = () => {
