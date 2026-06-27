@@ -23,6 +23,15 @@ import { useState } from "react";
 import { toast } from "sonner";
 import MotionShowcaseSection from "@/components/home/MotionShowcaseSection";
 import ExitIntentPopup from "@/components/home/ExitIntentPopup";
+import logoMonday from "@/assets/logos/monday.png.asset.json";
+import logoZapier from "@/assets/logos/zapier.png.asset.json";
+import logoHubspot from "@/assets/logos/hubspot.png.asset.json";
+import logoMailchimp from "@/assets/logos/mailchimp.png.asset.json";
+import logoCalendly from "@/assets/logos/calendly.png.asset.json";
+import logoStripe from "@/assets/logos/stripe.png.asset.json";
+import logoMeta from "@/assets/logos/meta.png.asset.json";
+import logoShopify from "@/assets/logos/shopify.png.asset.json";
+import logoGmail from "@/assets/logos/gmail.png.asset.json";
 
 
 const features = [
@@ -61,20 +70,15 @@ const faqs = [
 ];
 
 const integrations = [
-  { name: "Google", logo: "https://cdn.simpleicons.org/google" },
-  { name: "Zapier", logo: "https://cdn.simpleicons.org/zapier" },
-  { name: "Make", logo: "https://cdn.simpleicons.org/make" },
-  { name: "Meta", logo: "https://cdn.simpleicons.org/meta" },
-  { name: "Stripe", logo: "https://cdn.simpleicons.org/stripe" },
-  { name: "PayPal", logo: "https://cdn.simpleicons.org/paypal" },
-  { name: "HubSpot", logo: "https://cdn.simpleicons.org/hubspot" },
-  { name: "Mailchimp", logo: "https://cdn.simpleicons.org/mailchimp" },
-  { name: "Shopify", logo: "https://cdn.simpleicons.org/shopify" },
-  { name: "WordPress", logo: "https://cdn.simpleicons.org/wordpress" },
-  { name: "Salesforce", logo: "https://cdn.simpleicons.org/salesforce" },
-  { name: "Calendly", logo: "https://cdn.simpleicons.org/calendly" },
-  { name: "Notion", logo: "https://cdn.simpleicons.org/notion" },
-  { name: "Typeform", logo: "https://cdn.simpleicons.org/typeform" },
+  { name: "Monday.com", logo: logoMonday.url },
+  { name: "Zapier", logo: logoZapier.url },
+  { name: "HubSpot", logo: logoHubspot.url },
+  { name: "Mailchimp", logo: logoMailchimp.url },
+  { name: "Calendly", logo: logoCalendly.url },
+  { name: "Stripe", logo: logoStripe.url },
+  { name: "Meta", logo: logoMeta.url },
+  { name: "Shopify", logo: logoShopify.url },
+  { name: "Gmail", logo: logoGmail.url },
 ];
 
 const Index = () => {
@@ -189,22 +193,31 @@ const Index = () => {
     </section>
 
     {/* Social proof */}
-    <section className="border-b bg-surface py-8">
+    <section className="relative border-y border-border/60 bg-gradient-to-b from-white via-surface to-white py-14">
       <div className="container">
-        <p className="mb-4 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Trusted by teams using industry-leading tools
-        </p>
-        <div className="overflow-hidden">
-          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-6 items-center">
+        <div className="mx-auto mb-8 max-w-xl text-center">
+          <span className="text-[11px] font-bold uppercase tracking-[0.28em] text-accent">Trusted Integrations</span>
+          <p className="mt-2 text-sm font-medium tracking-wide text-muted-foreground">
+            Powering teams alongside industry-leading tools
+          </p>
+        </div>
+        <div
+          className="relative overflow-hidden"
+          style={{
+            maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+          }}
+        >
+          <div className="flex w-max animate-marquee items-center gap-8 hover:[animation-play-state:paused]">
             {[...integrations, ...integrations].map((item, i) => (
               <div
                 key={`${item.name}-${i}`}
-                className="flex-shrink-0 w-28 h-16 flex items-center justify-center rounded-xl border border-border bg-card shadow-sm"
+                className="group flex h-20 w-40 flex-shrink-0 items-center justify-center rounded-2xl border border-border bg-card px-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md"
               >
                 <img
                   src={item.logo}
-                  alt={item.name}
-                  className="h-7 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+                  alt={`${item.name} logo`}
+                  className="max-h-10 w-auto object-contain opacity-85 transition-opacity duration-300 group-hover:opacity-100"
                   loading="lazy"
                 />
               </div>
@@ -213,6 +226,7 @@ const Index = () => {
         </div>
       </div>
     </section>
+
 
     {/* Features */}
     <section className="py-20 bg-white md:py-28" id="features">
