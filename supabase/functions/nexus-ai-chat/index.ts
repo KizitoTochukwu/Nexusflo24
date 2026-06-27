@@ -89,6 +89,19 @@ serve(async (req) => {
     );
     const workspace = await resolveWorkspace(adminClient, workspaceId);
 
+    // Load Sales Closer custom instructions for consistent brand voice
+    let customInstructions = "";
+    if (workspace) {
+      const { data: closer } = await adminClient
+        .from("sales_closer_settings")
+        .select("system_prompt")
+        .eq("workspace_id", workspace.id)
+        .maybeSingle();
+      if (closer?.system_prompt?.trim()) {
+        customInstructions = closer.system_prompt.trim();
+      }
+    }
+
     // If frontend sends captured lead data, store it
     if (capturedLead?.email) {
       try {
@@ -213,7 +226,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: customInstructions ? `${customInstructions}\n\n---\n\n${SYSTEM_PROMPT}` : SYSTEM_PROMPT },
           ...messages,
         ],
         stream: true,
