@@ -1,17 +1,16 @@
-## Tighten Trust Section
+## Goal
+Replace the three "How It Works" card images on the homepage with hyper-realistic, context-matched photography.
 
-Shrink the trust band on the homepage (`src/pages/Index.tsx`) across all three dimensions.
+## Changes
 
-### Changes
+Generate 3 hyper-realistic images (already previewed) and swap the imports in `src/pages/Index.tsx`:
 
-1. **Section padding** — `py-14` → `py-8`; reduce header bottom margin `mb-8` → `mb-5`.
-2. **Heading text**
-   - Eyebrow "Trusted Integrations": `text-[11px]` → `text-[10px]`, tracking `0.28em` → `0.24em`.
-   - Subtitle "Powering teams alongside industry-leading tools": `text-sm` → `text-xs`, `mt-2` → `mt-1.5`.
-3. **Logo tiles**
-   - Tile size: `h-20 w-40` → `h-14 w-28`, `rounded-2xl` → `rounded-xl`, `px-5` → `px-3`.
-   - Logo height: `max-h-10` → `max-h-7`.
-   - Gap between tiles: `gap-8` → `gap-5`.
+1. **Capture** → `src/assets/step-capture.jpg` — laptop on a dark navy desk showing an AI-powered lead capture form with gold accents.
+2. **Nurture** → `src/assets/step-nurture.jpg` — hand holding phone with glowing Email / WhatsApp / SMS notifications connected by gold light streams.
+3. **Convert** → `src/assets/step-convert.jpg` — business analyst presenting a sales conversion & lead-scoring dashboard with rising gold/green charts.
 
-### Out of scope
-- No change to logos, marquee animation, fade masks, hover behavior, or surrounding sections.
+Single-file edit in `src/pages/Index.tsx` (lines 19–21): swap the three `step-*.png` imports for the new `.jpg` files. The `steps` array already wires `image: stepCapture | stepNurture | stepConvert` into the card markup, so no further changes are needed.
+
+## Out of scope
+- No layout, typography, or copy changes to the cards.
+- No edits to other sections.
