@@ -168,6 +168,14 @@ const App = () => (
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
+                <Route path="nexusintel" element={<NIOverview />} />
+                <Route path="nexusintel/analyse" element={<NIAnalyse />} />
+                <Route path="nexusintel/reports" element={<NIReports />} />
+                <Route path="nexusintel/reports/:id" element={<NIReportDetail />} />
+                <Route path="nexusintel/companies" element={<NICompanies />} />
+                <Route path="nexusintel/companies/:id" element={<NICompanyDetail />} />
+                <Route path="nexusintel/integrations" element={<NIIntegrations />} />
+                <Route path="nexusintel/usage" element={<NIUsage />} />
                 <Route element={<AdminGuard />}>
                   <Route path="workflows" element={<DashboardWorkflows />} />
                   <Route path="workflows/new" element={<WorkflowEditor />} />
