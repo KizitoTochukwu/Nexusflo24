@@ -80,16 +80,6 @@ import Unsubscribe from "./pages/Unsubscribe";
 import MetaPixelRouteTracker from "./components/analytics/MetaPixelRouteTracker";
 import SiteCustomCodeInjector from "./components/analytics/SiteCustomCodeInjector";
 import AiSeoVisibilityEngine from "./pages/AiSeoVisibilityEngine";
-import NexusIntelLanding from "./pages/nexusintel/NexusIntelLanding";
-import NexusIntelSample from "./pages/nexusintel/SampleReport";
-import NIOverview from "./pages/dashboard/nexusintel/NIOverview";
-import NIAnalyse from "./pages/dashboard/nexusintel/NIAnalyse";
-import NIReports from "./pages/dashboard/nexusintel/NIReports";
-import NIReportDetail from "./pages/dashboard/nexusintel/NIReportDetail";
-import NICompanies from "./pages/dashboard/nexusintel/NICompanies";
-import NICompanyDetail from "./pages/dashboard/nexusintel/NICompanyDetail";
-import NIIntegrations from "./pages/dashboard/nexusintel/NIIntegrations";
-import NIUsage from "./pages/dashboard/nexusintel/NIUsage";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -146,8 +136,6 @@ const App = () => (
               <Route path="/coaches-creators" element={<CoachesCreators />} />
               <Route path="/marketing-agencies" element={<MarketingAgencies />} />
               <Route path="/small-business" element={<SmallBusiness />} />
-              <Route path="/nexusintel" element={<NexusIntelLanding />} />
-              <Route path="/nexusintel/sample" element={<NexusIntelSample />} />
 
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
@@ -168,14 +156,6 @@ const App = () => (
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
-                <Route path="nexusintel" element={<NIOverview />} />
-                <Route path="nexusintel/analyse" element={<NIAnalyse />} />
-                <Route path="nexusintel/reports" element={<NIReports />} />
-                <Route path="nexusintel/reports/:id" element={<NIReportDetail />} />
-                <Route path="nexusintel/companies" element={<NICompanies />} />
-                <Route path="nexusintel/companies/:id" element={<NICompanyDetail />} />
-                <Route path="nexusintel/integrations" element={<NIIntegrations />} />
-                <Route path="nexusintel/usage" element={<NIUsage />} />
                 <Route element={<AdminGuard />}>
                   <Route path="workflows" element={<DashboardWorkflows />} />
                   <Route path="workflows/new" element={<WorkflowEditor />} />
