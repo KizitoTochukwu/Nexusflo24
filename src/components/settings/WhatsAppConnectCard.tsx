@@ -357,7 +357,9 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
               <div className="text-xs text-muted-foreground mb-1">Connection method</div>
               <div className="font-medium capitalize">
                 {conn?.connection_method?.replace("_", " ") || "manual"}
-              </div>
+          </div>
+
+          <WebhookVerifyTokenSection workspaceId={workspaceId} />
             </div>
           </div>
 
