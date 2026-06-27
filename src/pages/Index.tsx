@@ -189,27 +189,22 @@ const Index = () => {
     </section>
 
     {/* Social proof */}
-    <section className="border-b bg-white py-16 md:py-20">
+    <section className="border-b bg-surface py-8">
       <div className="container">
-        <div className="mb-12 flex flex-col items-center">
-          <span className="text-[11px] font-bold uppercase tracking-[0.4em] text-accent">
-            Trusted by teams using industry-leading tools
-          </span>
-          <div className="mt-4 h-px w-24 bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
-        </div>
-        <div className="relative overflow-hidden group">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 md:w-40 bg-gradient-to-r from-white to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 md:w-40 bg-gradient-to-l from-white to-transparent" />
-          <div className="flex animate-marquee group-hover:[animation-play-state:paused] w-max gap-6 items-center py-2">
+        <p className="mb-4 text-center text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          Trusted by teams using industry-leading tools
+        </p>
+        <div className="overflow-hidden">
+          <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-6 items-center">
             {[...integrations, ...integrations].map((item, i) => (
               <div
                 key={`${item.name}-${i}`}
-                className="flex-shrink-0 w-40 h-20 flex items-center justify-center rounded-md border border-accent/25 bg-primary px-8 transition-all duration-500 hover:-translate-y-1 hover:border-accent hover:shadow-[0_20px_40px_-15px_rgba(11,31,59,0.35)]"
+                className="flex-shrink-0 w-28 h-16 flex items-center justify-center rounded-xl border border-border bg-card shadow-sm"
               >
                 <img
                   src={item.logo}
                   alt={item.name}
-                  className="h-8 w-auto object-contain brightness-0 invert opacity-70 hover:opacity-100 transition-opacity duration-300"
+                  className="h-7 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
                   loading="lazy"
                 />
               </div>
