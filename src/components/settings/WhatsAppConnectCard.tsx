@@ -26,6 +26,9 @@ import {
   ShieldCheck,
   Phone,
   Sparkles,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
