@@ -198,14 +198,15 @@ export function useGenerateReport() {
         .select("*")
         .eq("workspace_id", workspaceId)
         .maybeSingle();
-      const current: NIUsage =
-        usage ??
-        (await db
+      let current: NIUsage = usage as NIUsage;
+      if (!current) {
+        const { data: inserted } = await db
           .from("nexusintel_usage")
           .insert({ workspace_id: workspaceId })
           .select()
-          .maybeSingle()
-          .then((r: any) => r.data)) as NIUsage;
+          .maybeSingle();
+        current = inserted as NIUsage;
+      }
 
       // Reset usage if month changed
       const thisMonth = new Date().toISOString().slice(0, 7);
