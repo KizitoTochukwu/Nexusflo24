@@ -436,12 +436,6 @@ const Index = () => {
       </div>
     </section>
 
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     {/* Testimonials */}
     <section className="bg-hero py-20 md:py-28">
       <div className="container">
