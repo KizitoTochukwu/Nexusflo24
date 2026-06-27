@@ -26,6 +26,9 @@ import {
   ShieldCheck,
   Phone,
   Sparkles,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -282,6 +285,149 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+const WEBHOOK_CALLBACK_URL = `${SUPABASE_FN_BASE}/whatsapp-webhook`;
+
+function WebhookVerifyTokenSection({ workspaceId }: { workspaceId: string }) {
+  const [token, setToken] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [loadingReveal, setLoadingReveal] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const callFn = async (method: "GET" | "POST") => {
+    const { data: sess } = await supabase.auth.getSession();
+    const accessToken = sess.session?.access_token;
+    if (!accessToken) throw new Error("Please sign in again.");
+    const url =
+      method === "GET"
+        ? `${SUPABASE_FN_BASE}/whatsapp-verify-token?workspaceId=${encodeURIComponent(workspaceId)}`
+        : `${SUPABASE_FN_BASE}/whatsapp-verify-token`;
+    const res = await fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        ...(method === "POST" ? { "Content-Type": "application/json" } : {}),
+      },
+      body: method === "POST" ? JSON.stringify({ workspaceId }) : undefined,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.error) throw new Error(json?.error || `Request failed (${res.status})`);
+    return json as { token: string | null };
+  };
+
+  const reveal = async () => {
+    setLoadingReveal(true);
+    try {
+      const res = await callFn("GET");
+      if (!res.token) {
+        toast.message("No verify token saved yet — click Regenerate to create one.");
+        setRevealed(true);
+        setToken(null);
+        return;
+      }
+      setToken(res.token);
+      setRevealed(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to load token");
+    } finally {
+      setLoadingReveal(false);
+    }
+  };
+
+  const regenerate = async () => {
+    setRegenerating(true);
+    try {
+      const res = await callFn("POST");
+      setToken(res.token);
+      setRevealed(true);
+      toast.success("New verify token generated — copy and paste it into Meta.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to regenerate token");
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const copy = (val: string) => {
+    navigator.clipboard.writeText(val);
+    toast.success("Copied");
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <KeyRound className="h-4 w-4 text-primary" />
+        <div className="font-medium text-sm">Webhook configuration for Meta</div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Paste these two values into <strong>Meta Business → WhatsApp → Configuration → Webhook</strong>,
+        then click <em>Verify and Save</em> and subscribe the <code>messages</code> field.
+      </p>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Callback URL</Label>
+        <div className="flex items-center gap-2">
+          <Input readOnly value={WEBHOOK_CALLBACK_URL} className="font-mono text-xs" />
+          <Button size="sm" variant="outline" onClick={() => copy(WEBHOOK_CALLBACK_URL)}>
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Verify Token</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            readOnly
+            type={revealed ? "text" : "password"}
+            value={revealed ? token ?? "" : "••••••••••••••••"}
+            placeholder={revealed && !token ? "No token yet — regenerate to create one" : ""}
+            className="font-mono text-xs"
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={revealed ? () => setRevealed(false) : reveal}
+            disabled={loadingReveal}
+            title={revealed ? "Hide" : "Show"}
+          >
+            {loadingReveal ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : revealed ? (
+              <EyeOff className="h-3.5 w-3.5" />
+            ) : (
+              <Eye className="h-3.5 w-3.5" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => token && copy(token)}
+            disabled={!token}
+            title="Copy"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="sm" variant="outline" onClick={regenerate} disabled={regenerating}>
+            {regenerating ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Regenerating
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Regenerate
+              </>
+            )}
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Regenerating immediately rotates the token. You'll need to re-verify the webhook in Meta after rotation.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
   const { data: conn } = useWhatsAppConnection(workspaceId);
   const connect = useConnectWhatsApp(workspaceId);
@@ -354,7 +500,9 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
               <div className="text-xs text-muted-foreground mb-1">Connection method</div>
               <div className="font-medium capitalize">
                 {conn?.connection_method?.replace("_", " ") || "manual"}
-              </div>
+          </div>
+
+          <WebhookVerifyTokenSection workspaceId={workspaceId} />
             </div>
           </div>
 
