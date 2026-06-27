@@ -172,8 +172,9 @@ serve(async (req) => {
         }
       }
 
-      // Store AI reply
-      const replyStatus = settings.mode === "auto_send" ? "sent" : "pending_approval";
+      // Store AI reply. In auto-send mode, only mark as sent after the channel
+      // send function confirms delivery to the provider.
+      let replyStatus = settings.mode === "auto_send" ? "sending" : "pending_approval";
       const { data: replyRecord } = await supabase
         .from("sales_conversations")
         .insert({
@@ -194,15 +195,29 @@ serve(async (req) => {
 
       // Auto-send if configured
       if (settings.mode === "auto_send" && replyRecord) {
-        await sendMessage(channel, lead, reply, workspace_id);
-        // Log activity
-        await supabase.from("lead_activities").insert({
-          lead_id,
-          user_id: lead.user_id,
-          workspace_id,
-          type: "ai_sales_reply",
-          meta: { channel, intent, message_preview: reply.substring(0, 100) },
-        });
+        const sendResult = await sendMessage(channel, lead, reply, workspace_id);
+        replyStatus = sendResult.success ? "sent" : "failed";
+
+        await supabase
+          .from("sales_conversations")
+          .update({
+            status: replyStatus,
+            meta: {
+              in_response_to: inboundMsg,
+              send_result: sendResult,
+            },
+          })
+          .eq("id", replyRecord.id);
+
+        if (sendResult.success) {
+          await supabase.from("lead_activities").insert({
+            lead_id,
+            user_id: lead.user_id,
+            workspace_id,
+            type: "ai_sales_reply",
+            meta: { channel, intent, message_preview: reply.substring(0, 100) },
+          });
+        }
       }
 
       return json({ intent, confidence, reply, status: replyStatus });
@@ -214,8 +229,8 @@ serve(async (req) => {
         lead, history || [], activities || [], channel, settings, bookingSlug
       );
 
-      const replyStatus = settings.mode === "auto_send" ? "sent" : "pending_approval";
-      await supabase.from("sales_conversations").insert({
+      let replyStatus = settings.mode === "auto_send" ? "sending" : "pending_approval";
+      const { data: followUpRecord } = await supabase.from("sales_conversations").insert({
         workspace_id,
         lead_id,
         channel,
@@ -225,17 +240,29 @@ serve(async (req) => {
         ai_model: "google/gemini-3-flash-preview",
         status: replyStatus,
         meta: { type: "follow_up" },
-      });
+      }).select().single();
 
-      if (settings.mode === "auto_send") {
-        await sendMessage(channel, lead, reply, workspace_id);
-        await supabase.from("lead_activities").insert({
-          lead_id,
-          user_id: lead.user_id,
-          workspace_id,
-          type: "ai_follow_up",
-          meta: { channel, message_preview: reply.substring(0, 100) },
-        });
+      if (settings.mode === "auto_send" && followUpRecord) {
+        const sendResult = await sendMessage(channel, lead, reply, workspace_id);
+        replyStatus = sendResult.success ? "sent" : "failed";
+
+        await supabase
+          .from("sales_conversations")
+          .update({
+            status: replyStatus,
+            meta: { type: "follow_up", send_result: sendResult },
+          })
+          .eq("id", followUpRecord.id);
+
+        if (sendResult.success) {
+          await supabase.from("lead_activities").insert({
+            lead_id,
+            user_id: lead.user_id,
+            workspace_id,
+            type: "ai_follow_up",
+            meta: { channel, message_preview: reply.substring(0, 100) },
+          });
+        }
       }
 
       return json({ reply, status: replyStatus });
@@ -401,7 +428,13 @@ Rules:
   ]);
 }
 
-async function sendMessage(channel: string, lead: any, message: string, workspaceId: string) {
+async function sendMessage(channel: string, lead: any, message: string, workspaceId: string): Promise<{
+  success: boolean;
+  status?: number;
+  error?: string;
+  fallback?: boolean;
+  providerMessageId?: string | null;
+}> {
   try {
     let url = "";
     let payload: Record<string, unknown> = {};
@@ -435,22 +468,41 @@ async function sendMessage(channel: string, lead: any, message: string, workspac
       };
     }
 
-    if (url) {
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!resp.ok) {
-        const errData = await resp.text();
-        console.error(`[ai-sales-closer] ${channel} send failed (${resp.status}):`, errData);
-      }
+    if (!url) {
+      return { success: false, error: `No ${channel} destination configured for lead` };
     }
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await resp.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { raw: text };
+    }
+
+    const success = resp.ok && data?.success !== false && !data?.error;
+    if (!success) {
+      const error = data?.error || text || `${channel} send failed`;
+      console.error(`[ai-sales-closer] ${channel} send failed (${resp.status}):`, text);
+      return { success: false, status: resp.status, error, fallback: Boolean(data?.fallback) };
+    }
+
+    return {
+      success: true,
+      status: resp.status,
+      providerMessageId: data?.waMessageId || data?.messageId || null,
+    };
   } catch (e) {
     console.error(`Failed to send ${channel} message:`, e);
+    return { success: false, error: e instanceof Error ? e.message : `Failed to send ${channel} message` };
   }
 }
