@@ -146,6 +146,8 @@ const App = () => (
               <Route path="/coaches-creators" element={<CoachesCreators />} />
               <Route path="/marketing-agencies" element={<MarketingAgencies />} />
               <Route path="/small-business" element={<SmallBusiness />} />
+              <Route path="/nexusintel" element={<NexusIntelLanding />} />
+              <Route path="/nexusintel/sample" element={<NexusIntelSample />} />
 
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
