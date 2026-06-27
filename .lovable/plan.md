@@ -1,42 +1,33 @@
-## What I found right now
+# Unify Nexus AI with AI Sales Closer Brand Voice
 
-The WhatsApp webhook is active and receiving your messages.
+Make the public website chatbot (`nexus-ai-chat`) speak with the same tone, product knowledge, and guardrails defined in **Settings → AI Sales Closer → Custom Instructions**, so leads get consistent messaging across the website widget and WhatsApp/Email/SMS replies.
 
-- Your messages at `18:47:20`, `18:47:43`, and `18:48:02 UTC` were stored as inbound WhatsApp messages.
-- The webhook triggered the AI Sales Closer each time.
-- AI classification worked each time: `intent: interest`, `confidence: 100`.
-- The reason no auto-reply was sent for those latest messages is a backend status bug introduced while making send-status more honest:
-  - `ai-sales-closer` tried to create the outbound AI reply with status `sending`.
-  - The `sales_conversations` table only allows: `draft`, `pending_approval`, `sent`, `delivered`, `failed`.
-  - Because `sending` is not allowed, the outbound reply record was rejected before `whatsapp-send` was called.
-- The older `WhatsApp not configured` problem has already been addressed by wiring the sender to use the active Meta WhatsApp connection and setting the approved default template.
+## What changes
 
-## Plan to fix it once and for all
+**Edge function: `supabase/functions/nexus-ai-chat/index.ts`**
+- After resolving the workspace, load that workspace's row from `sales_closer_settings` (already used by `ai-sales-closer`).
+- If `system_prompt` is set, prepend it to the existing Nexus AI base prompt so the brand voice / pricing / qualifying questions are applied — while keeping the website-only behaviors intact:
+  - Lead capture tag `[LEAD_CAPTURED:...]`
+  - Human handoff tag `[HUMAN_HANDOFF]`
+  - Website navigation links (`/pricing`, `/features`, `/register`, `/contact`)
+- If `system_prompt` is empty, fall back to the current default prompt (no behavior change).
+- Respect `is_enabled` only as a soft signal — the public widget should always answer, but if `channels` doesn't include a "web" entry we still allow it (the widget is the marketing site, not a messaging channel). No gating added.
 
-1. **Fix the invalid status flow**
-   - Change `ai-sales-closer` so it never writes `sending` to `sales_conversations`.
-   - For auto-send replies, create the outbound record as `draft`, then update it to `sent` only after WhatsApp confirms success, or `failed` if sending fails.
+**No frontend changes.** `ChatbotWidget.tsx` already passes `workspaceId`, so the function can resolve the right settings.
 
-2. **Make the auto-reply path fail loudly and visibly**
-   - If creating the outbound reply record fails, return a clear error and log it instead of returning `status: sending`.
-   - If the WhatsApp send fails, store the failure reason in the conversation `meta.send_result`.
+**No DB changes.** `sales_closer_settings.system_prompt` already exists.
 
-3. **Confirm WhatsApp sender wiring**
-   - Keep the current `whatsapp-send` credential resolution:
-     - workspace Meta credentials first from active WhatsApp settings
-     - repair the legacy channel settings mirror automatically
-     - only fallback to platform credentials if workspace settings are unavailable
+## Prompt composition order
 
-4. **Verify live after implementation**
-   - Check the latest inbound message chain again.
-   - Ask you to send one final WhatsApp message.
-   - Confirm in the backend:
-     - inbound message stored
-     - AI reply generated
-     - outbound WhatsApp message created
-     - provider message ID returned
-     - status becomes `sent` or a clear error is stored
+```
+[Sales Closer Custom Instructions] (if present)
+---
+[Nexus AI base prompt: site context, links, LEAD_CAPTURED + HUMAN_HANDOFF rules]
+```
 
-## Important note
+This way the user's brand voice / pricing / objection handlers take priority, but the website-specific lead-capture and handoff tagging logic still fires.
 
-There is no evidence that Meta webhook delivery is the problem now. The messages are arriving and AI is processing them. The current blocker is the invalid `sending` status preventing the outbound reply from being created and sent.
+## Out of scope
+- Changing the model (stays on `google/gemini-3-flash-preview`).
+- Editing the AI Sales Closer settings UI.
+- Touching the `ai-sales-closer` function.
