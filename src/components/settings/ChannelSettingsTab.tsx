@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
 import { toast } from "sonner";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +19,7 @@ import {
   Mail, Smartphone, MessageCircle, Loader2, Save, ChevronDown,
   CheckCircle2, XCircle, Unplug, Send, Globe, Copy, RefreshCw,
   Phone, ShieldCheck, ExternalLink, ArrowRight, ArrowLeft, Sparkles,
+  Sparkle, Server, KeyRound,
 } from "lucide-react";
 
 interface ChannelStatus {
@@ -598,6 +601,9 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [waTestSending, setWaTestSending] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
 
+  // Live WhatsApp connection (Meta) status — used for the header pill row.
+  const { data: waConn } = useWhatsAppConnection(workspaceId);
+
   // Draft key for unsaved input persistence (per workspace, per browser session).
   const draftKey = `nf24:channelDraft:${workspaceId}`;
 
@@ -832,58 +838,141 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       );
     }
     return (
-      <span className="flex items-center gap-1 text-xs text-accent">
-        <CheckCircle2 className="h-3.5 w-3.5" /> Custom credentials active
+      <span className="flex items-center gap-1 text-xs text-emerald-600">
+        <CheckCircle2 className="h-3.5 w-3.5" /> Workspace sender active
       </span>
     );
   };
+
+  // Pill badge for the page header summary row
+  const SummaryPill = ({
+    label,
+    active,
+    activeText,
+    inactiveText,
+  }: { label: string; active: boolean; activeText: string; inactiveText: string }) => (
+    <div className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-[11px]">
+      <span className="text-muted-foreground">{label}</span>
+      <span
+        className={
+          active
+            ? "inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-700 border border-emerald-500/20"
+            : "inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 font-medium text-muted-foreground border"
+        }
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-muted-foreground/50"}`} />
+        {active ? activeText : inactiveText}
+      </span>
+    </div>
+  );
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
+  const emailConnected = !!(channels?.email?.configured && channels?.email?.is_active);
+  const smsConnected = !!(channels?.sms?.configured && channels?.sms?.is_active);
+  const whatsappConnected = !!((waConn?.configured && waConn?.is_active) || (channels?.whatsapp?.configured && channels?.whatsapp?.is_active));
+  const senderModeCustom = emailConnected || smsConnected || whatsappConnected;
+
+  // Default-open accordion: first not-configured section so the user
+  // immediately sees what still needs setup.
+  const defaultOpen =
+    !emailConnected ? "email" :
+    !smsConnected ? "sms" :
+    !whatsappConnected ? "whatsapp" :
+    "platform";
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-accent/30 bg-accent/5 p-3">
-        <p className="text-xs text-foreground/80">
-          <strong>Bring Your Own Sender:</strong> Connect your own Email domain, SMS credentials, or WhatsApp Business number.
-          If not configured, the platform default credentials are used.
-        </p>
+    <div className="space-y-6">
+      {/* ── Page header ─────────────────────────────────────── */}
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            Communication Settings
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Connect email, SMS, WhatsApp, and sender credentials for your workspace.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <SummaryPill label="Email" active={emailConnected} activeText="Connected" inactiveText="Not connected" />
+          <SummaryPill label="SMS" active={smsConnected} activeText="Connected" inactiveText="Not connected" />
+          <SummaryPill label="WhatsApp" active={whatsappConnected} activeText="Connected" inactiveText="Not connected" />
+          <SummaryPill
+            label="Sender mode"
+            active={senderModeCustom}
+            activeText="Workspace sender"
+            inactiveText="Platform default"
+          />
+        </div>
       </div>
 
-      {/* ─── Email Channel ─── */}
-      <Collapsible>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-accent" />
-                  <div>
-                    <CardTitle className="text-base">Email (Resend or SendGrid)</CardTitle>
-                    <StatusIndicator ch={channels?.email} />
-                  </div>
-                </div>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      {/* ── Bring Your Own Sender banner ────────────────────── */}
+      <div className="relative overflow-hidden rounded-xl border border-amber-400/40 bg-gradient-to-br from-amber-50 via-white to-amber-50/40 p-5 shadow-sm">
+        <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-amber-400 to-amber-600" />
+        <div className="flex items-start gap-3 pl-2">
+          <div className="h-9 w-9 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+            <Sparkle className="h-4 w-4 text-amber-600" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground">Bring Your Own Sender</h3>
+            <p className="text-xs text-foreground/70 leading-relaxed">
+              Connect your own email domain, SMS credentials, or WhatsApp Business number.
+              If not configured, NexusFlo24 will use the platform default sending credentials.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Channel accordion ───────────────────────────────── */}
+      <Accordion type="single" collapsible defaultValue={defaultOpen} className="space-y-3">
+
+        {/* ── Email ─────────────────────────── */}
+        <AccordionItem value="email" className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30 [&[data-state=open]>div>svg.chev]:rotate-180">
+            <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+              <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                <Mail className="h-5 w-5 text-amber-600" />
               </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-4 pt-0">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-foreground">Email</span>
+                  {emailConnected ? (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-[10px]">
+                      {(channels?.email?.non_secret?.provider === "sendgrid" ? "SendGrid" : "Resend")} · Connected
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px]">Not connected</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  Send transactional and campaign emails from your verified sending domain.
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-5 pb-5 pt-0">
+            <div className="space-y-4">
               {channels?.email?.configured && (
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  {Object.entries(channels.email.masked).map(([k, v]) => (
-                    <p key={k}><span className="font-medium">{k}:</span> {v}</p>
-                  ))}
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Active credentials</div>
+                  <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    {Object.entries(channels.email.masked).map(([k, v]) => (
+                      <div key={k} className="flex gap-2"><span className="text-muted-foreground">{k}:</span><span className="font-mono truncate">{v}</span></div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Resend Domain Verification (only shown for Resend provider) */}
+              {/* Domain verification */}
               {emailProvider === "resend" && <ResendDomainPanel workspaceId={workspaceId} />}
 
               <Separator />
+
+              {/* Provider + credentials */}
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label>Provider</Label>
                   <Select value={emailProvider} onValueChange={(v) => setEmailProvider(v as "resend" | "sendgrid")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -893,7 +982,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label>{emailProvider === "sendgrid" ? "SendGrid API Key" : "Resend API Key"}</Label>
                   <Input
                     type="password"
@@ -903,19 +992,20 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                     maxLength={300}
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label>From Email</Label>
                   <Input value={emailFrom} onChange={(e) => setEmailFrom(e.target.value)} placeholder="hello@yourdomain.com" maxLength={200} />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label>From Name</Label>
                   <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} placeholder="NexusFlo24" maxLength={100} />
                 </div>
-                <div className="space-y-1 sm:col-span-2">
+                <div className="space-y-1.5 sm:col-span-2">
                   <Label>Reply-To (optional)</Label>
                   <Input value={emailReplyTo} onChange={(e) => setEmailReplyTo(e.target.value)} placeholder="support@yourdomain.com" maxLength={200} />
                 </div>
               </div>
+
               {(() => {
                 const savedProvider = (channels?.email?.non_secret?.provider || (channels?.email?.configured ? "resend" : emailProvider)) as "resend" | "sendgrid";
                 const providerChanged = channels?.email?.configured && savedProvider !== emailProvider;
@@ -928,17 +1018,16 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                         : "Use a Resend API key (starts with re_). Verify your sending domain via the panel above for best deliverability."}
                     </p>
                     {providerChanged && (
-                      <p className="text-[11px] text-amber-600">
+                      <p className="text-[11px] text-amber-700">
                         Provider changed to <strong>{emailProvider === "sendgrid" ? "SendGrid" : "Resend"}</strong> — paste a new {emailProvider === "sendgrid" ? "SendGrid (SG.…)" : "Resend (re_…)"} API key to save.
                       </p>
                     )}
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex flex-wrap gap-2 pt-1">
                       <Button size="sm" onClick={() => saveChannel("email", { provider: emailProvider, api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName, reply_to: emailReplyTo }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured) || needsNewKey}>
                         {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                       </Button>
-
                       {channels?.email?.configured && (
-                        <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("email")}>
+                        <Button variant="outline" size="sm" className="text-destructive border-destructive/40 hover:text-destructive hover:bg-destructive/5" onClick={() => setDisconnectTarget("email")}>
                           <Unplug className="h-4 w-4 mr-1" />Disconnect
                         </Button>
                       )}
@@ -946,199 +1035,259 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   </>
                 );
               })()}
+
               <Separator />
-              <div className="flex gap-2">
-                <Input value={emailTestTo} onChange={(e) => setEmailTestTo(e.target.value)} placeholder="test@example.com" className="max-w-[250px]" maxLength={200} />
-                <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={emailTestSending}>
-                  {emailTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
-                </Button>
-              </div>
-
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      {/* ─── SMS Channel ─── */}
-      <Collapsible>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5 text-accent" />
-                  <div>
-                    <CardTitle className="text-base">SMS (Twilio)</CardTitle>
-                    <StatusIndicator ch={channels?.sms} />
-                  </div>
+              <div>
+                <div className="text-xs font-medium text-foreground mb-1.5">Send a test email</div>
+                <div className="flex flex-wrap gap-2">
+                  <Input value={emailTestTo} onChange={(e) => setEmailTestTo(e.target.value)} placeholder="test@example.com" className="max-w-[260px]" maxLength={200} />
+                  <Button variant="outline" size="sm" onClick={handleTestEmail} disabled={emailTestSending}>
+                    {emailTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
+                  </Button>
                 </div>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-4 pt-0">
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ── SMS ────────────────────────────── */}
+        <AccordionItem value="sms" className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30">
+            <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+              <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                <Smartphone className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-foreground">SMS</span>
+                  {smsConnected ? (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-[10px]">
+                      Twilio · Connected
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px]">Not connected</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  Send transactional and bulk SMS through your Twilio account.
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-5 pb-5 pt-0">
+            <div className="space-y-4">
               {channels?.sms?.configured && (
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  {Object.entries(channels.sms.masked).map(([k, v]) => (
-                    <p key={k}><span className="font-medium">{k}:</span> {v}</p>
-                  ))}
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Active credentials</div>
+                  <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    {Object.entries(channels.sms.masked).map(([k, v]) => (
+                      <div key={k} className="flex gap-2"><span className="text-muted-foreground">{k}:</span><span className="font-mono truncate">{v}</span></div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Twilio Subaccount Provisioning */}
               <TwilioSubaccountPanel workspaceId={workspaceId} />
 
               <Separator />
+
               <p className="text-xs text-muted-foreground">Or enter your own Twilio credentials manually:</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label>Account SID</Label>
                   <Input type="password" value={smsAccountSid} onChange={(e) => setSmsAccountSid(e.target.value)} placeholder={channels?.sms?.configured ? "•••••• (leave blank to keep current)" : "AC..."} maxLength={100} />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label>Auth Token</Label>
                   <Input type="password" value={smsAuthToken} onChange={(e) => setSmsAuthToken(e.target.value)} placeholder={channels?.sms?.configured ? "•••••• (leave blank to keep current)" : "••••••"} maxLength={100} />
-
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5 sm:col-span-2">
                   <Label>From Number / Messaging Service SID</Label>
                   <Input value={smsFromNumber} onChange={(e) => setSmsFromNumber(e.target.value)} placeholder="+15551234567 or MG..." maxLength={50} />
                 </div>
               </div>
-              <div className="flex gap-2 flex-wrap">
+
+              <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" onClick={() => saveChannel("sms", { account_sid: smsAccountSid, auth_token: smsAuthToken, from_number: smsFromNumber }, setSmsSaving)} disabled={smsSaving || (!smsAccountSid && !channels?.sms?.configured)}>
                   {smsSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.sms?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("sms")}>
+                  <Button variant="outline" size="sm" className="text-destructive border-destructive/40 hover:text-destructive hover:bg-destructive/5" onClick={() => setDisconnectTarget("sms")}>
                     <Unplug className="h-4 w-4 mr-1" />Disconnect
                   </Button>
                 )}
               </div>
+
               <Separator />
-              <div className="flex gap-2">
-                <Input value={smsTestTo} onChange={(e) => setSmsTestTo(e.target.value)} placeholder="+447517327597" className="max-w-[200px]" maxLength={20} />
-                <Button variant="outline" size="sm" onClick={handleTestSms} disabled={smsTestSending}>
-                  {smsTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
-                </Button>
-              </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
-
-      {/* ─── WhatsApp One-Click Connect (Meta Embedded Signup) ─── */}
-      <WhatsAppConnectCard workspaceId={workspaceId} />
-
-      {/* ─── WhatsApp Channel — Advanced manual setup (fallback) ─── */}
-      <Collapsible>
-        <Card>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-5 w-5 text-accent" />
-                  <div>
-                    <CardTitle className="text-base">WhatsApp Business</CardTitle>
-                    <StatusIndicator ch={channels?.whatsapp} />
-                  </div>
-                </div>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-4 pt-0">
-              {channels?.whatsapp?.configured && (
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  {Object.entries(channels.whatsapp.masked).map(([k, v]) => (
-                    <p key={k}><span className="font-medium">{k}:</span> {v}</p>
-                  ))}
-                </div>
-              )}
-
-              {!channels?.whatsapp?.configured && !showWaWizard ? (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    New to WhatsApp Cloud API? Use our guided wizard to walk you through the setup step-by-step.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setShowWaWizard(true)}>
-                      <ShieldCheck className="h-4 w-4 mr-1" />Guided Setup Wizard
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setShowWaWizard(false)}>
-                      Manual Setup
-                    </Button>
-                  </div>
-                </div>
-              ) : showWaWizard ? (
-                <>
-                  <WhatsAppWizard
-                    onComplete={async (config) => {
-                      await saveChannel("whatsapp", config, setWaSaving);
-                      setShowWaWizard(false);
-                    }}
-                  />
-                  <Button variant="ghost" size="sm" onClick={() => setShowWaWizard(false)}>
-                    Switch to Manual Setup
+              <div>
+                <div className="text-xs font-medium text-foreground mb-1.5">Send a test SMS</div>
+                <div className="flex flex-wrap gap-2">
+                  <Input value={smsTestTo} onChange={(e) => setSmsTestTo(e.target.value)} placeholder="+447517327597" className="max-w-[220px]" maxLength={20} />
+                  <Button variant="outline" size="sm" onClick={handleTestSms} disabled={smsTestSending}>
+                    {smsTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
                   </Button>
-                </>
-              ) : null}
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-              {/* Manual fields (shown when wizard is off or already configured) */}
-              {(!showWaWizard || channels?.whatsapp?.configured) && (
-                <>
-                  <Separator />
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label>Access Token</Label>
-                      <Input type="password" value={waAccessToken} onChange={(e) => setWaAccessToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "EAA..."} maxLength={500} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Phone Number ID</Label>
-                      <Input value={waPhoneNumberId} onChange={(e) => setWaPhoneNumberId(e.target.value)} placeholder="123456789012345" maxLength={50} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>Verify Token</Label>
-                      <Input type="password" value={waVerifyToken} onChange={(e) => setWaVerifyToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "your-verify-token"} maxLength={200} />
+        {/* ── WhatsApp Business (single card: Meta tabs + advanced manual fallback) ─── */}
+        <AccordionItem value="whatsapp" className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30">
+            <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <MessageCircle className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-foreground">WhatsApp Business</span>
+                  {whatsappConnected ? (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-[10px]">
+                      Connected via Meta Cloud API
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px]">Not connected</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  Choose Meta Cloud API (Embedded Signup) or Twilio WhatsApp — one provider per workspace.
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-5 pb-5 pt-0">
+            <div className="space-y-4">
+              {/* Primary WhatsApp connection UI (Meta + Twilio tabs) */}
+              <WhatsAppConnectCard workspaceId={workspaceId} />
 
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" onClick={() => saveChannel("whatsapp", { access_token: waAccessToken, phone_number_id: waPhoneNumberId, verify_token: waVerifyToken }, setWaSaving)} disabled={waSaving || (!waAccessToken && !channels?.whatsapp?.configured)}>
-                      {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
-                    </Button>
+              {/* Advanced — manual credentials & test (formerly a separate duplicate card) */}
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors px-4 py-3 text-sm">
+                    <span className="flex items-center gap-2 font-medium">
+                      <KeyRound className="h-4 w-4 text-amber-600" />
+                      Advanced — manual credentials & test send
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  <div className="space-y-4 rounded-lg border bg-card p-4">
                     {channels?.whatsapp?.configured && (
-                      <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("whatsapp")}>
-                        <Unplug className="h-4 w-4 mr-1" />Disconnect
-                      </Button>
+                      <div className="rounded-lg border bg-muted/30 p-3">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">Manual credentials on file</div>
+                        <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          {Object.entries(channels.whatsapp.masked).map(([k, v]) => (
+                            <div key={k} className="flex gap-2"><span className="text-muted-foreground">{k}:</span><span className="font-mono truncate">{v}</span></div>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                  </div>
-                  <Separator />
-                  <div className="rounded-md border border-amber-300/60 bg-amber-50 p-2.5 text-xs text-amber-900">
-                    <strong>Heads up — WhatsApp 24h window:</strong> Free-form text messages
-                    only deliver if the recipient has messaged your business in the last 24 hours.
-                    Outside that window you must send an approved template, otherwise the send
-                    will fail with <em>"24h window closed"</em>. Use the test below with a number
-                    that has recently messaged you to verify your setup.
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Input value={waTestTo} onChange={(e) => setWaTestTo(e.target.value)} placeholder="+447517327597" maxLength={20} />
-                    <Input value={waTestMsg} onChange={(e) => setWaTestMsg(e.target.value)} placeholder="Hello from NexusFlo24!" maxLength={500} />
-                  </div>
-                  <Button variant="outline" size="sm" onClick={handleTestWhatsApp} disabled={waTestSending}>
-                    {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
-                  </Button>
 
-                  <Separator />
-                  <ReengagementTemplatePicker workspaceId={workspaceId} />
-                </>
-              )}
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label>Access Token</Label>
+                        <Input type="password" value={waAccessToken} onChange={(e) => setWaAccessToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "EAA..."} maxLength={500} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Phone Number ID</Label>
+                        <Input value={waPhoneNumberId} onChange={(e) => setWaPhoneNumberId(e.target.value)} placeholder="123456789012345" maxLength={50} />
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Verify Token</Label>
+                        <Input type="password" value={waVerifyToken} onChange={(e) => setWaVerifyToken(e.target.value)} placeholder={channels?.whatsapp?.configured ? "•••••• (leave blank to keep current)" : "your-verify-token"} maxLength={200} />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" onClick={() => saveChannel("whatsapp", { access_token: waAccessToken, phone_number_id: waPhoneNumberId, verify_token: waVerifyToken }, setWaSaving)} disabled={waSaving || (!waAccessToken && !channels?.whatsapp?.configured)}>
+                        {waSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
+                      </Button>
+                      {channels?.whatsapp?.configured && (
+                        <Button variant="outline" size="sm" className="text-destructive border-destructive/40 hover:text-destructive hover:bg-destructive/5" onClick={() => setDisconnectTarget("whatsapp")}>
+                          <Unplug className="h-4 w-4 mr-1" />Disconnect
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="rounded-md border border-amber-300/60 bg-amber-50 p-3 text-xs text-amber-900">
+                      <strong>Heads up — WhatsApp 24h window:</strong> Free-form text messages
+                      only deliver if the recipient has messaged your business in the last 24 hours.
+                      Outside that window, an approved template is required.
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-medium text-foreground mb-1.5">Send a test WhatsApp message</div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Input value={waTestTo} onChange={(e) => setWaTestTo(e.target.value)} placeholder="+447517327597" maxLength={20} />
+                        <Input value={waTestMsg} onChange={(e) => setWaTestMsg(e.target.value)} placeholder="Hello from NexusFlo24!" maxLength={500} />
+                      </div>
+                      <Button variant="outline" size="sm" className="mt-2" onClick={handleTestWhatsApp} disabled={waTestSending}>
+                        {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
+                      </Button>
+                    </div>
+
+                    <Separator />
+                    <ReengagementTemplatePicker workspaceId={workspaceId} />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ── Platform / Sender Defaults ─────── */}
+        <AccordionItem value="platform" className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30">
+            <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+              <div className="h-10 w-10 rounded-lg bg-slate-500/10 flex items-center justify-center shrink-0">
+                <Server className="h-5 w-5 text-slate-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-foreground">Sender Defaults</span>
+                  <Badge variant="outline" className="text-[10px]">Platform-managed</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  Fallback credentials NexusFlo24 uses when no workspace sender is configured.
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-5 pb-5 pt-0">
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mail className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="text-xs font-semibold">Email default</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">NexusFlo24 platform sender</p>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Smartphone className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="text-xs font-semibold">SMS default</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">NexusFlo24 Twilio</p>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-xs font-semibold">WhatsApp default</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">NexusFlo24 Meta / Twilio provider</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                This allows NexusFlo24 to support both platform-managed messaging and Bring Your Own Sender.
+                Adding workspace credentials in any channel above will automatically override the platform default for that channel only.
+              </p>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {/* Disconnect dialog */}
       <AlertDialog open={!!disconnectTarget} onOpenChange={(open) => !open && setDisconnectTarget(null)}>
