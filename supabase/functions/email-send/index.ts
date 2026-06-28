@@ -207,21 +207,25 @@ Deno.serve(async (req) => {
     const cleanSubject = stripTokens(subject);
     trackedHtml = stripTokens(trackedHtml);
     const finalSubject = isPreview ? `[TEST] ${cleanSubject}` : cleanSubject;
-    const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
+    const replyTo = body.replyTo || creds.config.reply_to || "NexusFlo24 Support <support@nexusflo24.com>";
 
     let result: { messageId: string };
     try {
-      result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
+      if (provider === "sendgrid") {
+        result = await sendSendgrid(apiKey, fromEmail, fromName, to, finalSubject, trackedHtml, replyTo);
+      } else {
+        result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
+      }
     } catch (sendErr: any) {
       const errorMessage = sendErr?.message || "Failed to send email";
-      console.error("email-send Resend error:", errorMessage);
+      console.error(`email-send ${provider} error:`, errorMessage);
       // Alert workspace owner if this is a credential failure
       if (isCredentialError("email", errorMessage)) {
         await notifyCredentialFailure({
           workspaceId,
           channel: "email",
           errorMessage,
-          meta: { provider: "resend", source: "email-send" },
+          meta: { provider, source: "email-send" },
         });
       }
       // Log the FAILED send so it appears in email_logs / dashboards
