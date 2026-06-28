@@ -670,8 +670,10 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         setChannels(data);
         // Hydrate non-secret form fields so they persist across reloads
         const eNS = data?.email?.non_secret || {};
+        if (eNS.provider !== undefined) setEmailProvider(eNS.provider === "sendgrid" ? "sendgrid" : "resend");
         if (eNS.from_email !== undefined) setEmailFrom(eNS.from_email || "");
         if (eNS.from_name !== undefined) setEmailFromName(eNS.from_name || "");
+        if (eNS.reply_to !== undefined) setEmailReplyTo(eNS.reply_to || "");
         const sNS = data?.sms?.non_secret || {};
         if (sNS.from_number !== undefined) setSmsFromNumber(sNS.from_number || "");
         const wNS = data?.whatsapp?.non_secret || {};
