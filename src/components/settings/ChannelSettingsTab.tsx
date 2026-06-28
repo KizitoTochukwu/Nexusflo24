@@ -835,11 +835,33 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       );
     }
     return (
-      <span className="flex items-center gap-1 text-xs text-accent">
-        <CheckCircle2 className="h-3.5 w-3.5" /> Custom credentials active
+      <span className="flex items-center gap-1 text-xs text-emerald-600">
+        <CheckCircle2 className="h-3.5 w-3.5" /> Workspace sender active
       </span>
     );
   };
+
+  // Pill badge for the page header summary row
+  const SummaryPill = ({
+    label,
+    active,
+    activeText,
+    inactiveText,
+  }: { label: string; active: boolean; activeText: string; inactiveText: string }) => (
+    <div className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-[11px]">
+      <span className="text-muted-foreground">{label}</span>
+      <span
+        className={
+          active
+            ? "inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-700 border border-emerald-500/20"
+            : "inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 font-medium text-muted-foreground border"
+        }
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-emerald-500" : "bg-muted-foreground/50"}`} />
+        {active ? activeText : inactiveText}
+      </span>
+    </div>
+  );
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
