@@ -567,9 +567,11 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [loading, setLoading] = useState(true);
 
   // Email fields
+  const [emailProvider, setEmailProvider] = useState<"resend" | "sendgrid">("resend");
   const [emailApiKey, setEmailApiKey] = useState("");
   const [emailFrom, setEmailFrom] = useState("");
   const [emailFromName, setEmailFromName] = useState("");
+  const [emailReplyTo, setEmailReplyTo] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
 
   // SMS fields
@@ -605,9 +607,11 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       const raw = sessionStorage.getItem(draftKey);
       if (!raw) return;
       const d = JSON.parse(raw);
+      if (typeof d.emailProvider === "string") setEmailProvider(d.emailProvider === "sendgrid" ? "sendgrid" : "resend");
       if (typeof d.emailApiKey === "string") setEmailApiKey(d.emailApiKey);
       if (typeof d.emailFrom === "string") setEmailFrom(d.emailFrom);
       if (typeof d.emailFromName === "string") setEmailFromName(d.emailFromName);
+      if (typeof d.emailReplyTo === "string") setEmailReplyTo(d.emailReplyTo);
       if (typeof d.smsAccountSid === "string") setSmsAccountSid(d.smsAccountSid);
       if (typeof d.smsAuthToken === "string") setSmsAuthToken(d.smsAuthToken);
       if (typeof d.smsFromNumber === "string") setSmsFromNumber(d.smsFromNumber);
@@ -621,12 +625,12 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   useEffect(() => {
     try {
       sessionStorage.setItem(draftKey, JSON.stringify({
-        emailApiKey, emailFrom, emailFromName,
+        emailProvider, emailApiKey, emailFrom, emailFromName, emailReplyTo,
         smsAccountSid, smsAuthToken, smsFromNumber,
         waAccessToken, waPhoneNumberId, waVerifyToken,
       }));
     } catch { /* ignore */ }
-  }, [draftKey, emailApiKey, emailFrom, emailFromName, smsAccountSid, smsAuthToken, smsFromNumber, waAccessToken, waPhoneNumberId, waVerifyToken]);
+  }, [draftKey, emailProvider, emailApiKey, emailFrom, emailFromName, emailReplyTo, smsAccountSid, smsAuthToken, smsFromNumber, waAccessToken, waPhoneNumberId, waVerifyToken]);
 
   const clearChannelDraft = (channel: string) => {
     if (channel === "email") {
@@ -666,8 +670,10 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         setChannels(data);
         // Hydrate non-secret form fields so they persist across reloads
         const eNS = data?.email?.non_secret || {};
+        if (eNS.provider !== undefined) setEmailProvider(eNS.provider === "sendgrid" ? "sendgrid" : "resend");
         if (eNS.from_email !== undefined) setEmailFrom(eNS.from_email || "");
         if (eNS.from_name !== undefined) setEmailFromName(eNS.from_name || "");
+        if (eNS.reply_to !== undefined) setEmailReplyTo(eNS.reply_to || "");
         const sNS = data?.sms?.non_secret || {};
         if (sNS.from_number !== undefined) setSmsFromNumber(sNS.from_number || "");
         const wNS = data?.whatsapp?.non_secret || {};
@@ -853,7 +859,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 <div className="flex items-center gap-2">
                   <Mail className="h-5 w-5 text-accent" />
                   <div>
-                    <CardTitle className="text-base">Email (Resend)</CardTitle>
+                    <CardTitle className="text-base">Email (Resend or SendGrid)</CardTitle>
                     <StatusIndicator ch={channels?.email} />
                   </div>
                 </div>
@@ -871,14 +877,30 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
               )}
 
-              {/* Resend Domain Verification */}
-              <ResendDomainPanel workspaceId={workspaceId} />
+              {/* Resend Domain Verification (only shown for Resend provider) */}
+              {emailProvider === "resend" && <ResendDomainPanel workspaceId={workspaceId} />}
 
               <Separator />
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label>Resend API Key</Label>
-                  <Input type="password" value={emailApiKey} onChange={(e) => setEmailApiKey(e.target.value)} placeholder={channels?.email?.configured ? "•••••• (leave blank to keep current)" : "re_..."} maxLength={200} />
+                  <Label>Provider</Label>
+                  <Select value={emailProvider} onValueChange={(v) => setEmailProvider(v as "resend" | "sendgrid")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="resend">Resend</SelectItem>
+                      <SelectItem value="sendgrid">SendGrid (Twilio)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>{emailProvider === "sendgrid" ? "SendGrid API Key" : "Resend API Key"}</Label>
+                  <Input
+                    type="password"
+                    value={emailApiKey}
+                    onChange={(e) => setEmailApiKey(e.target.value)}
+                    placeholder={channels?.email?.configured ? "•••••• (leave blank to keep current)" : (emailProvider === "sendgrid" ? "SG.xxxxx" : "re_...")}
+                    maxLength={300}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>From Email</Label>
@@ -886,11 +908,20 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
                 <div className="space-y-1">
                   <Label>From Name</Label>
-                  <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} placeholder="Your Brand" maxLength={100} />
+                  <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} placeholder="NexusFlo24" maxLength={100} />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Reply-To (optional)</Label>
+                  <Input value={emailReplyTo} onChange={(e) => setEmailReplyTo(e.target.value)} placeholder="support@yourdomain.com" maxLength={200} />
                 </div>
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                {emailProvider === "sendgrid"
+                  ? "Use a SendGrid API key with Mail Send permission. The From Email must be a verified Single Sender or authenticated domain in SendGrid."
+                  : "Use a Resend API key. Verify your sending domain via the panel above for best deliverability."}
+              </p>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => saveChannel("email", { provider: "resend", api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured)}>
+                <Button size="sm" onClick={() => saveChannel("email", { provider: emailProvider, api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName, reply_to: emailReplyTo }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured)}>
                   {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.email?.configured && (

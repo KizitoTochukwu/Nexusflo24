@@ -23,6 +23,36 @@ async function sendResend(apiKey: string, from: string, to: string, subject: str
   return { messageId: data.id };
 }
 
+async function sendSendgrid(apiKey: string, fromEmail: string, fromName: string, to: string, subject: string, html: string, replyTo?: string) {
+  // Optional Reply-To: accept "email", "Name <email>" or full "Name <email>" formats
+  let replyToObj: { email: string; name?: string } | undefined;
+  if (replyTo) {
+    const m = replyTo.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+    replyToObj = m ? { name: m[1] || undefined, email: m[2] } : { email: replyTo };
+  }
+  const body = {
+    personalizations: [{ to: [{ email: to }] }],
+    from: { email: fromEmail, name: fromName || undefined },
+    ...(replyToObj ? { reply_to: replyToObj } : {}),
+    subject,
+    content: [{ type: "text/html", value: html }],
+  };
+  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = "";
+    try { const j = await res.json(); detail = j?.errors?.[0]?.message || JSON.stringify(j); }
+    catch { detail = await res.text().catch(() => ""); }
+    throw new Error(`SendGrid error ${res.status}: ${detail}`);
+  }
+  // SendGrid returns 202 Accepted with X-Message-Id header
+  const messageId = res.headers.get("x-message-id") || crypto.randomUUID();
+  return { messageId };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -99,9 +129,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Resolve credentials: workspace-specific → platform ENV fallback
+    // Resolve credentials: workspace-specific → platform ENV fallback.
+    // Platform fallback auto-detects provider — Resend preferred when present,
+    // otherwise SendGrid if SENDGRID_API_KEY is set.
+    const platformResendKey = Deno.env.get("RESEND_API_KEY");
+    const platformSendgridKey = Deno.env.get("SENDGRID_API_KEY");
+    const platformProvider = platformResendKey ? "resend" : (platformSendgridKey ? "sendgrid" : "resend");
+    const platformApiKey = platformResendKey || platformSendgridKey;
     const creds = await resolveChannelCredentials(workspaceId, "email", {
-      api_key: Deno.env.get("RESEND_API_KEY"),
+      provider: platformProvider,
+      api_key: platformApiKey,
       from_email: Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com",
       from_name: "NexusFlo24",
     });
@@ -111,6 +148,7 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = creds.config.api_key;
+    const provider = (creds.config.provider || "resend").toLowerCase();
     // Sender profile overrides workspace channel settings when provided + approved
     const fromEmail = resolvedSender?.detail?.from_email || creds.config.from_email || "noreply@nexusflo24.com";
     const fromName = resolvedSender?.detail?.from_name || creds.config.from_name || "NexusFlo24";
@@ -169,21 +207,25 @@ Deno.serve(async (req) => {
     const cleanSubject = stripTokens(subject);
     trackedHtml = stripTokens(trackedHtml);
     const finalSubject = isPreview ? `[TEST] ${cleanSubject}` : cleanSubject;
-    const replyTo = body.replyTo || "NexusFlo24 Support <support@nexusflo24.com>";
+    const replyTo = body.replyTo || creds.config.reply_to || "NexusFlo24 Support <support@nexusflo24.com>";
 
     let result: { messageId: string };
     try {
-      result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
+      if (provider === "sendgrid") {
+        result = await sendSendgrid(apiKey, fromEmail, fromName, to, finalSubject, trackedHtml, replyTo);
+      } else {
+        result = await sendResend(apiKey, from, to, finalSubject, trackedHtml, replyTo);
+      }
     } catch (sendErr: any) {
       const errorMessage = sendErr?.message || "Failed to send email";
-      console.error("email-send Resend error:", errorMessage);
+      console.error(`email-send ${provider} error:`, errorMessage);
       // Alert workspace owner if this is a credential failure
       if (isCredentialError("email", errorMessage)) {
         await notifyCredentialFailure({
           workspaceId,
           channel: "email",
           errorMessage,
-          meta: { provider: "resend", source: "email-send" },
+          meta: { provider, source: "email-send" },
         });
       }
       // Log the FAILED send so it appears in email_logs / dashboards
