@@ -859,7 +859,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 <div className="flex items-center gap-2">
                   <Mail className="h-5 w-5 text-accent" />
                   <div>
-                    <CardTitle className="text-base">Email (Resend)</CardTitle>
+                    <CardTitle className="text-base">Email (Resend or SendGrid)</CardTitle>
                     <StatusIndicator ch={channels?.email} />
                   </div>
                 </div>
