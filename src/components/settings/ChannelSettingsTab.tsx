@@ -23,6 +23,7 @@ interface ChannelStatus {
   configured: boolean;
   is_active: boolean;
   masked: Record<string, string>;
+  non_secret?: Record<string, string>;
   updated_at: string | null;
 }
 
