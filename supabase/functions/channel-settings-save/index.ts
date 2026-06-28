@@ -150,10 +150,9 @@ Deno.serve(async (req) => {
 
     const cleanedConfig = trimConfig(config);
 
-    // Merge: if any secret field is blank and existing row has a stored value, keep it.
-    const secretKeys = SECRET_FIELDS[channel] || [];
-    const hasBlankSecret = secretKeys.some((k) => !cleanedConfig[k]);
-    if (hasBlankSecret) {
+    // Load prior config (if any) to support secret merging + provider-change detection.
+    let priorConfig: Record<string, string> | null = null;
+    {
       const { data: existing } = await adminClient
         .from("workspace_channel_settings")
         .select("config_encrypted")
@@ -162,13 +161,48 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (existing?.config_encrypted) {
         try {
-          const prior = JSON.parse(await decrypt(existing.config_encrypted, encryptionKey));
-          for (const k of secretKeys) {
-            if (!cleanedConfig[k] && prior[k]) cleanedConfig[k] = String(prior[k]);
-          }
+          priorConfig = JSON.parse(await decrypt(existing.config_encrypted, encryptionKey));
         } catch (e) {
           console.warn("channel-settings-save: failed to decrypt prior config", e);
         }
+      }
+    }
+
+    // Email: if provider changed, DO NOT carry the prior api_key — different providers
+    // use entirely different keys (Resend `re_...` vs SendGrid `SG....`).
+    const secretKeys = SECRET_FIELDS[channel] || [];
+    const skipSecretMerge = new Set<string>();
+    if (channel === "email" && priorConfig) {
+      const priorProvider = (priorConfig.provider || "resend").toLowerCase();
+      const newProvider = (cleanedConfig.provider || priorProvider).toLowerCase();
+      if (priorProvider !== newProvider) {
+        skipSecretMerge.add("api_key");
+        if (!cleanedConfig.api_key) {
+          return new Response(
+            JSON.stringify({ error: `Provider changed to ${newProvider}. Enter the ${newProvider === "sendgrid" ? "SendGrid" : "Resend"} API key for the new provider.` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
+    }
+
+    // Merge: keep prior secret value for fields left blank (except those skipped above).
+    if (priorConfig) {
+      for (const k of secretKeys) {
+        if (skipSecretMerge.has(k)) continue;
+        if (!cleanedConfig[k] && priorConfig[k]) cleanedConfig[k] = String(priorConfig[k]);
+      }
+    }
+
+    // Email: validate API-key prefix matches selected provider so we fail fast
+    // instead of letting the provider return a generic 401.
+    if (channel === "email" && cleanedConfig.api_key) {
+      const provider = (cleanedConfig.provider || "resend").toLowerCase();
+      if (provider === "sendgrid" && !cleanedConfig.api_key.startsWith("SG.")) {
+        return new Response(JSON.stringify({ error: "SendGrid API keys start with \"SG.\" — please paste a valid SendGrid Mail Send key." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (provider === "resend" && !cleanedConfig.api_key.startsWith("re_")) {
+        return new Response(JSON.stringify({ error: "Resend API keys start with \"re_\" — please paste a valid Resend key." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
@@ -184,6 +218,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: waErr }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
+
 
 
     const configEncrypted = await encrypt(JSON.stringify(cleanedConfig), encryptionKey);
