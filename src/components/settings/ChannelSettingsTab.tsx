@@ -936,12 +936,15 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                         {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                       </Button>
 
-                {channels?.email?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("email")}>
-                    <Unplug className="h-4 w-4 mr-1" />Disconnect
-                  </Button>
-                )}
-              </div>
+                      {channels?.email?.configured && (
+                        <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("email")}>
+                          <Unplug className="h-4 w-4 mr-1" />Disconnect
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
               <Separator />
               <div className="flex gap-2">
                 <Input value={emailTestTo} onChange={(e) => setEmailTestTo(e.target.value)} placeholder="test@example.com" className="max-w-[250px]" maxLength={200} />
@@ -949,6 +952,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   {emailTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
                 </Button>
               </div>
+
             </CardContent>
           </CollapsibleContent>
         </Card>
