@@ -567,9 +567,11 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [loading, setLoading] = useState(true);
 
   // Email fields
+  const [emailProvider, setEmailProvider] = useState<"resend" | "sendgrid">("resend");
   const [emailApiKey, setEmailApiKey] = useState("");
   const [emailFrom, setEmailFrom] = useState("");
   const [emailFromName, setEmailFromName] = useState("");
+  const [emailReplyTo, setEmailReplyTo] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
 
   // SMS fields
