@@ -607,9 +607,11 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
       const raw = sessionStorage.getItem(draftKey);
       if (!raw) return;
       const d = JSON.parse(raw);
+      if (typeof d.emailProvider === "string") setEmailProvider(d.emailProvider === "sendgrid" ? "sendgrid" : "resend");
       if (typeof d.emailApiKey === "string") setEmailApiKey(d.emailApiKey);
       if (typeof d.emailFrom === "string") setEmailFrom(d.emailFrom);
       if (typeof d.emailFromName === "string") setEmailFromName(d.emailFromName);
+      if (typeof d.emailReplyTo === "string") setEmailReplyTo(d.emailReplyTo);
       if (typeof d.smsAccountSid === "string") setSmsAccountSid(d.smsAccountSid);
       if (typeof d.smsAuthToken === "string") setSmsAuthToken(d.smsAuthToken);
       if (typeof d.smsFromNumber === "string") setSmsFromNumber(d.smsFromNumber);
@@ -623,12 +625,12 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   useEffect(() => {
     try {
       sessionStorage.setItem(draftKey, JSON.stringify({
-        emailApiKey, emailFrom, emailFromName,
+        emailProvider, emailApiKey, emailFrom, emailFromName, emailReplyTo,
         smsAccountSid, smsAuthToken, smsFromNumber,
         waAccessToken, waPhoneNumberId, waVerifyToken,
       }));
     } catch { /* ignore */ }
-  }, [draftKey, emailApiKey, emailFrom, emailFromName, smsAccountSid, smsAuthToken, smsFromNumber, waAccessToken, waPhoneNumberId, waVerifyToken]);
+  }, [draftKey, emailProvider, emailApiKey, emailFrom, emailFromName, emailReplyTo, smsAccountSid, smsAuthToken, smsFromNumber, waAccessToken, waPhoneNumberId, waVerifyToken]);
 
   const clearChannelDraft = (channel: string) => {
     if (channel === "email") {
