@@ -23,6 +23,7 @@ interface ChannelStatus {
   configured: boolean;
   is_active: boolean;
   masked: Record<string, string>;
+  non_secret?: Record<string, string>;
   updated_at: string | null;
 }
 
@@ -915,21 +916,36 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   <Input value={emailReplyTo} onChange={(e) => setEmailReplyTo(e.target.value)} placeholder="support@yourdomain.com" maxLength={200} />
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                {emailProvider === "sendgrid"
-                  ? "Use a SendGrid API key with Mail Send permission. The From Email must be a verified Single Sender or authenticated domain in SendGrid."
-                  : "Use a Resend API key. Verify your sending domain via the panel above for best deliverability."}
-              </p>
-              <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => saveChannel("email", { provider: emailProvider, api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName, reply_to: emailReplyTo }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured)}>
-                  {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
-                </Button>
-                {channels?.email?.configured && (
-                  <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("email")}>
-                    <Unplug className="h-4 w-4 mr-1" />Disconnect
-                  </Button>
-                )}
-              </div>
+              {(() => {
+                const savedProvider = (channels?.email?.non_secret?.provider || (channels?.email?.configured ? "resend" : emailProvider)) as "resend" | "sendgrid";
+                const providerChanged = channels?.email?.configured && savedProvider !== emailProvider;
+                const needsNewKey = providerChanged && !emailApiKey;
+                return (
+                  <>
+                    <p className="text-[11px] text-muted-foreground">
+                      {emailProvider === "sendgrid"
+                        ? "Use a SendGrid API key (starts with SG.) with Mail Send permission. The From Email must be a verified Single Sender or authenticated domain in SendGrid."
+                        : "Use a Resend API key (starts with re_). Verify your sending domain via the panel above for best deliverability."}
+                    </p>
+                    {providerChanged && (
+                      <p className="text-[11px] text-amber-600">
+                        Provider changed to <strong>{emailProvider === "sendgrid" ? "SendGrid" : "Resend"}</strong> — paste a new {emailProvider === "sendgrid" ? "SendGrid (SG.…)" : "Resend (re_…)"} API key to save.
+                      </p>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      <Button size="sm" onClick={() => saveChannel("email", { provider: emailProvider, api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName, reply_to: emailReplyTo }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured) || needsNewKey}>
+                        {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
+                      </Button>
+
+                      {channels?.email?.configured && (
+                        <Button variant="outline" size="sm" onClick={() => setDisconnectTarget("email")}>
+                          <Unplug className="h-4 w-4 mr-1" />Disconnect
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
               <Separator />
               <div className="flex gap-2">
                 <Input value={emailTestTo} onChange={(e) => setEmailTestTo(e.target.value)} placeholder="test@example.com" className="max-w-[250px]" maxLength={200} />
@@ -937,6 +953,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                   {emailTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
                 </Button>
               </div>
+
             </CardContent>
           </CollapsibleContent>
         </Card>

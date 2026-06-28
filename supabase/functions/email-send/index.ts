@@ -154,6 +154,20 @@ Deno.serve(async (req) => {
     const fromName = resolvedSender?.detail?.from_name || creds.config.from_name || "NexusFlo24";
     const from = `${fromName} <${fromEmail}>`;
 
+    // Defensive: catch provider/key mismatch (e.g. provider switched to SendGrid
+    // but stored key is still a Resend `re_...`) before the provider returns 401.
+    if (provider === "sendgrid" && !apiKey.startsWith("SG.")) {
+      const msg = "Stored email API key doesn't match the selected provider (SendGrid). Re-enter your SendGrid API key in Settings → Channels.";
+      try { await adminClient.from("email_logs").insert({ workspace_id: workspaceId, to_email: to, from_email: fromEmail, subject, direction: "outbound", status: "failed", error: msg, lead_id: (body.leadId || body.lead_id || null) }); } catch (_) {}
+      return new Response(JSON.stringify({ success: false, error: msg }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (provider === "resend" && !apiKey.startsWith("re_")) {
+      const msg = "Stored email API key doesn't match the selected provider (Resend). Re-enter your Resend API key in Settings → Channels.";
+      try { await adminClient.from("email_logs").insert({ workspace_id: workspaceId, to_email: to, from_email: fromEmail, subject, direction: "outbound", status: "failed", error: msg, lead_id: (body.leadId || body.lead_id || null) }); } catch (_) {}
+      return new Response(JSON.stringify({ success: false, error: msg }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
     // Inject tracking pixel and rewrite links for tracking
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
 
