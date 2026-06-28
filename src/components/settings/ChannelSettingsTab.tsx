@@ -601,6 +601,9 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [waTestSending, setWaTestSending] = useState(false);
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
 
+  // Live WhatsApp connection (Meta) status — used for the header pill row.
+  const { data: waConn } = useWhatsAppConnection(workspaceId);
+
   // Draft key for unsaved input persistence (per workspace, per browser session).
   const draftKey = `nf24:channelDraft:${workspaceId}`;
 
