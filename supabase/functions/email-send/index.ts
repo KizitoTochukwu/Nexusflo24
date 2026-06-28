@@ -129,9 +129,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Resolve credentials: workspace-specific → platform ENV fallback
+    // Resolve credentials: workspace-specific → platform ENV fallback.
+    // Platform fallback auto-detects provider — Resend preferred when present,
+    // otherwise SendGrid if SENDGRID_API_KEY is set.
+    const platformResendKey = Deno.env.get("RESEND_API_KEY");
+    const platformSendgridKey = Deno.env.get("SENDGRID_API_KEY");
+    const platformProvider = platformResendKey ? "resend" : (platformSendgridKey ? "sendgrid" : "resend");
+    const platformApiKey = platformResendKey || platformSendgridKey;
     const creds = await resolveChannelCredentials(workspaceId, "email", {
-      api_key: Deno.env.get("RESEND_API_KEY"),
+      provider: platformProvider,
+      api_key: platformApiKey,
       from_email: Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com",
       from_name: "NexusFlo24",
     });
@@ -141,6 +148,7 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = creds.config.api_key;
+    const provider = (creds.config.provider || "resend").toLowerCase();
     // Sender profile overrides workspace channel settings when provided + approved
     const fromEmail = resolvedSender?.detail?.from_email || creds.config.from_email || "noreply@nexusflo24.com";
     const fromName = resolvedSender?.detail?.from_name || creds.config.from_name || "NexusFlo24";
