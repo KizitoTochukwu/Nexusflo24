@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
 import { toast } from "sonner";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +19,7 @@ import {
   Mail, Smartphone, MessageCircle, Loader2, Save, ChevronDown,
   CheckCircle2, XCircle, Unplug, Send, Globe, Copy, RefreshCw,
   Phone, ShieldCheck, ExternalLink, ArrowRight, ArrowLeft, Sparkles,
+  Sparkle, Server, KeyRound,
 } from "lucide-react";
 
 interface ChannelStatus {
