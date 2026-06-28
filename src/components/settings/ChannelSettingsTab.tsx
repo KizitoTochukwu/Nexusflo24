@@ -877,14 +877,30 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
               )}
 
-              {/* Resend Domain Verification */}
-              <ResendDomainPanel workspaceId={workspaceId} />
+              {/* Resend Domain Verification (only shown for Resend provider) */}
+              {emailProvider === "resend" && <ResendDomainPanel workspaceId={workspaceId} />}
 
               <Separator />
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label>Resend API Key</Label>
-                  <Input type="password" value={emailApiKey} onChange={(e) => setEmailApiKey(e.target.value)} placeholder={channels?.email?.configured ? "•••••• (leave blank to keep current)" : "re_..."} maxLength={200} />
+                  <Label>Provider</Label>
+                  <Select value={emailProvider} onValueChange={(v) => setEmailProvider(v as "resend" | "sendgrid")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="resend">Resend</SelectItem>
+                      <SelectItem value="sendgrid">SendGrid (Twilio)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>{emailProvider === "sendgrid" ? "SendGrid API Key" : "Resend API Key"}</Label>
+                  <Input
+                    type="password"
+                    value={emailApiKey}
+                    onChange={(e) => setEmailApiKey(e.target.value)}
+                    placeholder={channels?.email?.configured ? "•••••• (leave blank to keep current)" : (emailProvider === "sendgrid" ? "SG.xxxxx" : "re_...")}
+                    maxLength={300}
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>From Email</Label>
@@ -892,11 +908,20 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                 </div>
                 <div className="space-y-1">
                   <Label>From Name</Label>
-                  <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} placeholder="Your Brand" maxLength={100} />
+                  <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} placeholder="NexusFlo24" maxLength={100} />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Reply-To (optional)</Label>
+                  <Input value={emailReplyTo} onChange={(e) => setEmailReplyTo(e.target.value)} placeholder="support@yourdomain.com" maxLength={200} />
                 </div>
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                {emailProvider === "sendgrid"
+                  ? "Use a SendGrid API key with Mail Send permission. The From Email must be a verified Single Sender or authenticated domain in SendGrid."
+                  : "Use a Resend API key. Verify your sending domain via the panel above for best deliverability."}
+              </p>
               <div className="flex gap-2 flex-wrap">
-                <Button size="sm" onClick={() => saveChannel("email", { provider: "resend", api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured)}>
+                <Button size="sm" onClick={() => saveChannel("email", { provider: emailProvider, api_key: emailApiKey, from_email: emailFrom, from_name: emailFromName, reply_to: emailReplyTo }, setEmailSaving)} disabled={emailSaving || (!emailApiKey && !channels?.email?.configured)}>
                   {emailSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}Save
                 </Button>
                 {channels?.email?.configured && (
