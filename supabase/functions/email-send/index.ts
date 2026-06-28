@@ -23,6 +23,36 @@ async function sendResend(apiKey: string, from: string, to: string, subject: str
   return { messageId: data.id };
 }
 
+async function sendSendgrid(apiKey: string, fromEmail: string, fromName: string, to: string, subject: string, html: string, replyTo?: string) {
+  // Optional Reply-To: accept "email", "Name <email>" or full "Name <email>" formats
+  let replyToObj: { email: string; name?: string } | undefined;
+  if (replyTo) {
+    const m = replyTo.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+    replyToObj = m ? { name: m[1] || undefined, email: m[2] } : { email: replyTo };
+  }
+  const body = {
+    personalizations: [{ to: [{ email: to }] }],
+    from: { email: fromEmail, name: fromName || undefined },
+    ...(replyToObj ? { reply_to: replyToObj } : {}),
+    subject,
+    content: [{ type: "text/html", value: html }],
+  };
+  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = "";
+    try { const j = await res.json(); detail = j?.errors?.[0]?.message || JSON.stringify(j); }
+    catch { detail = await res.text().catch(() => ""); }
+    throw new Error(`SendGrid error ${res.status}: ${detail}`);
+  }
+  // SendGrid returns 202 Accepted with X-Message-Id header
+  const messageId = res.headers.get("x-message-id") || crypto.randomUUID();
+  return { messageId };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
