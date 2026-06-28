@@ -38,7 +38,7 @@ function maskValue(val: string | undefined | null): string {
 
 // Fields safe to return in plaintext for form prefill (non-secret).
 const NON_SECRET_FIELDS: Record<string, string[]> = {
-  email: ["provider", "from_email", "from_name"],
+  email: ["provider", "from_email", "from_name", "reply_to"],
   sms: ["from_number"],
   whatsapp: ["provider", "phone_number_id"],
 };
