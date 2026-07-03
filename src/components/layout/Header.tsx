@@ -153,6 +153,25 @@ const Header = () => {
                     ))}
                   </div>
                 )}
+                {link.to === "/pricing" && (
+                  <div className="mt-1">
+                    <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                      Resources
+                    </div>
+                    {resourcesLinks.map((s) => (
+                      <Link
+                        key={s.to}
+                        to={s.to}
+                        onClick={() => setMobileOpen(false)}
+                        className={`block rounded-md pl-6 pr-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
+                          location.pathname === s.to ? "text-accent" : "text-muted-foreground"
+                        }`}
+                      >
+                        {s.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <div className="mt-2 flex flex-col gap-2">
