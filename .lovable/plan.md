@@ -1,131 +1,99 @@
+# ROI Savings Calculator — Build Plan
 
-## Goal
+A production-ready interactive lead-gen calculator that estimates revenue lost to poor follow-up and manual work, gated by a lead capture form that writes into the existing CRM.
 
-Refactor `src/components/settings/ChannelSettingsTab.tsx` (and the WhatsApp card it embeds) into a premium, SaaS-grade Communication Settings page — navy/white/gold, accordion-based, cleaner hierarchy — without touching any edge function, Supabase call, or wiring.
+## Routes
 
-## Scope guarantees (no backend changes)
+- `/tools/roi-savings-calculator` — public page (new)
+- `/dashboard/:workspaceId/roi-calculator-submissions` — admin view (new, workspace-scoped like other dashboard routes)
 
-- No edits to `supabase/functions/*`, Supabase tables, RLS, or any hook in `src/hooks/*`.
-- All existing handlers stay wired: save, disconnect, test email/SMS/WhatsApp, add domain, refresh verification, DNS records dialog, Twilio subaccount provisioning, Meta Embedded Signup, sync templates, regenerate verify token, default re-engagement template, masked-credential display, "leave blank to keep current" semantics.
-- Provider switch logic (Resend ↔ SendGrid prefix validation), `re_` / `SG.` rules, and provider-change "require new key" guard remain untouched.
+## Files to create
 
-## Files to edit
+- `src/pages/tools/RoiSavingsCalculator.tsx` — the full public page (hero → calculator → gated form → results → solution cards → CTA → FAQ), using existing `Header`, `Footer`, `Seo`, shadcn `Card`/`Input`/`Button`/`Accordion`/`Checkbox`/`Select`/`Progress`.
+- `src/lib/roi/calculator.ts` — pure calculation helpers, currency formatting (GBP/USD/EUR/NGN via `Intl.NumberFormat`), NGN threshold config, and recommendation logic.
+- `src/hooks/useRoiSubmission.ts` — wraps the `roi-calculator-submit` edge function call, captures UTM params, tracks analytics events.
+- `src/pages/dashboard/DashboardRoiSubmissions.tsx` — admin table + filters + row actions (open CRM contact, export CSV, update status, book appointment link).
+- `supabase/functions/roi-calculator-submit/index.ts` — public (verify_jwt=false) edge function that: validates input with zod, inserts into `roi_calculator_submissions`, upserts a `leads` row by email (workspace = platform default via `OWNER_USER_ID`'s workspace), attaches tags `roi-calculator-lead` + intent tags, writes a `lead_activities` note, and creates a `notifications` row for high-intent leads.
+- `supabase/functions/roi-calculator-submit/index.ts` also fires the existing `email-send` / `whatsapp-send` hooks for result delivery when configured.
 
-1. `src/components/settings/ChannelSettingsTab.tsx` — primary rewrite (presentation only).
-2. `src/components/settings/WhatsAppConnectCard.tsx` — tighten layout, move the second "manual credentials" panel into the Meta tab as a collapsible "Advanced: manual credentials" sub-section so only ONE WhatsApp Business card is rendered. Both manual-mode and Embedded Signup wiring stay intact — just visually merged.
-3. (Optional, only if needed) small additions to `src/index.css` for one or two semantic tokens (e.g. `--badge-success`, `--badge-warning`) — only if existing tokens don't cover it.
+## Files to change
 
-## New page structure
+- `src/App.tsx` — add the two new routes (public + workspace-scoped, guarded by `AdminGuard` for the submissions list).
+- `src/components/layout/Footer.tsx` — add a "Free Tools → ROI Savings Calculator" link.
+- `src/components/dashboard/DashboardLayout.tsx` sidebar — add admin-only "ROI Calculator" entry under the existing admin section.
 
-```text
-┌─ Page Header ────────────────────────────────────┐
-│ Communication Settings                            │
-│ Connect email, SMS, WhatsApp, and sender creds…  │
-│ [Email: Connected] [SMS: Connected]               │
-│ [WhatsApp: Connected] [Sender: Workspace]         │
-└──────────────────────────────────────────────────┘
+## Database migration
 
-┌─ Bring Your Own Sender (premium info card) ─────┐
-│ ✦ gold-bordered, icon + 2-line copy              │
-└──────────────────────────────────────────────────┘
+Create `public.roi_calculator_submissions` exactly as specified, with:
 
-Accordion (single-open, default = first not-configured):
-  ▸ Email           [Resend · Connected]  · updated 3d ago
-  ▸ SMS             [Twilio · Connected]
-  ▸ WhatsApp Business  [Connected via Meta Cloud API]
-  ▸ Sender Defaults / Platform Credentials
-```
+- Indexes on `email`, `workspace_id`, `created_at`, `lead_status`, `estimated_monthly_opportunity`.
+- `GRANT INSERT ON public.roi_calculator_submissions TO anon, authenticated;`
+- `GRANT SELECT, UPDATE ON public.roi_calculator_submissions TO authenticated;`
+- `GRANT ALL ON public.roi_calculator_submissions TO service_role;`
+- RLS enabled with:
+  - INSERT policy `WITH CHECK (true)` for anon + authenticated (public submissions).
+  - SELECT policy `USING (workspace_id IS NOT NULL AND public.is_workspace_member(auth.uid(), workspace_id)) OR public.has_role(auth.uid(),'admin')`.
+  - UPDATE policy for workspace admins + platform admin.
+  - No public SELECT/UPDATE/DELETE.
+- `update_updated_at_column` trigger.
 
-### Email card (expanded)
-
-- Header row: provider pill (Resend/SendGrid), status pill, "Last updated" muted text.
-- 2-col grid (1-col mobile): From Email, From Name, Reply-To, Provider select.
-- Credentials block: masked API key display + **Update API Key** button (reveals input) + **Disconnect** (with AlertDialog confirm). Full key never shown.
-- Domain verification → table layout:
+## Calculation formulas (in `src/lib/roi/calculator.ts`)
 
 ```text
-Domain                 Status        DNS         Actions
-www.nexusflo24.com     ✓ Verified    [DNS Records]  [⟳]
-nexusflo24.com         ✓ Verified    [DNS Records]  [⟳]
+current_customers          = leads_per_month * conversion_rate/100
+current_monthly_revenue    = current_customers * average_customer_value
+missed_leads               = leads_per_month * missed_follow_up_percentage/100
+recoverable_customers      = missed_leads * conversion_rate/100
+recoverable_revenue        = recoverable_customers * average_customer_value
+manual_admin_cost          = manual_follow_up_hours * staff_cost_per_hour
+estimated_monthly_opp      = recoverable_revenue + manual_admin_cost + monthly_software_cost
+estimated_annual_opp       = estimated_monthly_opp * 12
 ```
 
-  Plus an inline "Add domain" row (input + button) below the table.
-- Footer: Save (primary navy), Test (secondary) with inline email input.
+Threshold config (per currency, NGN uses ~1900x GBP as the configurable equivalent):
+`HIGH_OPP_THRESHOLD = { GBP:1000, USD:1000, EUR:1000, NGN:1_900_000 }`
+`HIGH_ADMIN_THRESHOLD = { GBP:500, USD:500, EUR:500, NGN:950_000 }`
 
-### SMS card (expanded)
+## Lead capture + CRM wiring
 
-- Provider pill: Twilio. Status pill.
-- Masked Account SID / Auth Token / Sender Number (read-only display when set).
-- "Update credentials" reveals the existing input fields.
-- Auto-Provision Subaccount section kept as-is, visually grouped under a subtle divider.
-- Footer: Save, Test SMS (with phone input), Disconnect (confirm dialog).
+Gate the full results behind: full_name, email, phone, business_name, business_type (dropdown as specified), preferred_contact_method, required consent checkbox. Preview numbers show before gating.
 
-### WhatsApp Business card (single card, two tabs)
+The `roi-calculator-submit` edge function:
 
-- Tabs: **Meta Cloud API** | **Twilio WhatsApp** (existing component).
-- Active tab shows clear selected state (already does).
-- Meta tab content reorganised into:
-  - Connection summary grid (Phone, Verified business, WABA ID, Connection method).
-  - Webhook configuration sub-card (Callback URL + copy, Verify Token masked + show/hide + copy + Regenerate, warning note).
-  - **Advanced — manual credentials** collapsible (the current second "WhatsApp Business / Custom credentials active" panel folded into here so the page only renders ONE WhatsApp card).
-  - Test send row (number + message + Test button).
-  - Default re-engagement template selector (unchanged).
-  - Actions: Sync Templates, Disconnect (confirm).
-- Twilio WhatsApp tab: unchanged functionality, restyled to match (masked Account SID/Auth Token, Sender Number, Save, Test, Disconnect).
+1. Inserts into `roi_calculator_submissions`.
+2. Looks up an existing `leads` row by lowercase email (matches existing dedup rule).
+3. Upserts the lead with tags `['roi-calculator-lead', ...intent tags]`, source `ROI Savings Calculator`, `assigned_owner_id` via `assign_next_round_robin`.
+4. Inserts a `lead_activities` note with the calculator summary and a `notifications` row titled "New High-Value ROI Calculator Lead" when high-intent.
+5. Fires internal sales notification via existing patterns; queues result email through `email-send` when Resend/SendGrid configured (best-effort, never blocks response).
 
-### Sender Defaults card (new, presentational only)
+## Recommendation logic
 
-Static informational card listing platform-default fallbacks:
-- Email default: NexusFlo24 platform sender
-- SMS default: NexusFlo24 Twilio
-- WhatsApp default: NexusFlo24 Meta/Twilio provider
-- Footnote about BYO vs platform-managed.
+Runs client-side and is stored on the submission:
 
-No data fetching; pure copy.
+- Missed follow-up ≥ 25% → follow-up gap message.
+- Manual admin cost ≥ threshold → automation message.
+- Conversion rate < 10% → conversion process message.
+- Monthly opportunity ≥ threshold → book audit message.
 
-## Visual system
+## Booking CTA
 
-- Card: `bg-card`, `rounded-xl`, `border`, soft shadow, `p-6`.
-- Page background: `bg-muted/30`.
-- Badges:
-  - Connected / Verified → green (`bg-green-500/10 text-green-700 border-green-500/20`).
-  - Pending / Workspace sender → amber (`bg-amber-500/10 text-amber-700 border-amber-500/20`).
-  - Not connected → muted outline.
-- Buttons:
-  - Primary: default shadcn (navy via theme).
-  - Secondary: `variant="outline"`.
-  - Danger: outline + `text-destructive border-destructive/40`, always behind an AlertDialog confirm.
-- Icons: lucide, gold tint (`text-primary` mapped to gold accent where appropriate, or `text-amber-500` for accent icons like Bring-Your-Own).
-- Spacing: 8px scale, `space-y-6` between cards, `gap-4` inside grids.
+Reuses the existing discovery-call slug: `/book/30-minute-discovery-call-9f5d5f` (same URL used across the rest of the site's "Book a Demo" buttons). Exposed as `ROI_CALCULATOR_BOOKING_URL` constant in `src/lib/roi/calculator.ts` for easy override.
 
-## Copy changes
+## Analytics events
 
-- "Custom credentials active" → "Workspace sender active".
-- "Meta Connected" badge → "Connected via Meta Cloud API".
-- Disconnect buttons → always open existing AlertDialog confirm before firing.
+Fired via existing analytics/pixel helpers (`workspacePixels`, Meta Pixel route tracker already global). Events: `roi_calculator_page_viewed`, `_started`, `_completed`, `_preview_viewed`, `_lead_submitted`, `_full_report_viewed`, `_booking_clicked`, `_whatsapp_clicked`. Only non-PII props sent (currency, business_type, buckets for leads/opportunity, UTM).
 
-## Responsive
+## SEO
 
-- `md:grid-cols-2` for credential field grids, collapsing to single column on mobile.
-- Action button rows use `flex flex-wrap gap-2`.
-- Accordion is touch-friendly (shadcn `Accordion` component, full-row trigger).
+`Seo` component with the specified title, meta description, canonical `/tools/roi-savings-calculator`, FAQPage JSON-LD built from the FAQ items.
 
-## Status summary row (header)
+## Admin submissions view
 
-Derived from existing data already loaded in the tab:
-- Email: `channels.email.configured && is_active`.
-- SMS: `channels.sms.configured && is_active`.
-- WhatsApp: from `useWhatsAppConnection`.
-- Sender mode: any of the above configured → "Workspace sender", else "Platform default".
+Reuses `DashboardLayout`, gated by `AdminGuard` (same pattern as other admin routes). Table + filter bar + CSV export + row actions that deep-link into the existing lead drawer (`/dashboard/:workspaceId/leads?leadId=…`) so all messaging/booking actions reuse existing flows — no duplicate messaging UI.
 
-No new queries.
+## Items requiring manual configuration after build
 
-## Out of scope
-
-- No new edge functions, no schema changes, no new secrets.
-- No changes to test/save/disconnect behaviour or payloads.
-- No changes to WhatsApp template marketplace tab or other Settings tabs.
-
-## Validation
-
-- After edits: typecheck passes, page renders, all existing buttons fire the same handlers, Network panel shows identical request shapes for Save/Test/Disconnect/Add-Domain/Sync-Templates/Regenerate-Token.
+- Marketing consent copy sign-off (uses the exact wording provided).
+- SendGrid/Resend must already be configured in Settings → Channels for automated result delivery emails; otherwise the submission still saves and the in-app notification still fires.
+- Optional: adjust `ROI_CALCULATOR_BOOKING_URL` if you want a dedicated "Automation Audit" booking page instead of the shared discovery call slug.
+- Optional: tune NGN thresholds in `src/lib/roi/calculator.ts` once you have a preferred FX assumption.
