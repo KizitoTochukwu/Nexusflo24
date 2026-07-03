@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import {
   Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus,
-  ChevronDown, ArrowRight, Check, CheckCircle2, CircleSlash
+  ChevronDown, ChevronRight, ArrowRight, Check, CheckCircle2, CircleSlash
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, phraseConditionGroup, type ConditionOperator, type ConditionRow, type ConditionLogic } from "@/hooks/useAutomations";
