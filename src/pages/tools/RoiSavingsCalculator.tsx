@@ -263,7 +263,7 @@ const RoiSavingsCalculator = () => {
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
               <Sparkles className="h-3.5 w-3.5" /> Free ROI Savings Calculator
             </div>
-            <h1 className="mx-auto max-w-[850px] text-balance text-4xl font-bold leading-tight tracking-tight text-accent md:text-[2.75rem]">
+            <h1 className="mx-auto max-w-[850px] text-balance text-4xl font-bold leading-tight tracking-tight text-accent md:text-[2.5rem]">
               Calculate the Revenue You’re Losing From Missed Follow-Up
             </h1>
             <p className="mx-auto mt-6 max-w-[720px] text-lg text-primary-foreground/80 md:text-xl">
