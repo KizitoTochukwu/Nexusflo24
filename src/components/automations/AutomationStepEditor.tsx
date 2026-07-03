@@ -458,15 +458,6 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
               )}
             >
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100"
-                    title="Drag to reorder"
-                    aria-label="Drag to reorder"
-                  >
-                    <GripVertical className="h-4 w-4" />
-                  </span>
-              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100"
