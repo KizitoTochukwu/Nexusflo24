@@ -696,25 +696,6 @@ const RoiSavingsCalculator = () => {
   );
 };
 
-const Field = ({
-  label,
-  htmlFor,
-  help,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  help?: string;
-  children: React.ReactNode;
-}) => (
-  <div className="space-y-1.5">
-    <Label htmlFor={htmlFor} className="text-sm font-medium text-primary">
-      {label}
-    </Label>
-    {children}
-    {help && <p className="text-[11px] text-muted-foreground">{help}</p>}
-  </div>
-);
 
 const FormField = ({
   label,
