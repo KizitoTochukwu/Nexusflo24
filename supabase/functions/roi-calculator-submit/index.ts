@@ -294,6 +294,60 @@ Deno.serve(async (req) => {
       );
     }
 
+    // --- Fire "roi_calculator_submitted" trigger into automations + workflows engines ---
+    if (workspaceId && leadId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
+      const enrollUrl = `${supabaseUrl}/functions/v1/enroll-workflow`;
+      const eventContext = {
+        submission_id: submission?.id,
+        currency,
+        business_type,
+        preferred_contact_method,
+        estimated_monthly_opportunity,
+        estimated_annual_opportunity,
+        recoverable_revenue,
+        manual_admin_cost,
+        high_intent: isHighIntent,
+      };
+
+      try {
+        const { data: matched } = await supabase
+          .from("automations")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .eq("trigger_type", "roi_calculator_submitted")
+          .eq("status", "active");
+        for (const auto of matched ?? []) {
+          fetch(execUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+            body: JSON.stringify({
+              automation_id: auto.id,
+              lead_id: leadId,
+              workspace_id: workspaceId,
+              event_context: eventContext,
+            }),
+          }).catch((e) => console.error("[roi-calculator-submit] dispatch automation failed:", e));
+        }
+      } catch (e) {
+        console.error("[roi-calculator-submit] automations lookup failed:", e);
+      }
+
+      fetch(enrollUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+        body: JSON.stringify({
+          workspace_id: workspaceId,
+          lead_ids: [leadId],
+          event_type: "roi_calculator_submitted",
+          event_config: eventContext,
+        }),
+      }).catch((e) => console.error("[roi-calculator-submit] enroll-workflow failed:", e));
+    }
+
+
     return new Response(
       JSON.stringify({
         success: true,
