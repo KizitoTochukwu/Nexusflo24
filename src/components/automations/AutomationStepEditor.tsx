@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import {
   Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus,
-  ChevronDown, ArrowRight, Check, CheckCircle2, CircleSlash
+  ChevronDown, ChevronRight, ArrowRight, Check, CheckCircle2, CircleSlash
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, phraseConditionGroup, type ConditionOperator, type ConditionRow, type ConditionLogic } from "@/hooks/useAutomations";
@@ -73,6 +73,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
   const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
   const { data: allAutomations } = useAutomations(workspaceId || "");
   const { data: workspaceMembers } = useWorkspaceMembers(workspaceId || "");
+  const [collapsedSteps, setCollapsedSteps] = useState<Record<number, boolean>>({});
+  const toggleCollapsed = (i: number) =>
+    setCollapsedSteps((prev) => ({ ...prev, [i]: !prev[i] }));
 
   const addStep = (type: StepData["step_type"]) => {
     const newStep: StepData = { step_type: type, config: {} };
@@ -455,7 +458,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
               )}
             >
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100"
                     title="Drag to reorder"
@@ -470,12 +473,29 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                       Step {stepNumbers[i]}
                     </Badge>
                   )}
+                  {collapsedSteps[i] && (
+                    <span className="truncate text-xs text-muted-foreground max-w-[420px]">
+                      {summarizeStep(step).split("\n").filter(Boolean).slice(0, 2).join(" — ")}
+                    </span>
+                  )}
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(i)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => toggleCollapsed(i)}
+                    title={collapsedSteps[i] ? "Expand" : "Collapse"}
+                    aria-label={collapsedSteps[i] ? "Expand step" : "Collapse step"}
+                  >
+                    {collapsedSteps[i] ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(i)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-              {step.step_type === "condition" && (() => {
+              {!collapsedSteps[i] && step.step_type === "condition" && (() => {
                 const allOptions = CONDITION_GROUPS.flatMap((g) => g.options);
 
                 // Normalize legacy single-row config into rows[] without writing to disk yet.
@@ -875,7 +895,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                 );
               })()}
 
-              {step.step_type === "action" && (
+              {!collapsedSteps[i] && step.step_type === "action" && (
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2 items-center">
                     <Select
@@ -1294,7 +1314,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                 </div>
               )}
 
-              {step.step_type === "delay" && (
+              {!collapsedSteps[i] && step.step_type === "delay" && (
                 <div className="flex gap-2 items-center">
                   <Input
                     type="number"
