@@ -145,8 +145,11 @@ export interface Recommendation {
 export function buildRecommendations(
   inputs: CalculatorInputs,
   results: CalculatorResults,
+  settings: RoiCalculatorSettings = DEFAULT_ROI_CALCULATOR_SETTINGS,
 ): Recommendation[] {
   const recs: Recommendation[] = [];
+  const oppT = settings.high_opportunity_thresholds[inputs.currency];
+  const admT = settings.high_admin_thresholds[inputs.currency];
 
   if (inputs.missed_follow_up_percentage >= 25) {
     recs.push({
@@ -156,7 +159,7 @@ export function buildRecommendations(
     });
   }
 
-  if (results.manual_admin_cost >= HIGH_ADMIN_THRESHOLD[inputs.currency]) {
+  if (results.manual_admin_cost >= admT) {
     recs.push({
       key: "manual_admin",
       message:
@@ -172,7 +175,7 @@ export function buildRecommendations(
     });
   }
 
-  if (results.estimated_monthly_opportunity >= HIGH_OPP_THRESHOLD[inputs.currency]) {
+  if (results.estimated_monthly_opportunity >= oppT) {
     recs.push({
       key: "high_value",
       message:
@@ -183,20 +186,28 @@ export function buildRecommendations(
   return recs;
 }
 
-export function isHighIntent(inputs: CalculatorInputs, results: CalculatorResults): boolean {
+export function isHighIntent(
+  inputs: CalculatorInputs,
+  results: CalculatorResults,
+  settings: RoiCalculatorSettings = DEFAULT_ROI_CALCULATOR_SETTINGS,
+): boolean {
   return (
-    results.estimated_monthly_opportunity >= HIGH_OPP_THRESHOLD[inputs.currency] ||
+    results.estimated_monthly_opportunity >= settings.high_opportunity_thresholds[inputs.currency] ||
     inputs.leads_per_month >= 100 ||
     inputs.missed_follow_up_percentage >= 30
   );
 }
 
-export function intentTags(inputs: CalculatorInputs, results: CalculatorResults): string[] {
+export function intentTags(
+  inputs: CalculatorInputs,
+  results: CalculatorResults,
+  settings: RoiCalculatorSettings = DEFAULT_ROI_CALCULATOR_SETTINGS,
+): string[] {
   const tags: string[] = ["roi-calculator-lead"];
-  if (isHighIntent(inputs, results)) tags.push("high-intent");
-  if (results.estimated_monthly_opportunity >= HIGH_OPP_THRESHOLD[inputs.currency])
+  if (isHighIntent(inputs, results, settings)) tags.push("high-intent");
+  if (results.estimated_monthly_opportunity >= settings.high_opportunity_thresholds[inputs.currency])
     tags.push("high-roi-opportunity");
-  if (results.manual_admin_cost >= HIGH_ADMIN_THRESHOLD[inputs.currency])
+  if (results.manual_admin_cost >= settings.high_admin_thresholds[inputs.currency])
     tags.push("manual-process-heavy");
   if (inputs.missed_follow_up_percentage >= 25) tags.push("follow-up-gap");
   return tags;
