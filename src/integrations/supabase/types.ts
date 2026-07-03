@@ -2419,6 +2419,123 @@ export type Database = {
         }
         Relationships: []
       }
+      roi_calculator_submissions: {
+        Row: {
+          average_customer_value: number
+          business_name: string | null
+          business_type: string | null
+          consent: boolean
+          contact_id: string | null
+          conversion_rate: number
+          created_at: string
+          currency: string
+          email: string
+          estimated_annual_opportunity: number
+          estimated_current_customers: number
+          estimated_current_revenue: number
+          estimated_manual_admin_cost: number
+          estimated_missed_leads: number
+          estimated_monthly_opportunity: number
+          estimated_recoverable_customers: number
+          estimated_recoverable_revenue: number
+          full_name: string
+          id: string
+          lead_status: string | null
+          leads_per_month: number
+          manual_follow_up_hours: number
+          missed_follow_up_percentage: number
+          monthly_software_cost: number
+          phone: string | null
+          preferred_contact_method: string | null
+          recommendation: string | null
+          source: string | null
+          staff_cost_per_hour: number
+          updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          average_customer_value?: number
+          business_name?: string | null
+          business_type?: string | null
+          consent?: boolean
+          contact_id?: string | null
+          conversion_rate?: number
+          created_at?: string
+          currency?: string
+          email: string
+          estimated_annual_opportunity?: number
+          estimated_current_customers?: number
+          estimated_current_revenue?: number
+          estimated_manual_admin_cost?: number
+          estimated_missed_leads?: number
+          estimated_monthly_opportunity?: number
+          estimated_recoverable_customers?: number
+          estimated_recoverable_revenue?: number
+          full_name: string
+          id?: string
+          lead_status?: string | null
+          leads_per_month?: number
+          manual_follow_up_hours?: number
+          missed_follow_up_percentage?: number
+          monthly_software_cost?: number
+          phone?: string | null
+          preferred_contact_method?: string | null
+          recommendation?: string | null
+          source?: string | null
+          staff_cost_per_hour?: number
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          average_customer_value?: number
+          business_name?: string | null
+          business_type?: string | null
+          consent?: boolean
+          contact_id?: string | null
+          conversion_rate?: number
+          created_at?: string
+          currency?: string
+          email?: string
+          estimated_annual_opportunity?: number
+          estimated_current_customers?: number
+          estimated_current_revenue?: number
+          estimated_manual_admin_cost?: number
+          estimated_missed_leads?: number
+          estimated_monthly_opportunity?: number
+          estimated_recoverable_customers?: number
+          estimated_recoverable_revenue?: number
+          full_name?: string
+          id?: string
+          lead_status?: string | null
+          leads_per_month?: number
+          manual_follow_up_hours?: number
+          missed_follow_up_percentage?: number
+          monthly_software_cost?: number
+          phone?: string | null
+          preferred_contact_method?: string | null
+          recommendation?: string | null
+          source?: string | null
+          staff_cost_per_hour?: number
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       sales_closer_settings: {
         Row: {
           booking_page_id: string | null
