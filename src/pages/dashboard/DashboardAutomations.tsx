@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock, DoorOpen, Sparkles, X, AlertTriangle, RotateCcw, Wand2 } from "lucide-react";
+import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock, DoorOpen, Sparkles, X, AlertTriangle, RotateCcw, Wand2, Facebook } from "lucide-react";
 import { SUBSCRIBER_NURTURE_DEFINITION, NURTURE_TEMPLATE_NAME } from "@/lib/automations/seedNurtureTemplate";
+import { META_LEAD_AD_DEFINITION, META_LEAD_AD_TEMPLATE_NAME } from "@/lib/automations/seedMetaLeadAdTemplate";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
