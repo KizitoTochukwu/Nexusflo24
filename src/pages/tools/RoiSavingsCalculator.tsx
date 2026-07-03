@@ -337,7 +337,7 @@ const RoiSavingsCalculator = () => {
                 onCalculate={handleCalculate}
               />
             ) : (
-              <Card className="border-accent/40 bg-muted/30 shadow-sm">
+              <Card className="self-start border-accent/40 bg-muted/30 shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Your inputs are locked
@@ -379,8 +379,6 @@ const RoiSavingsCalculator = () => {
                 </CardContent>
               </Card>
             )}
-
-
 
             {/* RIGHT: LIVE PREVIEW */}
             <div ref={resultsRef} className="space-y-4">
@@ -605,23 +603,6 @@ const RoiSavingsCalculator = () => {
                 </Card>
               )}
 
-              {submitted && recommendations.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Personalised recommendations</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {recommendations.map((r) => (
-                      <div
-                        key={r.key}
-                        className="rounded-md border border-accent/30 bg-accent/5 p-3 text-sm"
-                      >
-                        {r.message}
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
 
               <p className="text-xs text-muted-foreground">
                 <Info className="mr-1 inline h-3 w-3" />
