@@ -31,6 +31,7 @@ export const TRIGGERS: PaletteItem[] = [
   { kind: "trigger", subType: "funnel_step_completed", label: "Funnel step completed", description: "Step in a funnel finished", icon: Target, group: "Capture" },
   { kind: "trigger", subType: "purchase_event", label: "Purchase event", description: "Lead makes a purchase", icon: ShoppingCart, group: "Sales" },
   { kind: "trigger", subType: "appointment_booked", label: "Appointment booked", description: "Booking confirmed", icon: CalendarCheck, group: "Sales" },
+  { kind: "trigger", subType: "roi_calculator_submitted", label: "ROI Calculator submitted", description: "Fires when a visitor submits the ROI Savings Calculator", icon: Award, group: "Capture" },
   { kind: "trigger", subType: "trial_started", label: "Trial started", description: "Free trial begins", icon: Zap, group: "Lifecycle" },
   { kind: "trigger", subType: "trial_ending_soon", label: "Trial ending soon", description: "Trial about to expire", icon: AlertCircle, group: "Lifecycle" },
   { kind: "trigger", subType: "subscription_cancelled", label: "Subscription cancelled", description: "User cancels subscription", icon: StopCircle, group: "Lifecycle" },
