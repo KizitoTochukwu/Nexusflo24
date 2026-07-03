@@ -98,13 +98,25 @@ Deno.serve(async (req) => {
       workspaceId = w?.id ?? null;
     }
 
-    // Threshold for high-intent classification
-    const highOpp: Record<string, number> = {
-      GBP: 1000, USD: 1000, EUR: 1000, NGN: 1_900_000,
-    };
-    const highAdmin: Record<string, number> = {
-      GBP: 500, USD: 500, EUR: 500, NGN: 950_000,
-    };
+    // Threshold for high-intent classification — configurable via roi_calculator_settings.
+    const defaultHighOpp: Record<string, number> = { GBP: 1000, USD: 1000, EUR: 1000, NGN: 1_900_000 };
+    const defaultHighAdmin: Record<string, number> = { GBP: 500, USD: 500, EUR: 500, NGN: 950_000 };
+    let highOpp = defaultHighOpp;
+    let highAdmin = defaultHighAdmin;
+    try {
+      const { data: settings } = await supabase
+        .from("roi_calculator_settings")
+        .select("high_opportunity_thresholds, high_admin_thresholds")
+        .eq("id", "global")
+        .maybeSingle();
+      if (settings?.high_opportunity_thresholds && typeof settings.high_opportunity_thresholds === "object") {
+        highOpp = { ...defaultHighOpp, ...(settings.high_opportunity_thresholds as Record<string, number>) };
+      }
+      if (settings?.high_admin_thresholds && typeof settings.high_admin_thresholds === "object") {
+        highAdmin = { ...defaultHighAdmin, ...(settings.high_admin_thresholds as Record<string, number>) };
+      }
+    } catch (_) { /* fall back to defaults */ }
+
     const isHighIntent =
       estimated_monthly_opportunity >= highOpp[currency] ||
       inputs.leads_per_month >= 100 ||
