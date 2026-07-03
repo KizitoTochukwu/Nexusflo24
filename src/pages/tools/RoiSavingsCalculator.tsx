@@ -348,64 +348,78 @@ const RoiSavingsCalculator = () => {
                     {submitted ? "Your full report" : step >= 2 ? "Preview result" : "Live estimate"}
                   </p>
                   <CardTitle className="text-2xl leading-tight">
-                    You may be leaving approximately{" "}
-                    <span className="text-accent">{fmt(results.estimated_monthly_opportunity)}</span>{" "}
-                    per month on the table.
+                    {step >= 2 ? (
+                      <>
+                        You may be leaving approximately{" "}
+                        <span className="text-accent">
+                          {fmt(results.estimated_monthly_opportunity)}
+                        </span>{" "}
+                        per month on the table.
+                      </>
+                    ) : (
+                      <>Your estimated savings will appear here.</>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <StatBlock
-                      label="Est monthly opportunity"
-                      value={fmt(results.estimated_monthly_opportunity)}
-                      strong
-                    />
-                    <StatBlock
-                      label="Est annual opportunity"
-                      value={fmt(results.estimated_annual_opportunity)}
-                      strong
-                    />
-                    <StatBlock
-                      label="Recoverable customers / mo"
-                      value={results.recoverable_customers.toFixed(1)}
-                    />
-                    <StatBlock
-                      label="Missed follow-up revenue"
-                      value={fmt(results.recoverable_revenue)}
-                    />
-                    <StatBlock
-                      label="Manual admin cost / mo"
-                      value={fmt(results.manual_admin_cost)}
-                    />
-                    <StatBlock
-                      label="Current est monthly revenue"
-                      value={fmt(results.current_monthly_revenue)}
-                    />
-                  </div>
-
-                  {/* Breakdown bar */}
-                  <div className="pt-2">
-                    <p className="mb-2 text-xs text-primary-foreground/70">Opportunity breakdown</p>
-                    <div className="flex h-3 w-full overflow-hidden rounded-full bg-primary-foreground/10">
-                      <div className="bg-accent" style={{ width: `${segMissed}%` }} title="Missed follow-up revenue" />
-                      <div className="bg-gold-dark" style={{ width: `${segAdmin}%` }} title="Manual admin cost" />
-                      <div className="bg-primary-foreground/40" style={{ width: `${segSoftware}%` }} title="Software / admin cost" />
+                  {step < 2 ? (
+                    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary-foreground/20 bg-primary-foreground/5 px-4 py-10 text-center">
+                      <Calculator className="h-10 w-10 text-accent" />
+                      <p className="text-sm text-primary-foreground/80">
+                        Complete the questions to see your estimated monthly and annual
+                        opportunity.
+                      </p>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-primary-foreground/60">
-                      <span>Missed follow-up {segMissed}%</span>
-                      <span>Manual admin {segAdmin}%</span>
-                      <span>Software {segSoftware}%</span>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <StatBlock
+                          label="Est monthly opportunity"
+                          value={fmt(results.estimated_monthly_opportunity)}
+                          strong
+                        />
+                        <StatBlock
+                          label="Est annual opportunity"
+                          value={fmt(results.estimated_annual_opportunity)}
+                          strong
+                        />
+                        <StatBlock
+                          label="Recoverable customers / mo"
+                          value={results.recoverable_customers.toFixed(1)}
+                        />
+                        <StatBlock
+                          label="Missed follow-up revenue"
+                          value={fmt(results.recoverable_revenue)}
+                        />
+                        <StatBlock
+                          label="Manual admin cost / mo"
+                          value={fmt(results.manual_admin_cost)}
+                        />
+                        <StatBlock
+                          label="Current est monthly revenue"
+                          value={fmt(results.current_monthly_revenue)}
+                        />
+                      </div>
 
-                  {step < 2 && (
-                    <p className="text-sm text-primary-foreground/70">
-                      Adjust the inputs and click <strong>Calculate My Savings</strong> to lock your
-                      preview.
-                    </p>
+                      {/* Breakdown bar */}
+                      <div className="pt-2">
+                        <p className="mb-2 text-xs text-primary-foreground/70">Opportunity breakdown</p>
+                        <div className="flex h-3 w-full overflow-hidden rounded-full bg-primary-foreground/10">
+                          <div className="bg-accent" style={{ width: `${segMissed}%` }} title="Missed follow-up revenue" />
+                          <div className="bg-gold-dark" style={{ width: `${segAdmin}%` }} title="Manual admin cost" />
+                          <div className="bg-primary-foreground/40" style={{ width: `${segSoftware}%` }} title="Software / admin cost" />
+                        </div>
+                        <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-primary-foreground/60">
+                          <span>Missed follow-up {segMissed}%</span>
+                          <span>Manual admin {segAdmin}%</span>
+                          <span>Software {segSoftware}%</span>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
+
 
               {step >= 2 && !submitted && (
                 <Card className="border-accent/50 bg-background">
