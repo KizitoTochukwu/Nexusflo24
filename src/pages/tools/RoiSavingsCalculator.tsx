@@ -393,11 +393,11 @@ const RoiSavingsCalculator = () => {
                   <CardTitle className="text-2xl leading-tight">
                     {step >= 2 ? (
                       <>
-                        You may be leaving approximately{" "}
+                        You're missing out on about{" "}
                         <span className="text-accent">
                           {fmt(results.estimated_monthly_opportunity)}
                         </span>{" "}
-                        per month on the table.
+                        every month.
                       </>
                     ) : (
                       <>Your estimated savings will appear here.</>
