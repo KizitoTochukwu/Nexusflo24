@@ -1,69 +1,46 @@
-## Goal
+## Plan: Fix ROI Calculator Lead Sync + Automation Triggering
 
-When someone submits your Facebook Lead Ad form, Meta pushes it to NexusFlo24 → the lead lands in your CRM → an automation fires an instant Email + WhatsApp/SMS follow-up (and any further nurture steps you choose).
+### Goal
+Ensure every valid ROI savings calculator submission creates or updates the correct CRM lead, links the submission to that lead, and triggers the ROI calculator automation/workflow enrollment.
 
-There are two pieces: a **one-time connection** between Meta and NexusFlo24, and a **reusable automation** inside NexusFlo24.
+### What I’ll change
+1. **Harden CRM lead matching**
+   - Update `roi-calculator-submit` so it searches for an existing lead by:
+     1. email, case-insensitive, within the workspace
+     2. phone, within the same workspace, if no email match is found
+   - This matches the project rule: deduplicate leads by email first, then phone.
 
----
+2. **Handle duplicate insert conflicts safely**
+   - If inserting a new CRM lead fails because email or phone already exists, the function will re-query by email/phone and update that existing lead instead of leaving `contact_id` empty.
+   - Add clear backend logging for failed lead insert/update paths.
 
-## Part 1 — Connect Meta Lead Ads to NexusFlo24 (one-time)
+3. **Keep submissions linked to CRM leads**
+   - The ROI submission row will only be saved with `contact_id = null` when no lead can genuinely be resolved.
+   - For the known orphaned ROI submission, link it to the existing phone-matched lead and merge the ROI calculator tags.
 
-Today the Meta webhook in this project handles Instagram DMs and Facebook comments, but not the `leadgen` event Facebook fires when someone submits a Lead Form. I'll add that.
+4. **Restore automation firing**
+   - Once `leadId` is reliably resolved, the existing `roi_calculator_submitted` automation and workflow dispatch code will run as intended.
+   - No changes to automation rules, UI, or sender settings.
 
-What I'll build:
+### Data repair
+Backfill the known orphaned submission:
+- submission: `fc88fec2-289d-4411-81ee-c9bde1fbe69a`
+- matching existing lead: `f771b2e5-c900-4a26-93f6-da2fdf1f12df`
 
-1. **Extend the Meta webhook** (`meta-webhook` edge function) to also accept `field: "leadgen"` events.
-   - On each event: read `leadgen_id` + `page_id` from the payload.
-   - Call Meta Graph API `GET /{leadgen_id}?access_token=PAGE_TOKEN` to pull the full form answers (name, email, phone, plus any custom questions).
-   - Normalise the phone to E.164, then insert/merge the lead in the workspace's CRM using the same dedupe rules as the rest of the app (email, then phone).
-   - Tag the lead `meta-lead-ad` + the Facebook form name, set source = `Facebook Lead Ad`, and store `form_id`, `ad_id`, `campaign_id` in the lead activity meta so you can filter later.
+The repair will:
+- set the submission `contact_id`
+- update the lead’s tags/notes/activity timestamp with ROI calculator context
+- leave existing CRM data intact where possible
 
-2. **Subscribe your Facebook Page to the `leadgen` webhook field** — I'll add this to the Meta connection step in Settings → Channels → Meta so it happens automatically when you connect the Page (right now only `messages`/`feed` are subscribed).
+### Technical details
+- File to update: `supabase/functions/roi-calculator-submit/index.ts`
+- No schema changes
+- No frontend/UI changes
+- No RLS changes
+- No changes to email, WhatsApp, SMS, or sender approval settings
 
-3. **Docs card in Settings → Meta** with your webhook URL + verify token and a "Test with Meta Lead Ads Testing Tool" link, so you can fire a test lead and see it hit the CRM.
-
-No new secrets needed — the existing `META_PAGE_ACCESS_TOKEN` / `meta_settings` row is reused.
-
----
-
-## Part 2 — The follow-up automation (reusable, inside NexusFlo24)
-
-I'll ship a one-click template on the Automations page called **"Facebook Lead Ad → Instant Follow-up"** that seeds this workflow:
-
-```text
-Trigger: New lead captured
-  └ Filter: source = "Facebook Lead Ad"   (or tag = meta-lead-ad)
-
-Step 1  Send Email          — instant acknowledgement ("Thanks {{first_name}}, we got your details")
-Step 2  Wait 3 minutes
-Step 3  Send WhatsApp       — approved template; auto-fallback to SMS if the 24h window is closed
-Step 4  Move lead to folder "New Lead"
-Step 5  Assign salesperson  (round-robin, using the existing assignment engine)
-Step 6  Notify salesperson  (in-app + phone alert)
-Step 7  Wait 24 hours
-Step 8  Condition: appointment booked?
-          ├ Yes → Send "Appointment confirmation" email
-          └ No  → Send "Booking reminder" WhatsApp/SMS + email
-```
-
-All step types already exist in the automation builder — this is just a seeded template using them.
-
----
-
-## What you'll do after I ship this
-
-1. Open **Settings → Channels → Meta**, click "Connect Facebook Page", pick the Page running the ad.
-2. On the Automations page, click **Use template → "Facebook Lead Ad → Instant Follow-up"**, tweak the email/WhatsApp copy, hit Activate.
-3. In Facebook Ads Manager, make sure the Lead Form is attached to the same Page you connected. Fire a test lead from Meta's [Lead Ads Testing Tool](https://developers.facebook.com/tools/lead-ads-testing) — you'll see it appear in Leads within seconds and the follow-up messages go out.
-
-That's it — every future lead from that ad flows in automatically.
-
----
-
-## Technical notes (for reference)
-
-- Files touched: `supabase/functions/meta-webhook/index.ts` (add leadgen branch), `supabase/functions/meta-save-settings/index.ts` (subscribe `leadgen` field on Page), `src/components/settings/MetaChannelTab.tsx` (webhook + test link UI), `src/lib/automations/seedNurtureTemplate.ts` (new template) + a "Use template" entry on `DashboardAutomations`.
-- Uses existing `capture-lead` dedupe logic and `execute-automation` runner — no schema changes.
-- WhatsApp step auto-falls back to SMS via the existing 24h-window handling.
-
-Shall I build it?
+### Validation
+After implementation, I’ll verify that:
+- the function no longer silently loses leads when phone duplicates exist
+- the known orphaned submission is linked
+- future ROI submissions return a `lead_id`, allowing automations to trigger

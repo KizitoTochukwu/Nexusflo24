@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizePhoneE164 } from "../_shared/phone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,7 +40,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const phone = str(body.phone, 40);
+    const phoneRaw = str(body.phone, 40);
+    const normalizedPhone = normalizePhoneE164(phoneRaw);
+    const phone = normalizedPhone ?? phoneRaw;
+    const phoneCandidates = Array.from(new Set([phone, phoneRaw].filter((p): p is string => Boolean(p))));
     const business_name = str(body.business_name, 200);
     const business_type = str(body.business_type, 100);
     const preferred_contact_method = str(body.preferred_contact_method, 40);
@@ -139,13 +143,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
       ownerId = ws?.owner_user_id ?? ownerEnv ?? null;
 
-      const { data: existing } = await supabase
-        .from("leads")
-        .select("id, tags, user_id")
-        .eq("workspace_id", workspaceId)
-        .ilike("email", email)
-        .maybeSingle();
-
       const now = new Date().toISOString();
       const summary = [
         `ROI Calculator submission (${currency})`,
@@ -159,19 +156,92 @@ Deno.serve(async (req) => {
         .filter(Boolean)
         .join("\n");
 
-      if (existing) {
-        const mergedTags = Array.from(new Set([...(existing.tags || []), ...intentTags]));
-        await supabase
+      type LeadRow = {
+        id: string;
+        tags: string[] | null;
+        user_id: string | null;
+        phone: string | null;
+        email: string | null;
+      };
+
+      const leadSelect = "id, tags, user_id, phone, email";
+
+      const findLeadByEmail = async (): Promise<LeadRow | null> => {
+        const { data, error } = await supabase
           .from("leads")
-          .update({
-            updated_at: now,
-            last_activity_at: now,
-            tags: mergedTags,
-            ...(full_name ? { full_name } : {}),
-            ...(phone ? { phone } : {}),
-            notes: summary,
-          })
-          .eq("id", existing.id);
+          .select(leadSelect)
+          .eq("workspace_id", workspaceId)
+          .ilike("email", email)
+          .maybeSingle();
+
+        if (error) {
+          console.error("[roi-calculator-submit] lead email lookup failed:", error);
+          return null;
+        }
+        return (data as LeadRow | null) ?? null;
+      };
+
+      const findLeadByPhone = async (): Promise<LeadRow | null> => {
+        if (phoneCandidates.length === 0) return null;
+
+        const { data, error } = await supabase
+          .from("leads")
+          .select(leadSelect)
+          .eq("workspace_id", workspaceId)
+          .in("phone", phoneCandidates)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error("[roi-calculator-submit] lead phone lookup failed:", error);
+          return null;
+        }
+        return (data as LeadRow | null) ?? null;
+      };
+
+      const resolveExistingLead = async (): Promise<LeadRow | null> => {
+        const byEmail = await findLeadByEmail();
+        if (byEmail) return byEmail;
+        return await findLeadByPhone();
+      };
+
+      const updateResolvedLead = async (lead: LeadRow): Promise<void> => {
+        const mergedTags = Array.from(new Set([...(lead.tags || []), ...intentTags]));
+        const payload: Record<string, unknown> = {
+          updated_at: now,
+          last_activity_at: now,
+          tags: mergedTags,
+          ...(full_name ? { full_name } : {}),
+          notes: summary,
+        };
+
+        if (phone) {
+          const phoneOwner = await findLeadByPhone();
+          if (!phoneOwner || phoneOwner.id === lead.id) {
+            payload.phone = phone;
+          } else {
+            console.warn("[roi-calculator-submit] skipped phone update because it belongs to another lead", {
+              target_lead_id: lead.id,
+              phone_owner_lead_id: phoneOwner.id,
+            });
+          }
+        }
+
+        const { error } = await supabase
+          .from("leads")
+          .update(payload)
+          .eq("id", lead.id);
+
+        if (error) {
+          console.error("[roi-calculator-submit] lead update failed:", error);
+        }
+      };
+
+      const existing = await resolveExistingLead();
+
+      if (existing) {
+        await updateResolvedLead(existing);
         leadId = existing.id;
         if (existing.user_id) ownerId = existing.user_id;
       } else {
@@ -184,7 +254,7 @@ Deno.serve(async (req) => {
           if (typeof rr === "string") assignedOwnerId = rr;
         } catch { /* ignore */ }
 
-        const { data: newLead } = await supabase
+        const { data: newLead, error: leadInsertErr } = await supabase
           .from("leads")
           .insert({
             user_id: ownerId,
@@ -203,7 +273,17 @@ Deno.serve(async (req) => {
           })
           .select("id")
           .maybeSingle();
-        leadId = newLead?.id ?? null;
+        if (leadInsertErr) {
+          console.error("[roi-calculator-submit] lead insert failed:", leadInsertErr);
+          const recoveredLead = await resolveExistingLead();
+          if (recoveredLead) {
+            await updateResolvedLead(recoveredLead);
+            leadId = recoveredLead.id;
+            if (recoveredLead.user_id) ownerId = recoveredLead.user_id;
+          }
+        } else {
+          leadId = newLead?.id ?? null;
+        }
       }
 
       if (leadId) {
