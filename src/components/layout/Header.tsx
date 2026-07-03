@@ -61,17 +61,21 @@ const Header = () => {
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
           {desktopNav.map((item, idx) => {
-            if (item.type === "solutions") {
+            if (item.type === "solutions" || item.type === "resources") {
+              const isResources = item.type === "resources";
+              const links = isResources ? resourcesLinks : solutionsLinks;
+              const active = isResources ? resourcesActive : solutionsActive;
+              const label = isResources ? "Resources" : "Solutions";
               return (
-                <DropdownMenu key="solutions">
+                <DropdownMenu key={item.type}>
                   <DropdownMenuTrigger
-                    className={`${linkClass(solutionsActive)} inline-flex items-center gap-1 outline-none`}
+                    className={`${linkClass(active)} inline-flex items-center gap-1 outline-none`}
                   >
-                    Solutions
+                    {label}
                     <ChevronDown className="h-3.5 w-3.5" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="min-w-[14rem]">
-                    {solutionsLinks.map((s) => (
+                    {links.map((s) => (
                       <DropdownMenuItem key={s.to} asChild>
                         <Link
                           to={s.to}
