@@ -895,7 +895,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                 );
               })()}
 
-              {step.step_type === "action" && (
+              {!collapsedSteps[i] && step.step_type === "action" && (
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2 items-center">
                     <Select
