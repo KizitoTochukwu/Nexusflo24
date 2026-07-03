@@ -324,18 +324,63 @@ const RoiSavingsCalculator = () => {
           </div>
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-            {/* LEFT: GUIDED WIZARD */}
-            <RoiCalculatorWizard
-              inputs={inputs}
-              setInputs={(next) => setInputs(next)}
-              onStart={() => {
-                if (!started) {
-                  setStarted(true);
-                  analytics("roi_calculator_started", { currency: inputs.currency });
-                }
-              }}
-              onCalculate={handleCalculate}
-            />
+            {/* LEFT: GUIDED WIZARD or LOCKED SUMMARY */}
+            {step < 2 ? (
+              <RoiCalculatorWizard
+                inputs={inputs}
+                setInputs={(next) => setInputs(next)}
+                onStart={() => {
+                  if (!started) {
+                    setStarted(true);
+                    analytics("roi_calculator_started", { currency: inputs.currency });
+                  }
+                }}
+                onCalculate={handleCalculate}
+              />
+            ) : (
+              <Card className="border-accent/40 bg-muted/30 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Your inputs are locked
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Your estimate is ready on the right. You can edit your answers or unlock the full personalised report.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <SummaryRow label="Currency" value={inputs.currency} />
+                    <SummaryRow label="Leads / month" value={String(inputs.leads_per_month)} />
+                    <SummaryRow label="Avg customer value" value={fmt(inputs.average_customer_value)} />
+                    <SummaryRow label="Conversion rate" value={`${inputs.conversion_rate}%`} />
+                    <SummaryRow label="Missed follow-up" value={`${inputs.missed_follow_up_percentage}%`} />
+                    <SummaryRow label="Manual hours / mo" value={String(inputs.manual_follow_up_hours)} />
+                  </div>
+                  <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        setStep(1);
+                        setSubmitted(false);
+                        setLeadDialogOpen(false);
+                      }}
+                    >
+                      Edit answers
+                    </Button>
+                    {!submitted && (
+                      <Button
+                        className="w-full bg-accent text-accent-foreground shadow-gold hover:bg-gold-dark sm:w-auto"
+                        onClick={() => setLeadDialogOpen(true)}
+                      >
+                        <Lock className="mr-1 h-4 w-4" /> Unlock full report
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
 
 
             {/* RIGHT: LIVE PREVIEW */}
