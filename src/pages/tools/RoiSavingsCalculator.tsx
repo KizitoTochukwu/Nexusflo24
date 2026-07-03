@@ -693,39 +693,6 @@ const RoiSavingsCalculator = () => {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="bg-primary py-16 text-primary-foreground md:py-20">
-        <div className="container">
-          <div className="mx-auto max-w-3xl rounded-2xl border border-accent/30 bg-navy-light p-8 text-center md:p-12">
-            <h2 className="text-3xl font-bold md:text-4xl">
-              Turn Your Estimated Savings Into a Working Automation System
-            </h2>
-            <p className="mt-4 text-primary-foreground/80">
-              Book a free Automation Growth Audit and discover which NexusFlo24 workflow could have
-              the greatest impact on your sales process.
-            </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
-              >
-                <Link to={bookingUrl} onClick={trackBookingClick}>
-                  Book My Free Automation Audit <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
-              >
-                <Link to="/features">See How NexusFlo24 Works</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* FAQ */}
       <section className="bg-background py-16 md:py-20">
