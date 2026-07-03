@@ -73,6 +73,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
   const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
   const { data: allAutomations } = useAutomations(workspaceId || "");
   const { data: workspaceMembers } = useWorkspaceMembers(workspaceId || "");
+  const [collapsedSteps, setCollapsedSteps] = useState<Record<number, boolean>>({});
+  const toggleCollapsed = (i: number) =>
+    setCollapsedSteps((prev) => ({ ...prev, [i]: !prev[i] }));
 
   const addStep = (type: StepData["step_type"]) => {
     const newStep: StepData = { step_type: type, config: {} };
