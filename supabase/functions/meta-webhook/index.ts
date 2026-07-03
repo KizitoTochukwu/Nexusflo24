@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decryptMeta, matchKeyword } from "../_shared/meta-crypto.ts";
 import { verifyMetaSignature } from "../_shared/meta-hmac.ts";
+import { normalizePhoneE164 } from "../_shared/phone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,6 +123,23 @@ Deno.serve(async (req) => {
         const field = change?.field;
         const value = change?.value;
         if (!value) continue;
+
+        // ---------- Facebook Lead Ads (field === "leadgen") ----------
+        if (field === "leadgen") {
+          try {
+            await handleLeadgen({
+              adminClient,
+              encryptionKey,
+              settingsId: settings.id,
+              workspaceId,
+              value,
+            });
+          } catch (e) {
+            console.error("leadgen handler failed:", e);
+          }
+          continue;
+        }
+
 
         const isIgComment = platform === "instagram" && field === "comments";
         const isFbComment = platform === "facebook" && field === "feed" && value?.item === "comment" && value?.verb === "add";
@@ -355,3 +373,219 @@ async function fireKeywordTriggers(args: {
     }
   }
 }
+
+// ============================================================
+// Facebook Lead Ads handler
+// ============================================================
+// Payload shape:
+// changes[].value = { leadgen_id, page_id, form_id, adgroup_id, ad_id, created_time }
+// We fetch the full lead via Graph API using the Page access token, then upsert
+// into the CRM with dedupe (email → phone) and tag "meta-lead-ad" so the
+// user's "Facebook Lead Ad → Instant Follow-up" automation fires.
+async function handleLeadgen(args: {
+  adminClient: any;
+  encryptionKey: string;
+  settingsId: string;
+  workspaceId: string;
+  value: any;
+}) {
+  const { adminClient, encryptionKey, settingsId, workspaceId, value } = args;
+  const leadgenId: string | undefined = value?.leadgen_id;
+  const formId: string | undefined = value?.form_id;
+  const adId: string | undefined = value?.ad_id;
+  const campaignId: string | undefined = value?.campaign_id || value?.adgroup_id;
+  if (!leadgenId) return;
+
+  // Skip if we already ingested this leadgen_id (Meta may retry)
+  const { data: dupe } = await adminClient
+    .from("lead_activities")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("type", "meta_lead_ad")
+    .filter("meta->>leadgen_id", "eq", leadgenId)
+    .maybeSingle();
+  if (dupe) return;
+
+  // Decrypt the Page access token
+  const { data: settingsRow } = await adminClient
+    .from("meta_settings")
+    .select("page_access_token_encrypted")
+    .eq("id", settingsId)
+    .maybeSingle();
+  if (!settingsRow?.page_access_token_encrypted) {
+    console.warn("leadgen: no page_access_token for settings", settingsId);
+    return;
+  }
+  let pageToken: string;
+  try {
+    pageToken = await decryptMeta(settingsRow.page_access_token_encrypted, encryptionKey);
+  } catch (e) {
+    console.error("leadgen: failed to decrypt page token", e);
+    return;
+  }
+
+  // Fetch the lead form submission from Graph API
+  const graphUrl = `https://graph.facebook.com/v20.0/${leadgenId}?access_token=${encodeURIComponent(pageToken)}`;
+  const resp = await fetch(graphUrl);
+  if (!resp.ok) {
+    console.error("leadgen: graph fetch failed", resp.status, await resp.text());
+    return;
+  }
+  const data = await resp.json();
+  const fieldData: Array<{ name: string; values: string[] }> = data?.field_data || [];
+  const answers: Record<string, string> = {};
+  for (const f of fieldData) {
+    if (f?.name && Array.isArray(f.values) && f.values.length) {
+      answers[f.name.toLowerCase()] = String(f.values[0] || "").trim();
+    }
+  }
+
+  const email = (answers.email || answers.email_address || "").toLowerCase() || null;
+  const rawPhone = answers.phone_number || answers.phone || answers.mobile || answers.whatsapp_number || null;
+  const phone = rawPhone ? normalizePhoneE164(rawPhone) : null;
+  const fullName = answers.full_name
+    || [answers.first_name, answers.last_name].filter(Boolean).join(" ").trim()
+    || null;
+
+  if (!email && !phone) {
+    console.warn("leadgen: no email or phone in submission", leadgenId);
+    return;
+  }
+
+  // Resolve workspace owner for user_id
+  const { data: ws } = await adminClient
+    .from("workspaces")
+    .select("owner_user_id")
+    .eq("id", workspaceId)
+    .maybeSingle();
+  const ownerId = ws?.owner_user_id;
+  if (!ownerId) return;
+
+  // Dedupe: email (case-insensitive) → phone (E.164)
+  let existing: { id: string; tags: string[] | null } | null = null;
+  if (email) {
+    const { data } = await adminClient
+      .from("leads")
+      .select("id, tags")
+      .eq("workspace_id", workspaceId)
+      .ilike("email", email)
+      .maybeSingle();
+    existing = data;
+  }
+  if (!existing && phone) {
+    const { data } = await adminClient
+      .from("leads")
+      .select("id, tags")
+      .eq("workspace_id", workspaceId)
+      .eq("phone", phone)
+      .maybeSingle();
+    existing = data;
+  }
+
+  const now = new Date().toISOString();
+  const baseTags = ["meta-lead-ad", "facebook"];
+  if (formId) baseTags.push(`form:${formId}`);
+
+  let leadId: string;
+  if (existing) {
+    const mergedTags = Array.from(new Set([...(existing.tags || []), ...baseTags]));
+    await adminClient.from("leads").update({
+      full_name: fullName || undefined,
+      phone: phone || undefined,
+      source: "Facebook Lead Ad",
+      tags: mergedTags,
+      last_activity_at: now,
+      updated_at: now,
+    }).eq("id", existing.id);
+    leadId = existing.id;
+  } else {
+    const { data: created, error } = await adminClient
+      .from("leads")
+      .insert({
+        workspace_id: workspaceId,
+        user_id: ownerId,
+        full_name: fullName,
+        email,
+        phone,
+        source: "Facebook Lead Ad",
+        status: "New",
+        pipeline_stage: "new_lead",
+        score: 20,
+        tags: baseTags,
+        last_activity_at: now,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      console.error("leadgen: failed to insert lead", error);
+      return;
+    }
+    leadId = created.id;
+  }
+
+  // Activity log — used for dedupe on retries + for filtering in the CRM
+  await adminClient.from("lead_activities").insert({
+    lead_id: leadId,
+    user_id: ownerId,
+    workspace_id: workspaceId,
+    type: "meta_lead_ad",
+    meta: {
+      leadgen_id: leadgenId,
+      form_id: formId || null,
+      ad_id: adId || null,
+      campaign_id: campaignId || null,
+      answers,
+    },
+  });
+
+  // Emit a lead_created / opt_in activity so any generic new_lead triggers see it
+  await adminClient.from("lead_activities").insert({
+    lead_id: leadId,
+    user_id: ownerId,
+    workspace_id: workspaceId,
+    type: existing ? "opt_in" : "lead_created",
+    meta: { source: "facebook_lead_ad", form_id: formId || null },
+  });
+
+  // Dispatch matching automations (new_lead + lead_tagged/tag_added on our tags)
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
+  const dispatch = async (autoId: string) => {
+    try {
+      await fetch(execUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+        body: JSON.stringify({ automation_id: autoId, lead_id: leadId, workspace_id: workspaceId }),
+      });
+    } catch (e) {
+      console.error(`meta-webhook: dispatch automation ${autoId} failed:`, e);
+    }
+  };
+
+  try {
+    const { data: automations } = await adminClient
+      .from("automations")
+      .select("id, trigger_type, trigger_config")
+      .eq("workspace_id", workspaceId)
+      .in("trigger_type", existing ? ["lead_tagged", "tag_added"] : ["new_lead", "lead_tagged", "tag_added"])
+      .eq("status", "active");
+
+    for (const auto of automations ?? []) {
+      const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
+      if (auto.trigger_type === "new_lead" || auto.trigger_type === "tag_added") {
+        await dispatch(auto.id);
+        continue;
+      }
+      // lead_tagged: match if no specific tag OR tag in the applied tags
+      const cfgTag = (cfg.tag as string | undefined)?.toLowerCase();
+      if (!cfgTag || baseTags.some((t) => t.toLowerCase() === cfgTag)) {
+        await dispatch(auto.id);
+      }
+    }
+  } catch (dispatchErr) {
+    console.error("meta-webhook: automation dispatch error:", dispatchErr);
+  }
+}
+
+

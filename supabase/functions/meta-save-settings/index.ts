@@ -112,6 +112,25 @@ Deno.serve(async (req) => {
       if (error) throw error;
     }
 
+    // Best-effort: subscribe the Facebook Page to leadgen + messages + feed webhooks
+    // so Facebook Lead Ads flow into meta-webhook automatically. Non-fatal if it fails
+    // (e.g. token missing pages_manage_metadata scope) — the settings still save.
+    if (page_id && page_access_token) {
+      try {
+        const subUrl = `https://graph.facebook.com/v20.0/${page_id}/subscribed_apps?access_token=${encodeURIComponent(page_access_token)}`;
+        const subRes = await fetch(subUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ subscribed_fields: "leadgen,messages,feed,messaging_postbacks" }),
+        });
+        if (!subRes.ok) {
+          console.warn("meta-save-settings: page webhook subscribe failed", subRes.status, await subRes.text());
+        }
+      } catch (subErr) {
+        console.warn("meta-save-settings: page webhook subscribe error", subErr);
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
