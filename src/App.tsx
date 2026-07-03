@@ -80,6 +80,8 @@ import Unsubscribe from "./pages/Unsubscribe";
 import MetaPixelRouteTracker from "./components/analytics/MetaPixelRouteTracker";
 import SiteCustomCodeInjector from "./components/analytics/SiteCustomCodeInjector";
 import AiSeoVisibilityEngine from "./pages/AiSeoVisibilityEngine";
+import RoiSavingsCalculator from "./pages/tools/RoiSavingsCalculator";
+import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -130,6 +132,7 @@ const App = () => (
               <Route path="/anti-spam-policy" element={<AntiSpamPolicy />} />
               <Route path="/gdpr-rights" element={<GdprRights />} />
               <Route path="/ai-seo-visibility-engine" element={<AiSeoVisibilityEngine />} />
+              <Route path="/tools/roi-savings-calculator" element={<RoiSavingsCalculator />} />
               <Route path="/how-it-works/capture" element={<HowCapture />} />
               <Route path="/how-it-works/nurture" element={<HowNurture />} />
               <Route path="/how-it-works/convert" element={<HowConvert />} />
@@ -171,6 +174,8 @@ const App = () => (
                   <Route path="admin/usage" element={<AdminUsage />} />
                   <Route path="admin/credit-packages" element={<AdminCreditPackages />} />
                   <Route path="admin/messages" element={<AdminMessagesInbox />} />
+                  <Route path="admin/roi-calculator-submissions" element={<DashboardRoiSubmissions />} />
+                  <Route path="roi-calculator-submissions" element={<DashboardRoiSubmissions />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>

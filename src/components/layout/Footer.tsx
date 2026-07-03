@@ -74,6 +74,9 @@ const Footer = () => {
                 {item}
               </Link>
             )}
+            <Link to="/tools/roi-savings-calculator" className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+              ROI Savings Calculator
+            </Link>
           </div>
 
           {/* Company */}
