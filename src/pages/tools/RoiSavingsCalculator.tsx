@@ -258,18 +258,17 @@ const RoiSavingsCalculator = () => {
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary via-primary to-navy-light text-primary-foreground">
         <div className="absolute inset-0 opacity-[0.06] [background-image:radial-gradient(circle_at_1px_1px,#C9A227_1px,transparent_0)] [background-size:24px_24px]" />
-        <div className="container relative py-20 md:py-28">
-          <div className="mx-auto max-w-3xl text-center">
+        <div className="container relative py-14 md:py-20">
+          <div className="mx-auto text-center">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-              <Sparkles className="h-3.5 w-3.5" /> Free lead-magnet tool
+              <Sparkles className="h-3.5 w-3.5" /> Free ROI Savings Calculator
             </div>
-            <h1 className="text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl">
-              Calculate How Much Revenue You Could Recover With{" "}
-              <span className="text-accent">Automated Follow-Up</span>
+            <h1 className="mx-auto max-w-[850px] text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl">
+              Calculate the Revenue You’re Losing From Missed Follow-Up
             </h1>
-            <p className="mt-6 text-lg text-primary-foreground/80 md:text-xl">
-              Discover the estimated cost of missed leads, slow responses and manual follow-up — and
-              see how NexusFlo24 could help you capture, nurture and convert more customers.
+            <p className="mx-auto mt-6 max-w-[720px] text-lg text-primary-foreground/80 md:text-xl">
+              Enter a few details about your leads, conversion rate and manual follow-up process to
+              estimate your monthly and annual revenue opportunity.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button
