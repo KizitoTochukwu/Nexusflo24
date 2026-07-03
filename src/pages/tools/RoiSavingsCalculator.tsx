@@ -208,6 +208,7 @@ const RoiSavingsCalculator = () => {
       });
       setSubmitted(true);
       setStep(3);
+      setLeadDialogOpen(false);
       toast.success("Your full savings estimate is ready.");
       setTimeout(() => scrollTo(resultsRef), 100);
     } catch (err) {
