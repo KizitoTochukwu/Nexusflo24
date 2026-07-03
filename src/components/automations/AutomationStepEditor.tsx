@@ -1314,7 +1314,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                 </div>
               )}
 
-              {step.step_type === "delay" && (
+              {!collapsedSteps[i] && step.step_type === "delay" && (
                 <div className="flex gap-2 items-center">
                   <Input
                     type="number"
