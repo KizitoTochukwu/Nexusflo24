@@ -51,13 +51,6 @@ const Header = () => {
     if (link.to === "/pricing") desktopNav.push({ type: "resources" });
   });
 
-  // Insert Solutions after Features
-  const desktopNav: Array<{ type: "link" | "solutions"; label?: string; to?: string }> = [];
-  navLinks.forEach((link) => {
-    desktopNav.push({ type: "link", ...link });
-    if (link.to === "/features") desktopNav.push({ type: "solutions" });
-  });
-
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
       <div className="container flex h-16 items-center justify-between">
