@@ -26,11 +26,14 @@ export function useRoiCalculatorSettings() {
   return useQuery({
     queryKey: ["roi-calculator-settings"],
     queryFn: async (): Promise<RoiCalculatorSettings> => {
-      const { data, error } = await supabase.rpc("get_roi_calculator_settings" as never);
-      if (error || !data || !Array.isArray(data) || data.length === 0) {
+      const { data, error } = await (supabase.rpc as unknown as (fn: string) => Promise<{ data: unknown; error: unknown }>)(
+        "get_roi_calculator_settings",
+      );
+      const rows = Array.isArray(data) ? (data as Array<Record<string, unknown>>) : [];
+      if (error || rows.length === 0) {
         return DEFAULT_ROI_CALCULATOR_SETTINGS;
       }
-      const row = data[0] as {
+      const row = rows[0] as {
         booking_url: string | null;
         high_opportunity_thresholds: unknown;
         high_admin_thresholds: unknown;
