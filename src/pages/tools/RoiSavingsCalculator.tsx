@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import RoiCalculatorWizard from "@/components/roi/RoiCalculatorWizard";
 import {
   Select,
@@ -109,6 +116,7 @@ const RoiSavingsCalculator = () => {
   const [started, setStarted] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -147,6 +155,7 @@ const RoiSavingsCalculator = () => {
     });
     analytics("roi_calculator_preview_viewed");
     setStep(2);
+    setLeadDialogOpen(true);
     setTimeout(() => scrollTo(resultsRef), 100);
   };
 
@@ -199,6 +208,7 @@ const RoiSavingsCalculator = () => {
       });
       setSubmitted(true);
       setStep(3);
+      setLeadDialogOpen(false);
       toast.success("Your full savings estimate is ready.");
       setTimeout(() => scrollTo(resultsRef), 100);
     } catch (err) {
@@ -314,18 +324,63 @@ const RoiSavingsCalculator = () => {
           </div>
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-            {/* LEFT: GUIDED WIZARD */}
-            <RoiCalculatorWizard
-              inputs={inputs}
-              setInputs={(next) => setInputs(next)}
-              onStart={() => {
-                if (!started) {
-                  setStarted(true);
-                  analytics("roi_calculator_started", { currency: inputs.currency });
-                }
-              }}
-              onCalculate={handleCalculate}
-            />
+            {/* LEFT: GUIDED WIZARD or LOCKED SUMMARY */}
+            {step < 2 ? (
+              <RoiCalculatorWizard
+                inputs={inputs}
+                setInputs={(next) => setInputs(next)}
+                onStart={() => {
+                  if (!started) {
+                    setStarted(true);
+                    analytics("roi_calculator_started", { currency: inputs.currency });
+                  }
+                }}
+                onCalculate={handleCalculate}
+              />
+            ) : (
+              <Card className="border-accent/40 bg-muted/30 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Your inputs are locked
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Your estimate is ready on the right. You can edit your answers or unlock the full personalised report.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <SummaryRow label="Currency" value={inputs.currency} />
+                    <SummaryRow label="Leads / month" value={String(inputs.leads_per_month)} />
+                    <SummaryRow label="Avg customer value" value={fmt(inputs.average_customer_value)} />
+                    <SummaryRow label="Conversion rate" value={`${inputs.conversion_rate}%`} />
+                    <SummaryRow label="Missed follow-up" value={`${inputs.missed_follow_up_percentage}%`} />
+                    <SummaryRow label="Manual hours / mo" value={String(inputs.manual_follow_up_hours)} />
+                  </div>
+                  <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        setStep(1);
+                        setSubmitted(false);
+                        setLeadDialogOpen(false);
+                      }}
+                    >
+                      Edit answers
+                    </Button>
+                    {!submitted && (
+                      <Button
+                        className="w-full bg-accent text-accent-foreground shadow-gold hover:bg-gold-dark sm:w-auto"
+                        onClick={() => setLeadDialogOpen(true)}
+                      >
+                        <Lock className="mr-1 h-4 w-4" /> Unlock full report
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
 
 
             {/* RIGHT: LIVE PREVIEW */}
@@ -409,134 +464,132 @@ const RoiSavingsCalculator = () => {
               </Card>
 
 
-              {step >= 2 && !submitted && (
-                <Card className="border-accent/50 bg-background">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
+              <Dialog open={leadDialogOpen} onOpenChange={setLeadDialogOpen}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-primary">
                       <Lock className="h-4 w-4 text-accent" /> Unlock your full report
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    </DialogTitle>
+                    <DialogDescription>
                       Enter your details to receive personalised recommendations and next steps.
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <FormField label="Full name *" error={formErrors.full_name}>
-                          <Input
-                            value={form.full_name}
-                            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Work email *" error={formErrors.email}>
-                          <Input
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Phone number *" error={formErrors.phone}>
-                          <Input
-                            type="tel"
-                            value={form.phone}
-                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Business name *" error={formErrors.business_name}>
-                          <Input
-                            value={form.business_name}
-                            onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Business type *" error={formErrors.business_type}>
-                          <Select
-                            value={form.business_type}
-                            onValueChange={(v) => setForm({ ...form, business_type: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {BUSINESS_TYPES.map((t) => (
-                                <SelectItem key={t} value={t}>
-                                  {t}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormField>
-                        <FormField
-                          label="Preferred contact method *"
-                          error={formErrors.preferred_contact_method}
-                        >
-                          <Select
-                            value={form.preferred_contact_method}
-                            onValueChange={(v) =>
-                              setForm({ ...form, preferred_contact_method: v })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CONTACT_METHODS.map((m) => (
-                                <SelectItem key={m} value={m}>
-                                  {m}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormField>
-                      </div>
-
-                      <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-sm">
-                        <Checkbox
-                          checked={form.consent}
-                          onCheckedChange={(v) => setForm({ ...form, consent: v === true })}
-                          className="mt-0.5"
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FormField label="Full name *" error={formErrors.full_name}>
+                        <Input
+                          value={form.full_name}
+                          onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                         />
-                        <span className="text-muted-foreground">
-                          I agree to receive my calculator results and relevant follow-up from
-                          NexusFlo24. I understand that I can unsubscribe at any time.
-                        </span>
-                      </label>
-                      {formErrors.consent && (
-                        <p className="text-xs text-destructive">{formErrors.consent}</p>
-                      )}
-
-                      <Button
-                        type="submit"
-                        disabled={submitting}
-                        size="lg"
-                        className="w-full bg-accent text-accent-foreground hover:bg-gold-dark"
+                      </FormField>
+                      <FormField label="Work email *" error={formErrors.email}>
+                        <Input
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="Phone number *" error={formErrors.phone}>
+                        <Input
+                          type="tel"
+                          value={form.phone}
+                          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="Business name *" error={formErrors.business_name}>
+                        <Input
+                          value={form.business_name}
+                          onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="Business type *" error={formErrors.business_type}>
+                        <Select
+                          value={form.business_type}
+                          onValueChange={(v) => setForm({ ...form, business_type: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BUSINESS_TYPES.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                      <FormField
+                        label="Preferred contact method *"
+                        error={formErrors.preferred_contact_method}
                       >
-                        {submitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing your
-                            report…
-                          </>
-                        ) : (
-                          <>
-                            Unlock My Full Report <ArrowRight className="ml-1 h-4 w-4" />
-                          </>
-                        )}
-                      </Button>
+                        <Select
+                          value={form.preferred_contact_method}
+                          onValueChange={(v) =>
+                            setForm({ ...form, preferred_contact_method: v })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONTACT_METHODS.map((m) => (
+                              <SelectItem key={m} value={m}>
+                                {m}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    </div>
 
-                      <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        By submitting, you agree to our{" "}
-                        <Link to="/privacy-policy" className="underline">
-                          Privacy Policy
-                        </Link>{" "}
-                        and{" "}
-                        <Link to="/terms-of-service" className="underline">
-                          Terms of Service
-                        </Link>
-                        .
-                      </p>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
+                    <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-sm">
+                      <Checkbox
+                        checked={form.consent}
+                        onCheckedChange={(v) => setForm({ ...form, consent: v === true })}
+                        className="mt-0.5"
+                      />
+                      <span className="text-muted-foreground">
+                        I agree to receive my calculator results and relevant follow-up from
+                        NexusFlo24. I understand that I can unsubscribe at any time.
+                      </span>
+                    </label>
+                    {formErrors.consent && (
+                      <p className="text-xs text-destructive">{formErrors.consent}</p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                      size="lg"
+                      className="w-full bg-accent text-accent-foreground hover:bg-gold-dark"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing your report…
+                        </>
+                      ) : (
+                        <>
+                          Unlock My Full Report <ArrowRight className="ml-1 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      By submitting, you agree to our{" "}
+                      <Link to="/privacy-policy" className="underline">
+                        Privacy Policy
+                      </Link>{" "}
+                      and{" "}
+                      <Link to="/terms-of-service" className="underline">
+                        Terms of Service
+                      </Link>
+                      .
+                    </p>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
 
               {submitted && (
                 <Card className="border-emerald-500/40 bg-emerald-50">
@@ -710,6 +763,13 @@ const FormField = ({
     <Label className="text-xs font-medium text-primary">{label}</Label>
     {children}
     {error && <p className="text-[11px] text-destructive">{error}</p>}
+  </div>
+);
+
+const SummaryRow = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-center justify-between rounded-md border bg-background px-3 py-1.5">
+    <span className="text-xs text-muted-foreground">{label}</span>
+    <span className="text-sm font-semibold text-primary">{value}</span>
   </div>
 );
 
