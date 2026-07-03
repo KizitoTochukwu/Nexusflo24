@@ -124,6 +124,23 @@ Deno.serve(async (req) => {
         const value = change?.value;
         if (!value) continue;
 
+        // ---------- Facebook Lead Ads (field === "leadgen") ----------
+        if (field === "leadgen") {
+          try {
+            await handleLeadgen({
+              adminClient,
+              encryptionKey,
+              settingsId: settings.id,
+              workspaceId,
+              value,
+            });
+          } catch (e) {
+            console.error("leadgen handler failed:", e);
+          }
+          continue;
+        }
+
+
         const isIgComment = platform === "instagram" && field === "comments";
         const isFbComment = platform === "facebook" && field === "feed" && value?.item === "comment" && value?.verb === "add";
 
