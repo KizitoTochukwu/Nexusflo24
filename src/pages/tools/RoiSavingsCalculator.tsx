@@ -326,144 +326,19 @@ const RoiSavingsCalculator = () => {
           </div>
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-            {/* LEFT: CALCULATOR */}
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Calculator className="h-5 w-5 text-accent" /> Business inputs
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5 pt-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Currency" htmlFor="currency">
-                    <Select
-                      value={inputs.currency}
-                      onValueChange={(v) => setInputs({ ...inputs, currency: v as Currency })}
-                    >
-                      <SelectTrigger id="currency">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CURRENCIES.map((c) => (
-                          <SelectItem key={c.code} value={c.code}>
-                            {c.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
+            {/* LEFT: GUIDED WIZARD */}
+            <RoiCalculatorWizard
+              inputs={inputs}
+              setInputs={(next) => setInputs(next)}
+              onStart={() => {
+                if (!started) {
+                  setStarted(true);
+                  analytics("roi_calculator_started", { currency: inputs.currency });
+                }
+              }}
+              onCalculate={handleCalculate}
+            />
 
-                  <Field
-                    label="Leads generated per month *"
-                    htmlFor="leads"
-                    help="New enquiries, form submissions, calls or prospects your business receives monthly."
-                  >
-                    <Input
-                      id="leads"
-                      type="number"
-                      min={0}
-                      value={inputs.leads_per_month}
-                      onChange={(e) => setNum("leads_per_month", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Average customer value *"
-                    htmlFor="acv"
-                    help="Average revenue from one converted customer."
-                  >
-                    <Input
-                      id="acv"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={inputs.average_customer_value}
-                      onChange={(e) => setNum("average_customer_value", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Conversion rate (%) *"
-                    htmlFor="conv"
-                    help="Percentage of leads that become paying customers."
-                  >
-                    <Input
-                      id="conv"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={inputs.conversion_rate}
-                      onChange={(e) => setNum("conversion_rate", e.target.value, 100)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Leads not followed up properly (%) *"
-                    htmlFor="missed"
-                    help="Estimate leads that receive late, inconsistent or no follow-up."
-                  >
-                    <Input
-                      id="missed"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={inputs.missed_follow_up_percentage}
-                      onChange={(e) =>
-                        setNum("missed_follow_up_percentage", e.target.value, 100)
-                      }
-                    />
-                  </Field>
-
-                  <Field
-                    label="Monthly manual follow-up hours *"
-                    htmlFor="hours"
-                    help="Include sending messages, spreadsheets, lead management and scheduling."
-                  >
-                    <Input
-                      id="hours"
-                      type="number"
-                      min={0}
-                      value={inputs.manual_follow_up_hours}
-                      onChange={(e) => setNum("manual_follow_up_hours", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field label="Average staff cost per hour *" htmlFor="staff">
-                    <Input
-                      id="staff"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={inputs.staff_cost_per_hour}
-                      onChange={(e) => setNum("staff_cost_per_hour", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Monthly software / admin cost"
-                    htmlFor="software"
-                    help="Optional. Existing tools and admin overhead."
-                  >
-                    <Input
-                      id="software"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={inputs.monthly_software_cost}
-                      onChange={(e) => setNum("monthly_software_cost", e.target.value)}
-                    />
-                  </Field>
-                </div>
-
-                <Button
-                  onClick={handleCalculate}
-                  size="lg"
-                  className="w-full bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
-                >
-                  Calculate My Savings <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
 
             {/* RIGHT: LIVE PREVIEW */}
             <div ref={resultsRef} className="space-y-4">
