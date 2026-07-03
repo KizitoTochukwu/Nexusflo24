@@ -44,7 +44,6 @@ import {
   CURRENCIES,
   CalculatorInputs,
   Currency,
-  ROI_CALCULATOR_BOOKING_URL,
   buildRecommendations,
   calculate,
   formatCurrency,
@@ -52,6 +51,7 @@ import {
   intentTags,
   isHighIntent,
 } from "@/lib/roi/calculator";
+import { useRoiCalculatorSettings } from "@/hooks/useRoiCalculatorSettings";
 
 const DEFAULTS: CalculatorInputs = {
   currency: "GBP",
@@ -122,9 +122,18 @@ const RoiSavingsCalculator = () => {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  const { data: roiSettings } = useRoiCalculatorSettings();
+  const bookingUrl = roiSettings?.booking_url ?? "/book/30-minute-discovery-call-9f5d5f";
+
   const results = useMemo(() => calculate(inputs), [inputs]);
-  const recommendations = useMemo(() => buildRecommendations(inputs, results), [inputs, results]);
-  const highIntent = useMemo(() => isHighIntent(inputs, results), [inputs, results]);
+  const recommendations = useMemo(
+    () => buildRecommendations(inputs, results, roiSettings),
+    [inputs, results, roiSettings],
+  );
+  const highIntent = useMemo(
+    () => isHighIntent(inputs, results, roiSettings),
+    [inputs, results, roiSettings],
+  );
 
   const fmt = (n: number) => formatCurrency(n, inputs.currency);
 
@@ -181,7 +190,7 @@ const RoiSavingsCalculator = () => {
           ...form,
           ...inputs,
           recommendation: recommendationText,
-          tags: intentTags(inputs, results),
+          tags: intentTags(inputs, results, roiSettings),
           ...utm,
         },
       });
@@ -277,7 +286,7 @@ const RoiSavingsCalculator = () => {
                 variant="outline"
                 className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
               >
-                <Link to={ROI_CALCULATOR_BOOKING_URL} onClick={trackBookingClick}>
+                <Link to={bookingUrl} onClick={trackBookingClick}>
                   Book a Free Automation Audit
                 </Link>
               </Button>
@@ -770,7 +779,7 @@ const RoiSavingsCalculator = () => {
                 size="lg"
                 className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
               >
-                <Link to={ROI_CALCULATOR_BOOKING_URL} onClick={trackBookingClick}>
+                <Link to={bookingUrl} onClick={trackBookingClick}>
                   Book My Free Automation Audit <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
