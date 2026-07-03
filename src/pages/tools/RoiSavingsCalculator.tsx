@@ -766,6 +766,13 @@ const FormField = ({
   </div>
 );
 
+const SummaryRow = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-center justify-between rounded-md border bg-background px-3 py-1.5">
+    <span className="text-xs text-muted-foreground">{label}</span>
+    <span className="text-sm font-semibold text-primary">{value}</span>
+  </div>
+);
+
 const StatBlock = ({
   label,
   value,
