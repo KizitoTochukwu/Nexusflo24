@@ -538,10 +538,7 @@ async function handleLeadgen(args: {
     },
   });
 
-  // NOTE: We do NOT enqueue automations here directly.
-  // Adding the "meta-lead-ad" tag will cause `lead_tagged` automations to fire
-  // via the existing tag-trigger pathway (execute-automation picks them up).
-  // We also emit a lead_capture activity so `new_lead` triggers still work.
+  // Emit a lead_created / opt_in activity so any generic new_lead triggers see it
   await adminClient.from("lead_activities").insert({
     lead_id: leadId,
     user_id: ownerId,
@@ -549,5 +546,46 @@ async function handleLeadgen(args: {
     type: existing ? "opt_in" : "lead_created",
     meta: { source: "facebook_lead_ad", form_id: formId || null },
   });
+
+  // Dispatch matching automations (new_lead + lead_tagged/tag_added on our tags)
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const execUrl = `${supabaseUrl}/functions/v1/execute-automation`;
+  const dispatch = async (autoId: string) => {
+    try {
+      await fetch(execUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+        body: JSON.stringify({ automation_id: autoId, lead_id: leadId, workspace_id: workspaceId }),
+      });
+    } catch (e) {
+      console.error(`meta-webhook: dispatch automation ${autoId} failed:`, e);
+    }
+  };
+
+  try {
+    const { data: automations } = await adminClient
+      .from("automations")
+      .select("id, trigger_type, trigger_config")
+      .eq("workspace_id", workspaceId)
+      .in("trigger_type", existing ? ["lead_tagged", "tag_added"] : ["new_lead", "lead_tagged", "tag_added"])
+      .eq("status", "active");
+
+    for (const auto of automations ?? []) {
+      const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
+      if (auto.trigger_type === "new_lead" || auto.trigger_type === "tag_added") {
+        await dispatch(auto.id);
+        continue;
+      }
+      // lead_tagged: match if no specific tag OR tag in the applied tags
+      const cfgTag = (cfg.tag as string | undefined)?.toLowerCase();
+      if (!cfgTag || baseTags.some((t) => t.toLowerCase() === cfgTag)) {
+        await dispatch(auto.id);
+      }
+    }
+  } catch (dispatchErr) {
+    console.error("meta-webhook: automation dispatch error:", dispatchErr);
+  }
 }
+
 
