@@ -116,6 +116,7 @@ const RoiSavingsCalculator = () => {
   const [started, setStarted] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "",
