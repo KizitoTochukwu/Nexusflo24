@@ -1,26 +1,28 @@
-Plan: Strengthen the result headline in the ROI savings calculator
+Update the hero section on the ROI Savings Calculator page (`src/pages/tools/RoiSavingsCalculator.tsx`) to be more compact, conversion-focused, and clearly tied to the tool.
 
-The selected element is the `<h3>` headline inside the result/preview card on `/tools/roi-savings-calculator` (`src/pages/tools/RoiSavingsCalculator.tsx`, lines 393-401).
+### Changes
 
-Current headline text
-````text
-"You may be leaving approximately {amount} per month on the table."
-````
+1. **Badge**
+   - Replace `Free lead-magnet tool` with `Free ROI Savings Calculator`.
 
-Proposed change
-Replace the hedging "may be leaving" message with a direct, benefit-driven statement that better matches the "PREVIEW RESULT" visual in the reference screenshot.
+2. **Headline**
+   - Replace current headline with: `Calculate the Revenue You're Losing From Missed Follow-Up`.
+   - Apply a max-width of approximately `850px` so it wraps naturally across two balanced lines.
+   - Remove the existing accent color span wrapper; keep the heading in the primary hero color.
 
-New copy
-````text
-"You're missing out on about {amount} every month."
-````
+3. **Supporting paragraph**
+   - Replace current paragraph with: `Enter a few details about your leads, conversion rate and manual follow-up process to estimate your monthly and annual revenue opportunity.`
+   - Apply a max-width of `720px`.
 
-Implementation details
-1. Edit only the `CardTitle` block in the result card (right column).
-2. Keep the currency-formatted amount rendered via `{fmt(results.estimated_monthly_opportunity)}` inside the existing accent `<span>`.
-3. Keep the small uppercase eyebrow label above it as-is: "Preview result" / "Your full report" / "Live estimate".
-4. Preserve all existing styling, conditional logic (`step >= 2`), and accessibility.
-5. No changes to wizard, calculations, submission flow, DB, or edge functions.
+4. **Compact sizing**
+   - Reduce vertical padding on the hero section (e.g., `py-14 md:py-18` or equivalent) to remove excessive empty space.
+   - Keep CTA buttons and layout unchanged.
 
-Files changed
-- `src/pages/tools/RoiSavingsCalculator.tsx` (one text string only)
+### Constraints preserved
+- Page route remains `/tools/roi-savings-calculator`.
+- Calculator logic, wizard, result card, submission flow, database, and edge functions are untouched.
+- Navigation, footer, and overall NexusFlo24 branding remain unchanged.
+- SEO metadata, JSON-LD FAQ schema, and other sections below the hero are untouched.
+
+### File changed
+- `src/pages/tools/RoiSavingsCalculator.tsx` (hero section only, lines ~259–292).
