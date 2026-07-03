@@ -23,7 +23,7 @@ export async function logCommunicationUsage(entry: UsageLogEntry): Promise<void>
     message_id: entry.messageId ?? null,
     country: entry.country ?? null,
     credits_deducted: entry.creditsDeducted,
-    cost_cents: entry.costCents ?? null,
+    cost_cents: entry.costCents ?? 0,
     status: entry.status,
   });
   if (error) console.error("[usage-logger] insert failed:", error);
