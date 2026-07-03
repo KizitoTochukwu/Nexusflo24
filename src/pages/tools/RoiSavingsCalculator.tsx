@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import RoiCalculatorWizard from "@/components/roi/RoiCalculatorWizard";
 import {
   Select,
   SelectContent,
@@ -41,9 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   BUSINESS_TYPES,
   CONTACT_METHODS,
-  CURRENCIES,
   CalculatorInputs,
-  Currency,
   buildRecommendations,
   calculate,
   formatCurrency,
@@ -137,16 +136,6 @@ const RoiSavingsCalculator = () => {
 
   const fmt = (n: number) => formatCurrency(n, inputs.currency);
 
-  const setNum = (key: keyof CalculatorInputs, value: string, max?: number) => {
-    if (!started) {
-      setStarted(true);
-      analytics("roi_calculator_started", { currency: inputs.currency });
-    }
-    let n = parseFloat(value);
-    if (!Number.isFinite(n) || n < 0) n = 0;
-    if (max !== undefined) n = Math.min(max, n);
-    setInputs({ ...inputs, [key]: n });
-  };
 
   const scrollTo = (ref: React.RefObject<HTMLDivElement>) =>
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -325,144 +314,19 @@ const RoiSavingsCalculator = () => {
           </div>
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-            {/* LEFT: CALCULATOR */}
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Calculator className="h-5 w-5 text-accent" /> Business inputs
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5 pt-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Currency" htmlFor="currency">
-                    <Select
-                      value={inputs.currency}
-                      onValueChange={(v) => setInputs({ ...inputs, currency: v as Currency })}
-                    >
-                      <SelectTrigger id="currency">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CURRENCIES.map((c) => (
-                          <SelectItem key={c.code} value={c.code}>
-                            {c.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
+            {/* LEFT: GUIDED WIZARD */}
+            <RoiCalculatorWizard
+              inputs={inputs}
+              setInputs={(next) => setInputs(next)}
+              onStart={() => {
+                if (!started) {
+                  setStarted(true);
+                  analytics("roi_calculator_started", { currency: inputs.currency });
+                }
+              }}
+              onCalculate={handleCalculate}
+            />
 
-                  <Field
-                    label="Leads generated per month *"
-                    htmlFor="leads"
-                    help="New enquiries, form submissions, calls or prospects your business receives monthly."
-                  >
-                    <Input
-                      id="leads"
-                      type="number"
-                      min={0}
-                      value={inputs.leads_per_month}
-                      onChange={(e) => setNum("leads_per_month", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Average customer value *"
-                    htmlFor="acv"
-                    help="Average revenue from one converted customer."
-                  >
-                    <Input
-                      id="acv"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={inputs.average_customer_value}
-                      onChange={(e) => setNum("average_customer_value", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Conversion rate (%) *"
-                    htmlFor="conv"
-                    help="Percentage of leads that become paying customers."
-                  >
-                    <Input
-                      id="conv"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={inputs.conversion_rate}
-                      onChange={(e) => setNum("conversion_rate", e.target.value, 100)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Leads not followed up properly (%) *"
-                    htmlFor="missed"
-                    help="Estimate leads that receive late, inconsistent or no follow-up."
-                  >
-                    <Input
-                      id="missed"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={inputs.missed_follow_up_percentage}
-                      onChange={(e) =>
-                        setNum("missed_follow_up_percentage", e.target.value, 100)
-                      }
-                    />
-                  </Field>
-
-                  <Field
-                    label="Monthly manual follow-up hours *"
-                    htmlFor="hours"
-                    help="Include sending messages, spreadsheets, lead management and scheduling."
-                  >
-                    <Input
-                      id="hours"
-                      type="number"
-                      min={0}
-                      value={inputs.manual_follow_up_hours}
-                      onChange={(e) => setNum("manual_follow_up_hours", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field label="Average staff cost per hour *" htmlFor="staff">
-                    <Input
-                      id="staff"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={inputs.staff_cost_per_hour}
-                      onChange={(e) => setNum("staff_cost_per_hour", e.target.value)}
-                    />
-                  </Field>
-
-                  <Field
-                    label="Monthly software / admin cost"
-                    htmlFor="software"
-                    help="Optional. Existing tools and admin overhead."
-                  >
-                    <Input
-                      id="software"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={inputs.monthly_software_cost}
-                      onChange={(e) => setNum("monthly_software_cost", e.target.value)}
-                    />
-                  </Field>
-                </div>
-
-                <Button
-                  onClick={handleCalculate}
-                  size="lg"
-                  className="w-full bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
-                >
-                  Calculate My Savings <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
 
             {/* RIGHT: LIVE PREVIEW */}
             <div ref={resultsRef} className="space-y-4">
@@ -472,64 +336,78 @@ const RoiSavingsCalculator = () => {
                     {submitted ? "Your full report" : step >= 2 ? "Preview result" : "Live estimate"}
                   </p>
                   <CardTitle className="text-2xl leading-tight">
-                    You may be leaving approximately{" "}
-                    <span className="text-accent">{fmt(results.estimated_monthly_opportunity)}</span>{" "}
-                    per month on the table.
+                    {step >= 2 ? (
+                      <>
+                        You may be leaving approximately{" "}
+                        <span className="text-accent">
+                          {fmt(results.estimated_monthly_opportunity)}
+                        </span>{" "}
+                        per month on the table.
+                      </>
+                    ) : (
+                      <>Your estimated savings will appear here.</>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <StatBlock
-                      label="Est monthly opportunity"
-                      value={fmt(results.estimated_monthly_opportunity)}
-                      strong
-                    />
-                    <StatBlock
-                      label="Est annual opportunity"
-                      value={fmt(results.estimated_annual_opportunity)}
-                      strong
-                    />
-                    <StatBlock
-                      label="Recoverable customers / mo"
-                      value={results.recoverable_customers.toFixed(1)}
-                    />
-                    <StatBlock
-                      label="Missed follow-up revenue"
-                      value={fmt(results.recoverable_revenue)}
-                    />
-                    <StatBlock
-                      label="Manual admin cost / mo"
-                      value={fmt(results.manual_admin_cost)}
-                    />
-                    <StatBlock
-                      label="Current est monthly revenue"
-                      value={fmt(results.current_monthly_revenue)}
-                    />
-                  </div>
-
-                  {/* Breakdown bar */}
-                  <div className="pt-2">
-                    <p className="mb-2 text-xs text-primary-foreground/70">Opportunity breakdown</p>
-                    <div className="flex h-3 w-full overflow-hidden rounded-full bg-primary-foreground/10">
-                      <div className="bg-accent" style={{ width: `${segMissed}%` }} title="Missed follow-up revenue" />
-                      <div className="bg-gold-dark" style={{ width: `${segAdmin}%` }} title="Manual admin cost" />
-                      <div className="bg-primary-foreground/40" style={{ width: `${segSoftware}%` }} title="Software / admin cost" />
+                  {step < 2 ? (
+                    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary-foreground/20 bg-primary-foreground/5 px-4 py-10 text-center">
+                      <Calculator className="h-10 w-10 text-accent" />
+                      <p className="text-sm text-primary-foreground/80">
+                        Complete the questions to see your estimated monthly and annual
+                        opportunity.
+                      </p>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-primary-foreground/60">
-                      <span>Missed follow-up {segMissed}%</span>
-                      <span>Manual admin {segAdmin}%</span>
-                      <span>Software {segSoftware}%</span>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <StatBlock
+                          label="Est monthly opportunity"
+                          value={fmt(results.estimated_monthly_opportunity)}
+                          strong
+                        />
+                        <StatBlock
+                          label="Est annual opportunity"
+                          value={fmt(results.estimated_annual_opportunity)}
+                          strong
+                        />
+                        <StatBlock
+                          label="Recoverable customers / mo"
+                          value={results.recoverable_customers.toFixed(1)}
+                        />
+                        <StatBlock
+                          label="Missed follow-up revenue"
+                          value={fmt(results.recoverable_revenue)}
+                        />
+                        <StatBlock
+                          label="Manual admin cost / mo"
+                          value={fmt(results.manual_admin_cost)}
+                        />
+                        <StatBlock
+                          label="Current est monthly revenue"
+                          value={fmt(results.current_monthly_revenue)}
+                        />
+                      </div>
 
-                  {step < 2 && (
-                    <p className="text-sm text-primary-foreground/70">
-                      Adjust the inputs and click <strong>Calculate My Savings</strong> to lock your
-                      preview.
-                    </p>
+                      {/* Breakdown bar */}
+                      <div className="pt-2">
+                        <p className="mb-2 text-xs text-primary-foreground/70">Opportunity breakdown</p>
+                        <div className="flex h-3 w-full overflow-hidden rounded-full bg-primary-foreground/10">
+                          <div className="bg-accent" style={{ width: `${segMissed}%` }} title="Missed follow-up revenue" />
+                          <div className="bg-gold-dark" style={{ width: `${segAdmin}%` }} title="Manual admin cost" />
+                          <div className="bg-primary-foreground/40" style={{ width: `${segSoftware}%` }} title="Software / admin cost" />
+                        </div>
+                        <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-primary-foreground/60">
+                          <span>Missed follow-up {segMissed}%</span>
+                          <span>Manual admin {segAdmin}%</span>
+                          <span>Software {segSoftware}%</span>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
+
 
               {step >= 2 && !submitted && (
                 <Card className="border-accent/50 bg-background">
@@ -818,25 +696,6 @@ const RoiSavingsCalculator = () => {
   );
 };
 
-const Field = ({
-  label,
-  htmlFor,
-  help,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  help?: string;
-  children: React.ReactNode;
-}) => (
-  <div className="space-y-1.5">
-    <Label htmlFor={htmlFor} className="text-sm font-medium text-primary">
-      {label}
-    </Label>
-    {children}
-    {help && <p className="text-[11px] text-muted-foreground">{help}</p>}
-  </div>
-);
 
 const FormField = ({
   label,
