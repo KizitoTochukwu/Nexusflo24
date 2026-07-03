@@ -122,9 +122,18 @@ const RoiSavingsCalculator = () => {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  const { data: roiSettings } = useRoiCalculatorSettings();
+  const bookingUrl = roiSettings?.booking_url ?? "/book/30-minute-discovery-call-9f5d5f";
+
   const results = useMemo(() => calculate(inputs), [inputs]);
-  const recommendations = useMemo(() => buildRecommendations(inputs, results), [inputs, results]);
-  const highIntent = useMemo(() => isHighIntent(inputs, results), [inputs, results]);
+  const recommendations = useMemo(
+    () => buildRecommendations(inputs, results, roiSettings),
+    [inputs, results, roiSettings],
+  );
+  const highIntent = useMemo(
+    () => isHighIntent(inputs, results, roiSettings),
+    [inputs, results, roiSettings],
+  );
 
   const fmt = (n: number) => formatCurrency(n, inputs.currency);
 
