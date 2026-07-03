@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decryptMeta, matchKeyword } from "../_shared/meta-crypto.ts";
 import { verifyMetaSignature } from "../_shared/meta-hmac.ts";
+import { normalizePhoneE164 } from "../_shared/phone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
