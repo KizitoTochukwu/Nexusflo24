@@ -174,6 +174,8 @@ const App = () => (
                   <Route path="admin/usage" element={<AdminUsage />} />
                   <Route path="admin/credit-packages" element={<AdminCreditPackages />} />
                   <Route path="admin/messages" element={<AdminMessagesInbox />} />
+                  <Route path="admin/roi-calculator-submissions" element={<DashboardRoiSubmissions />} />
+                  <Route path="roi-calculator-submissions" element={<DashboardRoiSubmissions />} />
                 </Route>
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
