@@ -155,6 +155,7 @@ const RoiSavingsCalculator = () => {
     });
     analytics("roi_calculator_preview_viewed");
     setStep(2);
+    setLeadDialogOpen(true);
     setTimeout(() => scrollTo(resultsRef), 100);
   };
 
