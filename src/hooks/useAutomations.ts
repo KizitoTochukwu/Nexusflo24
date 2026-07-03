@@ -53,6 +53,7 @@ export const TRIGGER_OPTIONS = [
   { value: "campaign_completed", label: "Campaign completed" },
   { value: "purchase_event", label: "Purchase event (placeholder)" },
   { value: "book_appointment", label: "Appointment booked" },
+  { value: "roi_calculator_submitted", label: "ROI Calculator submitted" },
 ] as const;
 
 export type ConditionInputType = "none" | "text" | "number";
