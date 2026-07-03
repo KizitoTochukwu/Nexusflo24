@@ -36,11 +36,20 @@ const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const solutionsActive = solutionsLinks.some((l) => l.to === location.pathname);
+  const resourcesActive = resourcesLinks.some((l) => l.to === location.pathname);
 
   const linkClass = (active: boolean) =>
     `rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
       active ? "text-accent" : "text-muted-foreground"
     }`;
+
+  // Insert Solutions after Features, Resources after Pricing
+  const desktopNav: Array<{ type: "link" | "solutions" | "resources"; label?: string; to?: string }> = [];
+  navLinks.forEach((link) => {
+    desktopNav.push({ type: "link", ...link });
+    if (link.to === "/features") desktopNav.push({ type: "solutions" });
+    if (link.to === "/pricing") desktopNav.push({ type: "resources" });
+  });
 
   // Insert Solutions after Features
   const desktopNav: Array<{ type: "link" | "solutions"; label?: string; to?: string }> = [];
