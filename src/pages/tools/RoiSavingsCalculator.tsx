@@ -136,16 +136,6 @@ const RoiSavingsCalculator = () => {
 
   const fmt = (n: number) => formatCurrency(n, inputs.currency);
 
-  const setNum = (key: keyof CalculatorInputs, value: string, max?: number) => {
-    if (!started) {
-      setStarted(true);
-      analytics("roi_calculator_started", { currency: inputs.currency });
-    }
-    let n = parseFloat(value);
-    if (!Number.isFinite(n) || n < 0) n = 0;
-    if (max !== undefined) n = Math.min(max, n);
-    setInputs({ ...inputs, [key]: n });
-  };
 
   const scrollTo = (ref: React.RefObject<HTMLDivElement>) =>
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
