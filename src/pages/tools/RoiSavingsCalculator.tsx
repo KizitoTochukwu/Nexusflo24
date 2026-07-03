@@ -44,7 +44,6 @@ import {
   CURRENCIES,
   CalculatorInputs,
   Currency,
-  ROI_CALCULATOR_BOOKING_URL,
   buildRecommendations,
   calculate,
   formatCurrency,
@@ -52,6 +51,7 @@ import {
   intentTags,
   isHighIntent,
 } from "@/lib/roi/calculator";
+import { useRoiCalculatorSettings } from "@/hooks/useRoiCalculatorSettings";
 
 const DEFAULTS: CalculatorInputs = {
   currency: "GBP",
