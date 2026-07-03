@@ -26,24 +26,44 @@ export const BUSINESS_TYPES = [
 
 export const CONTACT_METHODS = ["Email", "WhatsApp", "Phone call"];
 
-// Booking link — reuses the existing NexusFlo24 discovery-call slug.
-export const ROI_CALCULATOR_BOOKING_URL = "/book/30-minute-discovery-call-9f5d5f";
+// Fallback defaults — used until the roi_calculator_settings row is loaded from the DB.
+// Admins edit these live via public.roi_calculator_settings (see get_roi_calculator_settings RPC).
+export const DEFAULT_ROI_CALCULATOR_BOOKING_URL = "/book/30-minute-discovery-call-9f5d5f";
+
+/** @deprecated Use useRoiCalculatorSettings() / DEFAULT_ROI_CALCULATOR_BOOKING_URL. Kept for older imports. */
+export const ROI_CALCULATOR_BOOKING_URL = DEFAULT_ROI_CALCULATOR_BOOKING_URL;
 
 // Currency-specific thresholds for recommendations & high-intent scoring.
-// NGN uses a configurable approximate equivalent (~1900x GBP).
-export const HIGH_OPP_THRESHOLD: Record<Currency, number> = {
+// Each currency has its own configurable value; NGN defaults use an FX-adjusted equivalent (~1900x GBP).
+export const DEFAULT_HIGH_OPP_THRESHOLD: Record<Currency, number> = {
   GBP: 1000,
   USD: 1000,
   EUR: 1000,
   NGN: 1_900_000,
 };
 
-export const HIGH_ADMIN_THRESHOLD: Record<Currency, number> = {
+export const DEFAULT_HIGH_ADMIN_THRESHOLD: Record<Currency, number> = {
   GBP: 500,
   USD: 500,
   EUR: 500,
   NGN: 950_000,
 };
+
+export interface RoiCalculatorSettings {
+  booking_url: string;
+  high_opportunity_thresholds: Record<Currency, number>;
+  high_admin_thresholds: Record<Currency, number>;
+}
+
+export const DEFAULT_ROI_CALCULATOR_SETTINGS: RoiCalculatorSettings = {
+  booking_url: DEFAULT_ROI_CALCULATOR_BOOKING_URL,
+  high_opportunity_thresholds: DEFAULT_HIGH_OPP_THRESHOLD,
+  high_admin_thresholds: DEFAULT_HIGH_ADMIN_THRESHOLD,
+};
+
+/** Back-compat: legacy names still referenced elsewhere. */
+export const HIGH_OPP_THRESHOLD = DEFAULT_HIGH_OPP_THRESHOLD;
+export const HIGH_ADMIN_THRESHOLD = DEFAULT_HIGH_ADMIN_THRESHOLD;
 
 export interface CalculatorInputs {
   currency: Currency;
