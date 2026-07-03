@@ -464,134 +464,132 @@ const RoiSavingsCalculator = () => {
               </Card>
 
 
-              {step >= 2 && !submitted && (
-                <Card className="border-accent/50 bg-background">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
+              <Dialog open={leadDialogOpen} onOpenChange={setLeadDialogOpen}>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-primary">
                       <Lock className="h-4 w-4 text-accent" /> Unlock your full report
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    </DialogTitle>
+                    <DialogDescription>
                       Enter your details to receive personalised recommendations and next steps.
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <FormField label="Full name *" error={formErrors.full_name}>
-                          <Input
-                            value={form.full_name}
-                            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Work email *" error={formErrors.email}>
-                          <Input
-                            type="email"
-                            value={form.email}
-                            onChange={(e) => setForm({ ...form, email: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Phone number *" error={formErrors.phone}>
-                          <Input
-                            type="tel"
-                            value={form.phone}
-                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Business name *" error={formErrors.business_name}>
-                          <Input
-                            value={form.business_name}
-                            onChange={(e) => setForm({ ...form, business_name: e.target.value })}
-                          />
-                        </FormField>
-                        <FormField label="Business type *" error={formErrors.business_type}>
-                          <Select
-                            value={form.business_type}
-                            onValueChange={(v) => setForm({ ...form, business_type: v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {BUSINESS_TYPES.map((t) => (
-                                <SelectItem key={t} value={t}>
-                                  {t}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormField>
-                        <FormField
-                          label="Preferred contact method *"
-                          error={formErrors.preferred_contact_method}
-                        >
-                          <Select
-                            value={form.preferred_contact_method}
-                            onValueChange={(v) =>
-                              setForm({ ...form, preferred_contact_method: v })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {CONTACT_METHODS.map((m) => (
-                                <SelectItem key={m} value={m}>
-                                  {m}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormField>
-                      </div>
-
-                      <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-sm">
-                        <Checkbox
-                          checked={form.consent}
-                          onCheckedChange={(v) => setForm({ ...form, consent: v === true })}
-                          className="mt-0.5"
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FormField label="Full name *" error={formErrors.full_name}>
+                        <Input
+                          value={form.full_name}
+                          onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                         />
-                        <span className="text-muted-foreground">
-                          I agree to receive my calculator results and relevant follow-up from
-                          NexusFlo24. I understand that I can unsubscribe at any time.
-                        </span>
-                      </label>
-                      {formErrors.consent && (
-                        <p className="text-xs text-destructive">{formErrors.consent}</p>
-                      )}
-
-                      <Button
-                        type="submit"
-                        disabled={submitting}
-                        size="lg"
-                        className="w-full bg-accent text-accent-foreground hover:bg-gold-dark"
+                      </FormField>
+                      <FormField label="Work email *" error={formErrors.email}>
+                        <Input
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="Phone number *" error={formErrors.phone}>
+                        <Input
+                          type="tel"
+                          value={form.phone}
+                          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="Business name *" error={formErrors.business_name}>
+                        <Input
+                          value={form.business_name}
+                          onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="Business type *" error={formErrors.business_type}>
+                        <Select
+                          value={form.business_type}
+                          onValueChange={(v) => setForm({ ...form, business_type: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BUSINESS_TYPES.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                      <FormField
+                        label="Preferred contact method *"
+                        error={formErrors.preferred_contact_method}
                       >
-                        {submitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing your
-                            report…
-                          </>
-                        ) : (
-                          <>
-                            Unlock My Full Report <ArrowRight className="ml-1 h-4 w-4" />
-                          </>
-                        )}
-                      </Button>
+                        <Select
+                          value={form.preferred_contact_method}
+                          onValueChange={(v) =>
+                            setForm({ ...form, preferred_contact_method: v })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONTACT_METHODS.map((m) => (
+                              <SelectItem key={m} value={m}>
+                                {m}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
+                    </div>
 
-                      <p className="text-[11px] leading-relaxed text-muted-foreground">
-                        By submitting, you agree to our{" "}
-                        <Link to="/privacy-policy" className="underline">
-                          Privacy Policy
-                        </Link>{" "}
-                        and{" "}
-                        <Link to="/terms-of-service" className="underline">
-                          Terms of Service
-                        </Link>
-                        .
-                      </p>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
+                    <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-3 text-sm">
+                      <Checkbox
+                        checked={form.consent}
+                        onCheckedChange={(v) => setForm({ ...form, consent: v === true })}
+                        className="mt-0.5"
+                      />
+                      <span className="text-muted-foreground">
+                        I agree to receive my calculator results and relevant follow-up from
+                        NexusFlo24. I understand that I can unsubscribe at any time.
+                      </span>
+                    </label>
+                    {formErrors.consent && (
+                      <p className="text-xs text-destructive">{formErrors.consent}</p>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                      size="lg"
+                      className="w-full bg-accent text-accent-foreground hover:bg-gold-dark"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing your report…
+                        </>
+                      ) : (
+                        <>
+                          Unlock My Full Report <ArrowRight className="ml-1 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      By submitting, you agree to our{" "}
+                      <Link to="/privacy-policy" className="underline">
+                        Privacy Policy
+                      </Link>{" "}
+                      and{" "}
+                      <Link to="/terms-of-service" className="underline">
+                        Terms of Service
+                      </Link>
+                      .
+                    </p>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
 
               {submitted && (
                 <Card className="border-emerald-500/40 bg-emerald-50">
