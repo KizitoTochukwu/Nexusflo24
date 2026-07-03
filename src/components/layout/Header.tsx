@@ -15,11 +15,15 @@ const navLinks = [
   { label: "Dashboard", to: "/dashboard" },
   { label: "Features", to: "/features" },
   { label: "Pricing", to: "/pricing" },
-  { label: "Academy", to: "/academy" },
-  { label: "Blog", to: "/blog" },
   { label: "Referral", to: "/referral" },
   { label: "About", to: "/about" },
   { label: "Contact", to: "/contact" },
+];
+
+const resourcesLinks = [
+  { label: "Academy", to: "/academy" },
+  { label: "Blog", to: "/blog" },
+  { label: "ROI Savings Calculator", to: "/tools/roi-savings-calculator" },
 ];
 
 const solutionsLinks = [
