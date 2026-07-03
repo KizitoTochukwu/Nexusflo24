@@ -190,7 +190,7 @@ const RoiSavingsCalculator = () => {
           ...form,
           ...inputs,
           recommendation: recommendationText,
-          tags: intentTags(inputs, results),
+          tags: intentTags(inputs, results, roiSettings),
           ...utm,
         },
       });
@@ -286,7 +286,7 @@ const RoiSavingsCalculator = () => {
                 variant="outline"
                 className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
               >
-                <Link to={ROI_CALCULATOR_BOOKING_URL} onClick={trackBookingClick}>
+                <Link to={bookingUrl} onClick={trackBookingClick}>
                   Book a Free Automation Audit
                 </Link>
               </Button>
@@ -779,7 +779,7 @@ const RoiSavingsCalculator = () => {
                 size="lg"
                 className="bg-accent text-accent-foreground hover:bg-gold-dark shadow-gold"
               >
-                <Link to={ROI_CALCULATOR_BOOKING_URL} onClick={trackBookingClick}>
+                <Link to={bookingUrl} onClick={trackBookingClick}>
                   Book My Free Automation Audit <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
