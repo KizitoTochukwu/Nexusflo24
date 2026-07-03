@@ -2419,6 +2419,33 @@ export type Database = {
         }
         Relationships: []
       }
+      roi_calculator_settings: {
+        Row: {
+          booking_url: string
+          created_at: string
+          high_admin_thresholds: Json
+          high_opportunity_thresholds: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_url?: string
+          created_at?: string
+          high_admin_thresholds?: Json
+          high_opportunity_thresholds?: Json
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_url?: string
+          created_at?: string
+          high_admin_thresholds?: Json
+          high_opportunity_thresholds?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       roi_calculator_submissions: {
         Row: {
           average_customer_value: number
@@ -4549,6 +4576,14 @@ export type Database = {
           body_enabled: boolean
           head_code: string
           head_enabled: boolean
+        }[]
+      }
+      get_roi_calculator_settings: {
+        Args: never
+        Returns: {
+          booking_url: string
+          high_admin_thresholds: Json
+          high_opportunity_thresholds: Json
         }[]
       }
       get_workspace_public_pixels: {
