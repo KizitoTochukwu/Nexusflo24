@@ -15,11 +15,15 @@ const navLinks = [
   { label: "Dashboard", to: "/dashboard" },
   { label: "Features", to: "/features" },
   { label: "Pricing", to: "/pricing" },
-  { label: "Academy", to: "/academy" },
-  { label: "Blog", to: "/blog" },
   { label: "Referral", to: "/referral" },
   { label: "About", to: "/about" },
   { label: "Contact", to: "/contact" },
+];
+
+const resourcesLinks = [
+  { label: "Academy", to: "/academy" },
+  { label: "Blog", to: "/blog" },
+  { label: "ROI Savings Calculator", to: "/tools/roi-savings-calculator" },
 ];
 
 const solutionsLinks = [
@@ -32,17 +36,19 @@ const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const solutionsActive = solutionsLinks.some((l) => l.to === location.pathname);
+  const resourcesActive = resourcesLinks.some((l) => l.to === location.pathname);
 
   const linkClass = (active: boolean) =>
     `rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
       active ? "text-accent" : "text-muted-foreground"
     }`;
 
-  // Insert Solutions after Features
-  const desktopNav: Array<{ type: "link" | "solutions"; label?: string; to?: string }> = [];
+  // Insert Solutions after Features, Resources after Pricing
+  const desktopNav: Array<{ type: "link" | "solutions" | "resources"; label?: string; to?: string }> = [];
   navLinks.forEach((link) => {
     desktopNav.push({ type: "link", ...link });
     if (link.to === "/features") desktopNav.push({ type: "solutions" });
+    if (link.to === "/pricing") desktopNav.push({ type: "resources" });
   });
 
   return (
@@ -55,17 +61,21 @@ const Header = () => {
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
           {desktopNav.map((item, idx) => {
-            if (item.type === "solutions") {
+            if (item.type === "solutions" || item.type === "resources") {
+              const isResources = item.type === "resources";
+              const links = isResources ? resourcesLinks : solutionsLinks;
+              const active = isResources ? resourcesActive : solutionsActive;
+              const label = isResources ? "Resources" : "Solutions";
               return (
-                <DropdownMenu key="solutions">
+                <DropdownMenu key={item.type}>
                   <DropdownMenuTrigger
-                    className={`${linkClass(solutionsActive)} inline-flex items-center gap-1 outline-none`}
+                    className={`${linkClass(active)} inline-flex items-center gap-1 outline-none`}
                   >
-                    Solutions
+                    {label}
                     <ChevronDown className="h-3.5 w-3.5" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="min-w-[14rem]">
-                    {solutionsLinks.map((s) => (
+                    {links.map((s) => (
                       <DropdownMenuItem key={s.to} asChild>
                         <Link
                           to={s.to}
@@ -130,6 +140,25 @@ const Header = () => {
                       Solutions
                     </div>
                     {solutionsLinks.map((s) => (
+                      <Link
+                        key={s.to}
+                        to={s.to}
+                        onClick={() => setMobileOpen(false)}
+                        className={`block rounded-md pl-6 pr-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
+                          location.pathname === s.to ? "text-accent" : "text-muted-foreground"
+                        }`}
+                      >
+                        {s.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+                {link.to === "/pricing" && (
+                  <div className="mt-1">
+                    <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                      Resources
+                    </div>
+                    {resourcesLinks.map((s) => (
                       <Link
                         key={s.to}
                         to={s.to}
