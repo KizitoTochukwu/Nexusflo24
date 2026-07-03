@@ -95,12 +95,25 @@ const DashboardAutomations = () => {
     () => !!automations?.some((a) => a.name === NURTURE_TEMPLATE_NAME),
     [automations],
   );
+  const hasMetaLeadAdTemplate = useMemo(
+    () => !!automations?.some((a) => a.name === META_LEAD_AD_TEMPLATE_NAME),
+    [automations],
+  );
 
   const seedNurture = () => {
     createAutomation.mutate(
       { workspace_id: workspaceId, ...SUBSCRIBER_NURTURE_DEFINITION },
       {
         onSuccess: () => toast.success("Subscriber Nurture template created as draft — review & activate."),
+      },
+    );
+  };
+
+  const seedMetaLeadAd = () => {
+    createAutomation.mutate(
+      { workspace_id: workspaceId, ...META_LEAD_AD_DEFINITION },
+      {
+        onSuccess: () => toast.success("Facebook Lead Ad follow-up template created as draft — review & activate."),
       },
     );
   };
@@ -113,6 +126,12 @@ const DashboardAutomations = () => {
           <p className="mt-1 text-sm text-muted-foreground">Build trigger-based multi-step workflows.</p>
         </div>
         <div className="flex items-center gap-2">
+          {!hasMetaLeadAdTemplate && (
+            <Button variant="outline" onClick={seedMetaLeadAd} disabled={createAutomation.isPending} className="gap-1.5">
+              <Facebook className="h-4 w-4" />
+              {createAutomation.isPending ? "Building…" : "Template: Facebook Lead Ad"}
+            </Button>
+          )}
           {!hasNurtureTemplate && (
             <Button variant="outline" onClick={seedNurture} disabled={createAutomation.isPending} className="gap-1.5">
               <Wand2 className="h-4 w-4" />
@@ -122,6 +141,7 @@ const DashboardAutomations = () => {
           <CreateAutomationDialog />
         </div>
       </div>
+
 
       {/* Backfill banner — surfaces legacy nurture automations missing exit criteria */}
       {!bannerDismissed && missingExitCount > 0 && (
