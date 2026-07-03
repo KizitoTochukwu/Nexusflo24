@@ -42,9 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   BUSINESS_TYPES,
   CONTACT_METHODS,
-  CURRENCIES,
   CalculatorInputs,
-  Currency,
   buildRecommendations,
   calculate,
   formatCurrency,
