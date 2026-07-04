@@ -21,7 +21,7 @@ export default function BuyCreditsTab({ workspaceId }: Props) {
     queryFn: async () => {
       const { data } = await supabase
         .from("credit_packages" as any)
-        .select("id, name, channel, credits, price_cents, price_currency, country_code, stripe_price_id")
+        .select("id, name, channel, credits, price_cents, currency, country, stripe_price_id")
         .eq("is_active", true)
         .order("price_cents", { ascending: true });
       return (data as any[]) || [];
@@ -107,14 +107,14 @@ export default function BuyCreditsTab({ workspaceId }: Props) {
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <Badge variant="outline" className="text-xs capitalize">{p.channel}</Badge>
                       </div>
-                      {p.country_code && <Badge variant="secondary" className="text-xs">{p.country_code}</Badge>}
+                      {p.country && <Badge variant="secondary" className="text-xs">{p.country}</Badge>}
                     </div>
                     <div>
                       <p className="font-semibold text-foreground">{p.name}</p>
                       <p className="text-2xl font-bold mt-1">{p.credits.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">credits</span></p>
                     </div>
                     <div className="flex items-center justify-between mt-auto">
-                      <span className="text-lg font-bold text-foreground">{formatPrice(p.price_cents, p.price_currency)}</span>
+                      <span className="text-lg font-bold text-foreground">{formatPrice(p.price_cents, p.currency)}</span>
                       <Button size="sm" disabled={disabled} onClick={() => handleBuy(p.id)} className="gap-1.5">
                         {buyingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
                         Buy
