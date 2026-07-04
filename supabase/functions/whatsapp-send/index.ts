@@ -196,6 +196,101 @@ async function sendWhatsAppMessage(
   return { ok: waRes.ok, data: waData, phoneNumberId, source };
 }
 
+/**
+ * Resolve a template LIVE against Meta's Graph API so we never trust a stale
+ * local cache (HubSpot / GHL / Wati all do this before every template send).
+ * Returns the exact { name, language, components } that Meta will accept, or
+ * null if no approved variant exists on the WABA our token is calling.
+ * Self-heals the local `whatsapp_templates` + `whatsapp_settings.waba_id`.
+ */
+async function resolveLiveTemplate(
+  adminClient: any,
+  workspaceId: string,
+  accessToken: string,
+  phoneNumberId: string,
+  templateName: string,
+  preferredLanguage: string | undefined,
+): Promise<{ name: string; language: string; components: any[] | null } | null> {
+  // 1. Resolve WABA id (cached on whatsapp_settings, else fetched from phone).
+  let wabaId: string | null = null;
+  const { data: wsRows } = await adminClient
+    .from("whatsapp_settings")
+    .select("id, waba_id")
+    .eq("workspace_id", workspaceId)
+    .order("is_active", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  const wsRow = wsRows?.[0];
+  wabaId = wsRow?.waba_id || null;
+
+  if (!wabaId) {
+    try {
+      const phoneRes = await fetch(
+        `https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}?fields=whatsapp_business_account_id`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const phoneData = await phoneRes.json();
+      wabaId = phoneData?.whatsapp_business_account_id || null;
+      if (wabaId && wsRow?.id) {
+        await adminClient
+          .from("whatsapp_settings")
+          .update({ waba_id: wabaId, updated_at: new Date().toISOString() })
+          .eq("id", wsRow.id);
+      }
+    } catch (err) {
+      console.warn("resolveLiveTemplate: WABA lookup failed", err);
+    }
+  }
+  if (!wabaId) return null;
+
+  // 2. Query live templates for this name.
+  let tplData: any = null;
+  try {
+    const tplRes = await fetch(
+      `https://graph.facebook.com/v19.0/${encodeURIComponent(wabaId)}/message_templates?name=${encodeURIComponent(templateName)}&fields=name,language,status,components&limit=25`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    tplData = await tplRes.json();
+  } catch (err) {
+    console.warn("resolveLiveTemplate: template fetch failed", err);
+    return null;
+  }
+
+  const approved = (tplData?.data || []).filter(
+    (t: any) => String(t?.status).toUpperCase() === "APPROVED" && t?.name === templateName,
+  );
+  if (approved.length === 0) return null;
+
+  const preferred = (preferredLanguage || "").trim();
+  const base = preferred.split(/[_-]/)[0].toLowerCase();
+  const picked =
+    approved.find((t: any) => t.language === preferred) ||
+    approved.find((t: any) => String(t.language).toLowerCase().startsWith(base)) ||
+    approved[0];
+
+  // 3. Self-heal local cache.
+  try {
+    await adminClient
+      .from("whatsapp_templates")
+      .update({
+        language: picked.language,
+        status: "approved",
+        components: picked.components || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("name", templateName);
+  } catch (err) {
+    console.warn("resolveLiveTemplate: cache heal failed", err);
+  }
+
+  return {
+    name: picked.name,
+    language: picked.language,
+    components: picked.components || null,
+  };
+}
+
 /** Check if the 24-hour conversation window is open for a given phone number */
 async function isWindowOpen(
   adminClient: any,
