@@ -1,46 +1,68 @@
-## Plan: Fix ROI Calculator Lead Sync + Automation Triggering
+## Goal
 
-### Goal
-Ensure every valid ROI savings calculator submission creates or updates the correct CRM lead, links the submission to that lead, and triggers the ROI calculator automation/workflow enrollment.
+Send Facebook Meta Ads leads into your NexusFlo24 CRM via a Make.com scenario — no code changes required. Your platform already exposes a public lead-capture webhook that accepts JSON, dedupes by email/phone, and fires any matching automations.
 
-### What I’ll change
-1. **Harden CRM lead matching**
-   - Update `roi-calculator-submit` so it searches for an existing lead by:
-     1. email, case-insensitive, within the workspace
-     2. phone, within the same workspace, if no email match is found
-   - This matches the project rule: deduplicate leads by email first, then phone.
+## Webhook endpoint (paste into Make.com HTTP module)
 
-2. **Handle duplicate insert conflicts safely**
-   - If inserting a new CRM lead fails because email or phone already exists, the function will re-query by email/phone and update that existing lead instead of leaving `contact_id` empty.
-   - Add clear backend logging for failed lead insert/update paths.
+- **Method:** `POST`
+- **URL:**
+  ```
+  https://stuaikfyuwcjmchcvfie.supabase.co/functions/v1/capture-lead
+  ```
+- **Headers:**
+  - `Content-Type: application/json`
+  - `apikey: <VITE_SUPABASE_PUBLISHABLE_KEY>` (the public anon key from your project — safe to embed)
+- **No Authorisation / Bearer token required** (public capture endpoint, protected by workspace scoping).
 
-3. **Keep submissions linked to CRM leads**
-   - The ROI submission row will only be saved with `contact_id = null` when no lead can genuinely be resolved.
-   - For the known orphaned ROI submission, link it to the existing phone-matched lead and merge the ROI calculator tags.
+## JSON body Make.com should send
 
-4. **Restore automation firing**
-   - Once `leadId` is reliably resolved, the existing `roi_calculator_submitted` automation and workflow dispatch code will run as intended.
-   - No changes to automation rules, UI, or sender settings.
+Map Facebook Lead Ads fields into these keys:
 
-### Data repair
-Backfill the known orphaned submission:
-- submission: `fc88fec2-289d-4411-81ee-c9bde1fbe69a`
-- matching existing lead: `f771b2e5-c900-4a26-93f6-da2fdf1f12df`
+```json
+{
+  "workspace_id": "95bc7e99-798e-49ef-a5c3-ab68bbc08950",
+  "full_name": "{{full_name}}",
+  "email": "{{email}}",
+  "phone": "{{phone_number}}",
+  "source": "Facebook Lead Ads",
+  "tags": ["facebook-ads", "{{form_name}}"],
+  "notes": "Ad: {{ad_name}} | Campaign: {{campaign_name}}",
+  "meta": {
+    "campaign_name": "{{campaign_name}}",
+    "adset_name": "{{adset_name}}",
+    "ad_name": "{{ad_name}}",
+    "form_id": "{{form_id}}",
+    "leadgen_id": "{{leadgen_id}}"
+  },
+  "utm": {
+    "utm_source": "facebook",
+    "utm_medium": "paid",
+    "utm_campaign": "{{campaign_name}}"
+  }
+}
+```
 
-The repair will:
-- set the submission `contact_id`
-- update the lead’s tags/notes/activity timestamp with ROI calculator context
-- leave existing CRM data intact where possible
+Required: `email` (valid format). `phone` must be international format (e.g. `+447517327597`) — the endpoint will normalize `07…` UK numbers automatically. `workspace_id` is **required** so leads land in your NexusFlo24 workspace (the ID above is your current workspace).
 
-### Technical details
-- File to update: `supabase/functions/roi-calculator-submit/index.ts`
-- No schema changes
-- No frontend/UI changes
-- No RLS changes
-- No changes to email, WhatsApp, SMS, or sender approval settings
+## Make.com scenario shape
 
-### Validation
-After implementation, I’ll verify that:
-- the function no longer silently loses leads when phone duplicates exist
-- the known orphaned submission is linked
-- future ROI submissions return a `lead_id`, allowing automations to trigger
+```text
+[Facebook Lead Ads: Watch Leads]
+        │
+        ▼
+[HTTP: Make a request]  ── POST to capture-lead URL with JSON body above
+        │
+        ▼
+[Router → error branch]  (optional: log 4xx/5xx to Google Sheet or email)
+```
+
+## What happens on the NexusFlo24 side
+
+1. Lead is created (or matched by email → phone) in the CRM under your workspace.
+2. Tags, source, notes, UTM, and Meta ad metadata are stored on the lead.
+3. Any active automation with trigger `lead_captured` / `lead_added_to_folder` matching the tags fires — email / WhatsApp / SMS follow-ups run automatically.
+4. Lead appears in `/dashboard/<workspace>/leads` in real time.
+
+## No code changes
+
+This plan is configuration-only. Nothing in the repo needs to change — I'll deliver the exact URL, headers, JSON template, and Make.com wiring notes when you approve. If you'd like me to also add a dedicated `?source=facebook-ads` shortcut, a signed webhook secret, or a pre-built Make.com blueprint file, tell me and I'll extend the plan.
