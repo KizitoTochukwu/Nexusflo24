@@ -469,6 +469,63 @@ Deno.serve(async (req) => {
       effectiveTemplate,
     );
 
+    // Auto-retry on Meta template language mismatch (error 132001).
+    // Meta stores templates under specific language tags (e.g. `en_US`,
+    // `en_GB`) but our synced copy may have the base tag (`en`) — or vice
+    // versa. Cycle through common alternates before giving up.
+    if (!attempt.ok && effectiveTemplate) {
+      const graphCode = Number(attempt.data?.error?.code ?? 0);
+      if (graphCode === 132001) {
+        const original = (effectiveTemplate.language || "en").trim();
+        const base = original.split(/[_-]/)[0].toLowerCase();
+        const candidates: string[] = [];
+        const push = (lang: string) => {
+          if (lang && lang !== original && !candidates.includes(lang)) candidates.push(lang);
+        };
+        if (base === "en") {
+          push("en_US"); push("en_GB"); push("en");
+        } else if (/[_-]/.test(original)) {
+          push(base);
+        } else {
+          push(`${base}_US`); push(`${base}_GB`);
+        }
+
+        for (const altLang of candidates) {
+          const retryTpl: TemplatePayload = { ...effectiveTemplate, language: altLang };
+          const retry = await sendWhatsAppMessage(
+            creds.config.access_token.trim(),
+            creds.config.phone_number_id.trim(),
+            normalizedTo,
+            msgBody || `[Template: ${effectiveTemplate.name}]`,
+            creds.source === "workspace" ? "workspace" : "platform",
+            retryTpl,
+          );
+          if (retry.ok) {
+            attempt = retry;
+            effectiveTemplate = retryTpl;
+            // Self-heal: update stored language so future sends use the
+            // correct tag without a manual re-sync.
+            await adminClient
+              .from("whatsapp_templates")
+              .update({ language: altLang, updated_at: new Date().toISOString() })
+              .eq("workspace_id", workspaceId)
+              .eq("name", effectiveTemplate.name)
+              .then(() => {}, (err: any) => console.warn("template lang self-heal failed:", err?.message));
+            console.log("WA template language auto-corrected", {
+              workspaceId, template: effectiveTemplate.name, from: original, to: altLang,
+            });
+            break;
+          }
+          const retryCode = Number(retry.data?.error?.code ?? 0);
+          if (retryCode !== 132001) {
+            // Different error — stop cycling languages, surface it.
+            attempt = retry;
+            break;
+          }
+        }
+      }
+    }
+
     // NOTE: do NOT fall back from workspace → platform credentials.
     // The platform access token does not own the workspace's phone_number_id,
     // so any retry produces a misleading 100/33 "credentials mismatch" error.

@@ -201,7 +201,11 @@ export default function AutomationEmailEditor({
       toast.success(`Test ${channelLabel} sent to ${testRecipient}.`);
       setTestOpen(false);
     } catch (e: any) {
-      toast.error(e?.message || `Failed to send test ${resolvedChannel}.`);
+      const raw = String(e?.message || "");
+      const friendly = /132001/.test(raw)
+        ? "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
+        : raw || `Failed to send test ${resolvedChannel}.`;
+      toast.error(friendly);
     } finally {
       setTestSending(false);
     }
