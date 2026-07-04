@@ -107,7 +107,7 @@ export default function BuyCreditsTab({ workspaceId }: Props) {
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <Badge variant="outline" className="text-xs capitalize">{p.channel}</Badge>
                       </div>
-                      {p.country_code && <Badge variant="secondary" className="text-xs">{p.country_code}</Badge>}
+                      {p.country && <Badge variant="secondary" className="text-xs">{p.country}</Badge>}
                     </div>
                     <div>
                       <p className="font-semibold text-foreground">{p.name}</p>
