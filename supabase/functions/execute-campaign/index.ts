@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isAdminUser } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { requireInternalCaller } from "../_shared/internal-auth.ts";
+import { enforceWaPacing } from "../_shared/wa-rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -181,6 +182,9 @@ Deno.serve(async (req) => {
           deliveryStatus = data.success ? "delivered" : "failed";
           if (!data.success) sendError = data.error;
         } else if (effectiveChannel === "whatsapp" && lead.phone) {
+          // WA-specific pacing (~25 msg/sec/phone) sits on top of the 550ms
+          // per-lead throttle so bursty campaigns don't trip Meta's per-second cap.
+          await enforceWaPacing(workspaceId);
           const res = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
             method: "POST",
             headers: {

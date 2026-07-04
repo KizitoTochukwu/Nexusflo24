@@ -579,14 +579,33 @@ export default function CreateCampaignDialog() {
                     <SelectItem value="none">None — send free-text only</SelectItem>
                     {waTemplates.map((t: any) => (
                       <SelectItem key={t.id} value={t.id}>
-                        {t.name} ({t.language})
+                        {t.name} ({t.language}) · {t.category}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground">
-                  Pick an approved template to reach leads outside the 24h window. Without one, sends fall back to your configured channel (or fail) when the window is closed.
-                </p>
+                {(() => {
+                  const picked = waTemplates.find((t: any) => t.id === waTemplateId);
+                  if (picked?.category === "MARKETING") {
+                    return (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                        ⚠ MARKETING template — audience must be opted-in to WhatsApp marketing. Opted-out leads will be skipped automatically.
+                      </p>
+                    );
+                  }
+                  if (picked?.category === "UTILITY" || picked?.category === "AUTHENTICATION") {
+                    return (
+                      <p className="text-[11px] text-muted-foreground">
+                        {picked.category} template — Meta requires transactional content. Not intended for promotional blasts.
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-[11px] text-muted-foreground">
+                      Pick an approved template to reach leads outside the 24h window. Without one, sends fall back to your configured channel (or fail) when the window is closed.
+                    </p>
+                  );
+                })()}
               </div>
             )}
 

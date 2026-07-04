@@ -7,6 +7,7 @@ import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
 import { resolveSenderProfile } from "../_shared/sender-resolver.ts";
 import { logCommunicationUsage, getDeductionAmount, countryFromE164 } from "../_shared/usage-logger.ts";
+import { enforceWaPacing, checkDailyTier } from "../_shared/wa-rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -565,6 +566,86 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Template category compliance (Meta MARKETING vs UTILITY vs AUTH) ──
+    // MARKETING templates: require lead opt-in (or workspace assume_opt_in),
+    //   and reject if the lead is on the opt-out list.
+    // UTILITY / AUTHENTICATION: allowed for campaigns but tagged with a
+    //   compliance_note so admins can audit misuse.
+    let complianceNote: string | null = null;
+    if (effectiveTemplate && !isPreview) {
+      const { data: tplRow } = await adminClient
+        .from("whatsapp_templates")
+        .select("category")
+        .eq("workspace_id", workspaceId)
+        .eq("name", effectiveTemplate.name)
+        .maybeSingle();
+      const category = String(tplRow?.category || "MARKETING").toUpperCase();
+
+      if (category === "MARKETING" && leadId) {
+        const { data: lead } = await adminClient
+          .from("leads")
+          .select("tags, wa_opt_in_at")
+          .eq("id", leadId)
+          .maybeSingle();
+        const tags: string[] = lead?.tags || [];
+        const optedOut = tags.includes("unsubscribed") || tags.includes("wa_opted_out");
+        if (optedOut) {
+          const errMsg = "Recipient opted out of WhatsApp marketing.";
+          await adminClient.from("whatsapp_messages").insert({
+            workspace_id: workspaceId, direction: "outbound",
+            phone_number: normalizedTo, message_type: "template",
+            body: msgBody || `[Template: ${effectiveTemplate.name}]`,
+            status: "failed", error: errMsg,
+            template_name: effectiveTemplate.name,
+            ...(leadId ? { lead_id: leadId } : {}),
+            ...(campaignId ? { campaign_id: campaignId } : {}),
+          });
+          if (campaignId && leadId) {
+            await adminClient.from("campaign_messages")
+              .update({ delivery_status: "failed", error: errMsg })
+              .eq("campaign_id", campaignId).eq("lead_id", leadId)
+              .eq("channel", "whatsapp").eq("delivery_status", "pending");
+          }
+          return new Response(JSON.stringify({
+            success: false, fallback: true, reason: "opted_out", error: errMsg,
+          }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        const { data: waSettings } = await adminClient
+          .from("whatsapp_settings")
+          .select("assume_opt_in")
+          .eq("workspace_id", workspaceId)
+          .maybeSingle();
+        const optIn = Boolean(lead?.wa_opt_in_at) || Boolean(waSettings?.assume_opt_in);
+        if (!optIn) {
+          complianceNote = "MARKETING template sent without recorded opt-in — verify lead consent.";
+        }
+      } else if ((category === "UTILITY" || category === "AUTHENTICATION") && campaignId) {
+        complianceNote = `${category} template used from a campaign — Meta may flag as misuse if not transactional.`;
+      }
+    }
+
+    // Per-phone pacing + daily tier check (matches HubSpot/GHL WA-specific throttling).
+    const tier = await checkDailyTier(adminClient, workspaceId);
+    if (!tier.ok) {
+      const errMsg = `WhatsApp 24h tier limit reached (${tier.used}/${tier.limit}). Wait or request a higher tier from Meta.`;
+      await adminClient.from("whatsapp_messages").insert({
+        workspace_id: workspaceId, direction: "outbound",
+        phone_number: normalizedTo, message_type: effectiveTemplate ? "template" : type,
+        body: msgBody || `[Template: ${effectiveTemplate?.name}]`,
+        status: "failed", error: errMsg,
+        ...(leadId ? { lead_id: leadId } : {}),
+        ...(campaignId ? { campaign_id: campaignId } : {}),
+      });
+      return new Response(JSON.stringify({
+        success: false, fallback: true, reason: "tier_exceeded", error: errMsg,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (tier.warn) {
+      console.warn(`WA tier warning: ${tier.used}/${tier.limit} for workspace ${workspaceId}`);
+    }
+    await enforceWaPacing(creds.config.phone_number_id.trim());
+
     let attempt = await sendWhatsAppMessage(
       creds.config.access_token.trim(),
       creds.config.phone_number_id.trim(),
@@ -648,6 +729,8 @@ Deno.serve(async (req) => {
         status: "failed",
         error: errMsg,
         ...(leadId ? { lead_id: leadId } : {}),
+        ...(campaignId ? { campaign_id: campaignId } : {}),
+        ...(complianceNote ? { compliance_note: complianceNote } : {}),
       });
 
       // Alert workspace owner if this is a credential/auth failure (token invalid/expired, permissions)
@@ -683,6 +766,8 @@ Deno.serve(async (req) => {
       template_name: effectiveTemplate?.name || null,
       sender_profile_id: resolvedSender?.profile?.id || null,
       ...(leadId ? { lead_id: leadId } : {}),
+      ...(campaignId ? { campaign_id: campaignId } : {}),
+      ...(complianceNote ? { compliance_note: complianceNote } : {}),
     });
     if (!isPreview) {
       await logCommunicationUsage({

@@ -194,7 +194,36 @@ async function runAction(
         const r = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
           workspaceId: workflow.workspace_id, to: lead.phone, body: message, leadId: lead.id, skipCredits: true,
         });
+        // Caller-side auto-fallback (matches HubSpot / GHL workflow-step behavior):
+        // when whatsapp-send returns fallback:true (window closed, template
+        // unavailable, opted out, tier exceeded) AND the node has a
+        // fallback_channel configured, fire it inline in the same step.
+        const waFailed = !r.ok || r.data?.success === false;
+        const wantsFallback = waFailed && r.data?.fallback === true;
+        const fbChannel = String(cfg.fallback_channel || "").toLowerCase();
+        if (wantsFallback && (fbChannel === "sms" || fbChannel === "email")) {
+          const fbMessage = interpolate(String(cfg.fallback_message || cfg.message || ""), lead);
+          if (fbChannel === "sms" && lead.phone) {
+            const fb = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+              workspaceId: workflow.workspace_id, to: lead.phone, message: fbMessage, leadId: lead.id, skipCredits: true,
+            });
+            return fb.ok
+              ? { status: "success", details: { message: fbMessage, primary_channel: "whatsapp", fallback_channel: "sms", fallback_reason: r.data?.reason } }
+              : { status: "failed", details: { primary_channel: "whatsapp", fallback_channel: "sms", fallback_reason: r.data?.reason }, error: fb.error };
+          }
+          if (fbChannel === "email" && lead.email) {
+            const fb = await postJson(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+              workspaceId: workflow.workspace_id, to: lead.email,
+              subject: String(cfg.fallback_subject || cfg.subject || "Follow-up"),
+              html: fbMessage, leadId: lead.id, skipCredits: true,
+            });
+            return fb.ok
+              ? { status: "success", details: { message: fbMessage, primary_channel: "whatsapp", fallback_channel: "email", fallback_reason: r.data?.reason } }
+              : { status: "failed", details: { primary_channel: "whatsapp", fallback_channel: "email", fallback_reason: r.data?.reason }, error: fb.error };
+          }
+        }
         if (!r.ok) return { status: "failed", details: { provider: r.data }, error: r.error };
+        if (r.data?.success === false) return { status: "failed", details: { reason: r.data?.reason }, error: r.data?.error };
         return { status: "success", details: { message } };
       }
       case "add_tag": {

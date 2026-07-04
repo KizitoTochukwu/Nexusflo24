@@ -1,66 +1,91 @@
-# Fix WhatsApp test send (the same pattern HubSpot / GHL / Wati use)
+# WhatsApp Production Parity — Close 4 Gaps
 
-## Why the current fix isn't working
+Bring real WhatsApp campaign/automation sends to full HubSpot / GoHighLevel parity by closing the four gaps flagged in the last comparison.
 
-Meta returns `132001 — Template name does not exist in the translation` for `reengagement_followup_v1` under `en`, `en_US`, and `en_GB`. That means the synced DB row is stale — the template no longer exists (or was renamed / re-approved under a different WABA) on the phone number our token is calling. The retry loop cycles languages but can't recover a template that isn't there.
+---
 
-Separately, coupling a **test send** to the workspace's re-engagement template is wrong. Test sends exist to verify credentials, not template state. HubSpot, GoHighLevel, Wati, and ManyChat all handle this the same way:
+## Gap 1 — Delivery-status webhook transitions
 
-1. Fetch approved templates **live** from Meta's Graph API right before sending (never trust the local cache blindly).
-2. For **connectivity tests**, fall back to Meta's universal `hello_world` template so the test always succeeds when credentials are valid.
-3. Reserve the "24h window closed + no template" hard failure for real automation/campaign sends only.
+**Goal:** When Meta posts a status webhook (`sent` → `delivered` → `read` → `failed`), propagate it to both `whatsapp_messages` and `campaign_messages` so campaign analytics reflect real delivery, not just the initial send result.
 
-## Changes
+**Changes**
+- `supabase/functions/whatsapp-webhook/index.ts`
+  - On `statuses[]` entries: look up the matching `whatsapp_messages` row by `wa_message_id`; update `status`, `delivered_at`, `read_at`, `error_code`, `error_title`.
+  - Then, if that row has a `campaign_id`, update the corresponding `campaign_messages` row (matched by `campaign_id + lead_id + channel='whatsapp'`) with:
+    - `delivery_status = delivered | read | failed`
+    - `error = <meta error title>` on failure
+  - Idempotent: only advance status forward (`sent < delivered < read`); never regress.
 
-### 1. `supabase/functions/whatsapp-send/index.ts`
+**Out of scope:** email/SMS webhook rewiring, historical backfill.
 
-**a. Live template resolver (`resolveLiveTemplate`)** — new helper.
-When we're about to send a template, first call `GET https://graph.facebook.com/v19.0/{waba_id}/message_templates?name={name}&fields=name,language,status,components` using the workspace access token, filter to `status=APPROVED`, and pick the exact match. If the local `language` doesn't match any live variant, use the first approved language returned. If nothing approved comes back, return `null` — do NOT attempt the doomed send.
+---
 
-WABA ID resolution order:
-- `whatsapp_settings.waba_id` (already stored during sync).
-- If missing, resolve via `GET /v19.0/{phone_number_id}?fields=whatsapp_business_account_id` and cache back to `whatsapp_settings.waba_id`.
+## Gap 2 — Caller-side auto-fallback wiring
 
-**b. Update `whatsapp_templates` cache on every live lookup** — when live data differs from stored (`language`, `status`, `components`), upsert the fresh copy so the marketplace UI stays in sync. Self-healing, matches how HubSpot/GHL keep template state fresh.
+**Goal:** When `whatsapp-send` returns `success:false, fallback:true` (window closed, template unavailable, non-retryable error), the workflow/automation engine should automatically switch channel to the configured fallback (SMS or Email) inside the same run, matching how HubSpot & GHL workflow steps behave.
 
-**c. Replace the current language-cycle retry loop (lines 472–527)** with the live resolver — it's strictly better and covers not just language mismatch but also renames, deletions, and status changes.
+**Changes**
+- `supabase/functions/execute-workflow/index.ts` (audit + patch)
+  - After a WhatsApp node send, if the response is `{ success:false, fallback:true }` and the node has `fallback_channel` configured (SMS/Email), invoke that channel's send function inline with the same body/subject.
+  - Log both attempts to `workflow_logs` with `primary_channel`, `fallback_channel`, `fallback_reason`.
+- `supabase/functions/execute-automation/index.ts` — same pattern for legacy automations.
+- `execute-campaign/index.ts` already schedules a fallback job on failure; extend it so `fallback:true` from WhatsApp fires the fallback **immediately** (0 delay) instead of using the "unread" delay. (Already partly done — verify + tighten.)
 
-**d. Test-send fallback to `hello_world`** — when `body.preview === true` AND (window closed OR the default template resolves to `null`), send Meta's universal `hello_world` (language `en_US`) instead of failing. Return `{ success: true, waMessageId, testMode: "hello_world", note: "Test delivered via hello_world (credentials verified)." }`. This is the exact pattern used by HubSpot's "Send test message" and GHL's "Test WhatsApp" buttons.
+**Out of scope:** UI to configure fallback per node (already exists), retry-with-backoff, cross-workspace routing.
 
-  - Do NOT use `hello_world` for real campaign/automation sends (`preview !== true`) — that path keeps the current strict `fallback:true` behavior so callers switch to SMS/Email.
-  - `hello_world` sends still skip credits (already the case for `preview`).
+---
 
-**e. When resolver returns `null` for a non-preview send** — return the existing structured `{ success:false, fallback:true, reason:"template_unavailable", error }` payload so campaigns/automations can gracefully fall back.
+## Gap 3 — WhatsApp-specific pacing
 
-### 2. `supabase/functions/whatsapp-sync-templates/index.ts`
+**Goal:** Respect Meta's per-phone-number tier limits (250 / 1K / 10K / 100K per 24h) and burst limits (~80 msg/sec/phone), separate from the global 550 ms email throttle.
 
-Also persist `waba_id` on `whatsapp_settings` when we discover it during sync (so the live resolver has it cached). No schema change — column already exists per the current settings row shape; if missing we'll add it in the migration below.
+**Changes**
+- `supabase/functions/_shared/wa-rate-limit.ts` (new)
+  - `enforceWaPacing(workspaceId, phoneNumberId)` — sleeps to keep sends under ~25/sec per phone (safe under Meta's 80/sec cap while leaving headroom).
+  - `checkDailyTier(phoneNumberId)` — reads today's count from `whatsapp_messages`; if within 10% of the workspace's `whatsapp_settings.tier_limit` (new column, defaults to 1000), returns a soft-warn flag; if over, returns hard-stop.
+- `execute-campaign/index.ts` — for WA legs, call `enforceWaPacing` before each send instead of the flat 550 ms sleep.
+- `execute-workflow` + `process-scheduled-jobs` — same call before WA sends.
+- Migration: `ALTER TABLE public.whatsapp_settings ADD COLUMN IF NOT EXISTS tier_limit int DEFAULT 1000;`
+- `whatsapp-sync-templates` (or a new `whatsapp-sync-phone`) — populate `tier_limit` from Meta's `messaging_limit_tier` on the phone number.
 
-### 3. Migration (only if `waba_id` column is missing on `whatsapp_settings`)
+**Out of scope:** dynamic tier upgrade detection, per-recipient dedup, marketing-message frequency caps.
 
-```sql
-ALTER TABLE public.whatsapp_settings
-  ADD COLUMN IF NOT EXISTS waba_id text;
-```
+---
 
-No new grants/policies needed — `whatsapp_settings` already has them.
+## Gap 4 — Template-category compliance
 
-### 4. `src/components/automations/email-editor/AutomationEmailEditor.tsx`
+**Goal:** Enforce Meta's rules — MARKETING templates require opt-in and honor unsubscribe; UTILITY/AUTHENTICATION templates must be transactional and cannot be used for promo blasts.
 
-Extend the current 132001 friendly-error branch:
+**Changes**
+- `whatsapp_templates` already stores `category` from Meta sync. Add a runtime guard in `whatsapp-send/index.ts`:
+  - If the resolved live template's `category === 'MARKETING'`:
+    - Reject the send if the lead's `tags` include `unsubscribed` or `wa_opted_out` (return `success:false, reason:'opted_out'`).
+    - Require the lead to have an opt-in marker (`wa_opt_in_at` on `leads`, new column) OR the workspace's `whatsapp_settings.assume_opt_in = true` (existing pattern for imported lists).
+  - If `category === 'UTILITY'` or `'AUTHENTICATION'` and the send is coming from a `campaign` (not a workflow/transactional trigger), log a warning to `whatsapp_messages.compliance_note` but do not block (Meta enforces on their side).
+- Migration:
+  ```sql
+  ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS wa_opt_in_at timestamptz;
+  ALTER TABLE public.whatsapp_settings ADD COLUMN IF NOT EXISTS assume_opt_in boolean DEFAULT false;
+  ALTER TABLE public.whatsapp_messages ADD COLUMN IF NOT EXISTS compliance_note text;
+  ```
+- `src/components/settings/WhatsAppTemplatesTab.tsx` — show category badge (MARKETING / UTILITY / AUTHENTICATION) on each template card so users pick the right one.
+- `CreateCampaignDialog.tsx` — when a WA template is selected and its `category === 'MARKETING'`, show an "audience opt-in required" hint.
 
-- If response body includes `testMode === "hello_world"` → toast: *"Test sent via Meta's hello_world template (credentials verified). Your actual message content will send in real automations."*
-- If `reason === "template_unavailable"` → toast: *"WhatsApp template no longer exists on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default."*
-- Keep existing generic 132001 message as final fallback.
+**Out of scope:** building a full double-opt-in flow, WhatsApp-native unsubscribe keyword handler (already partially in `whatsapp-webhook`), template submission UI.
 
-## Out of scope (unchanged)
+---
 
-- Twilio branch, credit accounting, sender resolver, 24h window detection logic, `whatsapp_messages` schema, Preview button behavior for other channels.
-- No changes to database RLS/GRANTs beyond the optional `waba_id` column add.
+## Technical notes
 
-## Verification
+- All new columns are additive with defaults → no data migration risk.
+- `enforceWaPacing` uses in-memory per-cold-start token bucket; acceptable because edge functions are short-lived and Meta's 80/sec is a per-second cap, not per-hour.
+- Status transitions are guarded by an enum ordering check so out-of-order webhooks (Meta sometimes retries) don't regress `read` back to `sent`.
+- No changes to Twilio path, credit accounting, or preview/`hello_world` behavior.
 
-1. Deploy `whatsapp-send` (+ `whatsapp-sync-templates` if migration ran).
-2. From the automation editor, click "Send test" to `07517327597` → expect toast "Test delivered via hello_world (credentials verified)" and a delivered WhatsApp message on the device.
-3. Check `whatsapp_messages` — the new row logs `status='sent'`, `template_name='hello_world'`, `auto_templated=true`.
-4. Trigger an actual campaign send to a closed-window lead → expect the live-resolved workspace template (or clean `fallback:true` if none approved).
+## Deliverables
+
+1. Migration for `tier_limit`, `wa_opt_in_at`, `assume_opt_in`, `compliance_note`.
+2. New `_shared/wa-rate-limit.ts`.
+3. Patched `whatsapp-webhook`, `whatsapp-send`, `execute-workflow`, `execute-automation`, `execute-campaign`.
+4. UI badges/hints on `WhatsAppTemplatesTab` and `CreateCampaignDialog`.
+5. Verify via `curl_edge_functions` that a MARKETING send to an opted-out lead returns `success:false, reason:'opted_out'` and a status webhook advances a `campaign_messages` row from `delivered` → `read`.
