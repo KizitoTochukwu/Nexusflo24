@@ -12,7 +12,7 @@ import { useForms } from "@/hooks/useForms";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
-import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
+
 
 export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
@@ -150,16 +150,11 @@ export default function CreateAutomationDialog() {
           {showTagInput && (
             <div>
               <label className="text-sm font-medium text-foreground">Tag</label>
-              <Select value={tagValue} onValueChange={setTagValue}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select tag (or leave blank for any)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AUTOMATION_TAG_OPTIONS.map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={tagValue}
+                onChange={(e) => setTagValue(e.target.value)}
+                placeholder="e.g. facebook-ads, qualified, meta-lead-ad"
+              />
               <p className="text-xs text-muted-foreground mt-1">
                 Fires whenever this exact tag is added to a lead. Leave blank to match any tag.
               </p>
