@@ -1714,6 +1714,7 @@ export type Database = {
           tags: string[] | null
           updated_at: string
           user_id: string
+          wa_opt_in_at: string | null
           workspace_id: string
         }
         Insert: {
@@ -1741,6 +1742,7 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           user_id: string
+          wa_opt_in_at?: string | null
           workspace_id: string
         }
         Update: {
@@ -1768,6 +1770,7 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string
           user_id?: string
+          wa_opt_in_at?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -3431,15 +3434,20 @@ export type Database = {
         Row: {
           auto_templated: boolean
           body: string | null
+          campaign_id: string | null
+          compliance_note: string | null
           created_at: string
+          delivered_at: string | null
           direction: string
           error: string | null
+          failed_at: string | null
           id: string
           lead_id: string | null
           message_type: string
           phone_number: string
           provider: string
           provider_message_id: string | null
+          read_at: string | null
           sender_profile_id: string | null
           status: string
           template_name: string | null
@@ -3449,15 +3457,20 @@ export type Database = {
         Insert: {
           auto_templated?: boolean
           body?: string | null
+          campaign_id?: string | null
+          compliance_note?: string | null
           created_at?: string
+          delivered_at?: string | null
           direction?: string
           error?: string | null
+          failed_at?: string | null
           id?: string
           lead_id?: string | null
           message_type?: string
           phone_number: string
           provider?: string
           provider_message_id?: string | null
+          read_at?: string | null
           sender_profile_id?: string | null
           status?: string
           template_name?: string | null
@@ -3467,15 +3480,20 @@ export type Database = {
         Update: {
           auto_templated?: boolean
           body?: string | null
+          campaign_id?: string | null
+          compliance_note?: string | null
           created_at?: string
+          delivered_at?: string | null
           direction?: string
           error?: string | null
+          failed_at?: string | null
           id?: string
           lead_id?: string | null
           message_type?: string
           phone_number?: string
           provider?: string
           provider_message_id?: string | null
+          read_at?: string | null
           sender_profile_id?: string | null
           status?: string
           template_name?: string | null
@@ -3568,6 +3586,7 @@ export type Database = {
       whatsapp_settings: {
         Row: {
           access_token_encrypted: string
+          assume_opt_in: boolean
           business_account_name: string | null
           connection_method: string
           created_at: string
@@ -3576,6 +3595,7 @@ export type Database = {
           id: string
           is_active: boolean
           phone_number_id: string
+          tier_limit: number
           token_expires_at: string | null
           updated_at: string
           verified_name: string | null
@@ -3585,6 +3605,7 @@ export type Database = {
         }
         Insert: {
           access_token_encrypted: string
+          assume_opt_in?: boolean
           business_account_name?: string | null
           connection_method?: string
           created_at?: string
@@ -3593,6 +3614,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           phone_number_id: string
+          tier_limit?: number
           token_expires_at?: string | null
           updated_at?: string
           verified_name?: string | null
@@ -3602,6 +3624,7 @@ export type Database = {
         }
         Update: {
           access_token_encrypted?: string
+          assume_opt_in?: boolean
           business_account_name?: string | null
           connection_method?: string
           created_at?: string
@@ -3610,6 +3633,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           phone_number_id?: string
+          tier_limit?: number
           token_expires_at?: string | null
           updated_at?: string
           verified_name?: string | null
