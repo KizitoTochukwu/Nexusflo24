@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isAdminUser } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { requireInternalCaller } from "../_shared/internal-auth.ts";
+import { enforceWaPacing } from "../_shared/wa-rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
