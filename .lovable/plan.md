@@ -1,47 +1,66 @@
-## Root cause
+# Fix WhatsApp test send (the same pattern HubSpot / GHL / Wati use)
 
-The WhatsApp "Send test" call fails at the edge function, not in the UI. Diagnosis:
+## Why the current fix isn't working
 
-1. The recipient's 24h window is closed, so `whatsapp-send` auto-switches to the workspace's default re-engagement template (`reengagement_followup_v1`).
-2. That template is stored in our DB as language **`en`** (from the last sync), and we send it to Meta as `en`.
-3. Meta rejects it with **`(#132001) Template name does not exist in the translation`** — Meta's copy of the approved template is registered under a different language tag (typically `en_US` or `en_GB`).
-4. `whatsapp-send` returns HTTP 400 → the browser shows "Edge Function returned a non-2xx status code".
+Meta returns `132001 — Template name does not exist in the translation` for `reengagement_followup_v1` under `en`, `en_US`, and `en_GB`. That means the synced DB row is stale — the template no longer exists (or was renamed / re-approved under a different WABA) on the phone number our token is calling. The retry loop cycles languages but can't recover a template that isn't there.
 
-Confirmed via `whatsapp_messages` logs — every recent send to this workspace failed with the same 132001 error, for both the test message and previous welcome messages.
+Separately, coupling a **test send** to the workspace's re-engagement template is wrong. Test sends exist to verify credentials, not template state. HubSpot, GoHighLevel, Wati, and ManyChat all handle this the same way:
 
-## Fix
+1. Fetch approved templates **live** from Meta's Graph API right before sending (never trust the local cache blindly).
+2. For **connectivity tests**, fall back to Meta's universal `hello_world` template so the test always succeeds when credentials are valid.
+3. Reserve the "24h window closed + no template" hard failure for real automation/campaign sends only.
 
-Make template sending resilient to Meta's language-code mismatch so a user's test (and real automations/campaigns) don't fail whenever the stored language tag drifts from Meta's registered tag.
+## Changes
 
-### 1. `supabase/functions/whatsapp-send/index.ts` — auto-retry on 132001
+### 1. `supabase/functions/whatsapp-send/index.ts`
 
-- After the initial `sendWhatsAppMessage(...)` call, if `attempt.ok === false` **and** we were sending a template **and** the Graph error code is `132001`, retry with a small set of alternate language tags derived from the current one:
-  - `en` → try `en_US`, then `en_GB`
-  - `en_US` / `en_GB` → try `en`
-  - Any `xx_YY` → try the base `xx`
-  - Any `xx` → try `xx_US` (generic fallback)
-- Deduplicate and skip the language we already tried. Stop at the first success.
-- On the first successful retry, also update `whatsapp_templates.language` for that workspace+name so future sends use the correct tag immediately (no need to re-sync).
-- If every retry still fails, return the original 132001 error message unchanged, but append a shorter hint: `"Auto-retried alternate language tags — none matched. Re-sync templates from Meta."`
+**a. Live template resolver (`resolveLiveTemplate`)** — new helper.
+When we're about to send a template, first call `GET https://graph.facebook.com/v19.0/{waba_id}/message_templates?name={name}&fields=name,language,status,components` using the workspace access token, filter to `status=APPROVED`, and pick the exact match. If the local `language` doesn't match any live variant, use the first approved language returned. If nothing approved comes back, return `null` — do NOT attempt the doomed send.
 
-### 2. `supabase/functions/whatsapp-sync-templates/index.ts` — safer default when Meta returns bare `en`
+WABA ID resolution order:
+- `whatsapp_settings.waba_id` (already stored during sync).
+- If missing, resolve via `GET /v19.0/{phone_number_id}?fields=whatsapp_business_account_id` and cache back to `whatsapp_settings.waba_id`.
 
-- When Meta returns `language: "en"` for a template, also mark it "language_variants_possible" via a note in logs (no schema change). This is informational only; the send-side retry above is the actual fix.
+**b. Update `whatsapp_templates` cache on every live lookup** — when live data differs from stored (`language`, `status`, `components`), upsert the fresh copy so the marketplace UI stays in sync. Self-healing, matches how HubSpot/GHL keep template state fresh.
 
-### 3. UI — surface a clearer message for this specific failure
+**c. Replace the current language-cycle retry loop (lines 472–527)** with the live resolver — it's strictly better and covers not just language mismatch but also renames, deletions, and status changes.
 
-- `AutomationEmailEditor.tsx` test-send catch block: when `data.graphSubcode === 132001` (or error text contains `132001`), replace the raw error with:
-  > "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
+**d. Test-send fallback to `hello_world`** — when `body.preview === true` AND (window closed OR the default template resolves to `null`), send Meta's universal `hello_world` (language `en_US`) instead of failing. Return `{ success: true, waMessageId, testMode: "hello_world", note: "Test delivered via hello_world (credentials verified)." }`. This is the exact pattern used by HubSpot's "Send test message" and GHL's "Test WhatsApp" buttons.
 
-No schema changes, no new secrets, no changes to the 24h-window flow itself.
+  - Do NOT use `hello_world` for real campaign/automation sends (`preview !== true`) — that path keeps the current strict `fallback:true` behavior so callers switch to SMS/Email.
+  - `hello_world` sends still skip credits (already the case for `preview`).
 
-## Technical notes
+**e. When resolver returns `null` for a non-preview send** — return the existing structured `{ success:false, fallback:true, reason:"template_unavailable", error }` payload so campaigns/automations can gracefully fall back.
 
-- `whatsapp-send` already returns `graphCode`/`graphSubcode` in the JSON body; the retry stays inside the same function so the caller contract is unchanged.
-- The DB self-heal (`update whatsapp_templates set language = <working>`) is scoped to `workspace_id + name` and only runs on a confirmed successful send, so a transient Meta hiccup can't corrupt the row.
-- Existing 24h-window logic, credit deduction, `preview`/`[TEST]` prefixing, and Twilio dispatch remain untouched.
+### 2. `supabase/functions/whatsapp-sync-templates/index.ts`
 
-## Out of scope
+Also persist `waba_id` on `whatsapp_settings` when we discover it during sync (so the live resolver has it cached). No schema change — column already exists per the current settings row shape; if missing we'll add it in the migration below.
 
-- No changes to Twilio path, hello_world flow, or credit accounting.
-- No new Settings UI — the existing "Sync templates from Meta" button in Settings → Channels remains the manual recovery path.
+### 3. Migration (only if `waba_id` column is missing on `whatsapp_settings`)
+
+```sql
+ALTER TABLE public.whatsapp_settings
+  ADD COLUMN IF NOT EXISTS waba_id text;
+```
+
+No new grants/policies needed — `whatsapp_settings` already has them.
+
+### 4. `src/components/automations/email-editor/AutomationEmailEditor.tsx`
+
+Extend the current 132001 friendly-error branch:
+
+- If response body includes `testMode === "hello_world"` → toast: *"Test sent via Meta's hello_world template (credentials verified). Your actual message content will send in real automations."*
+- If `reason === "template_unavailable"` → toast: *"WhatsApp template no longer exists on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default."*
+- Keep existing generic 132001 message as final fallback.
+
+## Out of scope (unchanged)
+
+- Twilio branch, credit accounting, sender resolver, 24h window detection logic, `whatsapp_messages` schema, Preview button behavior for other channels.
+- No changes to database RLS/GRANTs beyond the optional `waba_id` column add.
+
+## Verification
+
+1. Deploy `whatsapp-send` (+ `whatsapp-sync-templates` if migration ran).
+2. From the automation editor, click "Send test" to `07517327597` → expect toast "Test delivered via hello_world (credentials verified)" and a delivered WhatsApp message on the device.
+3. Check `whatsapp_messages` — the new row logs `status='sent'`, `template_name='hello_world'`, `auto_templated=true`.
+4. Trigger an actual campaign send to a closed-window lead → expect the live-resolved workspace template (or clean `fallback:true` if none approved).
