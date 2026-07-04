@@ -526,6 +526,40 @@ Deno.serve(async (req) => {
                 // Do NOT throw and do NOT set skipRemaining — chain must continue.
                 break;
               }
+              // Auto-fallback: when whatsapp-send flags fallback:true and the
+              // step config declares fallback_channel (sms|email), fire the
+              // sibling channel inline. Matches HubSpot / GHL workflow steps.
+              const wantsFallback = waData?.fallback === true;
+              const fbChannel = String((config as any).fallback_channel || "").toLowerCase();
+              if (wantsFallback && (fbChannel === "sms" || fbChannel === "email")) {
+                const fbMessage = interpolate(String((config as any).fallback_message || config.message || ""), lead);
+                if (fbChannel === "sms" && lead.phone) {
+                  const fbRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sms-send`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, message: fbMessage, leadId: lead_id, skipCredits: true }),
+                  });
+                  const fbData = await fbRes.json().catch(() => ({}));
+                  status = fbRes.ok && fbData?.success !== false ? "success" : "error";
+                  details = { primary_channel: "whatsapp", fallback_channel: "sms", fallback_reason: waData?.reason, error: fbData?.error };
+                  break;
+                }
+                if (fbChannel === "email" && lead.email) {
+                  const fbRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      workspaceId: workspace_id, to: lead.email,
+                      subject: String((config as any).fallback_subject || (config as any).subject || "Follow-up"),
+                      html: fbMessage, leadId: lead_id, skipCredits: true,
+                    }),
+                  });
+                  const fbData = await fbRes.json().catch(() => ({}));
+                  status = fbRes.ok && fbData?.success !== false ? "success" : "error";
+                  details = { primary_channel: "whatsapp", fallback_channel: "email", fallback_reason: waData?.reason, error: fbData?.error };
+                  break;
+                }
+              }
               // Soft-handle 24h window closed → mark as skipped (per core rule), don't kill chain
               if (waData?.fallback === true || /24h\s*window/i.test(String(waData?.error || ""))) {
                 status = "skipped";
