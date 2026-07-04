@@ -196,6 +196,101 @@ async function sendWhatsAppMessage(
   return { ok: waRes.ok, data: waData, phoneNumberId, source };
 }
 
+/**
+ * Resolve a template LIVE against Meta's Graph API so we never trust a stale
+ * local cache (HubSpot / GHL / Wati all do this before every template send).
+ * Returns the exact { name, language, components } that Meta will accept, or
+ * null if no approved variant exists on the WABA our token is calling.
+ * Self-heals the local `whatsapp_templates` + `whatsapp_settings.waba_id`.
+ */
+async function resolveLiveTemplate(
+  adminClient: any,
+  workspaceId: string,
+  accessToken: string,
+  phoneNumberId: string,
+  templateName: string,
+  preferredLanguage: string | undefined,
+): Promise<{ name: string; language: string; components: any[] | null } | null> {
+  // 1. Resolve WABA id (cached on whatsapp_settings, else fetched from phone).
+  let wabaId: string | null = null;
+  const { data: wsRows } = await adminClient
+    .from("whatsapp_settings")
+    .select("id, waba_id")
+    .eq("workspace_id", workspaceId)
+    .order("is_active", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  const wsRow = wsRows?.[0];
+  wabaId = wsRow?.waba_id || null;
+
+  if (!wabaId) {
+    try {
+      const phoneRes = await fetch(
+        `https://graph.facebook.com/v19.0/${encodeURIComponent(phoneNumberId)}?fields=whatsapp_business_account_id`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const phoneData = await phoneRes.json();
+      wabaId = phoneData?.whatsapp_business_account_id || null;
+      if (wabaId && wsRow?.id) {
+        await adminClient
+          .from("whatsapp_settings")
+          .update({ waba_id: wabaId, updated_at: new Date().toISOString() })
+          .eq("id", wsRow.id);
+      }
+    } catch (err) {
+      console.warn("resolveLiveTemplate: WABA lookup failed", err);
+    }
+  }
+  if (!wabaId) return null;
+
+  // 2. Query live templates for this name.
+  let tplData: any = null;
+  try {
+    const tplRes = await fetch(
+      `https://graph.facebook.com/v19.0/${encodeURIComponent(wabaId)}/message_templates?name=${encodeURIComponent(templateName)}&fields=name,language,status,components&limit=25`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    tplData = await tplRes.json();
+  } catch (err) {
+    console.warn("resolveLiveTemplate: template fetch failed", err);
+    return null;
+  }
+
+  const approved = (tplData?.data || []).filter(
+    (t: any) => String(t?.status).toUpperCase() === "APPROVED" && t?.name === templateName,
+  );
+  if (approved.length === 0) return null;
+
+  const preferred = (preferredLanguage || "").trim();
+  const base = preferred.split(/[_-]/)[0].toLowerCase();
+  const picked =
+    approved.find((t: any) => t.language === preferred) ||
+    approved.find((t: any) => String(t.language).toLowerCase().startsWith(base)) ||
+    approved[0];
+
+  // 3. Self-heal local cache.
+  try {
+    await adminClient
+      .from("whatsapp_templates")
+      .update({
+        language: picked.language,
+        status: "approved",
+        components: picked.components || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("name", templateName);
+  } catch (err) {
+    console.warn("resolveLiveTemplate: cache heal failed", err);
+  }
+
+  return {
+    name: picked.name,
+    language: picked.language,
+    components: picked.components || null,
+  };
+}
+
 /** Check if the 24-hour conversation window is open for a given phone number */
 async function isWindowOpen(
   adminClient: any,
@@ -366,12 +461,9 @@ Deno.serve(async (req) => {
     if (!template && msgBody) {
       const windowOpen = await isWindowOpen(adminClient, workspaceId, normalizedTo);
       if (!windowOpen) {
-        // Try to auto-recover: if the workspace has a default re-engagement
-        // template configured, send that template with the user's text
-        // injected as the {{1}} body variable. This mirrors how
-        // HubSpot / ManyChat / Wati hide the 24h window from the user.
-        // Defensive: there may legacy duplicate rows per workspace; pick the
-        // active one (or most recent) instead of failing maybeSingle().
+        // Try to auto-recover via the workspace's default re-engagement
+        // template — but ALWAYS resolve it live against Meta first
+        // (HubSpot / GHL / Wati pattern) so we don't send a stale name/lang.
         const { data: waSettingsRows } = await adminClient
           .from("whatsapp_settings")
           .select("default_reengagement_template_id, is_active, updated_at")
@@ -379,9 +471,8 @@ Deno.serve(async (req) => {
           .order("is_active", { ascending: false })
           .order("updated_at", { ascending: false })
           .limit(1);
-        const waSettings = waSettingsRows?.[0];
+        const defaultTplId = waSettingsRows?.[0]?.default_reengagement_template_id;
 
-        const defaultTplId = waSettings?.default_reengagement_template_id;
         let defaultTpl:
           | { name: string; language: string; variable_count: number; components: any[] | null }
           | null = null;
@@ -395,37 +486,51 @@ Deno.serve(async (req) => {
           if (tpl && tpl.status === "approved") defaultTpl = tpl as any;
         }
 
+        // Live-resolve against Meta so language/status/components are current.
+        let live: { name: string; language: string; components: any[] | null } | null = null;
         if (defaultTpl) {
+          live = await resolveLiveTemplate(
+            adminClient,
+            workspaceId,
+            creds.config.access_token.trim(),
+            creds.config.phone_number_id.trim(),
+            defaultTpl.name,
+            defaultTpl.language,
+          );
+        }
+
+        if (live) {
           autoTemplated = true;
-          // Build components: if the synced template defines its own BODY/HEADER/BUTTON
-          // components, pass through any non-body components unchanged (e.g. header image,
-          // CTA URL params) and inject the user's text as the BODY {{1}} variable. If the
-          // template has no variables, we send it without parameters.
-          //
-          // Meta rejects newlines/tabs/4+ consecutive spaces in body params — collapse them.
           const safeBody = msgBody
             .replace(/[\r\n\t]+/g, " ")
             .replace(/\s{4,}/g, "   ")
             .slice(0, 1024);
-
           const components: any[] = [];
-          if (defaultTpl.variable_count > 0) {
-            components.push({
-              type: "body",
-              parameters: [{ type: "text", text: safeBody }],
-            });
+          if ((defaultTpl?.variable_count ?? 0) > 0) {
+            components.push({ type: "body", parameters: [{ type: "text", text: safeBody }] });
           }
           effectiveTemplate = {
-            name: defaultTpl.name,
-            language: defaultTpl.language || "en",
+            name: live.name,
+            language: live.language,
             ...(components.length ? { components } : {}),
           };
-          console.log("WA window closed — auto-sending via default template", {
-            workspaceId, template: defaultTpl.name,
+          console.log("WA window closed — auto-sending via live-resolved template", {
+            workspaceId, template: live.name, language: live.language,
+          });
+        } else if (isPreview) {
+          // Test-send from the editor: fall back to Meta's universal
+          // `hello_world` so users get a clean credentials-verified signal
+          // regardless of template/state (matches HubSpot/GHL "Send test").
+          autoTemplated = true;
+          effectiveTemplate = { name: "hello_world", language: "en_US" };
+          console.log("WA test send — using hello_world credential probe", {
+            workspaceId, to: normalizedTo,
           });
         } else {
-          const errMsg = "WhatsApp 24h window closed — recipient has not messaged you in 24h. Configure a default re-engagement template in Settings → Channels, or send an approved template manually.";
-          console.warn("WA window closed (no default template)", { workspaceId, to: normalizedTo });
+          const errMsg = defaultTplId
+            ? "WhatsApp template no longer exists (or isn't approved) on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default re-engagement template."
+            : "WhatsApp 24h window closed — recipient has not messaged you in 24h. Configure a default re-engagement template in Settings → Channels, or send an approved template manually.";
+          console.warn("WA window closed (no live template)", { workspaceId, to: normalizedTo });
 
           await adminClient.from("whatsapp_messages").insert({
             workspace_id: workspaceId,
@@ -450,7 +555,7 @@ Deno.serve(async (req) => {
           return new Response(JSON.stringify({
             success: false,
             fallback: true,
-            reason: "window_closed",
+            reason: defaultTplId ? "template_unavailable" : "window_closed",
             error: errMsg,
           }), {
             status: 200,
@@ -469,62 +574,59 @@ Deno.serve(async (req) => {
       effectiveTemplate,
     );
 
-    // Auto-retry on Meta template language mismatch (error 132001).
-    // Meta stores templates under specific language tags (e.g. `en_US`,
-    // `en_GB`) but our synced copy may have the base tag (`en`) — or vice
-    // versa. Cycle through common alternates before giving up.
+    // Live-resolve retry on 132001 for caller-supplied templates that skipped
+    // the block above (e.g. campaign-picked template). hello_world is the
+    // universal fallback for a preview when even live resolution fails.
     if (!attempt.ok && effectiveTemplate) {
       const graphCode = Number(attempt.data?.error?.code ?? 0);
       if (graphCode === 132001) {
-        const original = (effectiveTemplate.language || "en").trim();
-        const base = original.split(/[_-]/)[0].toLowerCase();
-        const candidates: string[] = [];
-        const push = (lang: string) => {
-          if (lang && lang !== original && !candidates.includes(lang)) candidates.push(lang);
-        };
-        if (base === "en") {
-          push("en_US"); push("en_GB"); push("en");
-        } else if (/[_-]/.test(original)) {
-          push(base);
-        } else {
-          push(`${base}_US`); push(`${base}_GB`);
-        }
-
-        for (const altLang of candidates) {
-          const retryTpl: TemplatePayload = { ...effectiveTemplate, language: altLang };
+        const live = await resolveLiveTemplate(
+          adminClient,
+          workspaceId,
+          creds.config.access_token.trim(),
+          creds.config.phone_number_id.trim(),
+          effectiveTemplate.name,
+          effectiveTemplate.language,
+        );
+        if (live && (live.language !== effectiveTemplate.language)) {
+          const retryTpl: TemplatePayload = { ...effectiveTemplate, language: live.language };
           const retry = await sendWhatsAppMessage(
             creds.config.access_token.trim(),
             creds.config.phone_number_id.trim(),
             normalizedTo,
-            msgBody || `[Template: ${effectiveTemplate.name}]`,
+            msgBody || `[Template: ${retryTpl.name}]`,
             creds.source === "workspace" ? "workspace" : "platform",
             retryTpl,
           );
           if (retry.ok) {
             attempt = retry;
             effectiveTemplate = retryTpl;
-            // Self-heal: update stored language so future sends use the
-            // correct tag without a manual re-sync.
-            await adminClient
-              .from("whatsapp_templates")
-              .update({ language: altLang, updated_at: new Date().toISOString() })
-              .eq("workspace_id", workspaceId)
-              .eq("name", effectiveTemplate.name)
-              .then(() => {}, (err: any) => console.warn("template lang self-heal failed:", err?.message));
-            console.log("WA template language auto-corrected", {
-              workspaceId, template: effectiveTemplate.name, from: original, to: altLang,
+            console.log("WA template auto-corrected via live resolver", {
+              workspaceId, template: retryTpl.name, language: live.language,
             });
-            break;
-          }
-          const retryCode = Number(retry.data?.error?.code ?? 0);
-          if (retryCode !== 132001) {
-            // Different error — stop cycling languages, surface it.
+          } else {
             attempt = retry;
-            break;
+          }
+        }
+        // Preview last-resort: hello_world credential probe.
+        if (!attempt.ok && isPreview) {
+          const probe = await sendWhatsAppMessage(
+            creds.config.access_token.trim(),
+            creds.config.phone_number_id.trim(),
+            normalizedTo,
+            `[Template: hello_world]`,
+            creds.source === "workspace" ? "workspace" : "platform",
+            { name: "hello_world", language: "en_US" },
+          );
+          if (probe.ok) {
+            attempt = probe;
+            effectiveTemplate = { name: "hello_world", language: "en_US" };
+            autoTemplated = true;
           }
         }
       }
     }
+
 
     // NOTE: do NOT fall back from workspace → platform credentials.
     // The platform access token does not own the workspace's phone_number_id,
@@ -601,7 +703,8 @@ Deno.serve(async (req) => {
         .eq("delivery_status", "pending");
     }
 
-    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source, autoTemplated, templateUsed: effectiveTemplate?.name }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const testMode = isPreview && effectiveTemplate?.name === "hello_world" ? "hello_world" : undefined;
+    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source, autoTemplated, templateUsed: effectiveTemplate?.name, testMode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("whatsapp-send error:", err);
     return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send WhatsApp message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

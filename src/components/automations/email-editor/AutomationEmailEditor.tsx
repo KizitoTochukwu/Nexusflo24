@@ -194,7 +194,18 @@ export default function AutomationEmailEditor({
           body: { workspaceId, to: testRecipient, body: renderedMessage, preview: true },
         });
         if (error) throw error;
-        if (data && (data as any).success === false) throw new Error((data as any).error || "WhatsApp test failed");
+        if (data && (data as any).success === false) {
+          const reason = (data as any).reason;
+          if (reason === "template_unavailable") {
+            throw new Error("WhatsApp template no longer exists on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default.");
+          }
+          throw new Error((data as any).error || "WhatsApp test failed");
+        }
+        if ((data as any)?.testMode === "hello_world") {
+          toast.success("Test sent via Meta's hello_world template (credentials verified). Your real message content will send in live automations.");
+          setTestOpen(false);
+          return;
+        }
       }
 
       const channelLabel = resolvedChannel === "email" ? "email" : resolvedChannel === "sms" ? "SMS" : "WhatsApp message";
@@ -202,9 +213,11 @@ export default function AutomationEmailEditor({
       setTestOpen(false);
     } catch (e: any) {
       const raw = String(e?.message || "");
-      const friendly = /132001/.test(raw)
-        ? "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
-        : raw || `Failed to send test ${resolvedChannel}.`;
+      const friendly = /template no longer exists/i.test(raw)
+        ? raw
+        : /132001/.test(raw)
+          ? "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
+          : raw || `Failed to send test ${resolvedChannel}.`;
       toast.error(friendly);
     } finally {
       setTestSending(false);
