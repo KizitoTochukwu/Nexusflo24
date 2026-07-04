@@ -729,6 +729,8 @@ Deno.serve(async (req) => {
         status: "failed",
         error: errMsg,
         ...(leadId ? { lead_id: leadId } : {}),
+        ...(campaignId ? { campaign_id: campaignId } : {}),
+        ...(complianceNote ? { compliance_note: complianceNote } : {}),
       });
 
       // Alert workspace owner if this is a credential/auth failure (token invalid/expired, permissions)
