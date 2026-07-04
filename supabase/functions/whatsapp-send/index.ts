@@ -766,6 +766,8 @@ Deno.serve(async (req) => {
       template_name: effectiveTemplate?.name || null,
       sender_profile_id: resolvedSender?.profile?.id || null,
       ...(leadId ? { lead_id: leadId } : {}),
+      ...(campaignId ? { campaign_id: campaignId } : {}),
+      ...(complianceNote ? { compliance_note: complianceNote } : {}),
     });
     if (!isPreview) {
       await logCommunicationUsage({
