@@ -182,6 +182,9 @@ Deno.serve(async (req) => {
           deliveryStatus = data.success ? "delivered" : "failed";
           if (!data.success) sendError = data.error;
         } else if (effectiveChannel === "whatsapp" && lead.phone) {
+          // WA-specific pacing (~25 msg/sec/phone) sits on top of the 550ms
+          // per-lead throttle so bursty campaigns don't trip Meta's per-second cap.
+          await enforceWaPacing(workspaceId);
           const res = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
             method: "POST",
             headers: {
