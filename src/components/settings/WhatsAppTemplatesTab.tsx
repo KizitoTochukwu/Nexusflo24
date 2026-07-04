@@ -179,7 +179,21 @@ export default function WhatsAppTemplatesTab() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-semibold text-foreground">{t.name}</span>
                     <Badge variant="outline" className="text-[10px]">{t.language}</Badge>
-                    <Badge variant="secondary" className="text-[10px]">{t.category}</Badge>
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10px] ${
+                        t.category === "MARKETING" ? "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200" :
+                        t.category === "UTILITY" ? "bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200" :
+                        t.category === "AUTHENTICATION" ? "bg-purple-100 text-purple-900 dark:bg-purple-900/40 dark:text-purple-200" :
+                        ""
+                      }`}
+                      title={
+                        t.category === "MARKETING" ? "Requires recipient opt-in. Honors unsubscribe." :
+                        t.category === "UTILITY" ? "Transactional only — order updates, confirmations." :
+                        t.category === "AUTHENTICATION" ? "OTP / verification codes only." :
+                        undefined
+                      }
+                    >{t.category}</Badge>
                     {t.variable_count > 0 && (
                       <Badge variant="outline" className="text-[10px]">{t.variable_count} variable{t.variable_count === 1 ? "" : "s"}</Badge>
                     )}
