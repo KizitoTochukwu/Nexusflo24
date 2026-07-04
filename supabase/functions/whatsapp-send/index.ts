@@ -7,6 +7,7 @@ import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
 import { resolveSenderProfile } from "../_shared/sender-resolver.ts";
 import { logCommunicationUsage, getDeductionAmount, countryFromE164 } from "../_shared/usage-logger.ts";
+import { enforceWaPacing, checkDailyTier } from "../_shared/wa-rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
