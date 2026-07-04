@@ -327,57 +327,83 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Handle status updates
+          // Handle status updates (sent → delivered → read; or failed).
+          // Meta may deliver these out of order, so we always guard against
+          // regressing a "later" status back to an "earlier" one.
+          const STATUS_RANK: Record<string, number> = {
+            sent: 1, delivered: 2, read: 3, failed: 99,
+          };
           const statuses = value?.statuses || [];
           for (const st of statuses) {
-            if (st.id) {
-              // Update whatsapp_messages status
-              await adminClient
-                .from("whatsapp_messages")
-                .update({ status: st.status })
-                .eq("wa_message_id", st.id);
+            if (!st.id) continue;
+            const incoming = String(st.status || "").toLowerCase();
+            const incomingRank = STATUS_RANK[incoming] ?? 0;
+            if (!incomingRank) continue;
 
-              // If status is "read", update campaign_messages.opened for the linked lead
-              if (st.status === "read") {
-                // Find the whatsapp_message to get lead_id
-                const { data: waMsg } = await adminClient
-                  .from("whatsapp_messages")
-                  .select("lead_id, workspace_id")
-                  .eq("wa_message_id", st.id)
-                  .maybeSingle();
+            // Load current row so we can decide idempotency + propagation.
+            const { data: waMsg } = await adminClient
+              .from("whatsapp_messages")
+              .select("id, status, lead_id, workspace_id, campaign_id")
+              .eq("wa_message_id", st.id)
+              .maybeSingle();
+            if (!waMsg) continue;
 
-                if (waMsg?.lead_id) {
-                  await adminClient
-                    .from("campaign_messages")
-                    .update({ opened: true })
-                    .eq("lead_id", waMsg.lead_id)
-                    .eq("channel", "whatsapp")
-                    .eq("workspace_id", waMsg.workspace_id)
-                    .eq("opened", false);
+            const currentRank = STATUS_RANK[String(waMsg.status || "").toLowerCase()] ?? 0;
+            // Never regress: e.g. don't overwrite "read" with a late "delivered".
+            // "failed" wins over everything except itself.
+            const shouldAdvance =
+              incoming === "failed" ? waMsg.status !== "failed" : incomingRank > currentRank;
+            if (!shouldAdvance) continue;
 
-                  console.log(`WhatsApp read status: updated campaign_messages.opened for lead ${waMsg.lead_id}`);
-                }
-              }
-
-              // If status is "delivered", also update campaign_messages delivery_status
-              if (st.status === "delivered") {
-                const { data: waMsg } = await adminClient
-                  .from("whatsapp_messages")
-                  .select("lead_id, workspace_id")
-                  .eq("wa_message_id", st.id)
-                  .maybeSingle();
-
-                if (waMsg?.lead_id) {
-                  await adminClient
-                    .from("campaign_messages")
-                    .update({ delivery_status: "delivered" })
-                    .eq("lead_id", waMsg.lead_id)
-                    .eq("channel", "whatsapp")
-                    .eq("workspace_id", waMsg.workspace_id)
-                    .in("delivery_status", ["pending", "sent"]);
-                }
-              }
+            const errorTitle = st.errors?.[0]?.title || st.errors?.[0]?.error_data?.details || null;
+            const nowIso = new Date().toISOString();
+            const patch: Record<string, any> = { status: incoming };
+            if (incoming === "delivered") patch.delivered_at = nowIso;
+            if (incoming === "read") patch.read_at = nowIso;
+            if (incoming === "failed") {
+              patch.failed_at = nowIso;
+              if (errorTitle) patch.error = errorTitle;
             }
+
+            await adminClient
+              .from("whatsapp_messages")
+              .update(patch)
+              .eq("id", waMsg.id);
+
+            // Propagate to campaign_messages when this WA message belongs to a campaign.
+            // Prefer the direct campaign_id link; fall back to lead_id match for legacy rows.
+            const cmMatch = adminClient
+              .from("campaign_messages")
+              .update(
+                incoming === "read"
+                  ? { opened: true }
+                  : incoming === "delivered"
+                    ? { delivery_status: "delivered" }
+                    : incoming === "failed"
+                      ? { delivery_status: "failed", error: errorTitle || "WhatsApp send failed" }
+                      : { delivery_status: incoming },
+              )
+              .eq("workspace_id", waMsg.workspace_id)
+              .eq("channel", "whatsapp");
+
+            if (waMsg.campaign_id) {
+              cmMatch.eq("campaign_id", waMsg.campaign_id);
+            } else if (waMsg.lead_id) {
+              cmMatch.eq("lead_id", waMsg.lead_id);
+            } else {
+              continue;
+            }
+
+            // Only advance delivery_status forward for delivered/failed.
+            if (incoming === "delivered") {
+              cmMatch.in("delivery_status", ["pending", "sent"]);
+            } else if (incoming === "failed") {
+              cmMatch.in("delivery_status", ["pending", "sent", "delivered"]);
+            } else if (incoming === "read") {
+              cmMatch.eq("opened", false);
+            }
+
+            await cmMatch;
           }
         }
       }
