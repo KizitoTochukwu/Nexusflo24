@@ -24,7 +24,7 @@ import ExecutionTimeline from "./ExecutionTimeline";
 import ExecutionHistoryTable from "./ExecutionHistoryTable";
 import SequenceHealthPanel from "./SequenceHealthPanel";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
-import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
+
 import {
   getDefaultExitCriteria,
   describeCriterion,

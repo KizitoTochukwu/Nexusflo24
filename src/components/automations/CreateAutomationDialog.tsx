@@ -12,7 +12,7 @@ import { useForms } from "@/hooks/useForms";
 import { useLeadFolders } from "@/hooks/useLeadFolders";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import { getDefaultExitCriteria, type ExitCriterion } from "@/lib/automations/exitCriteria";
-import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
+
 
 export default function CreateAutomationDialog() {
   const [open, setOpen] = useState(false);
