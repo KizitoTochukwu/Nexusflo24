@@ -114,7 +114,7 @@ export default function BuyCreditsTab({ workspaceId }: Props) {
                       <p className="text-2xl font-bold mt-1">{p.credits.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">credits</span></p>
                     </div>
                     <div className="flex items-center justify-between mt-auto">
-                      <span className="text-lg font-bold text-foreground">{formatPrice(p.price_cents, p.price_currency)}</span>
+                      <span className="text-lg font-bold text-foreground">{formatPrice(p.price_cents, p.currency)}</span>
                       <Button size="sm" disabled={disabled} onClick={() => handleBuy(p.id)} className="gap-1.5">
                         {buyingId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingCart className="h-3.5 w-3.5" />}
                         Buy
