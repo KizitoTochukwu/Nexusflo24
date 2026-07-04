@@ -21,7 +21,7 @@ export default function BuyCreditsTab({ workspaceId }: Props) {
     queryFn: async () => {
       const { data } = await supabase
         .from("credit_packages" as any)
-        .select("id, name, channel, credits, price_cents, price_currency, country_code, stripe_price_id")
+        .select("id, name, channel, credits, price_cents, currency, country, stripe_price_id")
         .eq("is_active", true)
         .order("price_cents", { ascending: true });
       return (data as any[]) || [];
