@@ -470,6 +470,16 @@ Deno.serve(async (req) => {
       .from("workflow_enrollments").select("*").eq("id", enrollment_id).maybeSingle();
     if (enrollErr || !enrollment) throw new Error("Enrollment not found");
 
+    // Authorize caller: internal (service-role) or workspace member
+    const authz = await requireInternalOrWorkspaceMember(req, supabase, (enrollment as any).workspace_id);
+    if (authz) {
+      const body = await authz.text();
+      return new Response(body, {
+        status: authz.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (enrollment.status !== "active") {
       return new Response(JSON.stringify({ ok: true, skipped: enrollment.status }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
