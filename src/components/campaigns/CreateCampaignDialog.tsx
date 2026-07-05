@@ -375,8 +375,8 @@ export default function CreateCampaignDialog() {
           <Plus className="h-4 w-4" /> Create Campaign
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-none w-screen h-screen sm:max-w-none rounded-none p-0 gap-0 flex flex-col overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b border-border bg-background shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent">{step}</span>
             {stepLabel()}
@@ -387,6 +387,9 @@ export default function CreateCampaignDialog() {
             ))}
           </div>
         </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className={step === 3 ? "max-w-6xl mx-auto" : "max-w-2xl mx-auto"}>
 
         {/* STEP 1: Channel & Mode */}
         {step === 1 && (
@@ -968,6 +971,8 @@ export default function CreateCampaignDialog() {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
