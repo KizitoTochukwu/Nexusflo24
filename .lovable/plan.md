@@ -1,67 +1,80 @@
-## Root cause
+## Goal
 
-The recent "close the four gaps" audit added `requireInternalCaller(req)` to `execute-campaign`, `execute-automation`, and `execute-workflow`. That guard only accepts callers presenting the **service-role key** or the `INTERNAL_FUNCTION_SECRET` header.
+Verify end-to-end that the Campaigns page can send **Email + WhatsApp + SMS** from the browser without the "Failed to send a request to the Edge Function" error, using a single test lead: **kizzyadichie@gmail.com**.
 
-But the browser still invokes these three functions directly with the user's anon/user JWT:
+## What I'll do (build-mode steps)
 
-- `src/components/campaigns/CreateCampaignDialog.tsx` (broadcast "Send Now" auto-fire)
-- `src/components/campaigns/CampaignDetailsDrawer.tsx` (manual re-send)
-- `src/components/automations/SequenceHealthPanel.tsx` and `ExecutionHistoryTable.tsx`
-- `src/hooks/useWorkflows.ts` (manual workflow run + test-run)
+### 1. Prep — read-only checks
 
-Every one of those calls now gets a **403 Forbidden** from the guard, which supabase-js surfaces as the generic "Failed to send a request to the Edge Function" toast the screenshot shows. Scheduled/internal callers (cron, `check-campaign-triggers`, `execute-workflow` → `execute-automation`) still work because they use the service-role key.
+- `supabase--read_query` to find the lead: `SELECT id, workspace_id, email, phone, tags FROM public.leads WHERE lower(email) = 'kizzyadichie@gmail.com' LIMIT 1`.
+- Fail fast with a clear message if there's no phone number on the lead (WA/SMS cannot deliver otherwise); ask you for a phone if missing.
+- Confirm the workspace has `whatsapp_settings`, `sms_settings`, and either an approved sender / Resend key for Email (SELECT-only sanity check on presence, no secret values printed).
+- Redeploy `execute-campaign`, `execute-automation`, `execute-workflow` so the auth-guard fix is live.
 
-The other two guarded functions (`enroll-workflow-leads`, `check-campaign-triggers`) are only called server-to-server, so they can stay internal-only.
+### 2. Create a throwaway multi-channel test campaign
 
-## Fix
+Insert a single row via `supabase--insert` into `public.campaigns`:
 
-Introduce a second guard that accepts **either** an internal caller **or** an authenticated user who is a member of the target workspace, and swap the three user-facing functions to use it.
+- `name`: `E2E send test — {timestamp}`
+- `workspace_id`: from step 1
+- `type`: `multi` (per the multi-channel schema)
+- `campaign_type` / `mode`: `broadcast`
+- `status`: `draft`
+- `audience_filter`: `{ "lead_ids": ["<test lead id>"] }`
+- `message_content`: plain-text bodies scoped to each channel:
+  - Email: subject `NexusFlo24 delivery test`, body `Test send at {ts} — please ignore.`
+  - WhatsApp: same short text (no template — will exercise 24h-window handling / fallback wiring)
+  - SMS: `NexusFlo24 test {ts} — ignore.`
+- `fallback_settings`: `{ enabled: true, channel: "sms", delay_minutes: 0 }` so a closed WA window falls back to SMS.
+- `schedule_type`: `now`.
 
-### 1. New shared helper — `supabase/functions/_shared/caller-auth.ts`
+### 3. Fire it as the browser would
 
-```ts
-export async function requireInternalOrWorkspaceMember(
-  req: Request,
-  adminClient: any,
-  workspaceId: string,
-): Promise<Response | null>
+Call the deployed function directly using the **currently logged-in preview user's JWT** (that's you, workspace owner). This mirrors what the Campaigns page does after the "Send Campaign Now" click:
+
+```
+supabase--curl_edge_functions
+  path=/execute-campaign, method=POST
+  body={"campaign_id":"<id>"}
 ```
 
-Logic:
-1. If `requireInternalCaller(req)` returns `null` → allow (service-role / internal secret path unchanged).
-2. Otherwise, extract the bearer token from `Authorization`. Resolve the user via `adminClient.auth.getClaims(token)` (per project convention — memory rule).
-3. Check membership: `workspaces.owner_user_id = user.id` OR row in `workspace_members` for `(workspace_id, user_id)`. Also allow platform admins via existing `isAdminUser(user.id)`.
-4. Return `null` on success, `403` JSON otherwise.
+Read the JSON response — expect `{ sent, failed, results:[…] }` and **no 403 / "Failed to send a request"**.
 
-### 2. Update `execute-campaign/index.ts`
+### 4. Read back the actual delivery evidence
 
-- Remove the top-level `requireInternalCaller` call.
-- After loading `campaign` (to know `workspace_id`), call `requireInternalOrWorkspaceMember(req, supabase, campaign.workspace_id)`; return its response if non-null.
-- Keep everything else identical.
+For each channel, confirm a row exists and its status:
 
-### 3. Update `execute-automation/index.ts`
+- Email: `email_send_log` where `recipient_email = 'kizzyadichie@gmail.com'` and `created_at >= now() - interval '5 min'` (dedup by `message_id`, latest per email).
+- WhatsApp: `whatsapp_messages` for the lead in the last 5 min (`status`, `error_message`).
+- SMS: `sms_logs` for the lead in the last 5 min.
+- Cross-check with `campaign_messages` rows for the new campaign.
 
-Same pattern: fetch the `automation` first to get `workspace_id`, then authorize. The current top-of-handler guard is removed.
+### 5. Tail edge function logs for anything red
 
-### 4. Update `execute-workflow/index.ts`
+`supabase--edge_function_logs` for `execute-campaign`, `whatsapp-send`, `send-transactional-email` (or the SMS sender name in use). Report any errors verbatim.
 
-Same pattern: fetch the `workflow` first, then authorize on its `workspace_id`.
+### 6. Report per-channel result
 
-### 5. Leave internal-only functions unchanged
+Answer your question with a small table:
 
-`enroll-workflow-leads` and `check-campaign-triggers` keep `requireInternalCaller` — they are only invoked server-side.
+| Channel   | Fn responded 2xx | Provider accepted | Notes |
+|-----------|-----------------:|------------------:|-------|
+| Email     |                  |                   |       |
+| WhatsApp  |                  |                   |       |
+| SMS       |                  |                   |       |
+
+Plus an explicit yes/no on: *did any call return "Failed to send a request to the Edge Function"?*
+
+### 7. Cleanup
+
+Leave the throwaway campaign in place (marked `sent`/`completed` by the function) so you can inspect the run in the UI. If you want it removed I'll delete it in a follow-up.
+
+## Notes / expectations
+
+- If WhatsApp is outside the 24h window and there's no approved template, the memory rule + earlier audit require `whatsapp-send` to return `success:false, fallback:true` and the caller flips to SMS. That path will show up in the results as WA=failed(fallback) + SMS=sent, which still counts as delivered and is the correct behavior — I'll call that out explicitly instead of marking WA a regression.
+- No provider credentials, service-role key, or JWTs will be echoed back to you.
 
 ## Out of scope
 
-- No changes to `whatsapp-send`, WA pacing helper, template-category compliance, or webhook status transitions from the earlier audit.
-- No UI changes; the existing toasts already surface success/failure once the 403 is resolved.
-- No RLS / migration changes — membership check uses existing tables.
-
-## Verification
-
-After deploy:
-1. From the preview, create a broadcast "Send Now" campaign → toast should read `Campaign sent! N delivered`.
-2. `Send now` from `CampaignDetailsDrawer` on an existing campaign → same.
-3. `Run now` on an automation from `SequenceHealthPanel` → success toast, no 403.
-4. `Test run` and manual run of a workflow from the workflow editor → success.
-5. Cron-driven `check-campaign-triggers` → still works (service-role path unchanged), confirmed via edge function logs.
+- No UI changes.
+- No changes to provider adapters, credit accounting, WA template config, or fallback logic — only observation.
