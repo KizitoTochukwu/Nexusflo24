@@ -1,10 +1,13 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get("next");
+  const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -12,7 +15,12 @@ const AuthCallback = () => {
 
       if (error || !session) {
         toast.error("Google sign-in failed, please try again.");
-        navigate("/login", { replace: true });
+        navigate(next ? `/login?next=${encodeURIComponent(next)}` : "/login", { replace: true });
+        return;
+      }
+
+      if (next) {
+        window.location.replace(next);
         return;
       }
 
@@ -32,7 +40,7 @@ const AuthCallback = () => {
     };
 
     handleCallback();
-  }, [navigate]);
+  }, [navigate, next]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
@@ -42,3 +50,4 @@ const AuthCallback = () => {
 };
 
 export default AuthCallback;
+
