@@ -139,6 +139,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Authorize caller: internal (service-role) or workspace member
+    const authz = await requireInternalOrWorkspaceMember(req, supabase, workspace_id);
+    if (authz) {
+      const body = await authz.text();
+      return new Response(body, {
+        status: authz.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Deduplication: if this is a fresh trigger (not a scheduled resume),
     // check if there are already pending scheduled jobs for this automation+lead.
     // If so, skip to prevent duplicate emails.
