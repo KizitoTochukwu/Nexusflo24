@@ -4,7 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { deductCredit } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
-import { requireInternalCaller } from "../_shared/internal-auth.ts";
+import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -454,10 +454,8 @@ async function runAction(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const guard = requireInternalCaller(req);
-  if (guard) return guard;
-
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
 
   try {
     const body = await req.json();
@@ -471,6 +469,16 @@ Deno.serve(async (req) => {
     const { data: enrollment, error: enrollErr } = await supabase
       .from("workflow_enrollments").select("*").eq("id", enrollment_id).maybeSingle();
     if (enrollErr || !enrollment) throw new Error("Enrollment not found");
+
+    // Authorize caller: internal (service-role) or workspace member
+    const authz = await requireInternalOrWorkspaceMember(req, supabase, (enrollment as any).workspace_id);
+    if (authz) {
+      const body = await authz.text();
+      return new Response(body, {
+        status: authz.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (enrollment.status !== "active") {
       return new Response(JSON.stringify({ ok: true, skipped: enrollment.status }), {

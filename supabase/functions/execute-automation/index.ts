@@ -4,7 +4,7 @@ import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
 import { blocksToHtml, parseBlocksFromMessage, interpolateBlocks } from "../_shared/email-blocks.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
-import { requireInternalCaller } from "../_shared/internal-auth.ts";
+import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,10 +124,8 @@ async function evaluateExitCriteria(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const guard = requireInternalCaller(req);
-  if (guard) return guard;
-
   try {
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -138,6 +136,16 @@ Deno.serve(async (req) => {
     if (!automation_id || !lead_id || !workspace_id) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Authorize caller: internal (service-role) or workspace member
+    const authz = await requireInternalOrWorkspaceMember(req, supabase, workspace_id);
+    if (authz) {
+      const body = await authz.text();
+      return new Response(body, {
+        status: authz.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 

@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isAdminUser } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
-import { requireInternalCaller } from "../_shared/internal-auth.ts";
+import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
 import { enforceWaPacing } from "../_shared/wa-rate-limit.ts";
 
 const corsHeaders = {
@@ -12,8 +12,7 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const guard = requireInternalCaller(req);
-  if (guard) return guard;
+
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -43,6 +42,17 @@ Deno.serve(async (req) => {
     }
 
     const workspaceId = campaign.workspace_id;
+
+    // Authorize caller: internal (service-role) or workspace member
+    const authz = await requireInternalOrWorkspaceMember(req, supabase, workspaceId);
+    if (authz) {
+      // Ensure CORS headers on auth failure responses too
+      const body = await authz.text();
+      return new Response(body, {
+        status: authz.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Check if workspace owner is admin → skip credits
     const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
