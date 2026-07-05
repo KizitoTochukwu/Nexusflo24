@@ -124,10 +124,8 @@ async function evaluateExitCriteria(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const guard = requireInternalCaller(req);
-  if (guard) return guard;
-
   try {
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
