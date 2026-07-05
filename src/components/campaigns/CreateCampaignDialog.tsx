@@ -970,6 +970,8 @@ export default function CreateCampaignDialog() {
               </Button>
             </div>
           </div>
+        )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
