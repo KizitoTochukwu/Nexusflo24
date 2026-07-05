@@ -43,6 +43,17 @@ Deno.serve(async (req) => {
 
     const workspaceId = campaign.workspace_id;
 
+    // Authorize caller: internal (service-role) or workspace member
+    const authz = await requireInternalOrWorkspaceMember(req, supabase, workspaceId);
+    if (authz) {
+      // Ensure CORS headers on auth failure responses too
+      const body = await authz.text();
+      return new Response(body, {
+        status: authz.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check if workspace owner is admin → skip credits
     const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
     const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
