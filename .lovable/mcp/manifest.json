@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://stuaikfyuwcjmchcvfie.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "nexusflo24-mcp",
+      "version": "0.1.0",
+      "title": "NexusFlo24 MCP"
+    },
+    "tools": [
+      {
+        "name": "list_workspaces",
+        "title": "List workspaces",
+        "description": "List the signed-in user's NexusFlo24 workspaces. Use the returned workspace_id when calling other tools.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_leads",
+        "title": "List leads",
+        "description": "List the signed-in user's most recent leads in NexusFlo24 (name, email, phone, status, stage, score, source, tags, created_at). Optional workspace_id, status, and search filters.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional workspace to scope leads to."
+            },
+            "status": {
+              "type": "string",
+              "description": "Optional status filter (e.g. New, Contacted, Qualified)."
+            },
+            "search": {
+              "type": "string",
+              "description": "Optional case-insensitive match on name or email."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max rows to return (default 25)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_lead",
+        "title": "Create lead",
+        "description": "Create a new CRM lead in NexusFlo24 for the signed-in user's workspace. Requires at least full_name or email. Optional notes, source, tags, status.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Workspace to add the lead to."
+            },
+            "full_name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string",
+              "description": "Where the lead came from (e.g. 'ChatGPT MCP')."
+            },
+            "status": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "workspace_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_campaigns",
+        "title": "List campaigns",
+        "description": "List the signed-in user's marketing campaigns (Email / WhatsApp / SMS) in NexusFlo24 with status and channel.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

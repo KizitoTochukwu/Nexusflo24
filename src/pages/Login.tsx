@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import nexusLogo from "@/assets/nexusflo24-logo-full.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get("next");
+  const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
 
   const redirectToDashboard = async (userId: string) => {
+    if (next) {
+      navigate(next, { replace: true });
+      return;
+    }
     const { data: memberships } = await supabase
       .from("workspace_members")
       .select("workspace_id")
@@ -55,8 +62,11 @@ const Login = () => {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
+    const callback = next
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+      : `${window.location.origin}/auth/callback`;
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/auth/callback",
+      redirect_uri: callback,
     });
     setGoogleLoading(false);
     if (error) {

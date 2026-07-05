@@ -57,6 +57,7 @@ import AdminUsage from "./pages/admin/communication/AdminUsage";
 import AdminCreditPackages from "./pages/admin/communication/AdminCreditPackages";
 import AdminMessagesInbox from "./pages/admin/communication/AdminMessagesInbox";
 import AuthCallback from "./pages/AuthCallback";
+import OAuthConsent from "./pages/OAuthConsent";
 import PublicFunnel from "./pages/PublicFunnel";
 import DashboardBookings from "./pages/dashboard/DashboardBookings";
 import DashboardMessages from "./pages/dashboard/DashboardMessages";
@@ -121,6 +122,7 @@ const App = () => (
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
               <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/cookie-policy" element={<CookiePolicy />} />
