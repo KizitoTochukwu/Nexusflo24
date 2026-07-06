@@ -130,7 +130,7 @@ var list_campaigns_default = defineTool3({
   handler: async ({ workspace_id, limit }, ctx) => {
     if (!ctx.isAuthenticated())
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    let q = client3(ctx).from("campaigns").select("id, name, channel, status, created_at, updated_at").order("created_at", { ascending: false }).limit(limit ?? 25);
+    let q = client3(ctx).from("campaigns").select("id, name, type, status, created_at, updated_at").order("created_at", { ascending: false }).limit(limit ?? 25);
     if (workspace_id) q = q.eq("workspace_id", workspace_id);
     const { data, error } = await q;
     if (error)
