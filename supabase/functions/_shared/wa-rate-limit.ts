@@ -40,7 +40,11 @@ export async function checkDailyTier(
     .select("tier_limit")
     .eq("workspace_id", workspaceId)
     .maybeSingle();
-  const limit = Number(ws?.tier_limit ?? 1000);
+  // Default to Meta's top tier (100K/24h) so we don't silently cap workspaces
+  // below their real Meta-issued messaging limit. Meta itself enforces the
+  // actual per-account tier; this guard only exists to short-circuit obvious
+  // over-sends when an admin has explicitly set a lower `tier_limit`.
+  const limit = Number(ws?.tier_limit ?? 100000);
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count } = await adminClient
@@ -48,6 +52,10 @@ export async function checkDailyTier(
     .select("id", { count: "exact", head: true })
     .eq("workspace_id", workspaceId)
     .eq("direction", "outbound")
+    // Only successful/in-flight sends count against the daily tier. Failed rows
+    // (opt-out rejections, credential errors, tier-exceeded stubs) never
+    // reached Meta and must not consume the quota.
+    .neq("status", "failed")
     .gte("created_at", since);
   const used = Number(count ?? 0);
 
