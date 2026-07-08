@@ -4248,6 +4248,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          provider: string | null
           updated_at: string
           workspace_id: string
         }
@@ -4257,6 +4258,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          provider?: string | null
           updated_at?: string
           workspace_id: string
         }
@@ -4266,6 +4268,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          provider?: string | null
           updated_at?: string
           workspace_id?: string
         }

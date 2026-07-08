@@ -351,7 +351,7 @@ Deno.serve(async (req) => {
     if (existingChannel?.id) {
       await admin
         .from("workspace_channel_settings")
-        .update({ config_encrypted: channelConfigEncrypted, is_active: true })
+        .update({ config_encrypted: channelConfigEncrypted, is_active: true, provider: "meta" })
         .eq("id", existingChannel.id);
     } else {
       await admin.from("workspace_channel_settings").insert({
@@ -359,6 +359,7 @@ Deno.serve(async (req) => {
         channel: "whatsapp",
         config_encrypted: channelConfigEncrypted,
         is_active: true,
+        provider: "meta",
       });
     }
 

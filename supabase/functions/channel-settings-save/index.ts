@@ -223,6 +223,13 @@ Deno.serve(async (req) => {
 
     const configEncrypted = await encrypt(JSON.stringify(cleanedConfig), encryptionKey);
 
+    // Track WhatsApp provider explicitly so the single-active-provider trigger
+    // can distinguish Meta's mirror row from an active Twilio configuration.
+    const providerTag =
+      channel === "whatsapp"
+        ? ((cleanedConfig.provider || "").toLowerCase() === "twilio" ? "twilio" : "meta")
+        : null;
+
     const { error: upsertErr } = await adminClient
       .from("workspace_channel_settings")
       .upsert(
@@ -231,6 +238,7 @@ Deno.serve(async (req) => {
           channel,
           config_encrypted: configEncrypted,
           is_active: true,
+          provider: providerTag,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "workspace_id,channel" }

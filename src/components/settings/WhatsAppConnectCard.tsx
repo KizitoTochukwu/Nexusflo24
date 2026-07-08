@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +29,11 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useConnectWhatsApp,
   useDisconnectWhatsApp,
@@ -43,9 +45,12 @@ interface Props {
   workspaceId: string;
 }
 
+type ActiveProvider = "meta" | "twilio" | null;
+
 const SUPABASE_FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const TWILIO_INBOUND_URL = `${SUPABASE_FN_BASE}/twilio-whatsapp-webhook`;
 const TWILIO_STATUS_URL = `${SUPABASE_FN_BASE}/twilio-whatsapp-status`;
+const WEBHOOK_CALLBACK_URL = `${SUPABASE_FN_BASE}/whatsapp-webhook`;
 
 interface TwilioCfg {
   provider: "twilio";
@@ -53,6 +58,35 @@ interface TwilioCfg {
   auth_token: string;
   from_number: string;
   messaging_service_sid?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Active-provider resolution — SINGLE SOURCE OF TRUTH, always from the DB.
+// ---------------------------------------------------------------------------
+
+interface ChannelSettingsWhatsAppShape {
+  configured?: boolean;
+  is_active?: boolean;
+  non_secret?: { provider?: string };
+}
+
+async function fetchWhatsAppChannelSettings(
+  workspaceId: string,
+): Promise<ChannelSettingsWhatsAppShape | null> {
+  const { data: sess } = await supabase.auth.getSession();
+  const accessToken = sess.session?.access_token;
+  if (!accessToken) return null;
+  const res = await fetch(
+    `${SUPABASE_FN_BASE}/channel-settings-get?workspaceId=${encodeURIComponent(workspaceId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+    },
+  );
+  const json = await res.json().catch(() => ({}));
+  return (json?.whatsapp as ChannelSettingsWhatsAppShape) || null;
 }
 
 function CopyableUrl({ label, url }: { label: string; url: string }) {
@@ -76,10 +110,22 @@ function CopyableUrl({ label, url }: { label: string; url: string }) {
   );
 }
 
-function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
-  const [loading, setLoading] = useState(true);
+// ---------------------------------------------------------------------------
+// Twilio panel
+// ---------------------------------------------------------------------------
+
+function TwilioWhatsAppPanel({
+  workspaceId,
+  activeProvider,
+  onActivated,
+}: {
+  workspaceId: string;
+  activeProvider: ActiveProvider;
+  onActivated: () => Promise<void>;
+}) {
   const [saving, setSaving] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmSwitch, setConfirmSwitch] = useState(false);
   const [cfg, setCfg] = useState<TwilioCfg>({
     provider: "twilio",
     account_sid: "",
@@ -87,48 +133,27 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
     from_number: "",
     messaging_service_sid: "",
   });
-  const [isActive, setIsActive] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data: sess } = await supabase.auth.getSession();
-        const accessToken = sess.session?.access_token;
-        if (!accessToken) return;
-        const url = `${SUPABASE_FN_BASE}/channel-settings-get?workspaceId=${encodeURIComponent(workspaceId)}`;
-        const res = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        });
-        const json = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        const wa = json?.whatsapp;
-        // masked values (provider is not masked because it's not a secret-like string;
-        // it just gets first-4 / last-4 — but for short strings like "twilio" it
-        // returns "****". So infer from presence of account_sid masked + provider.
-        if (wa?.configured && wa?.masked) {
-          const looksLikeTwilio =
-            wa.masked.account_sid ||
-            wa.masked.from_number ||
-            String(wa.masked.provider || "").toLowerCase().includes("twil");
-          if (looksLikeTwilio) setIsActive(Boolean(wa.is_active));
-        }
-      } catch (err) {
-        console.error("load twilio whatsapp settings", err);
-      } finally {
-        if (!cancelled) setLoading(false);
+  const isTwilioActive = activeProvider === "twilio";
+  const metaIsActive = activeProvider === "meta";
+
+  const validate = (): string | null => {
+    if (!/^AC[0-9a-fA-F]{32}$/.test(cfg.account_sid.trim())) {
+      return "Account SID must start with AC and be 34 characters long.";
+    }
+    if (!cfg.auth_token.trim()) {
+      return "Auth Token is required.";
+    }
+    // Messaging Service SID can substitute for a From number
+    if (!cfg.messaging_service_sid?.trim()) {
+      if (!/^\+[1-9]\d{6,14}$/.test(cfg.from_number.trim())) {
+        return "From number must be valid E.164 format (e.g. +14155238886).";
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceId]);
+    }
+    return null;
+  };
 
-  const save = async () => {
+  const doSave = async () => {
     setSaving(true);
     try {
       const { data: sess } = await supabase.auth.getSession();
@@ -145,13 +170,27 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.error) throw new Error(json?.error || `Save failed (${res.status})`);
-      setIsActive(true);
-      toast.success("Twilio WhatsApp connected — paste the webhook URLs into Twilio Console.");
+      await onActivated();
+      toast.success("Twilio WhatsApp is now active for this workspace.");
     } catch (err: any) {
       toast.error(err?.message || "Save failed");
     } finally {
       setSaving(false);
+      setConfirmSwitch(false);
     }
+  };
+
+  const handlePrimary = () => {
+    const err = validate();
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    if (metaIsActive) {
+      setConfirmSwitch(true);
+      return;
+    }
+    void doSave();
   };
 
   const disconnectTwilio = async () => {
@@ -178,7 +217,7 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
         from_number: "",
         messaging_service_sid: "",
       });
-      setIsActive(false);
+      await onActivated();
       toast.success("Twilio WhatsApp disconnected");
     } catch (err: any) {
       toast.error(err?.message || "Disconnect failed");
@@ -187,17 +226,25 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading Twilio settings…
-      </div>
-    );
-  }
+  const primaryLabel = metaIsActive
+    ? "Validate & Switch to Twilio"
+    : isTwilioActive
+    ? "Update Twilio credentials"
+    : "Save & activate Twilio";
 
   return (
     <div className="space-y-4">
-      {isActive && (
+      {metaIsActive && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Meta Cloud API is currently active for this workspace. Enter your Twilio credentials
+            below and click <strong>{primaryLabel}</strong> to switch providers.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isTwilioActive && (
         <Alert>
           <CheckCircle2 className="h-4 w-4" />
           <AlertDescription>
@@ -257,10 +304,16 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={save} disabled={saving}>
-          {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</> : "Save & activate Twilio"}
+        <Button onClick={handlePrimary} disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…
+            </>
+          ) : (
+            primaryLabel
+          )}
         </Button>
-        {isActive && (
+        {isTwilioActive && (
           <Button
             variant="outline"
             className="text-destructive hover:text-destructive"
@@ -281,11 +334,32 @@ function TwilioWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
           "When a message comes in" and "Status callback URL" to the URLs above.
         </p>
       </div>
+
+      <AlertDialog open={confirmSwitch} onOpenChange={setConfirmSwitch}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to Twilio WhatsApp?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deactivate Meta Cloud API for this workspace. Your Meta connection details
+              and synced templates are preserved and you can switch back later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={doSave} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Confirm switch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-const WEBHOOK_CALLBACK_URL = `${SUPABASE_FN_BASE}/whatsapp-webhook`;
+// ---------------------------------------------------------------------------
+// Webhook verify token section (unchanged)
+// ---------------------------------------------------------------------------
 
 function WebhookVerifyTokenSection({ workspaceId }: { workspaceId: string }) {
   const [token, setToken] = useState<string | null>(null);
@@ -428,26 +502,53 @@ function WebhookVerifyTokenSection({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
+// ---------------------------------------------------------------------------
+// Meta panel
+// ---------------------------------------------------------------------------
+
+function MetaWhatsAppPanel({
+  workspaceId,
+  activeProvider,
+  onActivated,
+}: {
+  workspaceId: string;
+  activeProvider: ActiveProvider;
+  onActivated: () => Promise<void>;
+}) {
   const { data: conn } = useWhatsAppConnection(workspaceId);
   const connect = useConnectWhatsApp(workspaceId);
   const disconnect = useDisconnectWhatsApp(workspaceId);
   const sync = useSyncWhatsAppTemplates(workspaceId);
   const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [confirmSwitch, setConfirmSwitch] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  const handleConnect = async () => {
+  const metaIsActive = activeProvider === "meta";
+  const twilioIsActive = activeProvider === "twilio";
+
+  const runConnect = async () => {
     try {
       setConnectionError(null);
       const res = await connect.mutateAsync();
+      await onActivated();
       toast.success(
-        `Connected ${res?.displayPhoneNumber || "your WhatsApp number"} — fetching templates…`,
+        `Connected ${res?.displayPhoneNumber || "your WhatsApp number"} — Meta Cloud API is now active.`,
       );
     } catch (err: any) {
       const message = err?.message || "Connection failed";
       setConnectionError(message);
       toast.error(message);
+    } finally {
+      setConfirmSwitch(false);
     }
+  };
+
+  const handleConnect = () => {
+    if (twilioIsActive) {
+      setConfirmSwitch(true);
+      return;
+    }
+    void runConnect();
   };
 
   const handleSync = async () => {
@@ -462,6 +563,7 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
   const handleDisconnect = async () => {
     try {
       await disconnect.mutateAsync();
+      await onActivated();
       toast.success("WhatsApp disconnected");
       setConfirmDisconnect(false);
     } catch (err: any) {
@@ -469,11 +571,19 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
     }
   };
 
-  const isConnected = conn?.configured && conn?.is_active;
-
   return (
     <div className="space-y-4">
-      {isConnected ? (
+      {twilioIsActive && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Twilio WhatsApp is currently active for this workspace. Click{" "}
+            <strong>Connect &amp; Switch to Meta</strong> to switch providers.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {metaIsActive ? (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div className="rounded-lg border bg-muted/30 p-3">
@@ -500,9 +610,9 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
               <div className="text-xs text-muted-foreground mb-1">Connection method</div>
               <div className="font-medium capitalize">
                 {conn?.connection_method?.replace("_", " ") || "manual"}
-          </div>
+              </div>
 
-          <WebhookVerifyTokenSection workspaceId={workspaceId} />
+              <WebhookVerifyTokenSection workspaceId={workspaceId} />
             </div>
           </div>
 
@@ -563,7 +673,8 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
               </>
             ) : (
               <>
-                <MessageCircle className="h-4 w-4 mr-2" /> Connect WhatsApp via Meta
+                <MessageCircle className="h-4 w-4 mr-2" />
+                {twilioIsActive ? "Connect & Switch to Meta" : "Connect WhatsApp via Meta"}
               </>
             )}
           </Button>
@@ -594,14 +705,84 @@ function MetaWhatsAppPanel({ workspaceId }: { workspaceId: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={confirmSwitch} onOpenChange={setConfirmSwitch}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Switch to Meta Cloud API?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deactivate Twilio WhatsApp for this workspace. Meta will only become
+              active after you complete the Meta signup popup successfully.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={connect.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={runConnect} disabled={connect.isPending}>
+              {connect.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Continue to Meta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-export function WhatsAppConnectCard({ workspaceId }: Props) {
-  const { data: conn, isLoading } = useWhatsAppConnection(workspaceId);
+// ---------------------------------------------------------------------------
+// Card shell — owns selectedProviderTab + activeProvider split
+// ---------------------------------------------------------------------------
 
-  if (isLoading) {
+export function WhatsAppConnectCard({ workspaceId }: Props) {
+  const { data: conn, isLoading: connLoading } = useWhatsAppConnection(workspaceId);
+  const qc = useQueryClient();
+  const [twilioChannel, setTwilioChannel] =
+    useState<ChannelSettingsWhatsAppShape | null>(null);
+  const [channelLoading, setChannelLoading] = useState(true);
+  const [selectedProviderTab, setSelectedProviderTab] = useState<"meta" | "twilio">("meta");
+  const [initialised, setInitialised] = useState(false);
+
+  const loadChannel = useCallback(async () => {
+    setChannelLoading(true);
+    try {
+      const wa = await fetchWhatsAppChannelSettings(workspaceId);
+      setTwilioChannel(wa);
+    } finally {
+      setChannelLoading(false);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    void loadChannel();
+  }, [loadChannel]);
+
+  // Derive active provider strictly from DB-backed data.
+  const metaActive = Boolean(conn?.configured && conn?.is_active);
+  const twilioActive = Boolean(
+    twilioChannel?.configured &&
+      twilioChannel?.is_active &&
+      (twilioChannel?.non_secret?.provider || "").toLowerCase() === "twilio",
+  );
+  const activeProvider: ActiveProvider = metaActive
+    ? "meta"
+    : twilioActive
+    ? "twilio"
+    : null;
+
+  // First-load: align the visible tab with whatever provider is active.
+  useEffect(() => {
+    if (initialised || connLoading || channelLoading) return;
+    setSelectedProviderTab(activeProvider === "twilio" ? "twilio" : "meta");
+    setInitialised(true);
+  }, [initialised, connLoading, channelLoading, activeProvider]);
+
+  const refreshActiveProvider = useCallback(async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["whatsapp-connection", workspaceId] }),
+      loadChannel(),
+    ]);
+  }, [qc, workspaceId, loadChannel]);
+
+  if (connLoading || channelLoading) {
     return (
       <Card>
         <CardContent className="p-6 flex items-center gap-2 text-muted-foreground">
@@ -611,7 +792,18 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
     );
   }
 
-  const metaConnected = conn?.configured && conn?.is_active;
+  const headerBadge =
+    activeProvider === "meta" ? (
+      <Badge variant="default" className="bg-green-500 hover:bg-green-500">
+        <CheckCircle2 className="h-3 w-3 mr-1" /> Meta Connected
+      </Badge>
+    ) : activeProvider === "twilio" ? (
+      <Badge variant="default" className="bg-green-500 hover:bg-green-500">
+        <CheckCircle2 className="h-3 w-3 mr-1" /> Twilio Connected
+      </Badge>
+    ) : (
+      <Badge variant="outline">Not connected</Badge>
+    );
 
   return (
     <Card className="border-primary/20">
@@ -624,13 +816,7 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 WhatsApp Business
-                {metaConnected ? (
-                  <Badge variant="default" className="bg-green-500 hover:bg-green-500">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Meta Connected
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">Not connected</Badge>
-                )}
+                {headerBadge}
               </CardTitle>
               <CardDescription>
                 Pick a provider — Meta Cloud API (Embedded Signup) or Twilio WhatsApp. Only one
@@ -642,16 +828,28 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
       </CardHeader>
 
       <CardContent>
-        <Tabs defaultValue="meta" className="w-full">
+        <Tabs
+          value={selectedProviderTab}
+          onValueChange={(v) => setSelectedProviderTab(v as "meta" | "twilio")}
+          className="w-full"
+        >
           <TabsList className="grid grid-cols-2 w-full max-w-md">
             <TabsTrigger value="meta">Meta Cloud API</TabsTrigger>
             <TabsTrigger value="twilio">Twilio WhatsApp</TabsTrigger>
           </TabsList>
           <TabsContent value="meta" className="pt-4">
-            <MetaWhatsAppPanel workspaceId={workspaceId} />
+            <MetaWhatsAppPanel
+              workspaceId={workspaceId}
+              activeProvider={activeProvider}
+              onActivated={refreshActiveProvider}
+            />
           </TabsContent>
           <TabsContent value="twilio" className="pt-4">
-            <TwilioWhatsAppPanel workspaceId={workspaceId} />
+            <TwilioWhatsAppPanel
+              workspaceId={workspaceId}
+              activeProvider={activeProvider}
+              onActivated={refreshActiveProvider}
+            />
           </TabsContent>
         </Tabs>
       </CardContent>
