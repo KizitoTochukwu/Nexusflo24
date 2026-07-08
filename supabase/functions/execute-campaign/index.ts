@@ -3,6 +3,8 @@ import { isAdminUser } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
 import { enforceWaPacing } from "../_shared/wa-rate-limit.ts";
+import { parseBlocksFromMessage, interpolateBlocks, blocksToHtml, blocksToText } from "../_shared/email-blocks.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
