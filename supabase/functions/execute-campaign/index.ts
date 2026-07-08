@@ -368,5 +368,3 @@ Deno.serve(async (req) => {
   }
 });
 
-  }
-});
