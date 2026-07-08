@@ -330,12 +330,28 @@ export default function CreateCampaignDialog() {
         } else {
           const sent = data?.sent ?? 0;
           const failed = data?.failed ?? 0;
-          toast.success(`Campaign sent! ${sent} delivered${failed > 0 ? `, ${failed} failed` : ""}`);
+          const skippedUnsub = data?.skipped_unsubscribed ?? 0;
+          const skippedNoContact = data?.skipped_missing_contact ?? 0;
+          const skippedParts: string[] = [];
+          if (skippedUnsub > 0) skippedParts.push(`${skippedUnsub} unsubscribed`);
+          if (skippedNoContact > 0) skippedParts.push(`${skippedNoContact} missing contact info`);
+          const skippedSuffix = skippedParts.length ? ` · Skipped: ${skippedParts.join(", ")}` : "";
+          if (sent === 0) {
+            toast.error(
+              `Campaign delivered 0 messages${failed > 0 ? ` (${failed} failed)` : ""}${skippedSuffix}`,
+              { duration: 8000 }
+            );
+          } else {
+            toast.success(
+              `Campaign sent! ${sent} delivered${failed > 0 ? `, ${failed} failed` : ""}${skippedSuffix}`
+            );
+          }
         }
       } catch (err) {
         console.error("Auto-execute error:", err);
         toast.error("Campaign created but failed to send. You can retry from the campaign details.");
       }
+
     }
 
     setOpen(false);

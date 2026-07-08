@@ -1,80 +1,78 @@
-## Goal
+## Why nothing was delivered for campaign "hi"
 
-Verify end-to-end that the Campaigns page can send **Email + WhatsApp + SMS** from the browser without the "Failed to send a request to the Edge Function" error, using a single test lead: **kizzyadichie@gmail.com**.
+Looking at the actual data for campaign `4c8aca54…` (type = `multi-channel`, target = lead `kizzyadichie@gmail.com`):
 
-## What I'll do (build-mode steps)
+- `campaigns.sent_count = 0`, `status = completed`
+- `campaign_messages` for this campaign: **0 rows** — no send was ever attempted
+- Target lead's `tags` contains **`unsubscribed`**
+- `message_content.body` is a **block-JSON array** from the email/funnel builder (`[{id, type:"text", props:{content:...}}, {type:"image",...}, ...]`), not a rendered HTML/text string
+- `type = "multi-channel"` but nothing in the code actually fans out to all three channels
 
-### 1. Prep — read-only checks
+So three independent bugs stack on top of each other. Even if you fix one, the next still blocks delivery.
 
-- `supabase--read_query` to find the lead: `SELECT id, workspace_id, email, phone, tags FROM public.leads WHERE lower(email) = 'kizzyadichie@gmail.com' LIMIT 1`.
-- Fail fast with a clear message if there's no phone number on the lead (WA/SMS cannot deliver otherwise); ask you for a phone if missing.
-- Confirm the workspace has `whatsapp_settings`, `sms_settings`, and either an approved sender / Resend key for Email (SELECT-only sanity check on presence, no secret values printed).
-- Redeploy `execute-campaign`, `execute-automation`, `execute-workflow` so the auth-guard fix is live.
+### Root causes
 
-### 2. Create a throwaway multi-channel test campaign
+1. **Silent unsubscribe skip.** `execute-campaign` filters out any lead whose `tags` include `unsubscribed`, then if the filtered list is empty it writes `sent_count:0, status:completed` and returns `"All matching leads are unsubscribed"` — with **no row in `campaign_messages`, no toast, no notification**. From the UI it looks like the campaign ran successfully and delivered nothing, with no explanation.
 
-Insert a single row via `supabase--insert` into `public.campaigns`:
+2. **`multi-channel` only sends email.** In `execute-campaign/index.ts` the send loop does:
+   ```
+   const effectiveChannel = channel === "multi-channel" ? "email" : channel;
+   ```
+   So a "multi-channel" campaign only ever calls `email-send`. WhatsApp and SMS are **never dispatched** as primary channels. The `fallback_settings` (SMS after 30min if unread) also can't help here because fallback only fires when the primary send *fails* — a skipped/unsubscribed lead never even reaches that branch.
 
-- `name`: `E2E send test — {timestamp}`
-- `workspace_id`: from step 1
-- `type`: `multi` (per the multi-channel schema)
-- `campaign_type` / `mode`: `broadcast`
-- `status`: `draft`
-- `audience_filter`: `{ "lead_ids": ["<test lead id>"] }`
-- `message_content`: plain-text bodies scoped to each channel:
-  - Email: subject `NexusFlo24 delivery test`, body `Test send at {ts} — please ignore.`
-  - WhatsApp: same short text (no template — will exercise 24h-window handling / fallback wiring)
-  - SMS: `NexusFlo24 test {ts} — ignore.`
-- `fallback_settings`: `{ enabled: true, channel: "sms", delay_minutes: 0 }` so a closed WA window falls back to SMS.
-- `schedule_type`: `now`.
+3. **Body is block-JSON, not renderable content.** The campaign editor saved `body` as the funnel-builder block array. `execute-campaign` passes that raw JSON string straight into:
+   - `email-send` as `html` → recipient would see a wall of `[{"id":"blk_…"}]`
+   - `whatsapp-send` / `sms-send` as message body → same raw JSON, and WA/SMS have strict length + content rules so many providers will reject it outright.
+   There's no block-array → HTML (for email) or → plain-text (for WA/SMS) renderer on the send path.
 
-### 3. Fire it as the browser would
+### Fix plan
 
-Call the deployed function directly using the **currently logged-in preview user's JWT** (that's you, workspace owner). This mirrors what the Campaigns page does after the "Send Campaign Now" click:
+Frontend + edge function changes only. No schema changes.
 
-```
-supabase--curl_edge_functions
-  path=/execute-campaign, method=POST
-  body={"campaign_id":"<id>"}
-```
+**A. Actually send on all requested channels for `type = "multi-channel"`**
 
-Read the JSON response — expect `{ sent, failed, results:[…] }` and **no 403 / "Failed to send a request"**.
+In `supabase/functions/execute-campaign/index.ts`:
 
-### 4. Read back the actual delivery evidence
+- Replace the single `effectiveChannel` branch with a loop over the channels the campaign requested. Derive the channel set from `message_content.channels` (already written by `CreateCampaignDialog` for multi-channel) with fallback to `["email","whatsapp","sms"]` when absent.
+- For each channel present, call the matching send function *if the lead has the required contact field* (`email` for email, `phone` for wa/sms).
+- Insert one `campaign_messages` row per channel per lead with its own `delivery_status` + `error`.
+- Keep the existing fallback scheduler, but only trigger it when **all** primary channels for a lead failed (not per-channel), so we don't stack duplicate SMS fallbacks.
 
-For each channel, confirm a row exists and its status:
+**B. Render block-JSON body before sending**
 
-- Email: `email_send_log` where `recipient_email = 'kizzyadichie@gmail.com'` and `created_at >= now() - interval '5 min'` (dedup by `message_id`, latest per email).
-- WhatsApp: `whatsapp_messages` for the lead in the last 5 min (`status`, `error_message`).
-- SMS: `sms_logs` for the lead in the last 5 min.
-- Cross-check with `campaign_messages` rows for the new campaign.
+Add a shared helper `supabase/functions/_shared/render-blocks.ts`:
 
-### 5. Tail edge function logs for anything red
+- `renderBlocksToHtml(body)` — walks the block array, emits `<p>`, `<img>`, `<a>`, `<h1..h3>`, list, divider, button blocks into safe HTML, honouring `props.fontSize/color/alignment/fontWeight/lineHeight/src/alt/width`.
+- `renderBlocksToText(body)` — same walk, produces newline-separated plain text (used for WA + SMS). Images become `[image: alt]` or their `linkUrl`, buttons become `label: url`.
+- `coerceBody(raw)` — if `raw` parses as a block array, run the appropriate renderer; otherwise pass through unchanged (back-compat with existing plain-text/HTML campaigns).
 
-`supabase--edge_function_logs` for `execute-campaign`, `whatsapp-send`, `send-transactional-email` (or the SMS sender name in use). Report any errors verbatim.
+`execute-campaign` calls `coerceBody(messageBody, "html")` for the email leg and `coerceBody(messageBody, "text")` for WA + SMS legs, *before* interpolating variables (so `{{first_name}}` still works inside block text content).
 
-### 6. Report per-channel result
+**C. Stop silently swallowing "everyone was unsubscribed"**
 
-Answer your question with a small table:
+In `execute-campaign`:
 
-| Channel   | Fn responded 2xx | Provider accepted | Notes |
-|-----------|-----------------:|------------------:|-------|
-| Email     |                  |                   |       |
-| WhatsApp  |                  |                   |       |
-| SMS       |                  |                   |       |
+- Track counts of `skipped_unsubscribed`, `skipped_missing_contact`, `skipped_no_channel_match`, and return them in the response JSON.
+- When the whole audience is filtered out, still update `sent_count:0` but set `status = "failed"` (not `"completed"`) and write a workspace notification: `"Campaign 'hi' sent to 0 recipients — 1 lead skipped (unsubscribed)"` so the operator sees the real reason.
 
-Plus an explicit yes/no on: *did any call return "Failed to send a request to the Edge Function"?*
+In `CreateCampaignDialog` / `CampaignDetailsDrawer`:
 
-### 7. Cleanup
+- Surface the returned `skipped_*` counts in a toast after send ("Campaign sent to 0 of 1 — 1 unsubscribed").
+- In the details drawer, add a "Skipped recipients" panel listing skipped counts by reason so the user isn't left staring at an empty timeline.
 
-Leave the throwaway campaign in place (marked `sent`/`completed` by the function) so you can inspect the run in the UI. If you want it removed I'll delete it in a follow-up.
+**D. Verification for this specific case**
 
-## Notes / expectations
+After deploying the changes, re-run against `kizzyadichie@gmail.com` following the previous test protocol:
+1. Remove the `unsubscribed` tag on the lead.
+2. Trigger the campaign via `execute-campaign` with `campaign_id = 4c8aca54…`.
+3. Confirm three `campaign_messages` rows appear (email, whatsapp, sms), each with a delivered/failed status coming from the real provider (not from the block-JSON blob).
+4. Restore the `unsubscribed` tag; re-trigger; confirm the campaign now surfaces the "1 skipped (unsubscribed)" reason in the toast + drawer instead of silently completing.
 
-- If WhatsApp is outside the 24h window and there's no approved template, the memory rule + earlier audit require `whatsapp-send` to return `success:false, fallback:true` and the caller flips to SMS. That path will show up in the results as WA=failed(fallback) + SMS=sent, which still counts as delivered and is the correct behavior — I'll call that out explicitly instead of marking WA a regression.
-- No provider credentials, service-role key, or JWTs will be echoed back to you.
+### Files touched
 
-## Out of scope
+- `supabase/functions/execute-campaign/index.ts` — multi-channel fan-out, skip counters, notification on 0-send
+- `supabase/functions/_shared/render-blocks.ts` — new shared renderer
+- `src/components/campaigns/CreateCampaignDialog.tsx` — surface skipped counts in the success toast
+- `src/components/campaigns/CampaignDetailsDrawer.tsx` — add "Skipped recipients" panel
 
-- No UI changes.
-- No changes to provider adapters, credit accounting, WA template config, or fallback logic — only observation.
+No DB migrations, no new secrets, no provider config changes required.

@@ -3,6 +3,8 @@ import { isAdminUser } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
 import { enforceWaPacing } from "../_shared/wa-rate-limit.ts";
+import { parseBlocksFromMessage, interpolateBlocks, blocksToHtml, blocksToText } from "../_shared/email-blocks.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -131,152 +133,201 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Skip unsubscribed leads
+    // Skip unsubscribed leads and count them
+    const beforeUnsub = filteredLeads.length;
     filteredLeads = filteredLeads.filter((lead: any) => {
       const leadTags: string[] = lead.tags || [];
       return !leadTags.includes("unsubscribed");
     });
+    const skippedUnsubscribed = beforeUnsub - filteredLeads.length;
+
+    // Determine channels to fan-out on. For multi-channel, use content.channels
+    // if provided (e.g. ["email","whatsapp","sms"]), otherwise default to all 3.
+    const allChannels: Array<"email" | "whatsapp" | "sms"> =
+      channel === "multi-channel"
+        ? (Array.isArray((content as any).channels) && (content as any).channels.length > 0
+            ? ((content as any).channels as Array<"email" | "whatsapp" | "sms">)
+            : ["email", "whatsapp", "sms"])
+        : [channel as "email" | "whatsapp" | "sms"];
+
+    // Notification helper for zero-send outcomes
+    const notifyZeroSend = async (reason: string) => {
+      try {
+        const { data: wsRec } = await supabase.from("workspaces")
+          .select("owner_user_id").eq("id", workspaceId).maybeSingle();
+        if (wsRec?.owner_user_id) {
+          await supabase.from("notifications").insert({
+            workspace_id: workspaceId,
+            user_id: wsRec.owner_user_id,
+            title: `Campaign "${campaign.name}" sent to 0 recipients`,
+            body: reason,
+            type: "campaign_zero_send",
+            meta: { campaign_id, reason },
+          });
+        }
+      } catch (e) { console.error("notifyZeroSend failed:", (e as Error).message); }
+    };
 
     if (filteredLeads.length === 0) {
+      const reason = skippedUnsubscribed > 0
+        ? `${skippedUnsubscribed} lead(s) skipped — all recipients are unsubscribed.`
+        : "No matching leads for this audience.";
       await supabase.from("campaigns").update({
-        status: "completed", sent_count: 0, updated_at: new Date().toISOString(),
+        status: "failed", sent_count: 0, updated_at: new Date().toISOString(),
       }).eq("id", campaign_id);
-
-      return new Response(JSON.stringify({ ok: true, sent: 0, message: "All matching leads are unsubscribed" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      await notifyZeroSend(reason);
+      return new Response(JSON.stringify({
+        ok: true, sent: 0, failed: 0, total: 0,
+        skipped_unsubscribed: skippedUnsubscribed,
+        skipped_missing_contact: 0,
+        message: reason,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let sentCount = 0;
     let failedCount = 0;
-    const results: Array<{ lead_id: string; status: string; error?: string }> = [];
+    let skippedMissingContact = 0;
+    const results: Array<{ lead_id: string; channel: string; status: string; error?: string }> = [];
 
-    // Rate-limit helper: wait between sends to avoid provider throttling (Resend = 2 req/s)
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    // Render a body per channel from the stored message (may be block-JSON).
+    const renderBody = (raw: string, target: "html" | "text", vars: Record<string, string>): string => {
+      const blocks = parseBlocksFromMessage(raw || "");
+      if (blocks) {
+        const interpolated = interpolateBlocks(blocks, (s) => interpolateText(s, vars));
+        return target === "html" ? blocksToHtml(interpolated) : blocksToText(interpolated);
+      }
+      // Plain-text / HTML fallback
+      const interp = interpolateText(raw || "", vars);
+      if (target === "text") {
+        // Strip any stray HTML for WA/SMS
+        return interp.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim();
+      }
+      return interp;
+    };
 
     for (let i = 0; i < filteredLeads.length; i++) {
       const lead = filteredLeads[i];
-
-      // Throttle: wait 550ms between requests to stay under 2 req/s
       if (i > 0) await sleep(550);
+
       const vars = buildLeadVars(lead);
       const rawSubject = interpolateText(content.subject || "", vars).trim();
-      // Auto-fill subject from campaign name when missing so multi-channel
-      // campaigns don't fail on the email leg.
       const messageSubject = rawSubject || (campaign.name || "Message from NexusFlo24");
-      const messageBody = interpolateText(content.body || "", vars);
 
-      let deliveryStatus = "pending";
-      let sendError: string | undefined;
+      // Check contact availability once for this lead across chosen channels
+      const hasContactForAny = allChannels.some((ch) =>
+        (ch === "email" && !!lead.email) || ((ch === "whatsapp" || ch === "sms") && !!lead.phone)
+      );
+      if (!hasContactForAny) {
+        skippedMissingContact++;
+        continue;
+      }
 
-      try {
-        const effectiveChannel = channel === "multi-channel" ? "email" : channel;
+      let leadAllFailed = true;
+      let lastError: string | undefined;
+      let lastSubject = messageSubject;
+      let lastTextBody = "";
 
-        if (effectiveChannel === "email" && lead.email) {
-          const res = await fetch(`${supabaseUrl}/functions/v1/email-send`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceRoleKey}`,
-            },
-            body: JSON.stringify({
-              workspaceId, to: lead.email,
-              subject: messageSubject, html: messageBody,
-              leadId: lead.id, campaignId: campaign_id,
-              templateSettings: content.templateSettings || undefined,
-              senderProfileId: content.sender_profile_id_email || content.sender_profile_id || null,
-              ...(ownerIsAdmin ? { skipCredits: true } : {}),
-            }),
-          });
-          const data = await res.json();
-          deliveryStatus = data.success ? "delivered" : "failed";
-          if (!data.success) sendError = data.error;
-        } else if (effectiveChannel === "whatsapp" && lead.phone) {
-          // WA-specific pacing (~25 msg/sec/phone) sits on top of the 550ms
-          // per-lead throttle so bursty campaigns don't trip Meta's per-second cap.
-          await enforceWaPacing(workspaceId);
-          const res = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceRoleKey}`,
-            },
-            body: JSON.stringify({
-              workspaceId, to: lead.phone, body: messageBody,
-              leadId: lead.id, campaignId: campaign_id,
-              senderProfileId: content.sender_profile_id_whatsapp || content.sender_profile_id || null,
-              ...(content.whatsappTemplate ? { template: content.whatsappTemplate } : {}),
-              ...(ownerIsAdmin ? { skipCredits: true } : {}),
-            }),
-          });
-          const data = await res.json();
-          deliveryStatus = data.success ? "delivered" : "failed";
-          if (!data.success) {
-            // window_closed / fallback signal flows through the same failed
-            // branch below — the configured fallback channel will fire
-            // immediately because deliveryStatus === "failed".
-            sendError = data.error || (data.reason === "window_closed"
-              ? "WhatsApp 24h window closed"
-              : "WhatsApp send failed");
+      for (const ch of allChannels) {
+        // Skip channels the lead can't receive on
+        if (ch === "email" && !lead.email) continue;
+        if ((ch === "whatsapp" || ch === "sms") && !lead.phone) continue;
+
+        const htmlBody = renderBody(content.body || "", "html", vars);
+        const textBody = renderBody(content.body || "", "text", vars);
+        lastTextBody = textBody || htmlBody;
+
+        let deliveryStatus: "delivered" | "failed" = "failed";
+        let sendError: string | undefined;
+
+        try {
+          if (ch === "email") {
+            const res = await fetch(`${supabaseUrl}/functions/v1/email-send`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+              body: JSON.stringify({
+                workspaceId, to: lead.email,
+                subject: messageSubject, html: htmlBody,
+                leadId: lead.id, campaignId: campaign_id,
+                templateSettings: content.templateSettings || undefined,
+                senderProfileId: (content as any).sender_profile_id_email || (content as any).sender_profile_id || null,
+                ...(ownerIsAdmin ? { skipCredits: true } : {}),
+              }),
+            });
+            const data = await res.json();
+            deliveryStatus = data.success ? "delivered" : "failed";
+            if (!data.success) sendError = data.error || "Email send failed";
+          } else if (ch === "whatsapp") {
+            await enforceWaPacing(workspaceId);
+            const res = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+              body: JSON.stringify({
+                workspaceId, to: lead.phone, body: textBody || messageSubject,
+                leadId: lead.id, campaignId: campaign_id,
+                senderProfileId: (content as any).sender_profile_id_whatsapp || (content as any).sender_profile_id || null,
+                ...(content.whatsappTemplate ? { template: content.whatsappTemplate } : {}),
+                ...(ownerIsAdmin ? { skipCredits: true } : {}),
+              }),
+            });
+            const data = await res.json();
+            deliveryStatus = data.success ? "delivered" : "failed";
+            if (!data.success) {
+              sendError = data.error || (data.reason === "window_closed"
+                ? "WhatsApp 24h window closed"
+                : "WhatsApp send failed");
+            }
+          } else if (ch === "sms") {
+            const res = await fetch(`${supabaseUrl}/functions/v1/sms-send`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRoleKey}` },
+              body: JSON.stringify({
+                workspaceId, to: lead.phone, message: textBody || messageSubject,
+                leadId: lead.id, campaignId: campaign_id,
+                senderProfileId: (content as any).sender_profile_id_sms || (content as any).sender_profile_id || null,
+                ...(ownerIsAdmin ? { skipCredits: true } : {}),
+              }),
+            });
+            const data = await res.json();
+            deliveryStatus = data.success ? "delivered" : "failed";
+            if (!data.success) sendError = data.error || "SMS send failed";
           }
-        } else if (effectiveChannel === "sms" && lead.phone) {
-          const res = await fetch(`${supabaseUrl}/functions/v1/sms-send`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceRoleKey}`,
-            },
-            body: JSON.stringify({
-              workspaceId, to: lead.phone, message: messageBody,
-              leadId: lead.id, campaignId: campaign_id,
-              senderProfileId: content.sender_profile_id_sms || content.sender_profile_id || null,
-              ...(ownerIsAdmin ? { skipCredits: true } : {}),
-            }),
-          });
-          const data = await res.json();
-          deliveryStatus = data.success ? "delivered" : "failed";
-          if (!data.success) sendError = data.error;
-        } else {
+        } catch (err: any) {
           deliveryStatus = "failed";
-          sendError = `No ${effectiveChannel} contact info for lead`;
+          sendError = err?.message || "Send error";
         }
-      } catch (err: any) {
-        deliveryStatus = "failed";
-        sendError = err?.message || "Send error";
+
+        await supabase.from("campaign_messages").insert({
+          campaign_id, workspace_id: workspaceId, lead_id: lead.id,
+          channel: ch,
+          delivery_status: deliveryStatus,
+          error: deliveryStatus === "failed" ? (sendError || "Unknown send error") : null,
+        });
+
+        if (deliveryStatus === "delivered") {
+          sentCount++;
+          leadAllFailed = false;
+        } else {
+          failedCount++;
+          lastError = sendError;
+        }
+        results.push({ lead_id: lead.id, channel: ch, status: deliveryStatus, error: sendError });
       }
 
-      // Insert campaign_message row (with error text on failure)
-      await supabase.from("campaign_messages").insert({
-        campaign_id, workspace_id: workspaceId, lead_id: lead.id,
-        channel: channel === "multi-channel" ? "email" : channel,
-        delivery_status: deliveryStatus,
-        error: deliveryStatus === "failed" ? (sendError || "Unknown send error") : null,
-      });
-
-      if (deliveryStatus === "delivered") {
-        sentCount++;
-      } else {
-        failedCount++;
-      }
-
-      results.push({ lead_id: lead.id, status: deliveryStatus, error: sendError });
-
-      // Schedule fallback if enabled and primary failed/pending.
-      // When the PRIMARY send fails outright (no delivery happened),
-      // run the fallback immediately instead of waiting the configured
-      // "unread" delay — there's nothing to wait for.
-      if (fallback?.enabled && deliveryStatus === "failed" && fallback.channel) {
-        const runAt = new Date().toISOString();
+      // Fallback: only fire when EVERY primary channel for this lead failed.
+      if (fallback?.enabled && leadAllFailed && fallback.channel
+          && !allChannels.includes(fallback.channel as any)) {
         await supabase.from("scheduled_jobs").insert({
           workspace_id: workspaceId,
-          automation_id: campaign_id, // reuse field for campaign reference
+          automation_id: campaign_id,
           lead_id: lead.id,
           step_index: 0,
-          run_at: runAt,
+          run_at: new Date().toISOString(),
           payload: {
             type: "campaign_fallback",
             campaign_id, lead_id: lead.id, workspace_id: workspaceId,
-            channel: fallback.channel, subject: messageSubject, body: messageBody,
+            channel: fallback.channel, subject: lastSubject, body: lastTextBody,
             reason: "primary_send_failed",
           },
         });
@@ -285,18 +336,30 @@ Deno.serve(async (req) => {
 
     // Update campaign stats
     const totalTargeted = filteredLeads.length;
+    const finalStatus = sentCount === 0 ? "failed" : "completed";
     await supabase.from("campaigns").update({
       sent_count: sentCount,
-      status: "completed",
+      status: finalStatus,
       updated_at: new Date().toISOString(),
     }).eq("id", campaign_id);
 
+    if (sentCount === 0) {
+      const reasons: string[] = [];
+      if (skippedUnsubscribed > 0) reasons.push(`${skippedUnsubscribed} unsubscribed`);
+      if (skippedMissingContact > 0) reasons.push(`${skippedMissingContact} missing contact info`);
+      if (failedCount > 0) reasons.push(`${failedCount} provider failure(s)`);
+      await notifyZeroSend(
+        `Campaign "${campaign.name}" delivered 0 messages${reasons.length ? ` — ${reasons.join(", ")}` : ""}.`
+      );
+    }
+
     return new Response(JSON.stringify({
       ok: true, sent: sentCount, failed: failedCount,
-      total: totalTargeted, results,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      total: totalTargeted,
+      skipped_unsubscribed: skippedUnsubscribed,
+      skipped_missing_contact: skippedMissingContact,
+      results,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("execute-campaign error:", err);
     return new Response(JSON.stringify({ error: err?.message || "Execution failed" }), {
@@ -304,3 +367,4 @@ Deno.serve(async (req) => {
     });
   }
 });
+
