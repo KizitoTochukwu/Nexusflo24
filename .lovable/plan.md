@@ -1,78 +1,129 @@
-## Why nothing was delivered for campaign "hi"
 
-Looking at the actual data for campaign `4c8aca54…` (type = `multi-channel`, target = lead `kizzyadichie@gmail.com`):
+## Goal
 
-- `campaigns.sent_count = 0`, `status = completed`
-- `campaign_messages` for this campaign: **0 rows** — no send was ever attempted
-- Target lead's `tags` contains **`unsubscribed`**
-- `message_content.body` is a **block-JSON array** from the email/funnel builder (`[{id, type:"text", props:{content:...}}, {type:"image",...}, ...]`), not a rendered HTML/text string
-- `type = "multi-channel"` but nothing in the code actually fans out to all three channels
+Stop showing "Twilio WhatsApp is the active provider" / "Disconnect Twilio" just because the user clicked the Twilio tab while Meta is actually connected. Selecting a tab must not change what is active — only a successful save/switch does.
 
-So three independent bugs stack on top of each other. Even if you fix one, the next still blocks delivery.
+## Files to change
 
-### Root causes
+- `src/components/settings/WhatsAppConnectCard.tsx` — provider-tab logic + panels
+- `supabase/functions/channel-settings-save/index.ts` — deactivate Meta when Twilio activated
+- `supabase/functions/whatsapp-embedded-signup/index.ts` — deactivate Twilio row when Meta connected (verify path & apply)
+- New migration — DB trigger enforcing single active WhatsApp provider per workspace
 
-1. **Silent unsubscribe skip.** `execute-campaign` filters out any lead whose `tags` include `unsubscribed`, then if the filtered list is empty it writes `sent_count:0, status:completed` and returns `"All matching leads are unsubscribed"` — with **no row in `campaign_messages`, no toast, no notification**. From the UI it looks like the campaign ran successfully and delivered nothing, with no explanation.
+## 1. State split (`WhatsAppConnectCard.tsx`)
 
-2. **`multi-channel` only sends email.** In `execute-campaign/index.ts` the send loop does:
-   ```
-   const effectiveChannel = channel === "multi-channel" ? "email" : channel;
-   ```
-   So a "multi-channel" campaign only ever calls `email-send`. WhatsApp and SMS are **never dispatched** as primary channels. The `fallback_settings` (SMS after 30min if unread) also can't help here because fallback only fires when the primary send *fails* — a skipped/unsubscribed lead never even reaches that branch.
+Lift state into the parent `WhatsAppConnectCard`:
 
-3. **Body is block-JSON, not renderable content.** The campaign editor saved `body` as the funnel-builder block array. `execute-campaign` passes that raw JSON string straight into:
-   - `email-send` as `html` → recipient would see a wall of `[{"id":"blk_…"}]`
-   - `whatsapp-send` / `sms-send` as message body → same raw JSON, and WA/SMS have strict length + content rules so many providers will reject it outright.
-   There's no block-array → HTML (for email) or → plain-text (for WA/SMS) renderer on the send path.
+```text
+selectedProviderTab: "meta" | "twilio"        // pure UI, from Tabs value
+activeProvider:      "meta" | "twilio" | null // derived from DB
+```
 
-### Fix plan
+`activeProvider` derivation (single source of truth):
 
-Frontend + edge function changes only. No schema changes.
+- `"meta"` when `whatsapp_settings.is_active === true` and `phone_number_id` exists
+- `"twilio"` when `workspace_channel_settings` row `channel='whatsapp'`, `is_active=true`, config `provider='twilio'`
+- otherwise `null`
 
-**A. Actually send on all requested channels for `type = "multi-channel"`**
+Compute via a new hook `useActiveWhatsAppProvider(workspaceId)` that reads both sources through the existing `useWhatsAppConnection` + `channel-settings-get` fetch, and exposes `{ activeProvider, refresh }`. Header badge (line 627) reads only `activeProvider === 'meta' ? 'Meta Connected' : activeProvider === 'twilio' ? 'Twilio Connected' : 'Not connected'`.
 
-In `supabase/functions/execute-campaign/index.ts`:
+Default `selectedProviderTab` = current `activeProvider` on first load, else `"meta"`. Tab clicks only call `setSelectedProviderTab`.
 
-- Replace the single `effectiveChannel` branch with a loop over the channels the campaign requested. Derive the channel set from `message_content.channels` (already written by `CreateCampaignDialog` for multi-channel) with fallback to `["email","whatsapp","sms"]` when absent.
-- For each channel present, call the matching send function *if the lead has the required contact field* (`email` for email, `phone` for wa/sms).
-- Insert one `campaign_messages` row per channel per lead with its own `delivery_status` + `error`.
-- Keep the existing fallback scheduler, but only trigger it when **all** primary channels for a lead failed (not per-channel), so we don't stack duplicate SMS fallbacks.
+## 2. Panel behaviour
 
-**B. Render block-JSON body before sending**
+Pass `activeProvider` into both panels.
 
-Add a shared helper `supabase/functions/_shared/render-blocks.ts`:
+### `MetaWhatsAppPanel` (Meta tab selected)
 
-- `renderBlocksToHtml(body)` — walks the block array, emits `<p>`, `<img>`, `<a>`, `<h1..h3>`, list, divider, button blocks into safe HTML, honouring `props.fontSize/color/alignment/fontWeight/lineHeight/src/alt/width`.
-- `renderBlocksToText(body)` — same walk, produces newline-separated plain text (used for WA + SMS). Images become `[image: alt]` or their `linkUrl`, buttons become `label: url`.
-- `coerceBody(raw)` — if `raw` parses as a block array, run the appropriate renderer; otherwise pass through unchanged (back-compat with existing plain-text/HTML campaigns).
+- `activeProvider === "meta"` → current UI (connected details + Sync + Disconnect).
+- `activeProvider === "twilio"` → show alert **"Twilio WhatsApp is currently active for this workspace."** Hide the standard "Connect WhatsApp via Meta" button and instead show **"Connect & Switch to Meta"** — same `handleConnect`, but on success also calls the twilio-deactivation code path (server does it, see §3) and refreshes `activeProvider`.
+- `activeProvider === null` → current "Connect WhatsApp via Meta" flow.
 
-`execute-campaign` calls `coerceBody(messageBody, "html")` for the email leg and `coerceBody(messageBody, "text")` for WA + SMS legs, *before* interpolating variables (so `{{first_name}}` still works inside block text content).
+### `TwilioWhatsAppPanel` (Twilio tab selected)
 
-**C. Stop silently swallowing "everyone was unsubscribed"**
+- `activeProvider === "twilio"` → keep active-alert + "Disconnect Twilio".
+- `activeProvider === "meta"` → show alert **"Meta Cloud API is currently active for this workspace."** Always render the Twilio credential fields. Primary button label becomes **"Validate & Switch to Twilio"**. Do NOT render the "Twilio is active" alert or the "Disconnect Twilio" button in this state.
+- `activeProvider === null` → current "Save & activate Twilio" flow, no active alert, no disconnect.
 
-In `execute-campaign`:
+Remove the local `isActive` state — replace with the derived `activeProvider === 'twilio'`.
 
-- Track counts of `skipped_unsubscribed`, `skipped_missing_contact`, `skipped_no_channel_match`, and return them in the response JSON.
-- When the whole audience is filtered out, still update `sent_count:0` but set `status = "failed"` (not `"completed"`) and write a workspace notification: `"Campaign 'hi' sent to 0 recipients — 1 lead skipped (unsubscribed)"` so the operator sees the real reason.
+### Client-side Twilio validation before save
 
-In `CreateCampaignDialog` / `CampaignDetailsDrawer`:
+- `account_sid` must match `/^AC[0-9a-fA-F]{32}$/`
+- `auth_token` must be non-empty (32 hex is already enforced server-side)
+- `from_number` must match E.164 `/^\+[1-9]\d{6,14}$/` (skip when `messaging_service_sid` is set)
 
-- Surface the returned `skipped_*` counts in a toast after send ("Campaign sent to 0 of 1 — 1 unsubscribed").
-- In the details drawer, add a "Skipped recipients" panel listing skipped counts by reason so the user isn't left staring at an empty timeline.
+Toast the exact failing field before calling `channel-settings-save`.
 
-**D. Verification for this specific case**
+### Switch confirmation
 
-After deploying the changes, re-run against `kizzyadichie@gmail.com` following the previous test protocol:
-1. Remove the `unsubscribed` tag on the lead.
-2. Trigger the campaign via `execute-campaign` with `campaign_id = 4c8aca54…`.
-3. Confirm three `campaign_messages` rows appear (email, whatsapp, sms), each with a delivered/failed status coming from the real provider (not from the block-JSON blob).
-4. Restore the `unsubscribed` tag; re-trigger; confirm the campaign now surfaces the "1 skipped (unsubscribed)" reason in the toast + drawer instead of silently completing.
+When `activeProvider` differs from the provider being activated, open an `AlertDialog`: "Switching will deactivate <other> for this workspace. Continue?" Only after confirm → call the save/connect → on success call `refresh()` from the hook → then render success toast. No state flips before the DB refresh returns the new active provider.
 
-### Files touched
+## 3. Server: enforce single active provider
 
-- `supabase/functions/execute-campaign/index.ts` — multi-channel fan-out, skip counters, notification on 0-send
-- `supabase/functions/_shared/render-blocks.ts` — new shared renderer
-- `src/components/campaigns/CreateCampaignDialog.tsx` — surface skipped counts in the success toast
-- `src/components/campaigns/CampaignDetailsDrawer.tsx` — add "Skipped recipients" panel
+### `channel-settings-save` (channel === 'whatsapp', provider twilio, non-disconnect)
 
-No DB migrations, no new secrets, no provider config changes required.
+After the successful upsert, run:
+
+```sql
+UPDATE public.whatsapp_settings
+SET is_active = false, updated_at = now()
+WHERE workspace_id = $1 AND is_active = true;
+```
+
+### `whatsapp-embedded-signup` on successful Meta connect
+
+After marking `whatsapp_settings.is_active = true`, delete the twilio row:
+
+```sql
+DELETE FROM public.workspace_channel_settings
+WHERE workspace_id = $1 AND channel = 'whatsapp';
+```
+
+Templates and webhook tokens (`whatsapp_templates`, verify-token row) are untouched — only provider activation rows change.
+
+### Migration — atomic guard
+
+New migration adds a trigger so any direct write cannot leave two active:
+
+```sql
+CREATE OR REPLACE FUNCTION public.enforce_single_whatsapp_provider()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF TG_TABLE_NAME = 'whatsapp_settings' AND NEW.is_active THEN
+    UPDATE public.workspace_channel_settings
+      SET is_active = false, updated_at = now()
+      WHERE workspace_id = NEW.workspace_id AND channel = 'whatsapp' AND is_active = true;
+  ELSIF TG_TABLE_NAME = 'workspace_channel_settings'
+        AND NEW.channel = 'whatsapp' AND NEW.is_active THEN
+    UPDATE public.whatsapp_settings
+      SET is_active = false, updated_at = now()
+      WHERE workspace_id = NEW.workspace_id AND is_active = true;
+  END IF;
+  RETURN NEW;
+END; $$;
+
+CREATE TRIGGER trg_wa_single_provider_meta
+  BEFORE INSERT OR UPDATE OF is_active ON public.whatsapp_settings
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_single_whatsapp_provider();
+
+CREATE TRIGGER trg_wa_single_provider_twilio
+  BEFORE INSERT OR UPDATE OF is_active ON public.workspace_channel_settings
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_single_whatsapp_provider();
+```
+
+Both fire in the same transaction as the activating write, so the "two active" state can never be observed.
+
+## 4. Post-activation refresh
+
+Both panels, on save/connect success:
+
+1. `await refresh()` — re-reads `whatsapp_settings` and `channel-settings-get`.
+2. Derive new `activeProvider` from the refreshed data.
+3. Show success toast using the refreshed value (e.g. "Twilio WhatsApp is now active"). If refresh reports the other provider is still active, show error instead — never optimistically flip UI.
+
+## Out of scope (explicitly preserved)
+
+- Meta connection data, `whatsapp_templates`, `whatsapp-webhook`, verify-token section.
+- Twilio inbound/status webhook URL panels.
+- Existing edge functions for send/receive on either provider.
