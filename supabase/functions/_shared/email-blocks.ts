@@ -129,6 +129,62 @@ export function blocksToHtml(blocks: EmailBlock[]): string {
 }
 
 /**
+ * Render blocks to plain text suitable for WhatsApp / SMS bodies.
+ * Strips styling, keeps content + links.
+ */
+export function blocksToText(blocks: EmailBlock[]): string {
+  if (!Array.isArray(blocks)) return "";
+  const stripHtml = (s: string) =>
+    String(s ?? "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .trim();
+  const parts: string[] = [];
+  for (const b of blocks) {
+    switch (b?.type) {
+      case "text": {
+        const c = stripHtml(b.props?.content || "");
+        if (c) parts.push(c);
+        break;
+      }
+      case "button": {
+        const label = String(b.props?.label || "").trim();
+        const url = String(b.props?.url || "").trim();
+        if (label && url) parts.push(`${label}: ${url}`);
+        else if (url) parts.push(url);
+        else if (label) parts.push(label);
+        break;
+      }
+      case "image": {
+        const url = String(b.props?.linkUrl || b.props?.src || "").trim();
+        const alt = String(b.props?.alt || "").trim();
+        if (url) parts.push(alt ? `${alt}: ${url}` : url);
+        break;
+      }
+      case "columns": {
+        const cols = Array.isArray(b.props?.columns) ? b.props.columns : [];
+        for (const c of cols) {
+          const t = stripHtml(String(c || ""));
+          if (t) parts.push(t);
+        }
+        break;
+      }
+      case "divider":
+      case "spacer":
+      case "social":
+      default:
+        break;
+    }
+  }
+  return parts.join("\n\n").trim();
+}
+
+/**
  * Detect whether a body string is a JSON array of email-editor blocks.
  * Returns the parsed array, or null if it's plain text / HTML / invalid.
  */
