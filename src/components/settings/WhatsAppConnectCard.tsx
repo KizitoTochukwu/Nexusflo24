@@ -67,12 +67,28 @@ interface TwilioCfg {
 interface ChannelSettingsWhatsAppShape {
   configured?: boolean;
   is_active?: boolean;
-  non_secret?: { provider?: string };
+  provider?: string | null;
+  masked?: Record<string, string>;
+  non_secret?: {
+    provider?: string;
+    account_sid?: string;
+    from_number?: string;
+    messaging_service_sid?: string;
+    phone_number_id?: string;
+  };
+}
+
+interface ChannelSettingsResponseShape {
+  whatsapp?: ChannelSettingsWhatsAppShape;
+  whatsapp_by_provider?: {
+    meta?: ChannelSettingsWhatsAppShape;
+    twilio?: ChannelSettingsWhatsAppShape;
+  };
 }
 
 async function fetchWhatsAppChannelSettings(
   workspaceId: string,
-): Promise<ChannelSettingsWhatsAppShape | null> {
+): Promise<ChannelSettingsResponseShape | null> {
   const { data: sess } = await supabase.auth.getSession();
   const accessToken = sess.session?.access_token;
   if (!accessToken) return null;
@@ -86,7 +102,25 @@ async function fetchWhatsAppChannelSettings(
     },
   );
   const json = await res.json().catch(() => ({}));
-  return (json?.whatsapp as ChannelSettingsWhatsAppShape) || null;
+  return json as ChannelSettingsResponseShape;
+}
+
+async function switchWhatsAppProvider(workspaceId: string, provider: "meta" | "twilio") {
+  const { data: sess } = await supabase.auth.getSession();
+  const accessToken = sess.session?.access_token;
+  if (!accessToken) throw new Error("Please sign in again.");
+  const res = await fetch(`${SUPABASE_FN_BASE}/whatsapp-provider-switch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    },
+    body: JSON.stringify({ workspaceId, provider }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || json?.error) throw new Error(json?.error || `Switch failed (${res.status})`);
+  return json;
 }
 
 function CopyableUrl({ label, url }: { label: string; url: string }) {
@@ -117,10 +151,12 @@ function CopyableUrl({ label, url }: { label: string; url: string }) {
 function TwilioWhatsAppPanel({
   workspaceId,
   activeProvider,
+  twilioSettings,
   onActivated,
 }: {
   workspaceId: string;
   activeProvider: ActiveProvider;
+  twilioSettings?: ChannelSettingsWhatsAppShape | null;
   onActivated: () => Promise<void>;
 }) {
   const [saving, setSaving] = useState(false);
@@ -136,12 +172,25 @@ function TwilioWhatsAppPanel({
 
   const isTwilioActive = activeProvider === "twilio";
   const metaIsActive = activeProvider === "meta";
+  const twilioConfigured = Boolean(twilioSettings?.configured);
+
+  useEffect(() => {
+    if (!twilioSettings?.configured) return;
+    setCfg((current) => ({
+      provider: "twilio",
+      account_sid: twilioSettings.non_secret?.account_sid || current.account_sid,
+      auth_token: "",
+      from_number: twilioSettings.non_secret?.from_number || current.from_number,
+      messaging_service_sid:
+        twilioSettings.non_secret?.messaging_service_sid || current.messaging_service_sid || "",
+    }));
+  }, [twilioSettings]);
 
   const validate = (): string | null => {
     if (!/^AC[0-9a-fA-F]{32}$/.test(cfg.account_sid.trim())) {
       return "Account SID must start with AC and be 34 characters long.";
     }
-    if (!cfg.auth_token.trim()) {
+    if (!twilioConfigured && !cfg.auth_token.trim()) {
       return "Auth Token is required.";
     }
     // Messaging Service SID can substitute for a From number
@@ -151,6 +200,20 @@ function TwilioWhatsAppPanel({
       }
     }
     return null;
+  };
+
+  const activateSavedTwilio = async () => {
+    setSaving(true);
+    try {
+      await switchWhatsAppProvider(workspaceId, "twilio");
+      await onActivated();
+      toast.success("Twilio WhatsApp is now active for this workspace.");
+    } catch (err: any) {
+      toast.error(err?.message || "Switch failed");
+    } finally {
+      setSaving(false);
+      setConfirmSwitch(false);
+    }
   };
 
   const doSave = async () => {
@@ -186,6 +249,14 @@ function TwilioWhatsAppPanel({
       toast.error(err);
       return;
     }
+    if (twilioConfigured && !cfg.auth_token.trim() && !isTwilioActive) {
+      if (metaIsActive) {
+        setConfirmSwitch(true);
+        return;
+      }
+      void activateSavedTwilio();
+      return;
+    }
     if (metaIsActive) {
       setConfirmSwitch(true);
       return;
@@ -206,7 +277,7 @@ function TwilioWhatsAppPanel({
           Authorization: `Bearer ${accessToken}`,
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ workspaceId, channel: "whatsapp", disconnect: true }),
+        body: JSON.stringify({ workspaceId, channel: "whatsapp", provider: "twilio", disconnect: true }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.error) throw new Error(json?.error || `Disconnect failed`);
@@ -230,6 +301,8 @@ function TwilioWhatsAppPanel({
     ? "Validate & Switch to Twilio"
     : isTwilioActive
     ? "Update Twilio credentials"
+    : twilioConfigured
+    ? "Activate saved Twilio"
     : "Save & activate Twilio";
 
   return (
@@ -238,8 +311,16 @@ function TwilioWhatsAppPanel({
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            Meta Cloud API is currently active for this workspace. Enter your Twilio credentials
-            below and click <strong>{primaryLabel}</strong> to switch providers.
+            Meta Cloud API is currently active for this workspace. {twilioConfigured ? "Your Twilio setup is saved; activate it to switch providers." : "Enter your Twilio credentials below to switch providers."}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {twilioConfigured && !isTwilioActive && !metaIsActive && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Twilio WhatsApp credentials are saved but not currently active for this workspace.
           </AlertDescription>
         </Alert>
       )}
@@ -278,7 +359,7 @@ function TwilioWhatsAppPanel({
           <Input
             id="tw-token"
             type="password"
-            placeholder="32-char auth token"
+            placeholder={twilioConfigured ? "Saved — leave blank to keep existing token" : "Auth token"}
             value={cfg.auth_token}
             onChange={(e) => setCfg({ ...cfg, auth_token: e.target.value })}
           />
@@ -346,7 +427,10 @@ function TwilioWhatsAppPanel({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doSave} disabled={saving}>
+            <AlertDialogAction
+              onClick={twilioConfigured && !cfg.auth_token.trim() ? activateSavedTwilio : doSave}
+              disabled={saving}
+            >
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Confirm switch
             </AlertDialogAction>
