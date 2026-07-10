@@ -40,7 +40,7 @@ function maskValue(val: string | undefined | null): string {
 const NON_SECRET_FIELDS: Record<string, string[]> = {
   email: ["provider", "from_email", "from_name", "reply_to"],
   sms: ["from_number"],
-  whatsapp: ["provider", "phone_number_id"],
+  whatsapp: ["provider", "phone_number_id", "account_sid", "from_number", "messaging_service_sid"],
 };
 
 
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
 
     const { data: rows } = await adminClient
       .from("workspace_channel_settings")
-      .select("channel, is_active, config_encrypted, updated_at")
+      .select("channel, provider, is_active, config_encrypted, updated_at")
       .eq("workspace_id", workspaceId);
 
     const encryptionKey = Deno.env.get("CHANNEL_SETTINGS_ENCRYPTION_KEY");
@@ -87,31 +87,71 @@ Deno.serve(async (req) => {
     for (const row of rows || []) {
       let masked: Record<string, string> = {};
       let non_secret: Record<string, string> = {};
+      let configProvider = String(row.provider || "").toLowerCase();
       if (encryptionKey && row.config_encrypted) {
         try {
           const config = JSON.parse(await decrypt(row.config_encrypted, encryptionKey));
+          if (row.channel === "whatsapp") {
+            configProvider = String(
+              config.provider ||
+                (config.account_sid || config.auth_token
+                  ? "twilio"
+                  : config.access_token || config.phone_number_id
+                  ? "meta"
+                  : row.provider || "meta"),
+            ).toLowerCase();
+          }
           const safeKeys = NON_SECRET_FIELDS[row.channel] || [];
           for (const [k, v] of Object.entries(config)) {
             masked[k] = maskValue(v as string);
             if (safeKeys.includes(k) && typeof v === "string") non_secret[k] = v;
           }
+          if (row.channel === "whatsapp" && configProvider) non_secret.provider = configProvider;
         } catch {
           masked = { error: "decryption_failed" };
         }
       }
-      channels[row.channel] = {
+      const channelPayload = {
         configured: true,
         is_active: row.is_active,
+        provider: configProvider || non_secret.provider || null,
         masked,
         non_secret,
         updated_at: row.updated_at,
       };
+
+      if (row.channel === "whatsapp") {
+        const provider = String(configProvider || non_secret.provider || "meta").toLowerCase();
+        channels.whatsapp_by_provider = channels.whatsapp_by_provider || {};
+        channels.whatsapp_by_provider[provider] = channelPayload;
+
+        if (!channels.whatsapp || row.is_active) {
+          channels.whatsapp = channelPayload;
+        }
+        continue;
+      }
+
+      channels[row.channel] = channelPayload;
     }
 
     // Fill unconfigured channels
     for (const ch of ["email", "sms", "whatsapp"]) {
       if (!channels[ch]) {
         channels[ch] = { configured: false, is_active: false, masked: {}, non_secret: {}, updated_at: null };
+      }
+    }
+
+    channels.whatsapp_by_provider = channels.whatsapp_by_provider || {};
+    for (const provider of ["meta", "twilio"]) {
+      if (!channels.whatsapp_by_provider[provider]) {
+        channels.whatsapp_by_provider[provider] = {
+          configured: false,
+          is_active: false,
+          provider,
+          masked: {},
+          non_secret: { provider },
+          updated_at: null,
+        };
       }
     }
 

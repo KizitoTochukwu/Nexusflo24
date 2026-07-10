@@ -683,7 +683,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         if (eNS.reply_to !== undefined) setEmailReplyTo(eNS.reply_to || "");
         const sNS = data?.sms?.non_secret || {};
         if (sNS.from_number !== undefined) setSmsFromNumber(sNS.from_number || "");
-        const wNS = data?.whatsapp?.non_secret || {};
+        const wNS = data?.whatsapp_by_provider?.meta?.non_secret || data?.whatsapp?.non_secret || {};
         if (wNS.phone_number_id !== undefined) setWaPhoneNumberId(wNS.phone_number_id || "");
       }
     } catch { /* ignore */ }

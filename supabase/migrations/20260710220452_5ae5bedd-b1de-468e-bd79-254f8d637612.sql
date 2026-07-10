@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_single_wa_provider_meta() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.enforce_single_wa_provider_twilio() FROM PUBLIC, anon, authenticated;
