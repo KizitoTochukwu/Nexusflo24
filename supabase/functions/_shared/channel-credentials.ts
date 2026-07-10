@@ -74,14 +74,19 @@ export async function resolveChannelCredentials(
       const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
       const { data } = await adminClient
         .from("workspace_channel_settings")
-        .select("config_encrypted, is_active")
+        .select("config_encrypted, is_active, provider, updated_at")
         .eq("workspace_id", workspaceId)
         .eq("channel", channel)
         .eq("is_active", true)
-        .maybeSingle();
+        .order("updated_at", { ascending: false })
+        .limit(1);
 
-      if (data?.config_encrypted) {
-        const config = JSON.parse(await decrypt(data.config_encrypted, encryptionKey));
+      const row = data?.[0];
+      if (row?.config_encrypted) {
+        const config = JSON.parse(await decrypt(row.config_encrypted, encryptionKey));
+        if (channel === "whatsapp" && row.provider && !config.provider) {
+          config.provider = row.provider;
+        }
         // Validate that required fields have values
         const hasValues = Object.values(config).some((v) => v && String(v).trim().length > 0);
         if (hasValues) {

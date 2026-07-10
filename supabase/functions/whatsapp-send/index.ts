@@ -47,12 +47,13 @@ async function repairWorkspaceChannelSettings(
     .select("id")
     .eq("workspace_id", workspaceId)
     .eq("channel", "whatsapp")
+    .eq("provider", "meta")
     .maybeSingle();
 
   if (existing?.id) {
     await adminClient
       .from("workspace_channel_settings")
-      .update({ config_encrypted: configEncrypted, is_active: true, updated_at: new Date().toISOString() })
+      .update({ config_encrypted: configEncrypted, is_active: true, provider: "meta", updated_at: new Date().toISOString() })
       .eq("id", existing.id);
   } else {
     await adminClient.from("workspace_channel_settings").insert({
@@ -60,6 +61,7 @@ async function repairWorkspaceChannelSettings(
       channel: "whatsapp",
       config_encrypted: configEncrypted,
       is_active: true,
+      provider: "meta",
     });
   }
 }
@@ -70,7 +72,8 @@ async function resolveMetaCredentials(
   platformFallback: Record<string, string | undefined>,
 ) {
   const workspaceCreds = await resolveChannelCredentials(workspaceId, "whatsapp", {});
-  if (hasMetaCredentials(workspaceCreds.config)) return workspaceCreds;
+  const workspaceProvider = String(workspaceCreds.config.provider || "meta").toLowerCase();
+  if (workspaceProvider === "meta" && hasMetaCredentials(workspaceCreds.config)) return workspaceCreds;
 
   const whatsappKey = Deno.env.get("WHATSAPP_SETTINGS_ENCRYPTION_KEY");
   if (whatsappKey) {

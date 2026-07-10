@@ -339,7 +339,7 @@ Deno.serve(async (req) => {
     // 7. Also mirror into workspace_channel_settings so the existing
     //    resolveChannelCredentials() helper used by whatsapp-send picks it up.
     const channelConfigEncrypted = await encryptChannelConfig(
-      JSON.stringify({ phone_number_id: phoneNumberId, access_token: accessToken }),
+      JSON.stringify({ provider: "meta", phone_number_id: phoneNumberId, access_token: accessToken }),
       channelKey,
     );
     const { data: existingChannel } = await admin
@@ -347,11 +347,17 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("workspace_id", workspaceId)
       .eq("channel", "whatsapp")
+      .eq("provider", "meta")
       .maybeSingle();
     if (existingChannel?.id) {
       await admin
         .from("workspace_channel_settings")
-        .update({ config_encrypted: channelConfigEncrypted, is_active: true, provider: "meta" })
+        .update({
+          config_encrypted: channelConfigEncrypted,
+          is_active: true,
+          provider: "meta",
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", existingChannel.id);
     } else {
       await admin.from("workspace_channel_settings").insert({
