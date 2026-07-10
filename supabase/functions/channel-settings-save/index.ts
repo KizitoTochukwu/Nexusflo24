@@ -78,10 +78,10 @@ function validateWhatsAppConfig(config: Record<string, string>): string | null {
     if (!/^AC[0-9a-fA-F]{32}$/.test(config.account_sid || "")) {
       return "Twilio Account SID must start with AC and be 34 characters long.";
     }
-    if (!/^[0-9a-fA-F]{32}$/.test(config.auth_token || "")) {
-      return "Twilio Auth Token must be exactly 32 characters from the matching account.";
+    if (!config.auth_token) {
+      return "Twilio Auth Token is required.";
     }
-    if (!config.from_number) {
+    if (!config.messaging_service_sid && !/^\+[1-9]\d{6,14}$/.test(config.from_number || "")) {
       return "Enter a WhatsApp-enabled From number (e.g. +14155238886) or Messaging Service SID.";
     }
   }
@@ -126,13 +126,21 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden: workspace admin required" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Handle disconnect — delete the row entirely
+    // Handle disconnect — only remove the requested WhatsApp provider row so
+    // switching/deleting Twilio never removes Meta's saved setup.
     if (disconnect) {
-      const { error: delErr } = await adminClient
+      let deleteQuery = adminClient
         .from("workspace_channel_settings")
         .delete()
         .eq("workspace_id", workspaceId)
         .eq("channel", channel);
+
+      const disconnectProvider = String(body.provider || "").toLowerCase();
+      if (channel === "whatsapp" && (disconnectProvider === "twilio" || disconnectProvider === "meta")) {
+        deleteQuery = deleteQuery.eq("provider", disconnectProvider);
+      }
+
+      const { error: delErr } = await deleteQuery;
 
       if (delErr) throw delErr;
 
@@ -149,16 +157,24 @@ Deno.serve(async (req) => {
     }
 
     const cleanedConfig = trimConfig(config);
+    const providerTag =
+      channel === "whatsapp"
+        ? ((cleanedConfig.provider || "").toLowerCase() === "twilio" ? "twilio" : "meta")
+        : null;
+    if (channel === "whatsapp") cleanedConfig.provider = providerTag || "meta";
 
     // Load prior config (if any) to support secret merging + provider-change detection.
     let priorConfig: Record<string, string> | null = null;
     {
-      const { data: existing } = await adminClient
+      let existingQuery = adminClient
         .from("workspace_channel_settings")
         .select("config_encrypted")
         .eq("workspace_id", workspaceId)
-        .eq("channel", channel)
-        .maybeSingle();
+        .eq("channel", channel);
+      existingQuery = channel === "whatsapp"
+        ? existingQuery.eq("provider", providerTag)
+        : existingQuery.is("provider", null);
+      const { data: existing } = await existingQuery.maybeSingle();
       if (existing?.config_encrypted) {
         try {
           priorConfig = JSON.parse(await decrypt(existing.config_encrypted, encryptionKey));
@@ -223,30 +239,43 @@ Deno.serve(async (req) => {
 
     const configEncrypted = await encrypt(JSON.stringify(cleanedConfig), encryptionKey);
 
-    // Track WhatsApp provider explicitly so the single-active-provider trigger
-    // can distinguish Meta's mirror row from an active Twilio configuration.
-    const providerTag =
-      channel === "whatsapp"
-        ? ((cleanedConfig.provider || "").toLowerCase() === "twilio" ? "twilio" : "meta")
-        : null;
-
-    const { error: upsertErr } = await adminClient
+    let rowQuery = adminClient
       .from("workspace_channel_settings")
-      .upsert(
-        {
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("channel", channel);
+    rowQuery = channel === "whatsapp"
+      ? rowQuery.eq("provider", providerTag)
+      : rowQuery.is("provider", null);
+    const { data: existingRow, error: existingRowErr } = await rowQuery.maybeSingle();
+    if (existingRowErr) throw existingRowErr;
+
+    if (existingRow?.id) {
+      const { error: updateErr } = await adminClient
+        .from("workspace_channel_settings")
+        .update({
+          config_encrypted: configEncrypted,
+          is_active: true,
+          provider: providerTag,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingRow.id);
+      if (updateErr) throw updateErr;
+    } else {
+      const { error: insertErr } = await adminClient
+        .from("workspace_channel_settings")
+        .insert({
           workspace_id: workspaceId,
           channel,
           config_encrypted: configEncrypted,
           is_active: true,
           provider: providerTag,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: "workspace_id,channel" }
-      );
+        });
+      if (insertErr) throw insertErr;
+    }
 
-    if (upsertErr) throw upsertErr;
-
-    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: true, provider: providerTag }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("channel-settings-save error:", err);
     return new Response(JSON.stringify({ error: err?.message || "Failed to save channel settings" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
