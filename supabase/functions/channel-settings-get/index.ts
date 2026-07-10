@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         channels.whatsapp_by_provider = channels.whatsapp_by_provider || {};
         channels.whatsapp_by_provider[provider] = channelPayload;
 
-        if (!channels.whatsapp || row.is_active || provider === "twilio") {
+        if (!channels.whatsapp || row.is_active) {
           channels.whatsapp = channelPayload;
         }
         continue;
