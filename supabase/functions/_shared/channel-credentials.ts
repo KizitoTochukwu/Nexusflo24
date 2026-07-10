@@ -84,8 +84,13 @@ export async function resolveChannelCredentials(
       const row = data?.[0];
       if (row?.config_encrypted) {
         const config = JSON.parse(await decrypt(row.config_encrypted, encryptionKey));
-        if (channel === "whatsapp" && row.provider && !config.provider) {
-          config.provider = row.provider;
+        if (channel === "whatsapp" && !config.provider) {
+          const inferredProvider = config.account_sid || config.auth_token
+            ? "twilio"
+            : config.access_token || config.phone_number_id
+            ? "meta"
+            : row.provider;
+          if (inferredProvider) config.provider = inferredProvider;
         }
         // Validate that required fields have values
         const hasValues = Object.values(config).some((v) => v && String(v).trim().length > 0);

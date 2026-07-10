@@ -87,14 +87,26 @@ Deno.serve(async (req) => {
     for (const row of rows || []) {
       let masked: Record<string, string> = {};
       let non_secret: Record<string, string> = {};
+      let configProvider = String(row.provider || "").toLowerCase();
       if (encryptionKey && row.config_encrypted) {
         try {
           const config = JSON.parse(await decrypt(row.config_encrypted, encryptionKey));
+          if (row.channel === "whatsapp") {
+            configProvider = String(
+              config.provider ||
+                (config.account_sid || config.auth_token
+                  ? "twilio"
+                  : config.access_token || config.phone_number_id
+                  ? "meta"
+                  : row.provider || "meta"),
+            ).toLowerCase();
+          }
           const safeKeys = NON_SECRET_FIELDS[row.channel] || [];
           for (const [k, v] of Object.entries(config)) {
             masked[k] = maskValue(v as string);
             if (safeKeys.includes(k) && typeof v === "string") non_secret[k] = v;
           }
+          if (row.channel === "whatsapp" && configProvider) non_secret.provider = configProvider;
         } catch {
           masked = { error: "decryption_failed" };
         }
@@ -102,14 +114,14 @@ Deno.serve(async (req) => {
       const channelPayload = {
         configured: true,
         is_active: row.is_active,
-        provider: row.provider || non_secret.provider || null,
+        provider: configProvider || non_secret.provider || null,
         masked,
         non_secret,
         updated_at: row.updated_at,
       };
 
       if (row.channel === "whatsapp") {
-        const provider = String(row.provider || non_secret.provider || "meta").toLowerCase();
+        const provider = String(configProvider || non_secret.provider || "meta").toLowerCase();
         channels.whatsapp_by_provider = channels.whatsapp_by_provider || {};
         channels.whatsapp_by_provider[provider] = channelPayload;
 
