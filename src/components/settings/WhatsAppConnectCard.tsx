@@ -609,6 +609,22 @@ function MetaWhatsAppPanel({
 
   const metaIsActive = activeProvider === "meta";
   const twilioIsActive = activeProvider === "twilio";
+  const metaConfigured = Boolean(conn?.configured);
+
+  const activateSavedMeta = async () => {
+    try {
+      setConnectionError(null);
+      await switchWhatsAppProvider(workspaceId, "meta");
+      await onActivated();
+      toast.success("Meta Cloud API is now active for this workspace.");
+    } catch (err: any) {
+      const message = err?.message || "Switch failed";
+      setConnectionError(message);
+      toast.error(message);
+    } finally {
+      setConfirmSwitch(false);
+    }
+  };
 
   const runConnect = async () => {
     try {
@@ -628,6 +644,10 @@ function MetaWhatsAppPanel({
   };
 
   const handleConnect = () => {
+    if (twilioIsActive && metaConfigured) {
+      setConfirmSwitch(true);
+      return;
+    }
     if (twilioIsActive) {
       setConfirmSwitch(true);
       return;
@@ -735,9 +755,9 @@ function MetaWhatsAppPanel({
         <>
           <Alert>
             <AlertDescription>
-              Connecting opens a Meta popup where you'll select your Facebook Business, create or
-              pick a WhatsApp Business Account, and confirm your phone number. Takes about 90
-              seconds.
+              {metaConfigured
+                ? "Meta Cloud API is saved but not currently active for this workspace. Switch back without reconnecting."
+                : "Connecting opens a Meta popup where you'll select your Facebook Business, create or pick a WhatsApp Business Account, and confirm your phone number. Takes about 90 seconds."}
             </AlertDescription>
           </Alert>
           {connectionError && (
@@ -758,7 +778,11 @@ function MetaWhatsAppPanel({
             ) : (
               <>
                 <MessageCircle className="h-4 w-4 mr-2" />
-                {twilioIsActive ? "Connect & Switch to Meta" : "Connect WhatsApp via Meta"}
+                {twilioIsActive && metaConfigured
+                  ? "Activate saved Meta"
+                  : twilioIsActive
+                  ? "Connect & Switch to Meta"
+                  : "Connect WhatsApp via Meta"}
               </>
             )}
           </Button>
@@ -795,13 +819,15 @@ function MetaWhatsAppPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Switch to Meta Cloud API?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will deactivate Twilio WhatsApp for this workspace. Meta will only become
-              active after you complete the Meta signup popup successfully.
+              This will deactivate Twilio WhatsApp for this workspace. Your saved Twilio credentials remain available if you switch back later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={connect.isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={runConnect} disabled={connect.isPending}>
+            <AlertDialogAction
+              onClick={metaConfigured ? activateSavedMeta : runConnect}
+              disabled={connect.isPending}
+            >
               {connect.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Continue to Meta
             </AlertDialogAction>
@@ -819,8 +845,8 @@ function MetaWhatsAppPanel({
 export function WhatsAppConnectCard({ workspaceId }: Props) {
   const { data: conn, isLoading: connLoading } = useWhatsAppConnection(workspaceId);
   const qc = useQueryClient();
-  const [twilioChannel, setTwilioChannel] =
-    useState<ChannelSettingsWhatsAppShape | null>(null);
+  const [channelState, setChannelState] =
+    useState<ChannelSettingsResponseShape | null>(null);
   const [channelLoading, setChannelLoading] = useState(true);
   const [selectedProviderTab, setSelectedProviderTab] = useState<"meta" | "twilio">("meta");
   const [initialised, setInitialised] = useState(false);
@@ -829,7 +855,7 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
     setChannelLoading(true);
     try {
       const wa = await fetchWhatsAppChannelSettings(workspaceId);
-      setTwilioChannel(wa);
+      setChannelState(wa);
     } finally {
       setChannelLoading(false);
     }
@@ -840,6 +866,11 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
   }, [loadChannel]);
 
   // Derive active provider strictly from DB-backed data.
+  const twilioChannel =
+    channelState?.whatsapp_by_provider?.twilio ||
+    ((channelState?.whatsapp?.non_secret?.provider || channelState?.whatsapp?.provider || "").toLowerCase() === "twilio"
+      ? channelState.whatsapp
+      : null);
   const metaActive = Boolean(conn?.configured && conn?.is_active);
   const twilioActive = Boolean(
     twilioChannel?.configured &&
@@ -932,6 +963,7 @@ export function WhatsAppConnectCard({ workspaceId }: Props) {
             <TwilioWhatsAppPanel
               workspaceId={workspaceId}
               activeProvider={activeProvider}
+              twilioSettings={twilioChannel}
               onActivated={refreshActiveProvider}
             />
           </TabsContent>
