@@ -222,6 +222,11 @@ export default function AutomationEmailEditor({
           if (reason === "window_closed") {
             throw new Error((data as any).error || "WhatsApp 24h window closed — recipient must message you first, or send an approved template.");
           }
+          if (reason === "region_capability") {
+            throw new Error(
+              `Twilio: the WhatsApp sender isn't approved to send to this country. Open Twilio Console → Messaging → Senders and enable the destination region for your WhatsApp sender, or pick a WhatsApp-enabled sender in Settings → Channels. (${(data as any).error || "code 20422"})`
+            );
+          }
           throw new Error((data as any).error || "WhatsApp test failed");
         }
         if ((data as any)?.testMode === "hello_world") {
@@ -236,11 +241,13 @@ export default function AutomationEmailEditor({
       setTestOpen(false);
     } catch (e: any) {
       const raw = String(e?.message || "");
-      const friendly = /template no longer exists/i.test(raw)
+      const friendly = /template no longer exists|sender isn't approved/i.test(raw)
         ? raw
-        : /132001/.test(raw)
-          ? "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
-          : raw || `Failed to send test ${resolvedChannel}.`;
+        : /20422|Region capability/i.test(raw)
+          ? `Twilio: the WhatsApp sender isn't approved to send to this country. Open Twilio Console → Messaging → Senders and enable the destination region for your WhatsApp sender, or pick a WhatsApp-enabled sender in Settings → Channels. (${raw})`
+          : /132001/.test(raw)
+            ? "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
+            : raw || `Failed to send test ${resolvedChannel}.`;
       toast.error(friendly);
     } finally {
       setTestSending(false);
@@ -509,7 +516,9 @@ export default function AutomationEmailEditor({
               <ToolbarBtn icon={Link2} label="Insert link" onClick={insertLink} />
               <ToolbarBtn icon={Smile} label="Emoji" onClick={() => insertAtCursor("😊")} />
               <div className="ml-auto text-[10px] text-muted-foreground pr-1">
-                {charCount} chars · {smsSegments} SMS segment{smsSegments === 1 ? "" : "s"}
+                {resolvedChannel === "sms"
+                  ? `${charCount} chars · ${smsSegments} SMS segment${smsSegments === 1 ? "" : "s"}`
+                  : `${charCount} character${charCount === 1 ? "" : "s"}`}
               </div>
             </div>
 

@@ -253,6 +253,20 @@ Deno.serve(async (req) => {
     const messagingServiceSid = useMessagingService ? fromCandidate : undefined;
     const To = waAddress(normalizedTo);
 
+    console.log("[twilio-whatsapp-send] routing", {
+      workspaceId,
+      provider: "twilio",
+      usingMessagingService: useMessagingService,
+      fromHint: useMessagingService
+        ? `${fromCandidate.slice(0, 4)}…${fromCandidate.slice(-4)}`
+        : From
+          ? `whatsapp:…${From.slice(-4)}`
+          : null,
+      toHint: `whatsapp:…${normalizedTo.slice(-4)}`,
+      isTemplate: !!contentSid,
+      preview: !!preview,
+    });
+
     const sendRes = await sendViaTwilioGateway({
       accountSid,
       authToken,
@@ -289,6 +303,9 @@ Deno.serve(async (req) => {
 
       // 24h window-equivalent in Twilio: error 63016 (freeform outside window)
       const isWindowClosed = code === 63016 || /outside.*allowed window/i.test(errMsg);
+      // WhatsApp sender not approved for destination region (per-sender capability)
+      const isRegionCapability =
+        code === 20422 || /region capability/i.test(errMsg);
 
       // Credential / auth errors (20003 = auth, 20404 = not found)
       if (code === 20003 || code === 20404 || code === 401 || code === 403) {
@@ -308,6 +325,7 @@ Deno.serve(async (req) => {
           error: errMsg,
           code,
           ...(isWindowClosed ? { fallback: true, reason: "window_closed" } : {}),
+          ...(isRegionCapability ? { reason: "region_capability" } : {}),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
