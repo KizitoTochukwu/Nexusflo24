@@ -593,7 +593,6 @@ export default function CreateCampaignDialog() {
               <div className="space-y-1">
                 <WhatsAppTemplatePicker
                   workspaceId={workspaceId}
-                  requireTwilio
                   value={waTemplateSelection}
                   onChange={(v) => {
                     setWaTemplateSelection(v);
