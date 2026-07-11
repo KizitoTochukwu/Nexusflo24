@@ -101,6 +101,9 @@ export default function WhatsAppTemplatesTab() {
       body_preview: t.body_preview ?? "",
       variable_count: t.variable_count ?? 0,
       notes: t.notes ?? "",
+      provider: t.provider || "meta",
+      twilio_content_sid: t.twilio_content_sid ?? "",
+      twilio_variable_sample: t.twilio_variable_sample ? JSON.stringify(t.twilio_variable_sample, null, 2) : "",
     });
     setOpen(true);
   };
@@ -109,6 +112,24 @@ export default function WhatsAppTemplatesTab() {
     if (!workspaceId) return;
     const name = form.name.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
     if (!name) { toast.error("Template name is required"); return; }
+
+    const provider = form.provider || "meta";
+    const contentSidRaw = form.twilio_content_sid.trim();
+    if ((provider === "twilio" || provider === "both") && contentSidRaw && !/^HX[0-9a-fA-F]{32}$/.test(contentSidRaw)) {
+      toast.error("Twilio Content SID must look like HX + 32 hex characters (from Twilio Content Template Builder).");
+      return;
+    }
+    let sampleJson: Record<string, string> | null = null;
+    if (form.twilio_variable_sample.trim()) {
+      try {
+        sampleJson = JSON.parse(form.twilio_variable_sample);
+        if (typeof sampleJson !== "object" || Array.isArray(sampleJson)) throw new Error("bad shape");
+      } catch {
+        toast.error(`Variable sample must be JSON like {"1": "John", "2": "Acme"}`);
+        return;
+      }
+    }
+
     setSaving(true);
     const payload = {
       workspace_id: workspaceId,
@@ -119,6 +140,9 @@ export default function WhatsAppTemplatesTab() {
       variable_count: Number(form.variable_count) || 0,
       notes: form.notes || null,
       status: "approved",
+      provider,
+      twilio_content_sid: contentSidRaw || null,
+      twilio_variable_sample: sampleJson,
     };
     const q = editing
       ? supabase.from("whatsapp_templates").update(payload).eq("id", editing.id)
