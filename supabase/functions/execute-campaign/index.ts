@@ -66,7 +66,14 @@ Deno.serve(async (req) => {
       subject?: string;
       body?: string;
       templateSettings?: Record<string, any>;
-      whatsappTemplate?: { name: string; language: string; components?: any[] };
+      whatsappTemplate?: {
+        id?: string;
+        name?: string;
+        language?: string;
+        contentSid?: string;
+        contentVariables?: Record<string, string>;
+        components?: any[];
+      };
     };
     const audienceFilter = (campaign.audience_filter || {}) as {
       statuses?: string[];
