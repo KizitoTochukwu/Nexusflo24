@@ -173,6 +173,25 @@ export default function AutomationEmailEditor({
       const renderedSubject = interpolateText(subject, sample);
       const renderedMessage = interpolateText(message, sample);
 
+      // Unwraps Supabase FunctionsHttpError so we can show the backend's real
+      // error body instead of a generic "Edge Function returned a non-2xx…".
+      const readInvokeError = async (err: unknown): Promise<string> => {
+        if (err instanceof FunctionsHttpError) {
+          try {
+            const raw = await err.context.text();
+            try {
+              const body = JSON.parse(raw);
+              return String(body?.error || body?.message || raw || err.message);
+            } catch {
+              return raw || err.message;
+            }
+          } catch {
+            return err.message;
+          }
+        }
+        return String((err as any)?.message || err || "Unknown error");
+      };
+
       if (resolvedChannel === "email") {
         const { error } = await supabase.functions.invoke("email-send", {
           body: {
@@ -183,22 +202,25 @@ export default function AutomationEmailEditor({
             templateSettings: { ...(templateSettings ?? {}), preview: true },
           },
         });
-        if (error) throw error;
+        if (error) throw new Error(await readInvokeError(error));
       } else if (resolvedChannel === "sms") {
         const { data, error } = await supabase.functions.invoke("sms-send", {
           body: { workspaceId, to: testRecipient, message: renderedMessage, preview: true },
         });
-        if (error) throw error;
+        if (error) throw new Error(await readInvokeError(error));
         if (data && (data as any).success === false) throw new Error((data as any).error || "SMS test failed");
       } else {
         const { data, error } = await supabase.functions.invoke("whatsapp-send", {
           body: { workspaceId, to: testRecipient, body: renderedMessage, preview: true },
         });
-        if (error) throw error;
+        if (error) throw new Error(await readInvokeError(error));
         if (data && (data as any).success === false) {
           const reason = (data as any).reason;
           if (reason === "template_unavailable") {
             throw new Error("WhatsApp template no longer exists on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default.");
+          }
+          if (reason === "window_closed") {
+            throw new Error((data as any).error || "WhatsApp 24h window closed — recipient must message you first, or send an approved template.");
           }
           throw new Error((data as any).error || "WhatsApp test failed");
         }
