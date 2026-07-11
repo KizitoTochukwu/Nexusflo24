@@ -3,30 +3,26 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useBookingPages, useBookings, useCreateBookingPage, useUpdateBookingPage, useDeleteBookingPage, useUpdateBooking } from "@/hooks/useBookings";
 import type { BookingPage } from "@/hooks/useBookings";
+import { useBookingAutomationStatus } from "@/hooks/useBookingAutomationStatus";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, ExternalLink, Pencil, Trash2, CalendarDays, Loader2, Copy, Check } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { Plus, CalendarDays, Loader2, Trash2 } from "lucide-react";
 import BookingPageForm from "@/components/bookings/BookingPageForm";
-import BookingsList from "@/components/bookings/BookingsList";
+import BookingsSummaryCards from "@/components/bookings/BookingsSummaryCards";
+import BookingPageCard from "@/components/bookings/BookingPageCard";
+import AppointmentsPanel from "@/components/bookings/AppointmentsPanel";
 
 export default function DashboardBookings() {
   const workspaceId = useWorkspaceId();
   const { data: pages = [], isLoading: pagesLoading } = useBookingPages(workspaceId);
   const { data: bookings = [], isLoading: bookingsLoading } = useBookings(workspaceId);
+  const { data: automationStatus } = useBookingAutomationStatus(workspaceId);
   const createPage = useCreateBookingPage();
   const updatePage = useUpdateBookingPage();
   const deletePage = useDeleteBookingPage();
@@ -35,56 +31,38 @@ export default function DashboardBookings() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BookingPage | null>(null);
   const [pendingDelete, setPendingDelete] = useState<BookingPage | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  const copyLink = (id: string, url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopiedId(id);
-    toast.success("Booking link copied");
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   const handleCreate = (data: Partial<BookingPage>) => {
     createPage.mutate({ ...data, workspace_id: workspaceId, name: data.name! }, {
       onSuccess: () => setDialogOpen(false),
     });
   };
-
   const handleUpdate = (data: Partial<BookingPage>) => {
     if (!editing) return;
     updatePage.mutate({ ...data, id: editing.id }, {
       onSuccess: () => { setEditing(null); setDialogOpen(false); },
     });
   };
-
   const handleConfirmDelete = () => {
     if (!pendingDelete) return;
-    deletePage.mutate(pendingDelete.id, {
-      onSettled: () => setPendingDelete(null),
-    });
+    deletePage.mutate(pendingDelete.id, { onSettled: () => setPendingDelete(null) });
   };
-
-  const openEdit = (page: BookingPage) => {
-    setEditing(page);
-    setDialogOpen(true);
-  };
-
-  const openCreate = () => {
-    setEditing(null);
-    setDialogOpen(true);
-  };
+  const openEdit = (page: BookingPage) => { setEditing(page); setDialogOpen(true); };
+  const openCreate = () => { setEditing(null); setDialogOpen(true); };
 
   const baseUrl = window.location.origin;
 
   return (
     <DashboardLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bookings</h1>
           <p className="text-sm text-muted-foreground">Create booking pages and manage appointments.</p>
         </div>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> New Booking Page</Button>
       </div>
+
+      {!bookingsLoading && bookings.length > 0 && <BookingsSummaryCards bookings={bookings} />}
 
       <Tabs defaultValue="pages">
         <TabsList>
@@ -96,69 +74,29 @@ export default function DashboardBookings() {
           {pagesLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
           ) : pages.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <CalendarDays className="h-12 w-12 text-muted-foreground/40 mb-3" />
-                <p className="text-muted-foreground mb-3">No booking pages yet.</p>
-                <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Create Your First</Button>
+            <Card className="rounded-2xl border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4">
+                  <CalendarDays className="h-6 w-6 text-primary" />
+                </div>
+                <p className="font-medium mb-1">No booking pages yet</p>
+                <p className="text-sm text-muted-foreground mb-4">Share a link and let guests self-schedule.</p>
+                <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Create your first page</Button>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pages.map((page) => {
-                const pageBookings = bookings.filter((b) => b.booking_page_id === page.id && b.status === "confirmed");
-                return (
-                  <Card key={page.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-base">{page.name}</CardTitle>
-                          <p className="text-xs text-muted-foreground mt-0.5">{page.duration_minutes} min • {page.timezone}</p>
-                        </div>
-                        <Badge variant={page.status === "active" ? "default" : "secondary"}>{page.status}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {page.description && <p className="text-sm text-muted-foreground line-clamp-2">{page.description}</p>}
-                      <p className="text-xs text-muted-foreground">{pageBookings.length} upcoming booking{pageBookings.length !== 1 ? "s" : ""}</p>
-                      {page.slug && (
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Public booking link</label>
-                          <div className="flex items-center gap-1.5">
-                            <Input
-                              readOnly
-                              value={`${baseUrl}/book/${page.slug}`}
-                              onFocus={(e) => e.currentTarget.select()}
-                              className="h-8 text-xs bg-muted/40"
-                            />
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 px-2 shrink-0"
-                              onClick={() => copyLink(page.id, `${baseUrl}/book/${page.slug}`)}
-                            >
-                              {copiedId === page.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        {page.slug && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`${baseUrl}/book/${page.slug}`} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="mr-1 h-3 w-3" /> Preview
-                            </a>
-                          </Button>
-                        )}
-                        <Button variant="outline" size="sm" onClick={() => openEdit(page)}><Pencil className="mr-1 h-3 w-3" /> Edit</Button>
-                        <Button variant="ghost" size="sm" onClick={() => setPendingDelete(page)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {pages.map((page) => (
+                <BookingPageCard
+                  key={page.id}
+                  page={page}
+                  bookings={bookings}
+                  baseUrl={baseUrl}
+                  automationStatus={automationStatus}
+                  onEdit={() => openEdit(page)}
+                  onDelete={() => setPendingDelete(page)}
+                />
+              ))}
             </div>
           )}
         </TabsContent>
@@ -167,15 +105,12 @@ export default function DashboardBookings() {
           {bookingsLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <BookingsList
-                  bookings={bookings}
-                  bookingPages={pages}
-                  onCancel={(id) => updateBooking.mutate({ id, status: "cancelled" })}
-                />
-              </CardContent>
-            </Card>
+            <AppointmentsPanel
+              bookings={bookings}
+              pages={pages}
+              workspaceId={workspaceId}
+              onUpdateStatus={(id, status) => updateBooking.mutate({ id, status })}
+            />
           )}
         </TabsContent>
       </Tabs>
@@ -202,31 +137,19 @@ export default function DashboardBookings() {
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
                 <Trash2 className="h-5 w-5 text-destructive" />
               </div>
-              <div className="flex-1">
-                <AlertDialogTitle>Delete booking page?</AlertDialogTitle>
-              </div>
+              <AlertDialogTitle>Delete booking page?</AlertDialogTitle>
             </div>
             <AlertDialogDescription className="pt-2">
-              {pendingDelete ? (
-                <>
-                  This will permanently delete <span className="font-medium text-foreground">"{pendingDelete.name}"</span> and its public booking link.
-                  Existing appointments will remain, but no new bookings can be made. This action cannot be undone.
-                </>
-              ) : null}
+              {pendingDelete && (
+                <>This will permanently delete <span className="font-medium text-foreground">"{pendingDelete.name}"</span> and its public link. Existing appointments remain but new bookings cannot be made.</>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deletePage.isPending}>Cancel</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={deletePage.isPending}
-            >
-              {deletePage.isPending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…</>
-              ) : (
-                <><Trash2 className="mr-2 h-4 w-4" /> Delete booking page</>
-              )}
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={deletePage.isPending}>
+              {deletePage.isPending ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting…</>)
+                : (<><Trash2 className="mr-2 h-4 w-4" /> Delete</>)}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

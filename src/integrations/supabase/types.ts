@@ -404,10 +404,12 @@ export type Database = {
           guest_name: string
           guest_phone: string | null
           id: string
+          internal_notes: string | null
           lead_id: string | null
           meeting_location: string | null
           meeting_url: string | null
           notes: string | null
+          reminder_sent_at: string | null
           reschedule_token: string | null
           sms_consent: boolean
           sms_consent_source: string | null
@@ -416,6 +418,7 @@ export type Database = {
           sms_opt_out: boolean
           start_time: string
           status: string
+          updated_at: string
           workspace_id: string
         }
         Insert: {
@@ -427,10 +430,12 @@ export type Database = {
           guest_name: string
           guest_phone?: string | null
           id?: string
+          internal_notes?: string | null
           lead_id?: string | null
           meeting_location?: string | null
           meeting_url?: string | null
           notes?: string | null
+          reminder_sent_at?: string | null
           reschedule_token?: string | null
           sms_consent?: boolean
           sms_consent_source?: string | null
@@ -439,6 +444,7 @@ export type Database = {
           sms_opt_out?: boolean
           start_time: string
           status?: string
+          updated_at?: string
           workspace_id: string
         }
         Update: {
@@ -450,10 +456,12 @@ export type Database = {
           guest_name?: string
           guest_phone?: string | null
           id?: string
+          internal_notes?: string | null
           lead_id?: string | null
           meeting_location?: string | null
           meeting_url?: string | null
           notes?: string | null
+          reminder_sent_at?: string | null
           reschedule_token?: string | null
           sms_consent?: boolean
           sms_consent_source?: string | null
@@ -462,6 +470,7 @@ export type Database = {
           sms_opt_out?: boolean
           start_time?: string
           status?: string
+          updated_at?: string
           workspace_id?: string
         }
         Relationships: [
