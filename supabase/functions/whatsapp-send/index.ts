@@ -377,9 +377,16 @@ Deno.serve(async (req) => {
           preview: isPreview,
         }),
       });
-      const fwdData = await fwd.json().catch(() => ({}));
+      const fwdText = await fwd.text();
+      let fwdData: any = {};
+      try { fwdData = fwdText ? JSON.parse(fwdText) : {}; } catch { fwdData = { error: fwdText }; }
+      // Always return 200 with a structured JSON so callers get a readable error
+      // instead of a generic "Edge Function returned a non-2xx status code".
+      if (!fwd.ok && fwdData && typeof fwdData === "object" && fwdData.success !== false) {
+        fwdData = { success: false, error: fwdData.error || `Twilio send failed (${fwd.status})`, ...fwdData };
+      }
       return new Response(JSON.stringify(fwdData), {
-        status: fwd.status,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
