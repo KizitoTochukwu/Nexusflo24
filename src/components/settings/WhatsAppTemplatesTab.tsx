@@ -232,6 +232,12 @@ export default function WhatsAppTemplatesTab() {
                     {t.variable_count > 0 && (
                       <Badge variant="outline" className="text-[10px]">{t.variable_count} variable{t.variable_count === 1 ? "" : "s"}</Badge>
                     )}
+                    {t.twilio_content_sid && (
+                      <Badge variant="outline" className="text-[10px] font-mono">Twilio · {t.twilio_content_sid.slice(0, 6)}…</Badge>
+                    )}
+                    {t.provider && t.provider !== "meta" && (
+                      <Badge variant="secondary" className="text-[10px]">{t.provider}</Badge>
+                    )}
                   </div>
                   {t.body_preview && (
                     <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.body_preview}</p>
@@ -309,6 +315,47 @@ export default function WhatsAppTemplatesTab() {
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 placeholder="When to use this template…"
               />
+            </div>
+
+            <div className="pt-2 border-t border-border space-y-3">
+              <div>
+                <Label className="text-xs">Provider</Label>
+                <Select value={form.provider} onValueChange={(v) => setForm({ ...form, provider: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PROVIDERS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(form.provider === "twilio" || form.provider === "both") && (
+                <>
+                  <div>
+                    <Label className="text-xs">Twilio Content SID</Label>
+                    <Input
+                      value={form.twilio_content_sid}
+                      onChange={(e) => setForm({ ...form, twilio_content_sid: e.target.value.trim() })}
+                      placeholder="HX20b2d718817a6a64331ae9b5d747ce5f"
+                      className="font-mono text-xs"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Copy from Twilio Console → Messaging → Content Template Builder. Starts with <code className="font-mono">HX</code>.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Variable sample (JSON, optional)</Label>
+                    <Textarea
+                      value={form.twilio_variable_sample}
+                      onChange={(e) => setForm({ ...form, twilio_variable_sample: e.target.value })}
+                      rows={3}
+                      placeholder={`{\n  "1": "John",\n  "2": "Acme"\n}`}
+                      className="font-mono text-xs"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Used as default variable mapping when this template is picked in an automation or broadcast.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <DialogFooter>
