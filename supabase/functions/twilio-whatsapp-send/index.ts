@@ -253,6 +253,20 @@ Deno.serve(async (req) => {
     const messagingServiceSid = useMessagingService ? fromCandidate : undefined;
     const To = waAddress(normalizedTo);
 
+    console.log("[twilio-whatsapp-send] routing", {
+      workspaceId,
+      provider: "twilio",
+      usingMessagingService: useMessagingService,
+      fromHint: useMessagingService
+        ? `${fromCandidate.slice(0, 4)}…${fromCandidate.slice(-4)}`
+        : From
+          ? `whatsapp:…${From.slice(-4)}`
+          : null,
+      toHint: `whatsapp:…${normalizedTo.slice(-4)}`,
+      isTemplate: !!contentSid,
+      preview: !!preview,
+    });
+
     const sendRes = await sendViaTwilioGateway({
       accountSid,
       authToken,
