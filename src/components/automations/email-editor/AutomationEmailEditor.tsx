@@ -128,6 +128,7 @@ export default function AutomationEmailEditor({
   onMessageChange,
   templateSettings,
   onTemplateSettingsChange,
+  whatsappTemplate,
 }: AutomationEmailEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -150,8 +151,11 @@ export default function AutomationEmailEditor({
   }, [testOpen, testRecipient, user?.email, resolvedChannel]);
 
   const sendTest = useCallback(async () => {
-    if (!message?.trim()) {
-      toast.error("Add a message before sending a test.");
+    const hasTemplate = resolvedChannel === "whatsapp" && !!whatsappTemplate?.contentSid;
+    if (!message?.trim() && !hasTemplate) {
+      toast.error(resolvedChannel === "whatsapp"
+        ? "Pick an approved WhatsApp template or add a session-window message before sending a test."
+        : "Add a message before sending a test.");
       return;
     }
     if (resolvedChannel === "email" && !subject?.trim()) {
