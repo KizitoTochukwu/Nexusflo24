@@ -216,32 +216,48 @@ Deno.serve(async (req) => {
     const senderDetail = resolvedSender?.detail || null;
     const senderFrom = senderDetail?.twilio_wa_sender_sid || senderDetail?.phone_number || null;
 
-    const creds = await resolveChannelCredentials(workspaceId, "whatsapp", {
-      account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
-      auth_token: Deno.env.get("TWILIO_AUTH_TOKEN"),
-      from_number: Deno.env.get("TWILIO_FROM_NUMBER"),
-    });
+    const creds = await resolveChannelCredentials(
+      workspaceId,
+      "whatsapp",
+      {
+        account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
+        auth_token: Deno.env.get("TWILIO_AUTH_TOKEN"),
+        from_number:
+          Deno.env.get("TWILIO_FROM_NUMBER") ||
+          Deno.env.get("TWILIO_FROM_NUMBER_1"),
+        messaging_service_sid: Deno.env.get("MESSAGING_SERVICE_SID"),
+      },
+      { mergePlatformDefaults: true },
+    );
 
     const accountSid = (creds.config.account_sid || "").trim();
     const authToken = (creds.config.auth_token || "").trim();
-    const fromRaw = (senderFrom || creds.config.from_number || creds.config.messaging_service_sid || "").trim();
-    if (!accountSid || !fromRaw) {
+    const fromCandidate = (
+      senderFrom ||
+      creds.config.from_number ||
+      creds.config.messaging_service_sid ||
+      ""
+    ).trim();
+
+    if (!fromCandidate || (!accountSid && !Deno.env.get("TWILIO_API_KEY"))) {
+      const errMsg =
+        "Twilio WhatsApp not configured. Add Account SID, Auth Token, and a WhatsApp-enabled From number (or Messaging Service SID) in Settings → Channels, or ask an admin to set platform defaults.";
       return new Response(
-        JSON.stringify({
-          error:
-            "Twilio WhatsApp not configured. Add Account SID, Auth Token, and a WhatsApp-enabled From number in Settings → Channels.",
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ success: false, error: errMsg, provider: "twilio" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const From = waAddress(fromRaw);
+    const useMessagingService = isMessagingServiceSid(fromCandidate);
+    const From = useMessagingService ? undefined : waAddress(fromCandidate);
+    const messagingServiceSid = useMessagingService ? fromCandidate : undefined;
     const To = waAddress(normalizedTo);
 
     const sendRes = await sendViaTwilioGateway({
       accountSid,
       authToken,
       from: From,
+      messagingServiceSid,
       to: To,
       body: msgBody,
       contentSid,
@@ -254,6 +270,10 @@ Deno.serve(async (req) => {
         sendRes.data?.error_message ||
         `Twilio error ${sendRes.status}`;
       const code = sendRes.data?.code || sendRes.status;
+
+      console.warn("[twilio-whatsapp-send] provider error", {
+        workspaceId, status: sendRes.status, code, errMsg,
+      });
 
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
@@ -269,17 +289,6 @@ Deno.serve(async (req) => {
 
       // 24h window-equivalent in Twilio: error 63016 (freeform outside window)
       const isWindowClosed = code === 63016 || /outside.*allowed window/i.test(errMsg);
-      if (isWindowClosed) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            fallback: true,
-            reason: "window_closed",
-            error: errMsg,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
 
       // Credential / auth errors (20003 = auth, 20404 = not found)
       if (code === 20003 || code === 20404 || code === 401 || code === 403) {
@@ -291,10 +300,17 @@ Deno.serve(async (req) => {
         });
       }
 
-      return new Response(JSON.stringify({ success: false, error: errMsg, code }), {
-        status: sendRes.status >= 500 ? 500 : 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Always return 200 so the caller can read the JSON error body.
+      return new Response(
+        JSON.stringify({
+          success: false,
+          provider: "twilio",
+          error: errMsg,
+          code,
+          ...(isWindowClosed ? { fallback: true, reason: "window_closed" } : {}),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const sid = sendRes.data?.sid || null;
