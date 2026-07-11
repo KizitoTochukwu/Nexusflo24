@@ -23,6 +23,9 @@ type Template = {
   status: string;
   notes: string | null;
   created_at: string;
+  provider?: string;
+  twilio_content_sid?: string | null;
+  twilio_variable_sample?: Record<string, string> | null;
 };
 
 const LANGUAGES = [
@@ -38,6 +41,11 @@ const LANGUAGES = [
 ];
 
 const CATEGORIES = ["MARKETING", "UTILITY", "AUTHENTICATION"];
+const PROVIDERS = [
+  { value: "meta", label: "Meta (WhatsApp Cloud API)" },
+  { value: "twilio", label: "Twilio (Content Template)" },
+  { value: "both", label: "Both providers" },
+];
 
 const empty = {
   name: "",
@@ -46,6 +54,9 @@ const empty = {
   body_preview: "",
   variable_count: 0,
   notes: "",
+  provider: "meta",
+  twilio_content_sid: "",
+  twilio_variable_sample: "" as string, // JSON edited as text
 };
 
 export default function WhatsAppTemplatesTab() {
