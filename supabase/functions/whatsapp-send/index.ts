@@ -356,7 +356,49 @@ Deno.serve(async (req) => {
     const dispatchCreds = await resolveChannelCredentials(workspaceId, "whatsapp", {});
     const dispatchProvider = String(dispatchCreds.config.provider || "meta").toLowerCase();
     if (dispatchProvider === "twilio") {
-      console.log("[whatsapp-send] routing to Twilio provider", { workspaceId });
+      const adminClientEarly = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
+      // Hydrate template by id if only id was passed (defence-in-depth).
+      let tpl = (template as any) || null;
+      if (tpl && !tpl.contentSid && tpl.id) {
+        const { data: row } = await adminClientEarly
+          .from("whatsapp_templates")
+          .select("name, language, twilio_content_sid, variable_count, twilio_variable_sample")
+          .eq("workspace_id", workspaceId)
+          .eq("id", tpl.id)
+          .maybeSingle();
+        if (row?.twilio_content_sid) {
+          tpl = {
+            ...tpl,
+            name: row.name,
+            language: row.language,
+            contentSid: row.twilio_content_sid,
+            contentVariables: tpl.contentVariables || row.twilio_variable_sample || {},
+          };
+        }
+      }
+
+      // Business-initiated requires a template. Free-text is only allowed
+      // when the 24h customer-window is open.
+      if (!tpl?.contentSid && !isPreview) {
+        const windowOpen = await hasRecentInboundMessage(adminClientEarly, workspaceId, normalizedTo);
+        if (!windowOpen) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              provider: "twilio",
+              reason: "no_template",
+              error: "Business-initiated WhatsApp requires an approved template (Twilio Content SID). Free-text only delivers inside the 24-hour customer window.",
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
+
+      console.log("[whatsapp-send] routing to Twilio provider", {
+        workspaceId,
+        hasTemplate: !!tpl?.contentSid,
+        templateSid: tpl?.contentSid ? `${String(tpl.contentSid).slice(0, 6)}…` : null,
+      });
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const fwd = await fetch(`${supabaseUrl}/functions/v1/twilio-whatsapp-send`, {
         method: "POST",
@@ -370,8 +412,8 @@ Deno.serve(async (req) => {
           body: msgBody,
           leadId,
           campaignId,
-          contentSid: (template as any)?.contentSid,
-          contentVariables: (template as any)?.contentVariables,
+          contentSid: tpl?.contentSid,
+          contentVariables: tpl?.contentVariables,
           sender_profile_id: (body as any).sender_profile_id,
           skipCredits,
           preview: isPreview,
@@ -384,8 +426,6 @@ Deno.serve(async (req) => {
           body: fwdData,
         });
       }
-      // Always return 200 to the caller so the JSON error body is preserved
-      // (supabase.functions.invoke otherwise surfaces a generic non-2xx error).
       const normalized = {
         provider: "twilio",
         ...(typeof fwdData === "object" && fwdData ? fwdData : {}),
