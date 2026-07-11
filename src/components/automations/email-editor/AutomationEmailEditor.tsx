@@ -24,6 +24,14 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { toast } from "sonner";
 
+export type WhatsAppTemplateOverride = {
+  id?: string;
+  name?: string;
+  language?: string;
+  contentSid?: string;
+  contentVariables?: Record<string, string>;
+};
+
 interface AutomationEmailEditorProps {
   isEmail: boolean;
   /** Optional explicit channel — defaults to "email" when isEmail, else "sms". */
@@ -34,6 +42,9 @@ interface AutomationEmailEditorProps {
   onMessageChange: (v: string) => void;
   templateSettings?: TemplateSettings;
   onTemplateSettingsChange?: (settings: TemplateSettings) => void;
+  /** Optional selected WhatsApp approved template — when present, "Send test"
+   *  routes as a template send (ContentSid + variables) instead of free text. */
+  whatsappTemplate?: WhatsAppTemplateOverride | null;
 }
 
 function ToolbarBtn({ icon: Icon, label, onClick }: {
@@ -117,6 +128,7 @@ export default function AutomationEmailEditor({
   onMessageChange,
   templateSettings,
   onTemplateSettingsChange,
+  whatsappTemplate,
 }: AutomationEmailEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -139,8 +151,11 @@ export default function AutomationEmailEditor({
   }, [testOpen, testRecipient, user?.email, resolvedChannel]);
 
   const sendTest = useCallback(async () => {
-    if (!message?.trim()) {
-      toast.error("Add a message before sending a test.");
+    const hasTemplate = resolvedChannel === "whatsapp" && !!whatsappTemplate?.contentSid;
+    if (!message?.trim() && !hasTemplate) {
+      toast.error(resolvedChannel === "whatsapp"
+        ? "Pick an approved WhatsApp template or add a session-window message before sending a test."
+        : "Add a message before sending a test.");
       return;
     }
     if (resolvedChannel === "email" && !subject?.trim()) {
@@ -210,17 +225,42 @@ export default function AutomationEmailEditor({
         if (error) throw new Error(await readInvokeError(error));
         if (data && (data as any).success === false) throw new Error((data as any).error || "SMS test failed");
       } else {
-        const { data, error } = await supabase.functions.invoke("whatsapp-send", {
-          body: { workspaceId, to: testRecipient, body: renderedMessage, preview: true },
-        });
+        // Pre-interpolate template variable values against sample lead vars so
+        // the recipient sees "Hi John" instead of "Hi {{first_name}}".
+        const interpolatedVars: Record<string, string> = {};
+        if (whatsappTemplate?.contentVariables) {
+          for (const [k, v] of Object.entries(whatsappTemplate.contentVariables)) {
+            interpolatedVars[k] = interpolateText(String(v ?? ""), sample);
+          }
+        }
+        const payload: Record<string, unknown> = {
+          workspaceId,
+          to: testRecipient,
+          preview: true,
+        };
+        if (whatsappTemplate?.contentSid) {
+          payload.template = {
+            id: whatsappTemplate.id,
+            name: whatsappTemplate.name,
+            language: whatsappTemplate.language,
+            contentSid: whatsappTemplate.contentSid,
+            contentVariables: interpolatedVars,
+          };
+        } else {
+          payload.body = renderedMessage;
+        }
+        const { data, error } = await supabase.functions.invoke("whatsapp-send", { body: payload });
         if (error) throw new Error(await readInvokeError(error));
         if (data && (data as any).success === false) {
           const reason = (data as any).reason;
           if (reason === "template_unavailable") {
-            throw new Error("WhatsApp template no longer exists on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default.");
+            throw new Error("WhatsApp template no longer exists. Sync/refresh templates in Settings → Channels → WhatsApp Templates and pick a new one.");
+          }
+          if (reason === "no_template") {
+            throw new Error("Business-initiated WhatsApp requires an approved template. Pick one above the message box.");
           }
           if (reason === "window_closed") {
-            throw new Error((data as any).error || "WhatsApp 24h window closed — recipient must message you first, or send an approved template.");
+            throw new Error((data as any).error || "WhatsApp 24h window closed — pick an approved template or wait for the contact to message first.");
           }
           if (reason === "region_capability") {
             throw new Error(
@@ -252,7 +292,7 @@ export default function AutomationEmailEditor({
     } finally {
       setTestSending(false);
     }
-  }, [resolvedChannel, subject, message, testRecipient, workspaceId, templateSettings, user?.email]);
+  }, [resolvedChannel, subject, message, testRecipient, workspaceId, templateSettings, user?.email, whatsappTemplate]);
 
   const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
 

@@ -506,6 +506,22 @@ Deno.serve(async (req) => {
                 break;
               }
               const body = interpolate(config.message || "", lead);
+              // Interpolate WhatsApp template variables per-lead so
+              // "{{first_name}}" in variable mapping renders as "John".
+              const waTpl = (config as any).whatsapp_template as
+                | { id?: string; name?: string; language?: string; contentSid?: string; contentVariables?: Record<string, string> }
+                | undefined;
+              const templatePayload = waTpl && (waTpl.contentSid || waTpl.id)
+                ? {
+                    id: waTpl.id,
+                    name: waTpl.name,
+                    language: waTpl.language,
+                    contentSid: waTpl.contentSid,
+                    contentVariables: Object.fromEntries(
+                      Object.entries(waTpl.contentVariables || {}).map(([k, v]) => [k, interpolate(String(v ?? ""), lead)]),
+                    ),
+                  }
+                : undefined;
               let waRes: Response;
               let waData: any = {};
               try {
@@ -515,7 +531,15 @@ Deno.serve(async (req) => {
                     Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
                     "Content-Type": "application/json",
                   },
-                  body: JSON.stringify({ workspaceId: workspace_id, to: lead.phone, body, leadId: lead_id, skipCredits: true, senderProfileId: (config as any).sender_profile_id || null }),
+                  body: JSON.stringify({
+                    workspaceId: workspace_id,
+                    to: lead.phone,
+                    body,
+                    leadId: lead_id,
+                    skipCredits: true,
+                    senderProfileId: (config as any).sender_profile_id || null,
+                    ...(templatePayload ? { template: templatePayload } : {}),
+                  }),
                 });
                 waData = await waRes.json().catch(() => ({}));
               } catch (sendErr: any) {

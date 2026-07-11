@@ -23,6 +23,9 @@ type Template = {
   status: string;
   notes: string | null;
   created_at: string;
+  provider?: string;
+  twilio_content_sid?: string | null;
+  twilio_variable_sample?: Record<string, string> | null;
 };
 
 const LANGUAGES = [
@@ -38,6 +41,11 @@ const LANGUAGES = [
 ];
 
 const CATEGORIES = ["MARKETING", "UTILITY", "AUTHENTICATION"];
+const PROVIDERS = [
+  { value: "meta", label: "Meta (WhatsApp Cloud API)" },
+  { value: "twilio", label: "Twilio (Content Template)" },
+  { value: "both", label: "Both providers" },
+];
 
 const empty = {
   name: "",
@@ -46,6 +54,9 @@ const empty = {
   body_preview: "",
   variable_count: 0,
   notes: "",
+  provider: "meta",
+  twilio_content_sid: "",
+  twilio_variable_sample: "" as string, // JSON edited as text
 };
 
 export default function WhatsAppTemplatesTab() {
@@ -90,6 +101,9 @@ export default function WhatsAppTemplatesTab() {
       body_preview: t.body_preview ?? "",
       variable_count: t.variable_count ?? 0,
       notes: t.notes ?? "",
+      provider: t.provider || "meta",
+      twilio_content_sid: t.twilio_content_sid ?? "",
+      twilio_variable_sample: t.twilio_variable_sample ? JSON.stringify(t.twilio_variable_sample, null, 2) : "",
     });
     setOpen(true);
   };
@@ -98,6 +112,24 @@ export default function WhatsAppTemplatesTab() {
     if (!workspaceId) return;
     const name = form.name.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_");
     if (!name) { toast.error("Template name is required"); return; }
+
+    const provider = form.provider || "meta";
+    const contentSidRaw = form.twilio_content_sid.trim();
+    if ((provider === "twilio" || provider === "both") && contentSidRaw && !/^HX[0-9a-fA-F]{32}$/.test(contentSidRaw)) {
+      toast.error("Twilio Content SID must look like HX + 32 hex characters (from Twilio Content Template Builder).");
+      return;
+    }
+    let sampleJson: Record<string, string> | null = null;
+    if (form.twilio_variable_sample.trim()) {
+      try {
+        sampleJson = JSON.parse(form.twilio_variable_sample);
+        if (typeof sampleJson !== "object" || Array.isArray(sampleJson)) throw new Error("bad shape");
+      } catch {
+        toast.error(`Variable sample must be JSON like {"1": "John", "2": "Acme"}`);
+        return;
+      }
+    }
+
     setSaving(true);
     const payload = {
       workspace_id: workspaceId,
@@ -108,6 +140,9 @@ export default function WhatsAppTemplatesTab() {
       variable_count: Number(form.variable_count) || 0,
       notes: form.notes || null,
       status: "approved",
+      provider,
+      twilio_content_sid: contentSidRaw || null,
+      twilio_variable_sample: sampleJson,
     };
     const q = editing
       ? supabase.from("whatsapp_templates").update(payload).eq("id", editing.id)
@@ -197,6 +232,12 @@ export default function WhatsAppTemplatesTab() {
                     {t.variable_count > 0 && (
                       <Badge variant="outline" className="text-[10px]">{t.variable_count} variable{t.variable_count === 1 ? "" : "s"}</Badge>
                     )}
+                    {t.twilio_content_sid && (
+                      <Badge variant="outline" className="text-[10px] font-mono">Twilio · {t.twilio_content_sid.slice(0, 6)}…</Badge>
+                    )}
+                    {t.provider && t.provider !== "meta" && (
+                      <Badge variant="secondary" className="text-[10px]">{t.provider}</Badge>
+                    )}
                   </div>
                   {t.body_preview && (
                     <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{t.body_preview}</p>
@@ -274,6 +315,47 @@ export default function WhatsAppTemplatesTab() {
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 placeholder="When to use this template…"
               />
+            </div>
+
+            <div className="pt-2 border-t border-border space-y-3">
+              <div>
+                <Label className="text-xs">Provider</Label>
+                <Select value={form.provider} onValueChange={(v) => setForm({ ...form, provider: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PROVIDERS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(form.provider === "twilio" || form.provider === "both") && (
+                <>
+                  <div>
+                    <Label className="text-xs">Twilio Content SID</Label>
+                    <Input
+                      value={form.twilio_content_sid}
+                      onChange={(e) => setForm({ ...form, twilio_content_sid: e.target.value.trim() })}
+                      placeholder="HX20b2d718817a6a64331ae9b5d747ce5f"
+                      className="font-mono text-xs"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Copy from Twilio Console → Messaging → Content Template Builder. Starts with <code className="font-mono">HX</code>.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Variable sample (JSON, optional)</Label>
+                    <Textarea
+                      value={form.twilio_variable_sample}
+                      onChange={(e) => setForm({ ...form, twilio_variable_sample: e.target.value })}
+                      rows={3}
+                      placeholder={`{\n  "1": "John",\n  "2": "Acme"\n}`}
+                      className="font-mono text-xs"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Used as default variable mapping when this template is picked in an automation or broadcast.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <DialogFooter>

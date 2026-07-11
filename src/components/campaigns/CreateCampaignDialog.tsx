@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
+import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
 import { SenderProfilePicker } from "@/components/admin/SenderProfilePicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -76,6 +77,7 @@ export default function CreateCampaignDialog() {
 
   // Step 3 (WhatsApp only) - Optional approved template for re-engagement (24h window closed)
   const [waTemplateId, setWaTemplateId] = useState<string>("none");
+  const [waTemplateSelection, setWaTemplateSelection] = useState<WhatsAppTemplateSelection | null>(null);
   const { data: waTemplates = [] } = useQuery({
     queryKey: ["whatsapp-templates", workspaceId],
     enabled: !!workspaceId && (type === "whatsapp" || type === "multi-channel"),
@@ -286,10 +288,20 @@ export default function CreateCampaignDialog() {
         subject: finalSubject,
         body,
         templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
-        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && waTemplateId !== "none"
+        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && (waTemplateSelection?.contentSid || waTemplateSelection?.id || waTemplateId !== "none")
           ? (() => {
+              // Prefer new picker selection (has contentSid + variables).
+              if (waTemplateSelection?.id || waTemplateSelection?.contentSid) {
+                return {
+                  id: waTemplateSelection.id,
+                  name: waTemplateSelection.name,
+                  language: waTemplateSelection.language,
+                  contentSid: waTemplateSelection.contentSid,
+                  contentVariables: waTemplateSelection.contentVariables,
+                };
+              }
               const t = waTemplates.find((x: any) => x.id === waTemplateId);
-              return t ? { name: t.name, language: t.language } : undefined;
+              return t ? { id: t.id, name: t.name, language: t.language } : undefined;
             })()
           : undefined,
         sender_profile_id_email: senderProfileEmail || undefined,
@@ -577,54 +589,25 @@ export default function CreateCampaignDialog() {
               )}
             </div>
 
-            {(type === "whatsapp" || type === "multi-channel") && (
-              <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium">WhatsApp re-engagement template</Label>
-                  <a
-                    href={workspaceId ? `/dashboard/${workspaceId}/settings?tab=wa-templates` : "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] text-accent hover:underline"
-                  >
-                    Manage templates →
-                  </a>
-                </div>
-                <Select value={waTemplateId} onValueChange={setWaTemplateId}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="None — text only (24h window required)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None — send free-text only</SelectItem>
-                    {waTemplates.map((t: any) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name} ({t.language}) · {t.category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {(() => {
-                  const picked = waTemplates.find((t: any) => t.id === waTemplateId);
-                  if (picked?.category === "MARKETING") {
-                    return (
-                      <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                        ⚠ MARKETING template — audience must be opted-in to WhatsApp marketing. Opted-out leads will be skipped automatically.
-                      </p>
-                    );
-                  }
-                  if (picked?.category === "UTILITY" || picked?.category === "AUTHENTICATION") {
-                    return (
-                      <p className="text-[11px] text-muted-foreground">
-                        {picked.category} template — Meta requires transactional content. Not intended for promotional blasts.
-                      </p>
-                    );
-                  }
-                  return (
-                    <p className="text-[11px] text-muted-foreground">
-                      Pick an approved template to reach leads outside the 24h window. Without one, sends fall back to your configured channel (or fail) when the window is closed.
-                    </p>
-                  );
-                })()}
+            {(type === "whatsapp" || type === "multi-channel") && workspaceId && (
+              <div className="space-y-1">
+                <WhatsAppTemplatePicker
+                  workspaceId={workspaceId}
+                  requireTwilio
+                  value={waTemplateSelection}
+                  onChange={(v) => {
+                    setWaTemplateSelection(v);
+                    setWaTemplateId(v?.id ?? "none");
+                  }}
+                />
+                <a
+                  href={workspaceId ? `/dashboard/${workspaceId}/settings?tab=wa-templates` : "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] text-accent hover:underline block"
+                >
+                  Manage templates →
+                </a>
               </div>
             )}
 
@@ -635,6 +618,7 @@ export default function CreateCampaignDialog() {
               onSubjectChange={setSubject}
               message={body}
               onMessageChange={setBody}
+              whatsappTemplate={waTemplateSelection}
               templateSettings={templateSettings}
               onTemplateSettingsChange={(type === "email" || type === "multi-channel") ? setTemplateSettings : undefined}
             />

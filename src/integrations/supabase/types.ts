@@ -3671,7 +3671,10 @@ export type Database = {
           meta_template_id: string | null
           name: string
           notes: string | null
+          provider: string
           status: string
+          twilio_content_sid: string | null
+          twilio_variable_sample: Json | null
           updated_at: string
           variable_count: number
           workspace_id: string
@@ -3688,7 +3691,10 @@ export type Database = {
           meta_template_id?: string | null
           name: string
           notes?: string | null
+          provider?: string
           status?: string
+          twilio_content_sid?: string | null
+          twilio_variable_sample?: Json | null
           updated_at?: string
           variable_count?: number
           workspace_id: string
@@ -3705,7 +3711,10 @@ export type Database = {
           meta_template_id?: string | null
           name?: string
           notes?: string | null
+          provider?: string
           status?: string
+          twilio_content_sid?: string | null
+          twilio_variable_sample?: Json | null
           updated_at?: string
           variable_count?: number
           workspace_id?: string

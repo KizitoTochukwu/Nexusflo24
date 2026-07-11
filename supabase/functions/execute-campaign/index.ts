@@ -66,7 +66,14 @@ Deno.serve(async (req) => {
       subject?: string;
       body?: string;
       templateSettings?: Record<string, any>;
-      whatsappTemplate?: { name: string; language: string; components?: any[] };
+      whatsappTemplate?: {
+        id?: string;
+        name?: string;
+        language?: string;
+        contentSid?: string;
+        contentVariables?: Record<string, string>;
+        components?: any[];
+      };
     };
     const audienceFilter = (campaign.audience_filter || {}) as {
       statuses?: string[];
@@ -267,7 +274,18 @@ Deno.serve(async (req) => {
                 workspaceId, to: lead.phone, body: textBody || messageSubject,
                 leadId: lead.id, campaignId: campaign_id,
                 senderProfileId: (content as any).sender_profile_id_whatsapp || (content as any).sender_profile_id || null,
-                ...(content.whatsappTemplate ? { template: content.whatsappTemplate } : {}),
+                ...(content.whatsappTemplate
+                  ? {
+                      template: {
+                        ...content.whatsappTemplate,
+                        contentVariables: Object.fromEntries(
+                          Object.entries(content.whatsappTemplate.contentVariables || {}).map(
+                            ([k, v]) => [k, interpolateText(String(v ?? ""), vars)],
+                          ),
+                        ),
+                      },
+                    }
+                  : {}),
                 ...(ownerIsAdmin ? { skipCredits: true } : {}),
               }),
             });
