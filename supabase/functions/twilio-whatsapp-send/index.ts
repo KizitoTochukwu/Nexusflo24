@@ -19,6 +19,10 @@ const corsHeaders = {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 
+function isMessagingServiceSid(v: string): boolean {
+  return /^MG[0-9a-fA-F]{32}$/.test(v.trim());
+}
+
 function waAddress(num: string) {
   const clean = num.startsWith("whatsapp:") ? num.slice(9) : num;
   const e164 = clean.startsWith("+") ? clean : `+${clean.replace(/[^\d]/g, "")}`;
