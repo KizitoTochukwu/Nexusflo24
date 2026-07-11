@@ -274,7 +274,18 @@ Deno.serve(async (req) => {
                 workspaceId, to: lead.phone, body: textBody || messageSubject,
                 leadId: lead.id, campaignId: campaign_id,
                 senderProfileId: (content as any).sender_profile_id_whatsapp || (content as any).sender_profile_id || null,
-                ...(content.whatsappTemplate ? { template: content.whatsappTemplate } : {}),
+                ...(content.whatsappTemplate
+                  ? {
+                      template: {
+                        ...content.whatsappTemplate,
+                        contentVariables: Object.fromEntries(
+                          Object.entries(content.whatsappTemplate.contentVariables || {}).map(
+                            ([k, v]) => [k, interpolateText(String(v ?? ""), vars)],
+                          ),
+                        ),
+                      },
+                    }
+                  : {}),
                 ...(ownerIsAdmin ? { skipCredits: true } : {}),
               }),
             });
