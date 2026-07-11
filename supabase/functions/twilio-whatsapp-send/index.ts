@@ -303,6 +303,9 @@ Deno.serve(async (req) => {
 
       // 24h window-equivalent in Twilio: error 63016 (freeform outside window)
       const isWindowClosed = code === 63016 || /outside.*allowed window/i.test(errMsg);
+      // WhatsApp sender not approved for destination region (per-sender capability)
+      const isRegionCapability =
+        code === 20422 || /region capability/i.test(errMsg);
 
       // Credential / auth errors (20003 = auth, 20404 = not found)
       if (code === 20003 || code === 20404 || code === 401 || code === 403) {
@@ -322,6 +325,7 @@ Deno.serve(async (req) => {
           error: errMsg,
           code,
           ...(isWindowClosed ? { fallback: true, reason: "window_closed" } : {}),
+          ...(isRegionCapability ? { reason: "region_capability" } : {}),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
