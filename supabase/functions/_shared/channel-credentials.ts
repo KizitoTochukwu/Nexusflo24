@@ -66,8 +66,16 @@ export async function resolveChannelCredentials(
   workspaceId: string,
   channel: "email" | "sms" | "whatsapp",
   platformFallback: Record<string, string | undefined>,
+  options?: { mergePlatformDefaults?: boolean },
 ): Promise<ChannelCredentials> {
   const encryptionKey = Deno.env.get("CHANNEL_SETTINGS_ENCRYPTION_KEY");
+  const mergeDefaults = options?.mergePlatformDefaults === true;
+
+  // Build cleaned platform config once
+  const platformConfig: Record<string, string> = {};
+  for (const [k, v] of Object.entries(platformFallback)) {
+    if (v && String(v).trim().length > 0) platformConfig[k] = String(v).trim();
+  }
 
   if (encryptionKey) {
     try {
@@ -95,6 +103,13 @@ export async function resolveChannelCredentials(
         // Validate that required fields have values
         const hasValues = Object.values(config).some((v) => v && String(v).trim().length > 0);
         if (hasValues) {
+          if (mergeDefaults) {
+            for (const [k, v] of Object.entries(platformConfig)) {
+              if (!config[k] || String(config[k]).trim().length === 0) {
+                config[k] = v;
+              }
+            }
+          }
           return { source: "workspace", config };
         }
       }
@@ -103,18 +118,8 @@ export async function resolveChannelCredentials(
     }
   }
 
-  // Platform fallback
-  const config: Record<string, string> = {};
-  let hasAny = false;
-  for (const [k, v] of Object.entries(platformFallback)) {
-    if (v) {
-      config[k] = v;
-      hasAny = true;
-    }
-  }
-
-  if (hasAny) {
-    return { source: "platform", config };
+  if (Object.keys(platformConfig).length > 0) {
+    return { source: "platform", config: platformConfig };
   }
 
   return { source: "none", config: {} };
