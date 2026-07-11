@@ -1166,7 +1166,6 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         <div className="mb-3">
                           <WhatsAppTemplatePicker
                             workspaceId={workspaceId}
-                            requireTwilio
                             value={(step.config.whatsapp_template as WhatsAppTemplateSelection) || null}
                             onChange={(v) => updateStep(i, { whatsapp_template: v || undefined })}
                           />

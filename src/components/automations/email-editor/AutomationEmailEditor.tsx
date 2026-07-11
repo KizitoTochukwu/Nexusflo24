@@ -151,7 +151,7 @@ export default function AutomationEmailEditor({
   }, [testOpen, testRecipient, user?.email, resolvedChannel]);
 
   const sendTest = useCallback(async () => {
-    const hasTemplate = resolvedChannel === "whatsapp" && !!whatsappTemplate?.contentSid;
+    const hasTemplate = resolvedChannel === "whatsapp" && !!(whatsappTemplate?.contentSid || whatsappTemplate?.id);
     if (!message?.trim() && !hasTemplate) {
       toast.error(resolvedChannel === "whatsapp"
         ? "Pick an approved WhatsApp template or add a session-window message before sending a test."
@@ -238,7 +238,7 @@ export default function AutomationEmailEditor({
           to: testRecipient,
           preview: true,
         };
-        if (whatsappTemplate?.contentSid) {
+        if (whatsappTemplate?.contentSid || whatsappTemplate?.id) {
           payload.template = {
             id: whatsappTemplate.id,
             name: whatsappTemplate.name,
