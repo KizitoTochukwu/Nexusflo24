@@ -33,7 +33,8 @@ async function sendViaTwilioGateway(opts: {
   accountSid: string;
   authToken?: string;
   apiKey?: string; // connector connection key (X-Connection-Api-Key)
-  from: string;
+  from?: string;
+  messagingServiceSid?: string;
   to: string;
   body: string;
   contentSid?: string;
@@ -41,13 +42,14 @@ async function sendViaTwilioGateway(opts: {
 }): Promise<{ ok: boolean; status: number; data: any }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const connectionKey = opts.apiKey || Deno.env.get("TWILIO_API_KEY");
-  // Use gateway when available; otherwise fall back to direct Twilio Basic Auth
-  // (works when the workspace has supplied its own Account SID + Auth Token).
-  if (LOVABLE_API_KEY && connectionKey) {
-    const params = new URLSearchParams({
-      To: opts.to,
-      From: opts.from,
-    });
+
+  const buildParams = () => {
+    const params = new URLSearchParams({ To: opts.to });
+    if (opts.messagingServiceSid) {
+      params.set("MessagingServiceSid", opts.messagingServiceSid);
+    } else if (opts.from) {
+      params.set("From", opts.from);
+    }
     if (opts.contentSid) {
       params.set("ContentSid", opts.contentSid);
       if (opts.contentVariables) {
@@ -56,6 +58,11 @@ async function sendViaTwilioGateway(opts: {
     } else {
       params.set("Body", opts.body);
     }
+    return params;
+  };
+
+  // Use gateway when available; otherwise fall back to direct Twilio Basic Auth.
+  if (LOVABLE_API_KEY && connectionKey) {
     const res = await fetch(`${GATEWAY_URL}/Messages.json`, {
       method: "POST",
       headers: {
@@ -63,7 +70,7 @@ async function sendViaTwilioGateway(opts: {
         "X-Connection-Api-Key": connectionKey,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: params.toString(),
+      body: buildParams().toString(),
     });
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
@@ -78,15 +85,6 @@ async function sendViaTwilioGateway(opts: {
     };
   }
   const basic = btoa(`${opts.accountSid}:${opts.authToken}`);
-  const params = new URLSearchParams({ To: opts.to, From: opts.from });
-  if (opts.contentSid) {
-    params.set("ContentSid", opts.contentSid);
-    if (opts.contentVariables) {
-      params.set("ContentVariables", JSON.stringify(opts.contentVariables));
-    }
-  } else {
-    params.set("Body", opts.body);
-  }
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(opts.accountSid)}/Messages.json`,
     {
@@ -95,7 +93,7 @@ async function sendViaTwilioGateway(opts: {
         Authorization: `Basic ${basic}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: params.toString(),
+      body: buildParams().toString(),
     },
   );
   const data = await res.json().catch(() => ({}));
