@@ -103,8 +103,10 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, r
             Required for business-initiated messages. Free-text only delivers inside the 24-hour reply window.
           </p>
         </div>
-        {selected?.contentSid && (
-          <Badge variant="outline" className="text-[10px] font-mono">Twilio · {selected.contentSid.slice(0, 6)}…</Badge>
+        {selected?.twilio_content_sid && (
+          <Badge variant="outline" className="text-[10px] font-mono">
+            Twilio · {selected.twilio_content_sid.slice(0, 6)}…
+          </Badge>
         )}
       </div>
 
