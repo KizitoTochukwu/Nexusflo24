@@ -22,6 +22,7 @@ import type { ExitCriterion } from "@/lib/automations/exitCriteria";
 import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
 import { AUTOMATION_SCORE_OPTIONS } from "@/lib/automations/scoreOptions";
 import { SenderProfilePicker } from "@/components/admin/SenderProfilePicker";
+import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
 
 export type StepData = {
   step_type:
@@ -1161,6 +1162,16 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   </div>
                   {["send_email", "send_whatsapp", "send_sms"].includes(step.config.action as string) && (
                     <>
+                      {(step.config.action as string) === "send_whatsapp" && workspaceId && (
+                        <div className="mb-3">
+                          <WhatsAppTemplatePicker
+                            workspaceId={workspaceId}
+                            requireTwilio
+                            value={(step.config.whatsapp_template as WhatsAppTemplateSelection) || null}
+                            onChange={(v) => updateStep(i, { whatsapp_template: v || undefined })}
+                          />
+                        </div>
+                      )}
                       <AutomationEmailEditor
                         isEmail={(step.config.action as string) === "send_email"}
                         channel={
@@ -1176,6 +1187,7 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         onMessageChange={(v) => updateStep(i, { message: v })}
                         templateSettings={step.config.templateSettings as any}
                         onTemplateSettingsChange={(ts) => updateStep(i, { templateSettings: ts })}
+                        whatsappTemplate={(step.config.whatsapp_template as WhatsAppTemplateSelection) || null}
                       />
                       {workspaceId && (
                         <div className="mt-3 rounded-md border border-border bg-background/40 p-3">
