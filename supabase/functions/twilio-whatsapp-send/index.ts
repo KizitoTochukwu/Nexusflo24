@@ -19,6 +19,10 @@ const corsHeaders = {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 
+function isMessagingServiceSid(v: string): boolean {
+  return /^MG[0-9a-fA-F]{32}$/.test(v.trim());
+}
+
 function waAddress(num: string) {
   const clean = num.startsWith("whatsapp:") ? num.slice(9) : num;
   const e164 = clean.startsWith("+") ? clean : `+${clean.replace(/[^\d]/g, "")}`;
@@ -29,7 +33,8 @@ async function sendViaTwilioGateway(opts: {
   accountSid: string;
   authToken?: string;
   apiKey?: string; // connector connection key (X-Connection-Api-Key)
-  from: string;
+  from?: string;
+  messagingServiceSid?: string;
   to: string;
   body: string;
   contentSid?: string;
@@ -37,13 +42,14 @@ async function sendViaTwilioGateway(opts: {
 }): Promise<{ ok: boolean; status: number; data: any }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const connectionKey = opts.apiKey || Deno.env.get("TWILIO_API_KEY");
-  // Use gateway when available; otherwise fall back to direct Twilio Basic Auth
-  // (works when the workspace has supplied its own Account SID + Auth Token).
-  if (LOVABLE_API_KEY && connectionKey) {
-    const params = new URLSearchParams({
-      To: opts.to,
-      From: opts.from,
-    });
+
+  const buildParams = () => {
+    const params = new URLSearchParams({ To: opts.to });
+    if (opts.messagingServiceSid) {
+      params.set("MessagingServiceSid", opts.messagingServiceSid);
+    } else if (opts.from) {
+      params.set("From", opts.from);
+    }
     if (opts.contentSid) {
       params.set("ContentSid", opts.contentSid);
       if (opts.contentVariables) {
@@ -52,6 +58,11 @@ async function sendViaTwilioGateway(opts: {
     } else {
       params.set("Body", opts.body);
     }
+    return params;
+  };
+
+  // Use gateway when available; otherwise fall back to direct Twilio Basic Auth.
+  if (LOVABLE_API_KEY && connectionKey) {
     const res = await fetch(`${GATEWAY_URL}/Messages.json`, {
       method: "POST",
       headers: {
@@ -59,7 +70,7 @@ async function sendViaTwilioGateway(opts: {
         "X-Connection-Api-Key": connectionKey,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: params.toString(),
+      body: buildParams().toString(),
     });
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
@@ -74,15 +85,6 @@ async function sendViaTwilioGateway(opts: {
     };
   }
   const basic = btoa(`${opts.accountSid}:${opts.authToken}`);
-  const params = new URLSearchParams({ To: opts.to, From: opts.from });
-  if (opts.contentSid) {
-    params.set("ContentSid", opts.contentSid);
-    if (opts.contentVariables) {
-      params.set("ContentVariables", JSON.stringify(opts.contentVariables));
-    }
-  } else {
-    params.set("Body", opts.body);
-  }
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(opts.accountSid)}/Messages.json`,
     {
@@ -91,7 +93,7 @@ async function sendViaTwilioGateway(opts: {
         Authorization: `Basic ${basic}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: params.toString(),
+      body: buildParams().toString(),
     },
   );
   const data = await res.json().catch(() => ({}));
@@ -214,32 +216,48 @@ Deno.serve(async (req) => {
     const senderDetail = resolvedSender?.detail || null;
     const senderFrom = senderDetail?.twilio_wa_sender_sid || senderDetail?.phone_number || null;
 
-    const creds = await resolveChannelCredentials(workspaceId, "whatsapp", {
-      account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
-      auth_token: Deno.env.get("TWILIO_AUTH_TOKEN"),
-      from_number: Deno.env.get("TWILIO_FROM_NUMBER"),
-    });
+    const creds = await resolveChannelCredentials(
+      workspaceId,
+      "whatsapp",
+      {
+        account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
+        auth_token: Deno.env.get("TWILIO_AUTH_TOKEN"),
+        from_number:
+          Deno.env.get("TWILIO_FROM_NUMBER") ||
+          Deno.env.get("TWILIO_FROM_NUMBER_1"),
+        messaging_service_sid: Deno.env.get("MESSAGING_SERVICE_SID"),
+      },
+      { mergePlatformDefaults: true },
+    );
 
     const accountSid = (creds.config.account_sid || "").trim();
     const authToken = (creds.config.auth_token || "").trim();
-    const fromRaw = (senderFrom || creds.config.from_number || creds.config.messaging_service_sid || "").trim();
-    if (!accountSid || !fromRaw) {
+    const fromCandidate = (
+      senderFrom ||
+      creds.config.from_number ||
+      creds.config.messaging_service_sid ||
+      ""
+    ).trim();
+
+    if (!fromCandidate || (!accountSid && !Deno.env.get("TWILIO_API_KEY"))) {
+      const errMsg =
+        "Twilio WhatsApp not configured. Add Account SID, Auth Token, and a WhatsApp-enabled From number (or Messaging Service SID) in Settings → Channels, or ask an admin to set platform defaults.";
       return new Response(
-        JSON.stringify({
-          error:
-            "Twilio WhatsApp not configured. Add Account SID, Auth Token, and a WhatsApp-enabled From number in Settings → Channels.",
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ success: false, error: errMsg, provider: "twilio" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const From = waAddress(fromRaw);
+    const useMessagingService = isMessagingServiceSid(fromCandidate);
+    const From = useMessagingService ? undefined : waAddress(fromCandidate);
+    const messagingServiceSid = useMessagingService ? fromCandidate : undefined;
     const To = waAddress(normalizedTo);
 
     const sendRes = await sendViaTwilioGateway({
       accountSid,
       authToken,
       from: From,
+      messagingServiceSid,
       to: To,
       body: msgBody,
       contentSid,
@@ -252,6 +270,10 @@ Deno.serve(async (req) => {
         sendRes.data?.error_message ||
         `Twilio error ${sendRes.status}`;
       const code = sendRes.data?.code || sendRes.status;
+
+      console.warn("[twilio-whatsapp-send] provider error", {
+        workspaceId, status: sendRes.status, code, errMsg,
+      });
 
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
@@ -267,17 +289,6 @@ Deno.serve(async (req) => {
 
       // 24h window-equivalent in Twilio: error 63016 (freeform outside window)
       const isWindowClosed = code === 63016 || /outside.*allowed window/i.test(errMsg);
-      if (isWindowClosed) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            fallback: true,
-            reason: "window_closed",
-            error: errMsg,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
 
       // Credential / auth errors (20003 = auth, 20404 = not found)
       if (code === 20003 || code === 20404 || code === 401 || code === 403) {
@@ -289,10 +300,17 @@ Deno.serve(async (req) => {
         });
       }
 
-      return new Response(JSON.stringify({ success: false, error: errMsg, code }), {
-        status: sendRes.status >= 500 ? 500 : 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // Always return 200 so the caller can read the JSON error body.
+      return new Response(
+        JSON.stringify({
+          success: false,
+          provider: "twilio",
+          error: errMsg,
+          code,
+          ...(isWindowClosed ? { fallback: true, reason: "window_closed" } : {}),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const sid = sendRes.data?.sid || null;
