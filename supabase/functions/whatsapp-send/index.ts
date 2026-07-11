@@ -501,6 +501,39 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Normalize a Meta-flavoured template payload: the picker sends
+    // { id, name?, language?, contentVariables? } with no `components`.
+    // Hydrate name/language from the DB when only the id is present, and
+    // convert `contentVariables` ({"1":"Hi John",…}) into Meta's body
+    // parameter array. Twilio-flavoured payloads (contentSid) are already
+    // routed to the Twilio branch above.
+    if (template) {
+      const tplAny = template as any;
+      if ((!tplAny.name || !tplAny.language) && tplAny.id) {
+        const { data: row } = await adminClient
+          .from("whatsapp_templates")
+          .select("name, language, variable_count, components, status")
+          .eq("workspace_id", workspaceId)
+          .eq("id", tplAny.id)
+          .maybeSingle();
+        if (row) {
+          tplAny.name = tplAny.name || row.name;
+          tplAny.language = tplAny.language || row.language;
+        }
+      }
+      if (!tplAny.components && tplAny.contentVariables && typeof tplAny.contentVariables === "object") {
+        const entries = Object.entries(tplAny.contentVariables as Record<string, string>)
+          .filter(([k]) => /^\d+$/.test(k))
+          .sort((a, b) => Number(a[0]) - Number(b[0]));
+        if (entries.length > 0) {
+          tplAny.components = [
+            { type: "body", parameters: entries.map(([, v]) => ({ type: "text", text: String(v ?? "") })) },
+          ];
+        }
+      }
+    }
+
+
     // 24h re-engagement window check.
     // WhatsApp Cloud API ONLY allows free-form text when the recipient has
     // messaged your business in the last 24h. Outside that window the only
