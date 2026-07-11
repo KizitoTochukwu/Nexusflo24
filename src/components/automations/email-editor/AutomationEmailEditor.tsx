@@ -222,6 +222,11 @@ export default function AutomationEmailEditor({
           if (reason === "window_closed") {
             throw new Error((data as any).error || "WhatsApp 24h window closed — recipient must message you first, or send an approved template.");
           }
+          if (reason === "region_capability") {
+            throw new Error(
+              `Twilio: the WhatsApp sender isn't approved to send to this country. Open Twilio Console → Messaging → Senders and enable the destination region for your WhatsApp sender, or pick a WhatsApp-enabled sender in Settings → Channels. (${(data as any).error || "code 20422"})`
+            );
+          }
           throw new Error((data as any).error || "WhatsApp test failed");
         }
         if ((data as any)?.testMode === "hello_world") {
