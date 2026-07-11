@@ -378,11 +378,28 @@ Deno.serve(async (req) => {
         }),
       });
       const fwdData = await fwd.json().catch(() => ({}));
-      return new Response(JSON.stringify(fwdData), {
-        status: fwd.status,
+      if (!fwd.ok) {
+        console.warn("[whatsapp-send] twilio forwarder returned non-2xx", {
+          status: fwd.status,
+          body: fwdData,
+        });
+      }
+      // Always return 200 to the caller so the JSON error body is preserved
+      // (supabase.functions.invoke otherwise surfaces a generic non-2xx error).
+      const normalized = {
+        provider: "twilio",
+        ...(typeof fwdData === "object" && fwdData ? fwdData : {}),
+      } as Record<string, unknown>;
+      if (!fwd.ok && normalized.success === undefined) {
+        normalized.success = false;
+        if (!normalized.error) {
+          normalized.error = `Twilio WhatsApp send failed (status ${fwd.status})`;
+        }
+      }
+      return new Response(JSON.stringify(normalized), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
 
