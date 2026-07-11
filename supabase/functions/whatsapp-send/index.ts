@@ -400,6 +400,9 @@ Deno.serve(async (req) => {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+
 
     const adminClient = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
 
