@@ -20,6 +20,7 @@ import { parseBlocksFromMessage, blocksToHtml } from "./email-blocks/emailBlockS
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { toast } from "sonner";
 
