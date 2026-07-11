@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
+import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
 import { SenderProfilePicker } from "@/components/admin/SenderProfilePicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -76,6 +77,7 @@ export default function CreateCampaignDialog() {
 
   // Step 3 (WhatsApp only) - Optional approved template for re-engagement (24h window closed)
   const [waTemplateId, setWaTemplateId] = useState<string>("none");
+  const [waTemplateSelection, setWaTemplateSelection] = useState<WhatsAppTemplateSelection | null>(null);
   const { data: waTemplates = [] } = useQuery({
     queryKey: ["whatsapp-templates", workspaceId],
     enabled: !!workspaceId && (type === "whatsapp" || type === "multi-channel"),
