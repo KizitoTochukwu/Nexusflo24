@@ -238,7 +238,7 @@ export default function AutomationEmailEditor({
           to: testRecipient,
           preview: true,
         };
-        if (whatsappTemplate?.contentSid) {
+        if (whatsappTemplate?.contentSid || whatsappTemplate?.id) {
           payload.template = {
             id: whatsappTemplate.id,
             name: whatsappTemplate.name,
