@@ -288,10 +288,20 @@ export default function CreateCampaignDialog() {
         subject: finalSubject,
         body,
         templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
-        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && waTemplateId !== "none"
+        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && (waTemplateSelection?.contentSid || waTemplateSelection?.id || waTemplateId !== "none")
           ? (() => {
+              // Prefer new picker selection (has contentSid + variables).
+              if (waTemplateSelection?.id || waTemplateSelection?.contentSid) {
+                return {
+                  id: waTemplateSelection.id,
+                  name: waTemplateSelection.name,
+                  language: waTemplateSelection.language,
+                  contentSid: waTemplateSelection.contentSid,
+                  contentVariables: waTemplateSelection.contentVariables,
+                };
+              }
               const t = waTemplates.find((x: any) => x.id === waTemplateId);
-              return t ? { name: t.name, language: t.language } : undefined;
+              return t ? { id: t.id, name: t.name, language: t.language } : undefined;
             })()
           : undefined,
         sender_profile_id_email: senderProfileEmail || undefined,
