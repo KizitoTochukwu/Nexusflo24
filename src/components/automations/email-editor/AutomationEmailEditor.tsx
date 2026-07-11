@@ -24,6 +24,14 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { toast } from "sonner";
 
+export type WhatsAppTemplateOverride = {
+  id?: string;
+  name?: string;
+  language?: string;
+  contentSid?: string;
+  contentVariables?: Record<string, string>;
+};
+
 interface AutomationEmailEditorProps {
   isEmail: boolean;
   /** Optional explicit channel — defaults to "email" when isEmail, else "sms". */
@@ -34,6 +42,9 @@ interface AutomationEmailEditorProps {
   onMessageChange: (v: string) => void;
   templateSettings?: TemplateSettings;
   onTemplateSettingsChange?: (settings: TemplateSettings) => void;
+  /** Optional selected WhatsApp approved template — when present, "Send test"
+   *  routes as a template send (ContentSid + variables) instead of free text. */
+  whatsappTemplate?: WhatsAppTemplateOverride | null;
 }
 
 function ToolbarBtn({ icon: Icon, label, onClick }: {
