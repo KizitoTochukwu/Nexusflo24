@@ -120,3 +120,36 @@ export function useDisconnectWhatsApp(workspaceId: string) {
     },
   });
 }
+
+/**
+ * Returns the WhatsApp provider that outbound sends will use for this workspace,
+ * derived from workspace_channel_settings (channel='whatsapp', is_active=true).
+ * Falls back to whichever provider row exists, or 'meta' if a whatsapp_settings
+ * row exists, else null.
+ */
+export function useActiveWhatsAppProvider(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["whatsapp-active-provider", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async (): Promise<"meta" | "twilio" | null> => {
+      const { data: rows } = await supabase
+        .from("workspace_channel_settings")
+        .select("provider, is_active, updated_at")
+        .eq("workspace_id", workspaceId!)
+        .eq("channel", "whatsapp")
+        .order("is_active", { ascending: false })
+        .order("updated_at", { ascending: false });
+      const active = (rows || []).find((r: any) => r.is_active && r.provider);
+      if (active?.provider === "twilio" || active?.provider === "meta") return active.provider;
+      // Fallback: whatsapp_settings row implies Meta was connected.
+      const { data: wa } = await supabase
+        .from("whatsapp_settings")
+        .select("is_active, phone_number_id")
+        .eq("workspace_id", workspaceId!)
+        .maybeSingle();
+      if (wa?.phone_number_id) return "meta";
+      const anyRow = (rows || []).find((r: any) => r.provider === "twilio" || r.provider === "meta");
+      return (anyRow?.provider as "meta" | "twilio") || null;
+    },
+  });
+}
