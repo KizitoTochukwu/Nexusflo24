@@ -241,11 +241,13 @@ export default function AutomationEmailEditor({
       setTestOpen(false);
     } catch (e: any) {
       const raw = String(e?.message || "");
-      const friendly = /template no longer exists/i.test(raw)
+      const friendly = /template no longer exists|sender isn't approved/i.test(raw)
         ? raw
-        : /132001/.test(raw)
-          ? "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
-          : raw || `Failed to send test ${resolvedChannel}.`;
+        : /20422|Region capability/i.test(raw)
+          ? `Twilio: the WhatsApp sender isn't approved to send to this country. Open Twilio Console → Messaging → Senders and enable the destination region for your WhatsApp sender, or pick a WhatsApp-enabled sender in Settings → Channels. (${raw})`
+          : /132001/.test(raw)
+            ? "WhatsApp template language mismatch — we tried alternate tags automatically. Please re-sync templates in Settings → Channels → WhatsApp."
+            : raw || `Failed to send test ${resolvedChannel}.`;
       toast.error(friendly);
     } finally {
       setTestSending(false);
