@@ -509,7 +509,9 @@ export default function AutomationEmailEditor({
               <ToolbarBtn icon={Link2} label="Insert link" onClick={insertLink} />
               <ToolbarBtn icon={Smile} label="Emoji" onClick={() => insertAtCursor("😊")} />
               <div className="ml-auto text-[10px] text-muted-foreground pr-1">
-                {charCount} chars · {smsSegments} SMS segment{smsSegments === 1 ? "" : "s"}
+                {resolvedChannel === "sms"
+                  ? `${charCount} chars · ${smsSegments} SMS segment${smsSegments === 1 ? "" : "s"}`
+                  : `${charCount} character${charCount === 1 ? "" : "s"}`}
               </div>
             </div>
 
