@@ -193,7 +193,22 @@ export default function AutomationEmailEditor({
         const { data, error } = await supabase.functions.invoke("whatsapp-send", {
           body: { workspaceId, to: testRecipient, body: renderedMessage, preview: true },
         });
-        if (error) throw error;
+        if (error) {
+          const { FunctionsHttpError } = await import("@supabase/supabase-js");
+          let detail = (error as any)?.message || "WhatsApp test failed";
+          if (error instanceof FunctionsHttpError) {
+            try {
+              const ctxBody = await (error as any).context.text();
+              try {
+                const parsed = JSON.parse(ctxBody);
+                detail = parsed?.error || parsed?.message || ctxBody || detail;
+              } catch {
+                detail = ctxBody || detail;
+              }
+            } catch { /* keep detail */ }
+          }
+          throw new Error(detail);
+        }
         if (data && (data as any).success === false) {
           const reason = (data as any).reason;
           if (reason === "template_unavailable") {
