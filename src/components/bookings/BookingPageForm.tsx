@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Check, Unlink, Mail, Video, MapPin } from "lucide-react";
+import { Plus, Trash2, Check, Unlink, Mail, Video, MapPin, MessageCircle } from "lucide-react";
 import { useGoogleCalendarStatus, useGoogleCalendarConnect, useGoogleCalendarList, useSelectGoogleCalendar } from "@/hooks/useGoogleCalendar";
+import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
+import { useActiveWhatsAppProvider } from "@/hooks/useWhatsAppConnection";
 import type { BookingPage } from "@/hooks/useBookings";
 
 const DAYS = [
