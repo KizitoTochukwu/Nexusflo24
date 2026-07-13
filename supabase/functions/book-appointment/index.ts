@@ -765,15 +765,11 @@ Deno.serve(async (req) => {
               await sendWA(guest_phone, "guest");
             }
             if (notifyHostWA) {
-              // Owner phone comes from profiles
-              const { data: ownerRow } = await supabase
-                .from("profiles")
-                .select("phone")
-                .eq("id", page.user_id)
-                .maybeSingle();
-              const hostPhone = (ownerRow as any)?.phone;
+              const hostPhone = (ownerProfileWA as any)?.phone;
               if (hostPhone) {
                 await sendWA(hostPhone, "host");
+              } else {
+                console.warn("[book-appointment] notify_host_whatsapp on but no host phone in profile");
               }
             }
           }
