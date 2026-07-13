@@ -18,6 +18,10 @@ export type BookingPage = {
   color: string;
   status: string;
   notify_host: boolean;
+  notify_guest_whatsapp: boolean;
+  notify_host_whatsapp: boolean;
+  whatsapp_confirmation_template_id: string | null;
+  whatsapp_confirmation_variables: Record<string, string> | null;
   google_calendar_id: string | null;
   created_at: string;
   updated_at: string;
