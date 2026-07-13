@@ -695,7 +695,7 @@ Deno.serve(async (req) => {
               date: formattedDate,
               time: formattedTime,
               meeting_url: meetingUrl || meetingLocation || "See confirmation email",
-              host_name: (ownerProfile as any)?.full_name || "your host",
+              host_name: (ownerProfileWA as any)?.full_name || "your host",
               timezone: page.timezone,
             };
 
