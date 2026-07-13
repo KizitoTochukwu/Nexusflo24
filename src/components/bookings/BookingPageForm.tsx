@@ -199,6 +199,49 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
         <Switch id="notify-host" checked={notifyHost} onCheckedChange={setNotifyHost} />
       </div>
 
+      {/* WhatsApp confirmation */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <MessageCircle className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+          <div className="flex-1">
+            <Label className="text-sm font-medium">WhatsApp confirmations</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Send an approved WhatsApp template when someone books. Requires an active WhatsApp channel and an approved template (Meta or Twilio). Active provider: <strong>{activeWaProvider === "twilio" ? "Twilio" : "Meta Cloud API"}</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 pl-7">
+          <Label htmlFor="notify-guest-wa" className="text-sm cursor-pointer">
+            Send confirmation to guest on WhatsApp
+          </Label>
+          <Switch id="notify-guest-wa" checked={notifyGuestWA} onCheckedChange={setNotifyGuestWA} />
+        </div>
+
+        <div className="flex items-center justify-between gap-4 pl-7">
+          <Label htmlFor="notify-host-wa" className="text-sm cursor-pointer">
+            Also notify me (host) on WhatsApp
+          </Label>
+          <Switch id="notify-host-wa" checked={notifyHostWA} onCheckedChange={setNotifyHostWA} />
+        </div>
+
+        {(notifyGuestWA || notifyHostWA) && workspaceId && (
+          <div className="pl-7 space-y-2">
+            <WhatsAppTemplatePicker
+              workspaceId={workspaceId}
+              value={waTemplate}
+              onChange={setWaTemplate}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Suggested variable tokens: <code className="font-mono">{"{{guest_name}}"}</code>,{" "}
+              <code className="font-mono">{"{{page_name}}"}</code>,{" "}
+              <code className="font-mono">{"{{date}}"}</code>,{" "}
+              <code className="font-mono">{"{{time}}"}</code>,{" "}
+              <code className="font-mono">{"{{meeting_url}}"}</code>. They are resolved per booking.
+            </p>
+          </div>
+        )}
+
       {/* Meeting Location */}
       <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
         <div className="flex items-start gap-3">
