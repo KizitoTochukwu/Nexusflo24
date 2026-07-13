@@ -59,11 +59,22 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
   const [availability, setAvailability] = useState<Record<string, { start: string; end: string }[]>>(
     (initial?.availability as any) || DEFAULT_AVAILABILITY
   );
+  const [notifyGuestWA, setNotifyGuestWA] = useState<boolean>(initial?.notify_guest_whatsapp ?? false);
+  const [notifyHostWA, setNotifyHostWA] = useState<boolean>(initial?.notify_host_whatsapp ?? false);
+  const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateSelection | null>(
+    initial?.whatsapp_confirmation_template_id
+      ? {
+          id: initial.whatsapp_confirmation_template_id,
+          contentVariables: (initial.whatsapp_confirmation_variables as Record<string, string>) || undefined,
+        }
+      : null,
+  );
 
   const { data: gcalStatus } = useGoogleCalendarStatus(initial?.id);
   const { connect, disconnect } = useGoogleCalendarConnect();
   const { data: calendarList } = useGoogleCalendarList(gcalStatus?.connected ? gcalStatus.tokenId : null);
   const selectCalendar = useSelectGoogleCalendar();
+  const { data: activeWaProvider } = useActiveWhatsAppProvider(workspaceId ?? null);
 
   const handleSlotChange = (day: string, idx: number, field: "start" | "end", value: string) => {
     setAvailability((prev) => {
