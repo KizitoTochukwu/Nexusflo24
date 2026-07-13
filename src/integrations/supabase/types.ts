@@ -325,12 +325,16 @@ export type Database = {
           location_value: string | null
           max_days_ahead: number
           name: string
+          notify_guest_whatsapp: boolean
           notify_host: boolean
+          notify_host_whatsapp: boolean
           slug: string | null
           status: string
           timezone: string
           updated_at: string
           user_id: string
+          whatsapp_confirmation_template_id: string | null
+          whatsapp_confirmation_variables: Json | null
           workspace_id: string
         }
         Insert: {
@@ -347,12 +351,16 @@ export type Database = {
           location_value?: string | null
           max_days_ahead?: number
           name: string
+          notify_guest_whatsapp?: boolean
           notify_host?: boolean
+          notify_host_whatsapp?: boolean
           slug?: string | null
           status?: string
           timezone?: string
           updated_at?: string
           user_id: string
+          whatsapp_confirmation_template_id?: string | null
+          whatsapp_confirmation_variables?: Json | null
           workspace_id: string
         }
         Update: {
@@ -369,12 +377,16 @@ export type Database = {
           location_value?: string | null
           max_days_ahead?: number
           name?: string
+          notify_guest_whatsapp?: boolean
           notify_host?: boolean
+          notify_host_whatsapp?: boolean
           slug?: string | null
           status?: string
           timezone?: string
           updated_at?: string
           user_id?: string
+          whatsapp_confirmation_template_id?: string | null
+          whatsapp_confirmation_variables?: Json | null
           workspace_id?: string
         }
         Relationships: [
@@ -383,6 +395,13 @@ export type Database = {
             columns: ["google_token_id"]
             isOneToOne: false
             referencedRelation: "google_calendar_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_pages_whatsapp_confirmation_template_id_fkey"
+            columns: ["whatsapp_confirmation_template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
             referencedColumns: ["id"]
           },
           {
