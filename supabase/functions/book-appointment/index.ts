@@ -658,6 +658,12 @@ Deno.serve(async (req) => {
         if (!providerActive) {
           console.warn("[book-appointment] WA notify enabled but no active WhatsApp provider");
         } else {
+          // Owner profile (for host_name token and host phone lookup)
+          const { data: ownerProfileWA } = await supabase
+            .from("profiles")
+            .select("full_name, phone")
+            .eq("id", page.user_id)
+            .maybeSingle();
           // Load template — must be approved and belong to workspace
           const { data: tpl } = await supabase
             .from("whatsapp_templates")
