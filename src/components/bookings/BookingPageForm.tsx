@@ -113,6 +113,10 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
       notify_host: notifyHost,
       location_type: locationType,
       location_value: locationType === "google_meet" ? null : (locationValue || null),
+      notify_guest_whatsapp: notifyGuestWA,
+      notify_host_whatsapp: notifyHostWA,
+      whatsapp_confirmation_template_id: (notifyGuestWA || notifyHostWA) ? (waTemplate?.id ?? null) : null,
+      whatsapp_confirmation_variables: (notifyGuestWA || notifyHostWA) ? (waTemplate?.contentVariables ?? null) : null,
     } as any);
   };
 
