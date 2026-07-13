@@ -637,6 +637,148 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── WhatsApp confirmations (best effort) ──────────────────────────
+    // Send an approved WhatsApp template to the guest and/or host when
+    // the booking page has notify_guest_whatsapp / notify_host_whatsapp
+    // enabled and a whatsapp_confirmation_template_id is configured.
+    // Provider (Meta / Twilio) is auto-detected by whatsapp-send.
+    try {
+      const notifyGuestWA = (page as any).notify_guest_whatsapp === true;
+      const notifyHostWA = (page as any).notify_host_whatsapp === true;
+      const waTemplateId: string | null = (page as any).whatsapp_confirmation_template_id || null;
+
+      if ((notifyGuestWA || notifyHostWA) && waTemplateId) {
+        // Confirm workspace has an active WhatsApp provider (Meta or Twilio)
+        const [{ data: metaActive }, { data: twilioActive }] = await Promise.all([
+          supabase.from("whatsapp_settings").select("id").eq("workspace_id", page.workspace_id).eq("is_active", true).limit(1),
+          supabase.from("workspace_channel_settings").select("id").eq("workspace_id", page.workspace_id).eq("channel", "whatsapp").eq("provider", "twilio").eq("is_active", true).limit(1),
+        ]);
+        const providerActive = (metaActive && metaActive.length > 0) || (twilioActive && twilioActive.length > 0);
+
+        if (!providerActive) {
+          console.warn("[book-appointment] WA notify enabled but no active WhatsApp provider");
+        } else {
+          // Owner profile (for host_name token and host phone lookup)
+          const { data: ownerProfileWA } = await supabase
+            .from("profiles")
+            .select("full_name, phone")
+            .eq("id", page.user_id)
+            .maybeSingle();
+          // Load template — must be approved and belong to workspace
+          const { data: tpl } = await supabase
+            .from("whatsapp_templates")
+            .select("id, name, language, status, variable_count")
+            .eq("id", waTemplateId)
+            .eq("workspace_id", page.workspace_id)
+            .maybeSingle();
+
+          if (!tpl || tpl.status !== "approved") {
+            await supabase.from("notifications").insert({
+              workspace_id: page.workspace_id,
+              user_id: page.user_id,
+              title: "WhatsApp confirmation skipped",
+              body: `The template configured on "${page.name}" is missing or no longer approved. Update it in the booking page settings.`,
+              type: "system",
+              meta: { booking_id: booking.id, template_id: waTemplateId },
+            });
+          } else {
+            // Build booking token map
+            const formattedDate = startDt.toLocaleDateString("en-US", {
+              weekday: "long", year: "numeric", month: "long", day: "numeric",
+            });
+            const formattedTime = startDt.toLocaleTimeString("en-US", {
+              hour: "2-digit", minute: "2-digit",
+            });
+            const bookingTokens: Record<string, string> = {
+              guest_name,
+              page_name: page.name,
+              date: formattedDate,
+              time: formattedTime,
+              meeting_url: meetingUrl || meetingLocation || "See confirmation email",
+              host_name: (ownerProfileWA as any)?.full_name || "your host",
+              timezone: page.timezone,
+            };
+
+            const varTemplate: Record<string, string> =
+              ((page as any).whatsapp_confirmation_variables as Record<string, string>) || {};
+
+            // Interpolate {{token}} against booking tokens; positional map "1","2",…
+            const interpolate = (v: string): string =>
+              String(v).replace(
+                /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/g,
+                (_m, key: string, fallback?: string) => {
+                  const val = bookingTokens[key.toLowerCase()];
+                  if (val !== undefined && val !== null && String(val).trim() !== "") return String(val);
+                  return (fallback ?? "").trim();
+                },
+              );
+
+            const interpolatedVars: Record<string, string> = {};
+            for (let i = 1; i <= (tpl.variable_count || 0); i++) {
+              const key = String(i);
+              const raw = varTemplate[key];
+              if (raw !== undefined) {
+                interpolatedVars[key] = interpolate(raw);
+              } else {
+                // Fallback positional defaults: guest_name, page_name, date, time, meeting_url
+                const fallbackByPos = [
+                  bookingTokens.guest_name,
+                  bookingTokens.page_name,
+                  bookingTokens.date,
+                  bookingTokens.time,
+                  bookingTokens.meeting_url,
+                ];
+                interpolatedVars[key] = fallbackByPos[i - 1] ?? "";
+              }
+            }
+
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+            const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+            const sendWA = async (toPhone: string, label: string) => {
+              try {
+                const resp = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+                  body: JSON.stringify({
+                    workspaceId: page.workspace_id,
+                    to: toPhone,
+                    leadId: label === "guest" ? leadId : null,
+                    template: {
+                      id: tpl.id,
+                      name: tpl.name,
+                      language: tpl.language,
+                      contentVariables: interpolatedVars,
+                    },
+                  }),
+                });
+                if (!resp.ok) {
+                  const txt = await resp.text().catch(() => "");
+                  console.error(`[book-appointment] whatsapp-send ${label} failed`, resp.status, txt);
+                }
+              } catch (e) {
+                console.error(`[book-appointment] whatsapp-send ${label} exception`, e);
+              }
+            };
+
+            if (notifyGuestWA && guest_phone) {
+              await sendWA(guest_phone, "guest");
+            }
+            if (notifyHostWA) {
+              const hostPhone = (ownerProfileWA as any)?.phone;
+              if (hostPhone) {
+                await sendWA(hostPhone, "host");
+              } else {
+                console.warn("[book-appointment] notify_host_whatsapp on but no host phone in profile");
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[book-appointment] WhatsApp block failed", e);
+    }
+
     return new Response(JSON.stringify({ success: true, booking: { ...booking, meeting_url: meetingUrl, meeting_location: meetingLocation } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

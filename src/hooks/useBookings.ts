@@ -18,6 +18,10 @@ export type BookingPage = {
   color: string;
   status: string;
   notify_host: boolean;
+  notify_guest_whatsapp: boolean;
+  notify_host_whatsapp: boolean;
+  whatsapp_confirmation_template_id: string | null;
+  whatsapp_confirmation_variables: Record<string, string> | null;
   google_calendar_id: string | null;
   created_at: string;
   updated_at: string;
@@ -48,7 +52,7 @@ export function useBookingPages(workspaceId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("booking_pages" as any)
-        .select("id, workspace_id, user_id, name, slug, duration_minutes, availability, timezone, buffer_minutes, max_days_ahead, description, color, status, notify_host, location_type, location_value, created_at, updated_at")
+        .select("id, workspace_id, user_id, name, slug, duration_minutes, availability, timezone, buffer_minutes, max_days_ahead, description, color, status, notify_host, notify_guest_whatsapp, notify_host_whatsapp, whatsapp_confirmation_template_id, whatsapp_confirmation_variables, location_type, location_value, created_at, updated_at")
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
       if (error) throw error;

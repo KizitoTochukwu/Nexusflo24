@@ -5,8 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Check, Unlink, Mail, Video, MapPin } from "lucide-react";
+import { Plus, Trash2, Check, Unlink, Mail, Video, MapPin, MessageCircle } from "lucide-react";
 import { useGoogleCalendarStatus, useGoogleCalendarConnect, useGoogleCalendarList, useSelectGoogleCalendar } from "@/hooks/useGoogleCalendar";
+import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
+import { useActiveWhatsAppProvider } from "@/hooks/useWhatsAppConnection";
 import type { BookingPage } from "@/hooks/useBookings";
 
 const DAYS = [
@@ -57,11 +59,22 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
   const [availability, setAvailability] = useState<Record<string, { start: string; end: string }[]>>(
     (initial?.availability as any) || DEFAULT_AVAILABILITY
   );
+  const [notifyGuestWA, setNotifyGuestWA] = useState<boolean>(initial?.notify_guest_whatsapp ?? false);
+  const [notifyHostWA, setNotifyHostWA] = useState<boolean>(initial?.notify_host_whatsapp ?? false);
+  const [waTemplate, setWaTemplate] = useState<WhatsAppTemplateSelection | null>(
+    initial?.whatsapp_confirmation_template_id
+      ? {
+          id: initial.whatsapp_confirmation_template_id,
+          contentVariables: (initial.whatsapp_confirmation_variables as Record<string, string>) || undefined,
+        }
+      : null,
+  );
 
   const { data: gcalStatus } = useGoogleCalendarStatus(initial?.id);
   const { connect, disconnect } = useGoogleCalendarConnect();
   const { data: calendarList } = useGoogleCalendarList(gcalStatus?.connected ? gcalStatus.tokenId : null);
   const selectCalendar = useSelectGoogleCalendar();
+  const { data: activeWaProvider } = useActiveWhatsAppProvider(workspaceId ?? null);
 
   const handleSlotChange = (day: string, idx: number, field: "start" | "end", value: string) => {
     setAvailability((prev) => {
@@ -100,6 +113,10 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
       notify_host: notifyHost,
       location_type: locationType,
       location_value: locationType === "google_meet" ? null : (locationValue || null),
+      notify_guest_whatsapp: notifyGuestWA,
+      notify_host_whatsapp: notifyHostWA,
+      whatsapp_confirmation_template_id: (notifyGuestWA || notifyHostWA) ? (waTemplate?.id ?? null) : null,
+      whatsapp_confirmation_variables: (notifyGuestWA || notifyHostWA) ? (waTemplate?.contentVariables ?? null) : null,
     } as any);
   };
 
@@ -181,6 +198,52 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
         </div>
         <Switch id="notify-host" checked={notifyHost} onCheckedChange={setNotifyHost} />
       </div>
+
+      {/* WhatsApp confirmation */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <MessageCircle className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+          <div className="flex-1">
+            <Label className="text-sm font-medium">WhatsApp confirmations</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Send an approved WhatsApp template when someone books. Requires an active WhatsApp channel and an approved template (Meta or Twilio). Active provider: <strong>{activeWaProvider === "twilio" ? "Twilio" : "Meta Cloud API"}</strong>.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 pl-7">
+          <Label htmlFor="notify-guest-wa" className="text-sm cursor-pointer">
+            Send confirmation to guest on WhatsApp
+          </Label>
+          <Switch id="notify-guest-wa" checked={notifyGuestWA} onCheckedChange={setNotifyGuestWA} />
+        </div>
+
+        <div className="flex items-center justify-between gap-4 pl-7">
+          <Label htmlFor="notify-host-wa" className="text-sm cursor-pointer">
+            Also notify me (host) on WhatsApp
+          </Label>
+          <Switch id="notify-host-wa" checked={notifyHostWA} onCheckedChange={setNotifyHostWA} />
+        </div>
+
+        {(notifyGuestWA || notifyHostWA) && workspaceId && (
+          <div className="pl-7 space-y-2">
+            <WhatsAppTemplatePicker
+              workspaceId={workspaceId}
+              value={waTemplate}
+              onChange={setWaTemplate}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Suggested variable tokens: <code className="font-mono">{"{{guest_name}}"}</code>,{" "}
+              <code className="font-mono">{"{{page_name}}"}</code>,{" "}
+              <code className="font-mono">{"{{date}}"}</code>,{" "}
+              <code className="font-mono">{"{{time}}"}</code>,{" "}
+              <code className="font-mono">{"{{meeting_url}}"}</code>. They are resolved per booking.
+            </p>
+          </div>
+        )}
+      </div>
+
+
 
       {/* Meeting Location */}
       <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
