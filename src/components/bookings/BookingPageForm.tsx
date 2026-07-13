@@ -241,6 +241,9 @@ export default function BookingPageForm({ initial, onSubmit, loading, publicUrl,
             </p>
           </div>
         )}
+      </div>
+
+
 
       {/* Meeting Location */}
       <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
