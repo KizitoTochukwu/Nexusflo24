@@ -20,6 +20,12 @@ import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type Palett
 import { validateWorkflow } from "@/lib/workflows/validation";
 import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflows/types";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  ENROLLMENT_OBJECTS, TRIGGER_SOURCES,
+  configurationStatus, friendlyTriggerLabel, scopeSummary,
+} from "@/lib/workflows/triggerCatalog";
+import EnrollmentTriggerDrawer from "@/components/workflows/EnrollmentTriggerDrawer";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
 import DiagnosticsPanel from "@/components/workflows/DiagnosticsPanel";
@@ -699,15 +705,130 @@ function NodeInspector({ node, workspaceId, onChange, onDelete, onClose }: { nod
 }
 
 function WorkflowSettings({ workflow, onUpdate }: { workflow: any; onUpdate: (p: any) => Promise<void> }) {
-  const [reEnroll, setReEnroll] = useState(!!workflow?.enrollment_config?.reEnrollment);
-  const [suppressTags, setSuppressTags] = useState((workflow?.suppression_config?.tags || []).join(", "));
+  const workspaceId = workflow?.workspace_id;
+  const { data: folders = [] } = useLeadFolders(workspaceId || "");
+  const [description, setDescription] = useState<string>(workflow?.description || "");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [testing, setTesting] = useState(false);
   if (!workflow) return null;
   const issues = validateWorkflow(workflow.canvas_json);
+  const enrollmentObject = (workflow.enrollment_object_type || "lead") as any;
+  const status = configurationStatus(workflow);
+  const friendly = friendlyTriggerLabel(workflow.trigger_source, workflow.trigger_event);
+  const scope = scopeSummary(workflow);
+
+  const runTest = async () => {
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("test-workflow-trigger", {
+        body: {
+          workflow_id: workflow.id,
+          trigger_source: workflow.trigger_source,
+          trigger_event: workflow.trigger_event,
+          trigger_config: workflow.trigger_config || {},
+          filter_groups: workflow.filter_groups || [],
+        },
+      });
+      if (error) throw error;
+      toast({
+        title: data?.passed ? "Test passed" : "Test ran — filters did not pass",
+        description: data?.sample_payload ? "See details in the trigger drawer." : undefined,
+      });
+    } catch (e: any) {
+      toast({ title: "Test failed", description: e?.message || "Try again", variant: "destructive" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const statusPill =
+    status === "configured"
+      ? <Badge className="bg-green-600 hover:bg-green-600">Configured</Badge>
+      : status === "error"
+        ? <Badge variant="destructive">Error</Badge>
+        : <Badge variant="outline" className="border-amber-500/60 text-amber-700">Incomplete</Badge>;
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-base font-semibold">Workflow settings</h3>
+    <div className="space-y-5">
+      <h3 className="text-base font-semibold text-primary">Workflow details</h3>
 
+      {/* Description */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onBlur={async () => {
+            if (description !== workflow.description) await onUpdate({ description });
+          }}
+          rows={2}
+          className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+          placeholder="What does this workflow do?"
+        />
+      </div>
+
+      {/* Enrollment object */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">Enrollment object</label>
+        <select
+          value={enrollmentObject}
+          onChange={async (e) => await onUpdate({ enrollment_object_type: e.target.value })}
+          className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"
+        >
+          {ENROLLMENT_OBJECTS.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-muted-foreground">Controls which records can enter this workflow.</p>
+      </div>
+
+      {/* Folder */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">Folder</label>
+        <select
+          value={workflow.folder_id || ""}
+          onChange={async (e) => await onUpdate({ folder_id: e.target.value || null })}
+          className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm"
+        >
+          <option value="">Unfiled</option>
+          {folders.map((f) => (
+            <option key={f.id} value={f.id}>{f.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Enrollment trigger card */}
+      <div className="rounded-md border p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold uppercase tracking-wide text-primary">Enrollment trigger</div>
+          {statusPill}
+        </div>
+        <div>
+          <div className="text-sm font-medium">{friendly}</div>
+          <div className="text-xs text-muted-foreground">
+            {ENROLLMENT_OBJECTS.find((o) => o.key === enrollmentObject)?.label} ·{" "}
+            {workflow.trigger_source ? (TRIGGER_SOURCES.find((s) => s.key === workflow.trigger_source)?.label ?? workflow.trigger_source) : "No source"}
+          </div>
+          {scope && <div className="mt-1 text-[11px] text-muted-foreground">{scope}</div>}
+          <div className="mt-1 text-[11px] text-muted-foreground">
+            Re-enrollment: {workflow.reenrollment_config?.mode || "never"}
+          </div>
+          {workflow.trigger_summary && (
+            <p className="mt-2 text-xs italic text-foreground/80">"{workflow.trigger_summary}"</p>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => setDrawerOpen(true)}>
+            Edit trigger
+          </Button>
+          <Button size="sm" variant="ghost" onClick={runTest} disabled={testing || !workflow.trigger_event}>
+            {testing ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <FlaskConical className="mr-1 h-3.5 w-3.5" />}
+            Test
+          </Button>
+        </div>
+      </div>
+
+      {/* Validation card */}
       <div className="rounded-md border p-3">
         <div className="mb-2 flex items-center gap-2">
           {issues.filter(i => i.level === "error").length === 0
@@ -725,27 +846,15 @@ function WorkflowSettings({ workflow, onUpdate }: { workflow: any; onUpdate: (p:
         )}
       </div>
 
-      <div>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={reEnroll} onChange={async (e) => { setReEnroll(e.target.checked); await onUpdate({ enrollment_config: { ...workflow.enrollment_config, reEnrollment: e.target.checked } }); }} />
-          Allow re-enrollment
-        </label>
-        <p className="ml-5 mt-1 text-xs text-muted-foreground">Re-enter leads who match the trigger again.</p>
-      </div>
-
-      <div>
-        <label className="text-xs font-medium text-muted-foreground">Suppress leads with tags (comma-separated)</label>
-        <Input
-          value={suppressTags}
-          onChange={(e) => setSuppressTags(e.target.value)}
-          onBlur={async () => {
-            const tags = suppressTags.split(",").map((t) => t.trim()).filter(Boolean);
-            await onUpdate({ suppression_config: { ...workflow.suppression_config, tags } });
-          }}
-          className="mt-1"
-          placeholder="customer, unsubscribed"
-        />
-      </div>
+      <EnrollmentTriggerDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        workflow={workflow}
+        enrollmentObject={enrollmentObject}
+        onSave={async (patch) => {
+          await onUpdate(patch);
+        }}
+      />
     </div>
   );
 }

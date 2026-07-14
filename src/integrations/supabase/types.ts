@@ -2328,6 +2328,47 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_automation_events: {
+        Row: {
+          event_key: string
+          event_payload: Json | null
+          external_event_id: string
+          id: string
+          processed_at: string
+          status: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          event_key: string
+          event_payload?: Json | null
+          external_event_id: string
+          id?: string
+          processed_at?: string
+          status?: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          event_key?: string
+          event_payload?: Json | null
+          external_event_id?: string
+          id?: string
+          processed_at?: string
+          status?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processed_automation_events_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -4051,15 +4092,26 @@ export type Database = {
           canvas_json: Json
           created_at: string
           daily_send_cap: number
+          deduplication_key: string | null
           description: string | null
           enrollment_config: Json
+          enrollment_method: string
+          enrollment_object_type: string
+          filter_groups: Json
+          folder_id: string | null
           goal_node_id: string | null
           id: string
+          last_tested_at: string | null
           name: string
           quiet_hours: Json
+          reenrollment_config: Json
           status: string
           suppression_config: Json
           template_slug: string | null
+          trigger_config: Json
+          trigger_event: string | null
+          trigger_source: string | null
+          trigger_summary: string | null
           unenrollment_triggers: Json
           updated_at: string
           user_id: string
@@ -4070,15 +4122,26 @@ export type Database = {
           canvas_json?: Json
           created_at?: string
           daily_send_cap?: number
+          deduplication_key?: string | null
           description?: string | null
           enrollment_config?: Json
+          enrollment_method?: string
+          enrollment_object_type?: string
+          filter_groups?: Json
+          folder_id?: string | null
           goal_node_id?: string | null
           id?: string
+          last_tested_at?: string | null
           name: string
           quiet_hours?: Json
+          reenrollment_config?: Json
           status?: string
           suppression_config?: Json
           template_slug?: string | null
+          trigger_config?: Json
+          trigger_event?: string | null
+          trigger_source?: string | null
+          trigger_summary?: string | null
           unenrollment_triggers?: Json
           updated_at?: string
           user_id: string
@@ -4089,15 +4152,26 @@ export type Database = {
           canvas_json?: Json
           created_at?: string
           daily_send_cap?: number
+          deduplication_key?: string | null
           description?: string | null
           enrollment_config?: Json
+          enrollment_method?: string
+          enrollment_object_type?: string
+          filter_groups?: Json
+          folder_id?: string | null
           goal_node_id?: string | null
           id?: string
+          last_tested_at?: string | null
           name?: string
           quiet_hours?: Json
+          reenrollment_config?: Json
           status?: string
           suppression_config?: Json
           template_slug?: string | null
+          trigger_config?: Json
+          trigger_event?: string | null
+          trigger_source?: string | null
+          trigger_summary?: string | null
           unenrollment_triggers?: Json
           updated_at?: string
           user_id?: string
