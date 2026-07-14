@@ -143,4 +143,16 @@ export interface Workflow {
   version: number;
   created_at: string;
   updated_at: string;
+  // Enrollment trigger (structured, replaces raw canvas trigger metadata)
+  enrollment_object_type?: string;
+  enrollment_method?: string;
+  trigger_source?: string | null;
+  trigger_event?: string | null;
+  trigger_config?: Record<string, any>;
+  filter_groups?: Array<{ combinator: "AND" | "OR"; conditions: Array<{ property: string; operator: string; value?: string }> }>;
+  reenrollment_config?: { mode: string; wait_amount?: number; wait_unit?: string };
+  deduplication_key?: string | null;
+  trigger_summary?: string | null;
+  last_tested_at?: string | null;
+  folder_id?: string | null;
 }
