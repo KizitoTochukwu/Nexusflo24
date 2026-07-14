@@ -87,6 +87,29 @@ Deno.serve(async (req) => {
       if (!triggerMatches(trig, event_type, event_config)) continue;
       matchedWorkflows++;
 
+      // Webhook / duplicate-event guard (e.g. Meta leadgen_id retries).
+      const externalId = event_config?.external_event_id
+        || event_config?.leadgen_id
+        || event_config?.event_id
+        || null;
+      if (externalId) {
+        const { error: dupErr } = await supabase.from("processed_automation_events").insert({
+          workspace_id, workflow_id: wf.id, event_key: event_type,
+          external_event_id: String(externalId), event_payload: event_config,
+        });
+        if (dupErr && (dupErr as any).code === "23505") {
+          await supabase.from("workflow_logs").insert({
+            workflow_id: wf.id, workspace_id, enrollment_id: null,
+            lead_id: lead_ids[0] || null,
+            event_type: "duplicate_event", level: "info",
+            message: `Skipped duplicate ${event_type} (external id ${externalId})`,
+            details: { external_event_id: externalId },
+          }).then(() => {}, () => {});
+          continue;
+        }
+      }
+
+
       for (const leadId of lead_ids) {
         const { data: lead } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
         if (!lead) continue;
