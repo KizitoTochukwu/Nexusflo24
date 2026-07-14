@@ -20,6 +20,12 @@ import { TRIGGERS, ACTIONS, CONDITIONS, FLOW_NODES, findPaletteItem, type Palett
 import { validateWorkflow } from "@/lib/workflows/validation";
 import type { WorkflowCanvasJSON, NodeData, WorkflowStatus } from "@/lib/workflows/types";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  ENROLLMENT_OBJECTS, TRIGGER_SOURCES,
+  configurationStatus, friendlyTriggerLabel, scopeSummary,
+} from "@/lib/workflows/triggerCatalog";
+import EnrollmentTriggerDrawer from "@/components/workflows/EnrollmentTriggerDrawer";
 import AutomationEmailEditor from "@/components/automations/email-editor/AutomationEmailEditor";
 import { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "@/components/automations/email-editor/EmailTemplateSettings";
 import DiagnosticsPanel from "@/components/workflows/DiagnosticsPanel";
