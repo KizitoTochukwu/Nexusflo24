@@ -503,7 +503,7 @@ export function useCreateAutomation() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: { workspace_id: string; name: string; description?: string; trigger_type: string; trigger_config?: Record<string, unknown>; exit_criteria?: unknown[]; steps: { step_type: string; config: Record<string, unknown> }[] }) => {
+    mutationFn: async (input: { workspace_id: string; name: string; description?: string; trigger_type: string; trigger_config?: Record<string, unknown>; exit_criteria?: unknown[]; steps: { step_type: string; config: Record<string, unknown> }[] } & AutomationEnrollmentPatch) => {
       const { steps, ...automationData } = input;
       const { data, error } = await supabase
         .from("automations")
