@@ -36,9 +36,11 @@ interface Props {
   workflow: any;
   enrollmentObject: EnrollmentObject;
   onSave: (patch: EnrollmentTriggerPatch) => Promise<void>;
+  /** Which record type this drawer is editing. Defaults to "workflow" for back-compat. */
+  recordKind?: "workflow" | "automation";
 }
 
-export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, enrollmentObject, onSave }: Props) {
+export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, enrollmentObject, onSave, recordKind = "workflow" }: Props) {
   const [method, setMethod] = useState<string>(workflow?.enrollment_method || "event");
   const [source, setSource] = useState<string | null>(workflow?.trigger_source || null);
   const [event, setEvent] = useState<string | null>(workflow?.trigger_event || null);
