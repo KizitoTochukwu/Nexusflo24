@@ -190,12 +190,26 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground">Trigger</label>
-                <Select value={triggerType} onValueChange={setTriggerType}>
+                <label className="text-sm font-medium text-foreground">Enrollment object</label>
+                <Select
+                  value={enrollmentObject}
+                  onValueChange={(v) => {
+                    const next = v as EnrollmentObject;
+                    setEnrollmentObject(next);
+                    setTrigger((t) => ({
+                      ...t,
+                      enrollment_object_type: next,
+                      // Reset source/event because available sources depend on the object.
+                      trigger_source: null,
+                      trigger_event: null,
+                      trigger_config: {},
+                    }));
+                  }}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {TRIGGER_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    {ENROLLMENT_OBJECTS.map((o) => (
+                      <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -207,52 +221,23 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
             </div>
 
-            {triggerType === "lead_added_to_folder" ? (
-              <div>
-                <label className="text-sm font-medium text-foreground">Scope to folder</label>
-                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="Any folder" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Any folder</SelectItem>
-                    {(folders ?? []).map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Fires when a lead is added to this folder (manual move, CSV import, or auto-routing).
-                </p>
-              </div>
-            ) : triggerType === "lead_tagged" ? (
-              <div>
-                <label className="text-sm font-medium text-foreground">Tag</label>
-                <Input
-                  className="max-w-sm"
-                  value={tagValue}
-                  onChange={(e) => setTagValue(e.target.value)}
-                  placeholder="e.g. facebook-ads, qualified, meta-lead-ad"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Fires whenever this exact tag is added. Leave blank to match any tag.
-                </p>
-              </div>
-            ) : (
-              <div>
-                <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
-                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="All funnels" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All funnels (global)</SelectItem>
-                    {(funnels ?? []).map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Fires when a new lead is associated with this funnel (via visit, form submission, or direct capture)"}
-                </p>
-              </div>
-            )}
+            <EnrollmentTriggerCard
+              record={trigger}
+              enrollmentObject={enrollmentObject}
+              recordKind="automation"
+              onChange={async (patch) => {
+                setTrigger((t) => ({
+                  ...t,
+                  enrollment_method: patch.enrollment_method,
+                  trigger_source: patch.trigger_source,
+                  trigger_event: patch.trigger_event,
+                  trigger_config: patch.trigger_config,
+                  filter_groups: patch.filter_groups,
+                  reenrollment_config: patch.reenrollment_config,
+                  trigger_summary: patch.trigger_summary,
+                }));
+              }}
+            />
 
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
@@ -279,12 +264,15 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 <AutomationStepEditor
                   steps={steps}
                   onChange={setSteps}
-                  triggerType={triggerType}
+                  triggerType={trigger.trigger_event || automation.trigger_type}
                   exitCriteria={exitCriteria}
                   onExitCriteriaChange={setExitCriteria}
                 />
               )}
             </div>
+
+          </TabsContent>
+
 
           </TabsContent>
 
