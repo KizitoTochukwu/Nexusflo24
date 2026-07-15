@@ -176,15 +176,25 @@ export type Database = {
       automations: {
         Row: {
           created_at: string
+          deduplication_key: string | null
           description: string | null
+          enrollment_method: string | null
+          enrollment_object_type: string | null
           exit_actions: Json
           exit_criteria: Json
+          filter_groups: Json
+          folder_id: string | null
           id: string
           last_run_at: string | null
+          last_tested_at: string | null
           name: string
+          reenrollment_config: Json
           run_count: number
           status: string
           trigger_config: Json | null
+          trigger_event: string | null
+          trigger_source: string | null
+          trigger_summary: string | null
           trigger_type: string
           updated_at: string
           user_id: string
@@ -192,15 +202,25 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deduplication_key?: string | null
           description?: string | null
+          enrollment_method?: string | null
+          enrollment_object_type?: string | null
           exit_actions?: Json
           exit_criteria?: Json
+          filter_groups?: Json
+          folder_id?: string | null
           id?: string
           last_run_at?: string | null
+          last_tested_at?: string | null
           name: string
+          reenrollment_config?: Json
           run_count?: number
           status?: string
           trigger_config?: Json | null
+          trigger_event?: string | null
+          trigger_source?: string | null
+          trigger_summary?: string | null
           trigger_type?: string
           updated_at?: string
           user_id: string
@@ -208,15 +228,25 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deduplication_key?: string | null
           description?: string | null
+          enrollment_method?: string | null
+          enrollment_object_type?: string | null
           exit_actions?: Json
           exit_criteria?: Json
+          filter_groups?: Json
+          folder_id?: string | null
           id?: string
           last_run_at?: string | null
+          last_tested_at?: string | null
           name?: string
+          reenrollment_config?: Json
           run_count?: number
           status?: string
           trigger_config?: Json | null
+          trigger_event?: string | null
+          trigger_source?: string | null
+          trigger_summary?: string | null
           trigger_type?: string
           updated_at?: string
           user_id?: string

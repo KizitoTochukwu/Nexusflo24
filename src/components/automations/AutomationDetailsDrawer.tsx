@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   type Automation,
-  TRIGGER_OPTIONS,
   useAutomationSteps,
   useAutomationLogs,
   useAutomationEmailDeliveries,
@@ -24,6 +23,10 @@ import ExecutionTimeline from "./ExecutionTimeline";
 import ExecutionHistoryTable from "./ExecutionHistoryTable";
 import SequenceHealthPanel from "./SequenceHealthPanel";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
+import EnrollmentTriggerCard, {
+  type EnrollmentTriggerRecord,
+} from "@/components/workflows/EnrollmentTriggerCard";
+import { ENROLLMENT_OBJECTS, type EnrollmentObject } from "@/lib/workflows/triggerCatalog";
 
 import {
   getDefaultExitCriteria,
@@ -32,8 +35,6 @@ import {
   type ExitCriterion,
 } from "@/lib/automations/exitCriteria";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useFunnels } from "@/hooks/useFunnels";
-import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { useLeads } from "@/hooks/useLeads";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,17 +52,23 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const { data: savedSteps, isLoading: stepsLoading, isError: stepsError, error: stepsErr, refetch: refetchSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs, isLoading: logsLoading, isError: logsError, error: logsErrObj, refetch: refetchLogs, isFetching: logsFetching } = useAutomationLogs(automation?.id ?? null);
   const { data: emailDeliveries } = useAutomationEmailDeliveries(automation?.id ?? null, automation?.workspace_id ?? null);
-  const { data: funnels } = useFunnels(workspaceId);
-  const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [triggerType, setTriggerType] = useState("new_lead");
-  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
-  const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
-  const [tagValue, setTagValue] = useState<string>("");
+  const [enrollmentObject, setEnrollmentObject] = useState<EnrollmentObject>("lead");
+  const [trigger, setTrigger] = useState<EnrollmentTriggerRecord>({
+    workspace_id: workspaceId,
+    enrollment_object_type: "lead",
+    enrollment_method: "event",
+    trigger_source: null,
+    trigger_event: null,
+    trigger_config: {},
+    filter_groups: [],
+    reenrollment_config: { mode: "never" },
+    trigger_summary: null,
+  });
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>([]);
   const [testLeadId, setTestLeadId] = useState<string>("");
@@ -76,12 +83,21 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
     if (automation) {
       setName(automation.name);
       setDescription(automation.description || "");
-      setTriggerType(automation.trigger_type);
-      const cfg = (automation.trigger_config ?? {}) as Record<string, unknown>;
-      setSelectedFunnelId((cfg.funnel_id as string) || "all");
-      setSelectedFolderId((cfg.folder_id as string) || "any");
-      setTagValue((cfg.tag as string) || "");
-      // Pre-fill sensible defaults for legacy automations that have never set exit_criteria.
+      const obj = (automation.enrollment_object_type || "lead") as EnrollmentObject;
+      setEnrollmentObject(obj);
+      setTrigger({
+        id: automation.id,
+        workspace_id: automation.workspace_id,
+        name: automation.name,
+        enrollment_object_type: obj,
+        enrollment_method: automation.enrollment_method || "event",
+        trigger_source: automation.trigger_source ?? null,
+        trigger_event: automation.trigger_event ?? automation.trigger_type ?? null,
+        trigger_config: (automation.trigger_config ?? {}) as Record<string, any>,
+        filter_groups: (automation.filter_groups as any[]) ?? [],
+        reenrollment_config: automation.reenrollment_config ?? { mode: "never" },
+        trigger_summary: automation.trigger_summary ?? null,
+      });
       const saved = (automation.exit_criteria ?? []) as ExitCriterion[];
       if (saved.length === 0) {
         setExitCriteria(getDefaultExitCriteria(automation.trigger_type));
@@ -100,23 +116,25 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   if (!automation || !open) return null;
 
   const handleSave = () => {
-    const triggerConfig: Record<string, unknown> = {};
-    if (triggerType === "lead_added_to_folder") {
-      if (selectedFolderId !== "any") triggerConfig.folder_id = selectedFolderId;
-    } else if (triggerType === "lead_tagged") {
-      if (tagValue.trim()) triggerConfig.tag = tagValue.trim();
-    } else if (selectedFunnelId !== "all") {
-      triggerConfig.funnel_id = selectedFunnelId;
-    }
+    // Keep legacy trigger_type in sync with trigger_event so runtime executors
+    // (fireTriggers, execute-automation, folder trigger) keep working.
+    const triggerType = trigger.trigger_event || automation.trigger_type || "new_lead";
     updateAutomation.mutate({
       id: automation.id,
       workspace_id: workspaceId,
       name,
       description,
       trigger_type: triggerType,
-      trigger_config: triggerConfig,
+      trigger_config: (trigger.trigger_config as Record<string, unknown>) || {},
       exit_criteria: exitCriteria,
       steps,
+      enrollment_object_type: enrollmentObject,
+      enrollment_method: trigger.enrollment_method || "event",
+      trigger_source: trigger.trigger_source ?? null,
+      trigger_event: trigger.trigger_event ?? null,
+      filter_groups: (trigger.filter_groups as unknown[]) ?? [],
+      reenrollment_config: trigger.reenrollment_config ?? { mode: "never" },
+      trigger_summary: trigger.trigger_summary ?? null,
     });
   };
 
@@ -172,12 +190,26 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground">Trigger</label>
-                <Select value={triggerType} onValueChange={setTriggerType}>
+                <label className="text-sm font-medium text-foreground">Enrollment object</label>
+                <Select
+                  value={enrollmentObject}
+                  onValueChange={(v) => {
+                    const next = v as EnrollmentObject;
+                    setEnrollmentObject(next);
+                    setTrigger((t) => ({
+                      ...t,
+                      enrollment_object_type: next,
+                      // Reset source/event because available sources depend on the object.
+                      trigger_source: null,
+                      trigger_event: null,
+                      trigger_config: {},
+                    }));
+                  }}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {TRIGGER_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    {ENROLLMENT_OBJECTS.map((o) => (
+                      <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -189,52 +221,23 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
             </div>
 
-            {triggerType === "lead_added_to_folder" ? (
-              <div>
-                <label className="text-sm font-medium text-foreground">Scope to folder</label>
-                <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
-                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="Any folder" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Any folder</SelectItem>
-                    {(folders ?? []).map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Fires when a lead is added to this folder (manual move, CSV import, or auto-routing).
-                </p>
-              </div>
-            ) : triggerType === "lead_tagged" ? (
-              <div>
-                <label className="text-sm font-medium text-foreground">Tag</label>
-                <Input
-                  className="max-w-sm"
-                  value={tagValue}
-                  onChange={(e) => setTagValue(e.target.value)}
-                  placeholder="e.g. facebook-ads, qualified, meta-lead-ad"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Fires whenever this exact tag is added. Leave blank to match any tag.
-                </p>
-              </div>
-            ) : (
-              <div>
-                <label className="text-sm font-medium text-foreground">Scope to funnel (optional)</label>
-                <Select value={selectedFunnelId} onValueChange={setSelectedFunnelId}>
-                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="All funnels" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All funnels (global)</SelectItem>
-                    {(funnels ?? []).map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {selectedFunnelId === "all" ? "Triggers for leads from any source" : "Fires when a new lead is associated with this funnel (via visit, form submission, or direct capture)"}
-                </p>
-              </div>
-            )}
+            <EnrollmentTriggerCard
+              record={trigger}
+              enrollmentObject={enrollmentObject}
+              recordKind="automation"
+              onChange={async (patch) => {
+                setTrigger((t) => ({
+                  ...t,
+                  enrollment_method: patch.enrollment_method,
+                  trigger_source: patch.trigger_source,
+                  trigger_event: patch.trigger_event,
+                  trigger_config: patch.trigger_config,
+                  filter_groups: patch.filter_groups,
+                  reenrollment_config: patch.reenrollment_config,
+                  trigger_summary: patch.trigger_summary,
+                }));
+              }}
+            />
 
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Steps</label>
@@ -261,7 +264,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
                 <AutomationStepEditor
                   steps={steps}
                   onChange={setSteps}
-                  triggerType={triggerType}
+                  triggerType={trigger.trigger_event || automation.trigger_type}
                   exitCriteria={exitCriteria}
                   onExitCriteriaChange={setExitCriteria}
                 />
@@ -269,6 +272,7 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
             </div>
 
           </TabsContent>
+
 
           <TabsContent value="timeline" className="mt-5 space-y-3">
             {logsLoading ? (

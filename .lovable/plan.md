@@ -1,112 +1,79 @@
-## Goal
+## Port the enrollment-trigger UX into the Automations module
 
-Rework only the workflow details area and the first trigger node in the existing editor. Everything else (palette, canvas, action/condition nodes, Timeline / History / Health / Logs tabs, `execute-workflow` engine) stays as-is.
+Mirror the changes already shipped in Workflows onto Automations so both modules use the same object → source → event → scope → filters model. No redesign of the step editor — only the trigger area.
 
-## Database changes
+### 1. Database migration — extend `public.automations`
 
-Migration 1 — extend `workflows`:
+Add the same columns already on `workflows`, nullable, so legacy rows keep working:
 
-- `enrollment_object_type text` (contact | lead | deal | booking | conversation | payment | subscription) — default `'lead'`
-- `enrollment_method text` (event | filter | schedule | webhook | manual) — default `'event'`
-- `trigger_source text` (crm, forms, funnels, meta_lead_ads, linkedin_lead_gen, google_lead_forms, bookings, email, whatsapp, sms, payments, campaigns, webhooks)
-- `trigger_event text` (machine key, e.g. `meta_lead_received`)
-- `trigger_config jsonb` default `'{}'` — source-specific scope (funnel_id, page_id, calendar_id, meta connection/page/form/campaign/adset/ad ids, any-value flags, etc.)
-- `filter_groups jsonb` default `'[]'` — AND/OR groups of `{property, operator, value}`
-- `reenrollment_config jsonb` default `'{"mode":"never"}'`
-- `deduplication_key text` — e.g. `meta.leadgen_id`
-- `trigger_summary text` — plain-English sentence rendered on the node
-- `last_tested_at timestamptz`
-- `folder_id uuid` (nullable) — Folder field in details
+- `enrollment_object_type` text default `'lead'`
+- `enrollment_method` text default `'event'`
+- `trigger_source` text
+- `trigger_event` text
+- `trigger_config` — already exists (jsonb); reused for scope field values
+- `filter_groups` jsonb default `'[]'::jsonb`
+- `reenrollment_config` jsonb default `'{"mode":"never"}'::jsonb`
+- `deduplication_key` text
+- `trigger_summary` text
+- `last_tested_at` timestamptz
+- `folder_id` uuid (nullable, for grouping)
 
-Backfill for existing rows using the current `canvas_json` trigger node:
-- `campaign_completed` → source `campaigns`, event `campaign_completed`
-- `new_lead` / `lead_tagged` / `lead_added_to_folder` / `score_threshold` → source `crm`
-- `form_submitted` → source `forms`
-- `funnel_step_completed` → source `funnels`
-- `appointment_booked` → source `bookings`
-- `whatsapp_replied` / `sms_replied` / `email_opened|_not_opened` / `link_clicked` → source `whatsapp|sms|email`
-- `purchase_event` → source `payments`
-- `trial_*` / `subscription_cancelled` → source `subscriptions`
-- Never remap `campaign_completed` to `meta_lead_received`.
-- Default `enrollment_object_type = 'lead'` for all.
-- Copy trigger node `config` into `trigger_config`.
+Backfill mapping from existing `trigger_type` (never remap `campaign_completed` → `meta_lead_received`):
 
-Migration 2 — new `processed_automation_events`:
 ```text
-id uuid pk, workspace_id uuid not null, workflow_id uuid not null references workflows on delete cascade,
-event_key text not null, external_event_id text not null,
-event_payload jsonb, processed_at timestamptz default now(), status text default 'processed'
-UNIQUE (workspace_id, workflow_id, external_event_id)
+new_lead              → crm  / new_lead
+lead_added_to_folder  → crm  / lead_added_to_folder
+lead_tagged           → crm  / lead_tagged
+score_threshold       → crm  / score_threshold
+form_submitted        → forms / form_submitted
+campaign_completed    → campaigns / campaign_completed
+appointment_booked    → bookings / appointment_booked
 ```
-- GRANTs: `authenticated` select-only; `service_role` all.
-- RLS: members of the workspace can select via `is_workspace_member`; only `service_role` writes.
 
-Edge functions that already receive Meta / campaigns / booking events (`enroll-workflow-leads`, `meta-webhook`, etc.) will get a small guarded insert into this table keyed off `external_event_id` (Meta `leadgen_id`, campaign_message id, booking id, etc.). If the insert conflicts, the enrollment is skipped. No engine redesign.
+RLS: no new table — reuse existing workspace-scoped policies on `automations`. No new GRANTs needed.
 
-## Frontend — Workflow details panel (`WorkflowSettings` in `WorkflowEditor.tsx`)
+### 2. Frontend — replace the legacy trigger UI on both surfaces
 
-Keep: name, description, workflow owner, folder.
+**`CreateAutomationDialog.tsx`** and **`AutomationDetailsDrawer.tsx`**:
 
-Remove: the current Trigger dropdown and the always-visible "Scope to funnel" field.
+- Remove the "Trigger" `<Select>` fed by `TRIGGER_OPTIONS`.
+- Remove the "Scope to funnel (optional)", inline folder picker, and inline tag input blocks.
+- Add an **Enrollment object** selector (Contact / Lead / Deal / Booking / Conversation / Payment / Subscription), same list used in workflows.
+- Add an **Enrollment trigger card** identical to workflows:
+  - Gold trigger node with friendly label from `friendlyTriggerLabel()`
+  - Configured / Incomplete / Error pill from `configurationStatus()`
+  - One-line summary from `buildTriggerSummary()` and scope chips from `scopeSummary()`
+  - **Edit trigger** button opens the existing `EnrollmentTriggerDrawer`
+  - **Test trigger** button (uses existing `test-workflow-trigger` edge function; we'll extend it to accept `{ source, event, trigger_config, filter_groups, workspace_id }` without needing a workflow id)
 
-Add: **Enrollment object** select (Contact / Lead / Deal / Booking / Conversation / Payment / Subscription). Persists to `workflows.enrollment_object_type`. Changing it clears the trigger source if incompatible and marks the trigger node "Incomplete".
+**Reuse without changes**:
+- `src/lib/workflows/triggerCatalog.ts`
+- `src/components/workflows/EnrollmentTriggerDrawer.tsx`
+- `src/components/workflows/FilterGroupBuilder.tsx`
 
-## Frontend — Enrollment trigger node
+Keep the existing **Workflow / Timeline / History / Health / Logs** tabs in `AutomationDetailsDrawer` untouched.
 
-Replace the generic first trigger palette node behaviour so that every workflow always renders one gold-bordered "Enrollment trigger" node at the canvas root (auto-inserted if missing). The node card shows:
+### 3. Hook + save/load — `useAutomations.ts`
 
-- Header: "Enrollment trigger" with configuration status pill (green Configured / amber Incomplete / red Error).
-- Friendly trigger label (e.g. "New Facebook lead received"), never the raw key.
-- Rows: Enrollment object, Trigger source, Trigger event, key config summary (e.g. "Page: NexusFlo24 · Form: Free WhatsApp Audit"), Re-enrollment setting.
-- Buttons: **Edit trigger** (opens drawer), **Test trigger**.
+- Extend the `Automation` type and `createAutomation` / `updateAutomation` mutation payloads with the new columns.
+- On save, also derive and store `trigger_summary`. Continue writing legacy `trigger_type` alongside the new fields (so the DB trigger `enqueue_folder_automations` and any live executors keep working — no runtime behaviour changes in this task).
+- On load, if new fields are null, fall back to the legacy `trigger_type` mapping so the new UI renders correctly for pre-migration rows.
 
-A `triggerCatalog.ts` maps `source → events[]` with `{key, label, description, requiredScopeFields}` and provides `friendlyLabel(source, event)` and `buildSummary(workflow)` used by the node and the details panel.
+### 4. Back-compat guardrails
 
-## Frontend — Trigger configuration drawer (right side)
+- Runtime executors (`enqueue_folder_automations`, `fireTriggers.ts`, `execute-automation` edge function) keep reading `trigger_type` / `trigger_config`. This task does **not** switch execution over; it only changes the configuration surface.
+- No automation is auto-converted between sources; the mapping is purely for display until the user re-saves.
 
-New component `EnrollmentTriggerDrawer` opened from Edit trigger. Stepped layout:
+### 5. Where the "Edit trigger" button lives after this ships
 
-1. **Enrollment method** — radios: event, filter criteria, schedule, webhook, manual.
-2. **Trigger source** — grid of the 13 sources above, filtered by the current `enrollment_object_type`.
-3. **Trigger event** — list filtered to the selected source only. Friendly labels; stored keys retained.
-4. **Scope fields** — rendered dynamically from the source's `requiredScopeFields`:
-   - CRM: Pipeline, Stage, Owner, Lead source, Tags
-   - Forms: Form
-   - Funnels: Funnel, Page, Form, Funnel step
-   - Bookings: Calendar, Booking type, Assigned user, Appointment status
-   - Meta Lead Ads: Meta connection*, Ad account, Facebook Page*, Lead form*, Campaign, Ad set, Ad (starred = required)
-   - Each dropdown supports "Any value" or a specific value.
-5. **Additional filters** — reusable `FilterGroupBuilder` (AND / OR groups) with operators: is equal to, is not equal to, is any of, is none of, contains, does not contain, is known, is unknown, is greater than, is less than, is before, is after.
-6. **Re-enrollment** — radios: never, every event, when conditions become true again, after waiting period (+ duration input). Meta Lead Ads defaults to "Re-enroll for every unique lead form submission" with `deduplication_key = 'meta.leadgen_id'`.
-7. **Test trigger** panel — for Meta shows most recent lead payload (via new `test-workflow-trigger` edge function) and a "Send test lead" button (guides to Meta test tool), renders received payload, mapped contact fields, and pass/fail against filters. Marked test-only — never invokes `execute-workflow`.
-8. Live **Trigger summary** at the top ("Enrol leads when a new submission is received from the NexusFlo24 Facebook Page through the Free WhatsApp Follow-Up Audit form."), saved to `trigger_summary`.
+- `/dashboard/:workspaceId/automations` → open any automation row → **Workflow tab** → **Enrollment trigger** card → **Edit** button (right-side drawer).
+- Same button also appears in the **Create Automation** dialog once you pick a name.
 
-Drawer save patches all `workflows.*` trigger columns and updates the canvas trigger node's `data.config` / `data.subType` / `data.label` so the engine's existing trigger matching keeps working.
+### Files to edit / create
 
-## Backend — deduplication guard
-
-`enroll-workflow-leads` (and the Meta webhook feeder) attempt to insert into `processed_automation_events` before enrolling. Unique-constraint violation → skip enrollment and log a `duplicate_event` breadcrumb into `workflow_logs`. This is the only engine change.
-
-## Security
-
-- New columns and table remain workspace-scoped via `is_workspace_member`.
-- Trigger drawer only reads sources for the current workspace (Meta connections, funnels, forms, calendars, pipelines).
-
-## Design
-
-Follows current tokens — navy headings, gold trigger node border, green/amber/red status pills, rounded cards, right-side drawer using shadcn `Sheet`. No visual redesign outside the details panel, trigger node, and drawer.
-
-## Files touched
-
-- `supabase/migrations/<ts>_workflow_enrollment_trigger.sql` (schema + backfill + processed_automation_events)
-- `src/lib/workflows/triggerCatalog.ts` (new)
-- `src/lib/workflows/types.ts` (add new fields to `Workflow`)
-- `src/pages/dashboard/WorkflowEditor.tsx` (details panel, ensure enrollment trigger node, wire drawer)
-- `src/components/workflows/EnrollmentTriggerNodeCard.tsx` (new)
-- `src/components/workflows/EnrollmentTriggerDrawer.tsx` (new)
-- `src/components/workflows/FilterGroupBuilder.tsx` (new)
-- `src/hooks/useWorkflows.ts` (patch mutation covers new fields)
-- `supabase/functions/enroll-workflow-leads/index.ts` (dedupe insert)
-- `supabase/functions/test-workflow-trigger/index.ts` (new, test-only)
-
-Existing workflows continue to run unchanged; their canvas trigger node stays and the mirrored `workflows.trigger_*` columns feed the new UI.
+- **Migration** — `supabase/migrations/<ts>_add_automation_enrollment_structure.sql`
+- **Edit** `src/hooks/useAutomations.ts` (type, mutations, load-time fallback mapping)
+- **Edit** `src/components/automations/CreateAutomationDialog.tsx` (replace trigger block)
+- **Edit** `src/components/automations/AutomationDetailsDrawer.tsx` (replace trigger block)
+- **Edit** `supabase/functions/test-workflow-trigger/index.ts` (accept ad-hoc payload, no workflow id required)
+- **Edit** `src/integrations/supabase/types.ts` after migration approval

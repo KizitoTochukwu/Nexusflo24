@@ -36,9 +36,11 @@ interface Props {
   workflow: any;
   enrollmentObject: EnrollmentObject;
   onSave: (patch: EnrollmentTriggerPatch) => Promise<void>;
+  /** Which record type this drawer is editing. Defaults to "workflow" for back-compat. */
+  recordKind?: "workflow" | "automation";
 }
 
-export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, enrollmentObject, onSave }: Props) {
+export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, enrollmentObject, onSave, recordKind = "workflow" }: Props) {
   const [method, setMethod] = useState<string>(workflow?.enrollment_method || "event");
   const [source, setSource] = useState<string | null>(workflow?.trigger_source || null);
   const [event, setEvent] = useState<string | null>(workflow?.trigger_event || null);
@@ -118,15 +120,17 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
     setTesting(true);
     setTestResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("test-workflow-trigger", {
-        body: {
-          workflow_id: workflow.id,
-          trigger_source: source,
-          trigger_event: event,
-          trigger_config: config,
-          filter_groups: filters,
-        },
-      });
+      const body: Record<string, any> = {
+        trigger_source: source,
+        trigger_event: event,
+        trigger_config: config,
+        filter_groups: filters,
+        record_kind: recordKind,
+        workspace_id: workflow?.workspace_id,
+      };
+      if (recordKind === "automation") body.automation_id = workflow.id;
+      else body.workflow_id = workflow.id;
+      const { data, error } = await supabase.functions.invoke("test-workflow-trigger", { body });
       if (error) throw error;
       setTestResult(data);
     } catch (e: any) {
