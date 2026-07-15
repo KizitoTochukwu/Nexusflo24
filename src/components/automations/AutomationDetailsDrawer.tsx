@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   type Automation,
-  TRIGGER_OPTIONS,
   useAutomationSteps,
   useAutomationLogs,
   useAutomationEmailDeliveries,
@@ -24,6 +23,10 @@ import ExecutionTimeline from "./ExecutionTimeline";
 import ExecutionHistoryTable from "./ExecutionHistoryTable";
 import SequenceHealthPanel from "./SequenceHealthPanel";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
+import EnrollmentTriggerCard, {
+  type EnrollmentTriggerRecord,
+} from "@/components/workflows/EnrollmentTriggerCard";
+import { ENROLLMENT_OBJECTS, type EnrollmentObject } from "@/lib/workflows/triggerCatalog";
 
 import {
   getDefaultExitCriteria,
@@ -32,8 +35,6 @@ import {
   type ExitCriterion,
 } from "@/lib/automations/exitCriteria";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useFunnels } from "@/hooks/useFunnels";
-import { useLeadFolders } from "@/hooks/useLeadFolders";
 import { useLeads } from "@/hooks/useLeads";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
