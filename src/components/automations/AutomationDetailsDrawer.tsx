@@ -274,8 +274,6 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
           </TabsContent>
 
 
-          </TabsContent>
-
           <TabsContent value="timeline" className="mt-5 space-y-3">
             {logsLoading ? (
               <div className="rounded-lg border bg-card p-4 space-y-3" aria-busy="true">
