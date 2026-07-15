@@ -17,6 +17,29 @@ export type Automation = {
   run_count: number;
   created_at: string;
   updated_at: string;
+  // Enrollment/trigger structure (mirrors workflows) — all optional/back-compat
+  enrollment_object_type?: string | null;
+  enrollment_method?: string | null;
+  trigger_source?: string | null;
+  trigger_event?: string | null;
+  filter_groups?: unknown[] | null;
+  reenrollment_config?: { mode?: string; wait_amount?: number; wait_unit?: string } | null;
+  deduplication_key?: string | null;
+  trigger_summary?: string | null;
+  last_tested_at?: string | null;
+  folder_id?: string | null;
+};
+
+export type AutomationEnrollmentPatch = {
+  enrollment_object_type?: string | null;
+  enrollment_method?: string | null;
+  trigger_source?: string | null;
+  trigger_event?: string | null;
+  trigger_config?: Record<string, unknown>;
+  filter_groups?: unknown[];
+  reenrollment_config?: { mode?: string; wait_amount?: number; wait_unit?: string };
+  deduplication_key?: string | null;
+  trigger_summary?: string | null;
 };
 
 export type AutomationStep = {
