@@ -120,15 +120,17 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
     setTesting(true);
     setTestResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("test-workflow-trigger", {
-        body: {
-          workflow_id: workflow.id,
-          trigger_source: source,
-          trigger_event: event,
-          trigger_config: config,
-          filter_groups: filters,
-        },
-      });
+      const body: Record<string, any> = {
+        trigger_source: source,
+        trigger_event: event,
+        trigger_config: config,
+        filter_groups: filters,
+        record_kind: recordKind,
+        workspace_id: workflow?.workspace_id,
+      };
+      if (recordKind === "automation") body.automation_id = workflow.id;
+      else body.workflow_id = workflow.id;
+      const { data, error } = await supabase.functions.invoke("test-workflow-trigger", { body });
       if (error) throw error;
       setTestResult(data);
     } catch (e: any) {
