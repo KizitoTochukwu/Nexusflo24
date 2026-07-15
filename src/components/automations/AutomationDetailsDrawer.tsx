@@ -52,17 +52,23 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   const { data: savedSteps, isLoading: stepsLoading, isError: stepsError, error: stepsErr, refetch: refetchSteps } = useAutomationSteps(automation?.id ?? null);
   const { data: logs, isLoading: logsLoading, isError: logsError, error: logsErrObj, refetch: refetchLogs, isFetching: logsFetching } = useAutomationLogs(automation?.id ?? null);
   const { data: emailDeliveries } = useAutomationEmailDeliveries(automation?.id ?? null, automation?.workspace_id ?? null);
-  const { data: funnels } = useFunnels(workspaceId);
-  const { data: folders } = useLeadFolders(workspaceId);
   const updateAutomation = useUpdateAutomation();
   const simulate = useSimulateAutomation();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [triggerType, setTriggerType] = useState("new_lead");
-  const [selectedFunnelId, setSelectedFunnelId] = useState<string>("all");
-  const [selectedFolderId, setSelectedFolderId] = useState<string>("any");
-  const [tagValue, setTagValue] = useState<string>("");
+  const [enrollmentObject, setEnrollmentObject] = useState<EnrollmentObject>("lead");
+  const [trigger, setTrigger] = useState<EnrollmentTriggerRecord>({
+    workspace_id: workspaceId,
+    enrollment_object_type: "lead",
+    enrollment_method: "event",
+    trigger_source: null,
+    trigger_event: null,
+    trigger_config: {},
+    filter_groups: [],
+    reenrollment_config: { mode: "never" },
+    trigger_summary: null,
+  });
   const [steps, setSteps] = useState<StepData[]>([]);
   const [exitCriteria, setExitCriteria] = useState<ExitCriterion[]>([]);
   const [testLeadId, setTestLeadId] = useState<string>("");
@@ -77,12 +83,21 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
     if (automation) {
       setName(automation.name);
       setDescription(automation.description || "");
-      setTriggerType(automation.trigger_type);
-      const cfg = (automation.trigger_config ?? {}) as Record<string, unknown>;
-      setSelectedFunnelId((cfg.funnel_id as string) || "all");
-      setSelectedFolderId((cfg.folder_id as string) || "any");
-      setTagValue((cfg.tag as string) || "");
-      // Pre-fill sensible defaults for legacy automations that have never set exit_criteria.
+      const obj = (automation.enrollment_object_type || "lead") as EnrollmentObject;
+      setEnrollmentObject(obj);
+      setTrigger({
+        id: automation.id,
+        workspace_id: automation.workspace_id,
+        name: automation.name,
+        enrollment_object_type: obj,
+        enrollment_method: automation.enrollment_method || "event",
+        trigger_source: automation.trigger_source ?? null,
+        trigger_event: automation.trigger_event ?? automation.trigger_type ?? null,
+        trigger_config: (automation.trigger_config ?? {}) as Record<string, any>,
+        filter_groups: (automation.filter_groups as any[]) ?? [],
+        reenrollment_config: automation.reenrollment_config ?? { mode: "never" },
+        trigger_summary: automation.trigger_summary ?? null,
+      });
       const saved = (automation.exit_criteria ?? []) as ExitCriterion[];
       if (saved.length === 0) {
         setExitCriteria(getDefaultExitCriteria(automation.trigger_type));
@@ -101,23 +116,25 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
   if (!automation || !open) return null;
 
   const handleSave = () => {
-    const triggerConfig: Record<string, unknown> = {};
-    if (triggerType === "lead_added_to_folder") {
-      if (selectedFolderId !== "any") triggerConfig.folder_id = selectedFolderId;
-    } else if (triggerType === "lead_tagged") {
-      if (tagValue.trim()) triggerConfig.tag = tagValue.trim();
-    } else if (selectedFunnelId !== "all") {
-      triggerConfig.funnel_id = selectedFunnelId;
-    }
+    // Keep legacy trigger_type in sync with trigger_event so runtime executors
+    // (fireTriggers, execute-automation, folder trigger) keep working.
+    const triggerType = trigger.trigger_event || automation.trigger_type || "new_lead";
     updateAutomation.mutate({
       id: automation.id,
       workspace_id: workspaceId,
       name,
       description,
       trigger_type: triggerType,
-      trigger_config: triggerConfig,
+      trigger_config: (trigger.trigger_config as Record<string, unknown>) || {},
       exit_criteria: exitCriteria,
       steps,
+      enrollment_object_type: enrollmentObject,
+      enrollment_method: trigger.enrollment_method || "event",
+      trigger_source: trigger.trigger_source ?? null,
+      trigger_event: trigger.trigger_event ?? null,
+      filter_groups: (trigger.filter_groups as unknown[]) ?? [],
+      reenrollment_config: trigger.reenrollment_config ?? { mode: "never" },
+      trigger_summary: trigger.trigger_summary ?? null,
     });
   };
 
