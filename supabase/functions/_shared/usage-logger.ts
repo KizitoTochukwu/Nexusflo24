@@ -16,14 +16,19 @@ export async function logCommunicationUsage(entry: UsageLogEntry): Promise<void>
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+  // cost_cents is NOT NULL — coerce defensively so null/undefined/NaN never leaks.
+  const rawCost = entry.costCents;
+  const numericCost = typeof rawCost === "number" && Number.isFinite(rawCost) ? Math.round(rawCost) : 0;
+  const rawCredits = entry.creditsDeducted;
+  const numericCredits = typeof rawCredits === "number" && Number.isFinite(rawCredits) ? rawCredits : 0;
   const { error } = await admin.from("communication_usage").insert({
     workspace_id: entry.workspaceId,
     sender_profile_id: entry.senderProfileId ?? null,
     channel: entry.channel,
     message_id: entry.messageId ?? null,
     country: entry.country ?? null,
-    credits_deducted: entry.creditsDeducted,
-    cost_cents: entry.costCents ?? 0,
+    credits_deducted: numericCredits,
+    cost_cents: numericCost,
     status: entry.status,
   });
   if (error) console.error("[usage-logger] insert failed:", error);
