@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SidebarLogo from "@/components/brand/SidebarLogo";
 import { useRouteMemory } from "@/hooks/useRouteMemory";
 import SidebarCreditWidget from "@/components/dashboard/SidebarCreditWidget";
@@ -7,6 +7,7 @@ import { useLowCreditAlert } from "@/hooks/useLowCreditAlert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
   BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio } from
@@ -22,7 +23,9 @@ import {
 "@/components/ui/dropdown-menu";
 
 const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile();
+  // Desktop: sidebar expanded by default. Mobile: closed by default (off-canvas drawer).
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -32,6 +35,17 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   useNotificationWatcher();
   useLowCreditAlert();
   useRouteMemory();
+
+  // Sync default sidebar state when crossing the mobile breakpoint.
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
+
+  // Auto-close drawer on route change (mobile only).
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
@@ -64,33 +78,53 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
   const initials = user?.user_metadata?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "?";
 
+  // Sidebar sizing / visibility
+  // - Mobile: full drawer (w-72), slides in from left, backdrop behind it.
+  // - Desktop: fixed rail (w-56 open / w-14 collapsed).
+  const desktopWidth = sidebarOpen ? "w-56" : "w-14";
+  const mobileTranslate = sidebarOpen ? "translate-x-0" : "-translate-x-full";
+  const asideClasses = isMobile
+    ? `fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r bg-primary transition-transform duration-300 ${mobileTranslate}`
+    : `fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-primary transition-all duration-300 ${desktopWidth}`;
+
+  const mainMargin = isMobile ? "ml-0" : (sidebarOpen ? "ml-56" : "ml-14");
+
+  // On mobile, labels always show inside the drawer.
+  const showLabels = isMobile ? true : sidebarOpen;
+
   return (
     <div
       className="flex min-h-screen bg-surface"
-      style={{ "--dashboard-sidebar-width": sidebarOpen ? "14rem" : "3.5rem" } as React.CSSProperties}
+      style={{ "--dashboard-sidebar-width": isMobile ? "0px" : (sidebarOpen ? "14rem" : "3.5rem") } as React.CSSProperties}
     >
+      {/* Mobile backdrop */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside
-        className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r bg-primary transition-all duration-300 ${
-        sidebarOpen ? "w-56" : "w-14"}`
-        }>
-        
+      <aside className={asideClasses}>
         <div className="flex h-14 items-center justify-between px-3">
-          {sidebarOpen && (
+          {showLabels && (
             <Link to="/" className="flex items-center">
-              <SidebarLogo collapsed={!sidebarOpen} />
+              <SidebarLogo collapsed={false} />
             </Link>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={`rounded p-1 text-primary-foreground/60 hover:text-primary-foreground ${
-              !sidebarOpen ? "mx-auto" : ""
+              !showLabels ? "mx-auto" : ""
             }`}
+            aria-label={sidebarOpen ? "Close menu" : "Open menu"}
           >
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
-        <nav className="flex-1 space-y-1 px-2 py-4 my-[20px]">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4 my-[20px]">
           {sidebarItems.map((item) => {
             const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
             return (
@@ -102,57 +136,64 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
                 "bg-sidebar-accent text-sidebar-accent-foreground" :
                 "text-primary-foreground/60 hover:bg-sidebar-accent/50 hover:text-primary-foreground"}`
                 }>
-                
                 <item.icon className="h-4 w-4 shrink-0" />
-                {sidebarOpen && <span>{item.label}</span>}
+                {showLabels && <span>{item.label}</span>}
               </Link>);
-
           })}
         </nav>
 
         {/* Credit balances */}
-        <SidebarCreditWidget collapsed={!sidebarOpen} />
+        <SidebarCreditWidget collapsed={!showLabels} />
 
         {/* Sidebar logout */}
         <div className="border-t border-sidebar-border px-2 py-3">
           <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/60 transition-colors hover:bg-sidebar-accent/50 hover:text-primary-foreground">
-            
             <LogOut className="h-4 w-4 shrink-0" />
-            {sidebarOpen && <span>Log Out</span>}
+            {showLabels && <span>Log Out</span>}
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className={`relative z-10 flex-1 transition-all duration-300 ${sidebarOpen ? "ml-56" : "ml-14"}`}>
+      <main className={`relative z-10 flex-1 transition-all duration-300 ${mainMargin}`}>
         {/* Top bar */}
-        <header className="flex h-14 items-center justify-between border-b bg-background px-6">
-          {/* Workspace switcher */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-foreground transition-colors hover:bg-muted">
-                <Building2 className="h-4 w-4 text-accent" />
-                <span className="max-w-[200px] truncate">{currentWorkspace?.name || "Workspace"}</span>
-                <PlanBadge />
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+        <header className="flex h-14 items-center justify-between border-b bg-background px-4 sm:px-6">
+          <div className="flex items-center gap-2 min-w-0">
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="rounded-lg p-2 text-foreground hover:bg-muted"
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel className="text-xs text-muted-foreground">Workspaces</DropdownMenuLabel>
-              {workspaces.map((ws) =>
-              <DropdownMenuItem
-                key={ws.id}
-                onClick={() => handleSwitchWorkspace(ws.id)}
-                className="flex items-center justify-between">
-                
-                  <span className="truncate">{ws.name}</span>
-                  {ws.id === workspaceId && <Check className="h-4 w-4 text-accent" />}
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            {/* Workspace switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-foreground transition-colors hover:bg-muted min-w-0">
+                  <Building2 className="h-4 w-4 text-accent shrink-0" />
+                  <span className="max-w-[140px] sm:max-w-[200px] truncate">{currentWorkspace?.name || "Workspace"}</span>
+                  <PlanBadge />
+                  <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Workspaces</DropdownMenuLabel>
+                {workspaces.map((ws) =>
+                <DropdownMenuItem
+                  key={ws.id}
+                  onClick={() => handleSwitchWorkspace(ws.id)}
+                  className="flex items-center justify-between">
+                    <span className="truncate">{ws.name}</span>
+                    {ws.id === workspaceId && <Check className="h-4 w-4 text-accent" />}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           <div className="flex items-center gap-2">
             <NotificationBell />
@@ -184,7 +225,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
           </div>
         </header>
 
-        <div className="p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <BillingWarningBanner />
           {children}
         </div>
