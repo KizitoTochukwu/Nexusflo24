@@ -12,18 +12,18 @@ interface Props {
 export default function AppointmentCalendarView({ bookings, mode, onSelect }: Props) {
   const today = new Date();
 
-  if (mode === "calendar") {
-    // agenda: grouped by day
-    const groups = useMemo(() => {
-      const map = new Map<string, Booking[]>();
-      for (const b of [...bookings].sort((a, z) => new Date(a.start_time).getTime() - new Date(z.start_time).getTime())) {
-        const k = format(new Date(b.start_time), "yyyy-MM-dd");
-        if (!map.has(k)) map.set(k, []);
-        map.get(k)!.push(b);
-      }
-      return Array.from(map.entries());
-    }, [bookings]);
+  // Hooks must run unconditionally on every render.
+  const groups = useMemo(() => {
+    const map = new Map<string, Booking[]>();
+    for (const b of [...bookings].sort((a, z) => new Date(a.start_time).getTime() - new Date(z.start_time).getTime())) {
+      const k = format(new Date(b.start_time), "yyyy-MM-dd");
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(b);
+    }
+    return Array.from(map.entries());
+  }, [bookings]);
 
+  if (mode === "calendar") {
     if (groups.length === 0) return <p className="py-10 text-center text-sm text-muted-foreground">No appointments match.</p>;
 
     return (
