@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     for (const wf of workflows) {
       const canvas = wf.canvas_json || { nodes: [] };
       const trig = (canvas.nodes || []).find((n: any) => n.data?.kind === "trigger");
-      if (!triggerMatches(trig, event_type, event_config)) continue;
+      if (!triggerMatches(wf, trig, event_type, event_config)) continue;
       matchedWorkflows++;
 
       // Webhook / duplicate-event guard (e.g. Meta leadgen_id retries).
@@ -175,20 +175,37 @@ Deno.serve(async (req) => {
         const { data: lead } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
         if (!lead) continue;
 
-        if (leadIsSuppressed(lead, wf.suppression_config)) continue;
+        if (leadIsSuppressed(lead, wf.suppression_config)) {
+          await supabase.from("workflow_logs").insert({
+            workflow_id: wf.id, workspace_id, enrollment_id: null, lead_id: leadId,
+            event_type: "suppressed", level: "info",
+            message: `Lead suppressed by workflow suppression config`,
+          }).then(() => {}, () => {});
+          continue;
+        }
 
-        // Re-enrollment logic
+        // Additional filter groups (from new trigger drawer)
+        if (!leadPassesFilters(lead, wf.filter_groups || [])) {
+          await supabase.from("workflow_logs").insert({
+            workflow_id: wf.id, workspace_id, enrollment_id: null, lead_id: leadId,
+            event_type: "filtered_out", level: "info",
+            message: `Lead did not match trigger filters`,
+            details: { filter_groups: wf.filter_groups },
+          }).then(() => {}, () => {});
+          continue;
+        }
+
+        // Re-enrollment logic (structured reenrollment_config, with legacy fallback)
         const { data: existing } = await supabase
           .from("workflow_enrollments")
-          .select("id,status")
+          .select("id,status,started_at")
           .eq("workflow_id", wf.id).eq("lead_id", leadId)
           .order("started_at", { ascending: false })
           .limit(1);
         const last = existing?.[0];
         if (last) {
           if (last.status === "active") continue; // duplicate guard
-          const allowReEnroll = !!wf.enrollment_config?.reEnrollment;
-          if (!allowReEnroll) continue;
+          if (!canReEnroll(wf, last)) continue;
         }
 
         const { data: enrollment, error: insErr } = await supabase
