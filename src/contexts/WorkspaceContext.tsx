@@ -118,6 +118,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         currentWorkspace,
         currentMembership,
         loading,
+        error,
         setCurrentWorkspaceId,
         refreshWorkspaces: fetchWorkspaces,
       }}
