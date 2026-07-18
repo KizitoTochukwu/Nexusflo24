@@ -23,6 +23,7 @@ interface WorkspaceContextType {
   currentWorkspace: Workspace | null;
   currentMembership: WorkspaceMember | null;
   loading: boolean;
+  error: string | null;
   setCurrentWorkspaceId: (id: string) => void;
   refreshWorkspaces: () => Promise<void>;
 }
@@ -32,6 +33,7 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
   currentWorkspace: null,
   currentMembership: null,
   loading: true,
+  error: null,
   setCurrentWorkspaceId: () => {},
   refreshWorkspaces: async () => {},
 });
@@ -44,11 +46,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [memberships, setMemberships] = useState<WorkspaceMember[]>([]);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchWorkspaces = async () => {
     if (!user) {
       setWorkspaces([]);
       setMemberships([]);
+      setError(null);
       setLoading(false);
       return;
     }
@@ -56,19 +60,32 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     // Mark loading at the start so consumers don't see a stale empty state
     // between user changing and the new fetch completing.
     setLoading(true);
+    setError(null);
 
-    const [wsResult, memResult] = await Promise.all([
-      supabase.from("workspaces").select("*").order("created_at", { ascending: true }),
-      supabase.from("workspace_members").select("*").eq("user_id", user.id),
-    ]);
+    try {
+      const [wsResult, memResult] = await Promise.all([
+        supabase.from("workspaces").select("*").order("created_at", { ascending: true }),
+        supabase.from("workspace_members").select("*").eq("user_id", user.id),
+      ]);
 
-    const ws = (wsResult.data ?? []) as Workspace[];
-    const mems = (memResult.data ?? []) as WorkspaceMember[];
+      if (wsResult.error) throw wsResult.error;
+      if (memResult.error) throw memResult.error;
 
-    setWorkspaces(ws);
-    setMemberships(mems);
-    setLoading(false);
+      const ws = (wsResult.data ?? []) as Workspace[];
+      const mems = (memResult.data ?? []) as WorkspaceMember[];
+
+      setWorkspaces(ws);
+      setMemberships(mems);
+    } catch (err: any) {
+      console.error("[WorkspaceContext] fetchWorkspaces failed:", err);
+      setError(err?.message || "Failed to load workspaces");
+      setWorkspaces([]);
+      setMemberships([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   // Track which user id we've already loaded workspaces for so that a new
   // `user` object reference (e.g. a Supabase token refresh on tab focus)
@@ -101,6 +118,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         currentWorkspace,
         currentMembership,
         loading,
+        error,
         setCurrentWorkspaceId,
         refreshWorkspaces: fetchWorkspaces,
       }}

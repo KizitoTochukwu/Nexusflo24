@@ -1,79 +1,46 @@
-## Port the enrollment-trigger UX into the Automations module
 
-Mirror the changes already shipped in Workflows onto Automations so both modules use the same object → source → event → scope → filters model. No redesign of the step editor — only the trigger area.
+## Problem
 
-### 1. Database migration — extend `public.automations`
+On mobile, opening `/dashboard/:workspaceId/overview` shows only the centered spinning loader from `WorkspaceGuard` and never resolves. Root cause is a combination of two issues:
 
-Add the same columns already on `workflows`, nullable, so legacy rows keep working:
+1. **Loading state can get stuck.** `WorkspaceContext.fetchWorkspaces` has no `try/catch`. If the workspaces query fails (transient network hiccup, momentarily missing auth token on a mobile tab restore, RLS error), `setLoading(false)` is never reached, so `WorkspaceGuard` keeps rendering the spinner forever. There is also no timeout/fallback UI.
+2. **The dashboard shell isn't mobile-aware.** `DashboardLayout` always renders a `fixed` 224 px sidebar and pushes main content with `ml-56`, with no drawer, no overlay close, no responsive breakpoint. Even once the spinner clears, the sidebar covers most of the 390 px viewport and taps hit sidebar links, which is what the user is describing as "keeps rotating when clicked" (each nav tap triggers a route change → guard spinner → stuck again).
 
-- `enrollment_object_type` text default `'lead'`
-- `enrollment_method` text default `'event'`
-- `trigger_source` text
-- `trigger_event` text
-- `trigger_config` — already exists (jsonb); reused for scope field values
-- `filter_groups` jsonb default `'[]'::jsonb`
-- `reenrollment_config` jsonb default `'{"mode":"never"}'::jsonb`
-- `deduplication_key` text
-- `trigger_summary` text
-- `last_tested_at` timestamptz
-- `folder_id` uuid (nullable, for grouping)
+## Fix
 
-Backfill mapping from existing `trigger_type` (never remap `campaign_completed` → `meta_lead_received`):
+### 1. Make workspace loading resilient (`src/contexts/WorkspaceContext.tsx`)
 
-```text
-new_lead              → crm  / new_lead
-lead_added_to_folder  → crm  / lead_added_to_folder
-lead_tagged           → crm  / lead_tagged
-score_threshold       → crm  / score_threshold
-form_submitted        → forms / form_submitted
-campaign_completed    → campaigns / campaign_completed
-appointment_booked    → bookings / appointment_booked
-```
+- Wrap `fetchWorkspaces` in `try/catch/finally` so `setLoading(false)` always runs.
+- On error, log and leave `workspaces = []` so `WorkspaceGuard` can render its "Setting up your workspace…" empty state instead of an infinite spinner.
+- Expose the last error via context so the guard can surface a retry.
 
-RLS: no new table — reuse existing workspace-scoped policies on `automations`. No new GRANTs needed.
+### 2. Add a stuck-loading fallback (`src/components/auth/WorkspaceGuard.tsx`)
 
-### 2. Frontend — replace the legacy trigger UI on both surfaces
+- After ~6 seconds of `authLoading || wsLoading`, replace the bare spinner with a small card: "Still loading your workspace…" + **Retry** (calls `refreshWorkspaces`) + **Sign out** buttons. Prevents the dead-end mobile screen.
 
-**`CreateAutomationDialog.tsx`** and **`AutomationDetailsDrawer.tsx`**:
+### 3. Make `DashboardLayout` mobile-responsive (`src/components/dashboard/DashboardLayout.tsx`)
 
-- Remove the "Trigger" `<Select>` fed by `TRIGGER_OPTIONS`.
-- Remove the "Scope to funnel (optional)", inline folder picker, and inline tag input blocks.
-- Add an **Enrollment object** selector (Contact / Lead / Deal / Booking / Conversation / Payment / Subscription), same list used in workflows.
-- Add an **Enrollment trigger card** identical to workflows:
-  - Gold trigger node with friendly label from `friendlyTriggerLabel()`
-  - Configured / Incomplete / Error pill from `configurationStatus()`
-  - One-line summary from `buildTriggerSummary()` and scope chips from `scopeSummary()`
-  - **Edit trigger** button opens the existing `EnrollmentTriggerDrawer`
-  - **Test trigger** button (uses existing `test-workflow-trigger` edge function; we'll extend it to accept `{ source, event, trigger_config, filter_groups, workspace_id }` without needing a workflow id)
+- Detect mobile via `useIsMobile()` (already in the project).
+- Mobile behavior:
+  - Sidebar defaults to **closed**, renders as an off-canvas drawer (`fixed inset-y-0 left-0 w-72 -translate-x-full` / `translate-x-0` when open) with a dark backdrop that closes on tap.
+  - Add a hamburger `SidebarTrigger` button on the left of the top bar (visible only on mobile).
+  - Main content uses `ml-0` on mobile, current `ml-56 / ml-14` on desktop.
+  - Auto-close the drawer when the route changes (`useEffect` on `location.pathname`).
+- Desktop behavior unchanged (fixed rail, collapse toggle).
+- Ensure the sidebar has `z-50` and backdrop `z-40` so it sits above the Nexus AI chat button and top bar.
 
-**Reuse without changes**:
-- `src/lib/workflows/triggerCatalog.ts`
-- `src/components/workflows/EnrollmentTriggerDrawer.tsx`
-- `src/components/workflows/FilterGroupBuilder.tsx`
+### 4. Sanity pass
 
-Keep the existing **Workflow / Timeline / History / Health / Logs** tabs in `AutomationDetailsDrawer` untouched.
+- Verify `p-6 lg:p-8` on the content wrapper still looks correct on 390 px width; tighten to `p-4 sm:p-6 lg:p-8`.
+- Keep sign-out/credit widget accessible inside the mobile drawer (no layout change needed — they already live in the sidebar).
 
-### 3. Hook + save/load — `useAutomations.ts`
+## Out of scope
 
-- Extend the `Automation` type and `createAutomation` / `updateAutomation` mutation payloads with the new columns.
-- On save, also derive and store `trigger_summary`. Continue writing legacy `trigger_type` alongside the new fields (so the DB trigger `enqueue_folder_automations` and any live executors keep working — no runtime behaviour changes in this task).
-- On load, if new fields are null, fall back to the legacy `trigger_type` mapping so the new UI renders correctly for pre-migration rows.
+- No changes to auth flow, routing, or `Dashboard.tsx` metrics logic.
+- No visual redesign of individual dashboard cards.
 
-### 4. Back-compat guardrails
+## Verification
 
-- Runtime executors (`enqueue_folder_automations`, `fireTriggers.ts`, `execute-automation` edge function) keep reading `trigger_type` / `trigger_config`. This task does **not** switch execution over; it only changes the configuration surface.
-- No automation is auto-converted between sources; the mapping is purely for display until the user re-saves.
-
-### 5. Where the "Edit trigger" button lives after this ships
-
-- `/dashboard/:workspaceId/automations` → open any automation row → **Workflow tab** → **Enrollment trigger** card → **Edit** button (right-side drawer).
-- Same button also appears in the **Create Automation** dialog once you pick a name.
-
-### Files to edit / create
-
-- **Migration** — `supabase/migrations/<ts>_add_automation_enrollment_structure.sql`
-- **Edit** `src/hooks/useAutomations.ts` (type, mutations, load-time fallback mapping)
-- **Edit** `src/components/automations/CreateAutomationDialog.tsx` (replace trigger block)
-- **Edit** `src/components/automations/AutomationDetailsDrawer.tsx` (replace trigger block)
-- **Edit** `supabase/functions/test-workflow-trigger/index.ts` (accept ad-hoc payload, no workflow id required)
-- **Edit** `src/integrations/supabase/types.ts` after migration approval
+- Preview at 390 × 844: spinner resolves, drawer closed by default, hamburger opens it, tapping a link navigates and closes the drawer, no infinite spinner on route change.
+- Force a failed workspaces fetch (offline) → fallback card with Retry appears instead of a perpetual spinner.
+- Desktop layout unchanged.
