@@ -828,6 +828,31 @@ function WorkflowSettings({ workflow, onUpdate }: { workflow: any; onUpdate: (p:
         </div>
       </div>
 
+      {/* Suppression tags */}
+      <div className="rounded-md border p-3 space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-primary">Suppression tags</div>
+        <p className="text-[11px] text-muted-foreground">
+          Leads with any of these tags will be skipped when this workflow tries to enroll them.
+        </p>
+        <Input
+          defaultValue={(workflow.suppression_config?.tags || []).join(", ")}
+          placeholder="e.g. unsubscribed, do-not-contact"
+          onBlur={async (e) => {
+            const tags = e.target.value
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean);
+            const current = workflow.suppression_config || { tags: [], lifecycleStages: [], smartListIds: [] };
+            const next = { ...current, tags };
+            if (JSON.stringify(current.tags || []) !== JSON.stringify(tags)) {
+              await onUpdate({ suppression_config: next });
+              toast({ title: "Suppression tags saved" });
+            }
+          }}
+        />
+      </div>
+
+
       {/* Validation card */}
       <div className="rounded-md border p-3">
         <div className="mb-2 flex items-center gap-2">

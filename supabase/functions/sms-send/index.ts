@@ -378,11 +378,16 @@ Deno.serve(async (req) => {
     }
 
     const errMsgRaw = err?.message || "Failed to send SMS";
+    const errCode = Number(err?.code || 0);
     const isTwilioPairError = /current combination of 'To'.*'From'|and\/or 'From' parameters/i.test(errMsgRaw);
-    const isGeoPermissionError = /Permission to send an SMS has not been enabled for the region/i.test(errMsgRaw);
+    const isGeoPermissionError = errCode === 21408 || /Permission to send an SMS has not been enabled for the region/i.test(errMsgRaw);
+    const isInvalidToError = errCode === 21211 || /Invalid 'To' Phone Number/i.test(errMsgRaw);
+    const isInvalidFromError = errCode === 21212 || /Invalid 'From' Phone Number/i.test(errMsgRaw);
+    const isUnverifiedTrial = errCode === 21608 || /unverified/i.test(errMsgRaw);
     const isCredentialFailure = isCredentialError("sms", errMsgRaw, providerStatus);
     const isClientError =
-      /Invalid 'To' Phone Number|Invalid 'From' Phone Number|cannot be the same/i.test(errMsgRaw) ||
+      isInvalidToError || isInvalidFromError || isUnverifiedTrial ||
+      /cannot be the same/i.test(errMsgRaw) ||
       isTwilioPairError ||
       isGeoPermissionError ||
       isCredentialFailure;
@@ -393,10 +398,16 @@ Deno.serve(async (req) => {
     } else if (isGeoPermissionError) {
       const region = errMsgRaw.match(/\+(\d{1,4})/)?.[0] || "this region";
       errMsg = `Twilio has not enabled SMS for ${region}. Open Twilio Console → Messaging → Settings → Geo Permissions and enable the destination country, then retry. (Trial accounts must also verify the recipient number.)`;
+    } else if (isInvalidToError) {
+      errMsg = `Twilio rejected the recipient number as invalid. Ensure it is in full international E.164 format (e.g. +447517327597) and belongs to a real, reachable mobile line.`;
+    } else if (isInvalidFromError) {
+      errMsg = "Twilio rejected your sender number. Use a valid E.164 number, a Messaging Service SID (MG…), or an approved alphanumeric sender ID.";
+    } else if (isUnverifiedTrial) {
+      errMsg = "Your Twilio account is in trial mode and this recipient hasn't been verified. Verify the number in Twilio Console → Phone Numbers → Verified Caller IDs, or upgrade to a paid Twilio account.";
     } else if (isTwilioPairError) {
       errMsg = "Twilio rejected this To/From combination. If your account is in trial mode, verify the recipient number in Twilio and ensure SMS permissions are enabled for that destination country.";
     }
 
-    return new Response(JSON.stringify({ success: false, error: errMsg }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: false, error: errMsg, code: errCode || undefined }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
