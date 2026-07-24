@@ -12,7 +12,6 @@ import logoFull from "@/assets/nexusflo24-logo-full.png";
 import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 
 const navLinks = [
-  { label: "Dashboard", to: "/dashboard" },
   { label: "Features", to: "/features" },
   { label: "Pricing", to: "/pricing" },
   { label: "Referral", to: "/referral" },
