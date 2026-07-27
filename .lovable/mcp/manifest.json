@@ -12,8 +12,8 @@
   "mcp": {
     "server": {
       "name": "nexusflo24-mcp",
-      "version": "0.1.0",
-      "title": "NexusFlo24 MCP"
+      "version": "0.2.0",
+      "title": "NexusFlo24 AI Agent Connections"
     },
     "tools": [
       {
@@ -29,6 +29,28 @@
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_workspace_summary",
+        "title": "Get workspace summary",
+        "description": "Get a high-level NexusFlo24 workspace snapshot: workspace name plus total leads, hot leads, upcoming appointments, active campaigns and active automations.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
         },
         "outputSchema": null
       },
@@ -68,12 +90,42 @@
         "outputSchema": null
       },
       {
-        "name": "create_lead",
-        "title": "Create lead",
-        "description": "Create a new CRM lead in NexusFlo24 for the signed-in user's workspace. Requires at least full_name or email. Optional notes, source, tags, status.",
+        "name": "get_lead",
+        "title": "Get lead",
+        "description": "Get a single NexusFlo24 lead by id, including status, stage, score, source, tags and notes.",
         "annotations": {
-          "readOnlyHint": false,
-          "destructiveHint": false,
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The lead to fetch."
+            },
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "lead_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_hot_leads",
+        "title": "List hot leads",
+        "description": "List the workspace's hottest NexusFlo24 leads — highest lead score first, optionally only those above a minimum score. Max 50 rows.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
           "openWorldHint": false
         },
         "inputSchema": {
@@ -81,39 +133,16 @@
           "properties": {
             "workspace_id": {
               "type": "string",
-              "format": "uuid",
-              "description": "Workspace to add the lead to."
+              "format": "uuid"
             },
-            "full_name": {
-              "type": "string"
+            "min_score": {
+              "type": "integer",
+              "description": "Minimum lead score (default 81 = Hot)."
             },
-            "email": {
-              "type": "string",
-              "format": "email"
-            },
-            "phone": {
-              "type": "string"
-            },
-            "source": {
-              "type": "string",
-              "description": "Where the lead came from (e.g. 'ChatGPT MCP')."
-            },
-            "status": {
-              "type": "string"
-            },
-            "notes": {
-              "type": "string"
-            },
-            "tags": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+            "limit": {
+              "type": "integer"
             }
           },
-          "required": [
-            "workspace_id"
-          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
@@ -140,6 +169,210 @@
             },
             "limit": {
               "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_campaign_performance",
+        "title": "Get campaign performance",
+        "description": "Get NexusFlo24 campaign performance — sent count, open rate, click rate and conversion rate — for one campaign or the workspace's most recent campaigns.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional single campaign to report on."
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_appointments",
+        "title": "List appointments",
+        "description": "List NexusFlo24 appointments (bookings) for the workspace, optionally within a date range or by status. Returns guest name, time, status and location. Max 50 rows.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "from": {
+              "type": "string",
+              "description": "ISO start of range (default now)."
+            },
+            "to": {
+              "type": "string",
+              "description": "ISO end of range."
+            },
+            "status": {
+              "type": "string",
+              "description": "Optional status filter (confirmed, cancelled, completed)."
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_conversations",
+        "title": "List conversations",
+        "description": "List recent NexusFlo24 customer conversation messages across Email, SMS and WhatsApp, with channel, direction, intent and status. Max 50 rows.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional lead to scope the conversation to."
+            },
+            "channel": {
+              "type": "string",
+              "description": "Optional channel filter (email, sms, whatsapp)."
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_automations",
+        "title": "List automations",
+        "description": "List NexusFlo24 automations for the workspace with status, trigger summary, run count and last run time. Max 50 rows.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "Optional status filter (active, paused, draft)."
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_workspace_analytics",
+        "title": "Get workspace analytics",
+        "description": "Get NexusFlo24 business analytics for a period (default last 30 days): new leads, hot leads, bookings, campaigns sent and average open/click rates.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "days": {
+              "type": "integer",
+              "description": "Look-back window in days (default 30, max 365)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_lead",
+        "title": "Create lead",
+        "description": "Create a new CRM lead in NexusFlo24. Requires the workspace to have granted write access to AI assistants for CRM and Leads. Requires at least full_name or email.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "workspace_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Workspace to add the lead to."
+            },
+            "full_name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string",
+              "description": "Where the lead came from (e.g. 'ChatGPT')."
+            },
+            "status": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false,
