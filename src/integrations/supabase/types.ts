@@ -1841,6 +1841,228 @@ export type Database = {
           },
         ]
       }
+      mcp_action_approvals: {
+        Row: {
+          args_digest: string | null
+          client_key: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: string
+          expires_at: string | null
+          id: string
+          requested_by: string | null
+          risk_level: string
+          summary: string | null
+          tool_name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          args_digest?: string | null
+          client_key?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string
+          expires_at?: string | null
+          id?: string
+          requested_by?: string | null
+          risk_level?: string
+          summary?: string | null
+          tool_name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          args_digest?: string | null
+          client_key?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string
+          expires_at?: string | null
+          id?: string
+          requested_by?: string | null
+          risk_level?: string
+          summary?: string | null
+          tool_name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_action_approvals_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_connections: {
+        Row: {
+          client_key: string
+          client_name: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          last_seen_at: string | null
+          oauth_client_id: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_key: string
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_seen_at?: string | null
+          oauth_client_id?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_key?: string
+          client_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_seen_at?: string | null
+          oauth_client_id?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_rate_limits: {
+        Row: {
+          created_at: string
+          id: string
+          request_count: number
+          updated_at: string
+          user_id: string
+          window_start: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          request_count?: number
+          updated_at?: string
+          user_id: string
+          window_start: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          request_count?: number
+          updated_at?: string
+          user_id?: string
+          window_start?: string
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      mcp_tool_activity: {
+        Row: {
+          approval_status: string
+          client_key: string | null
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          execution_status: string
+          id: string
+          oauth_client_id: string | null
+          risk_level: string
+          summary: string | null
+          tool_name: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_status?: string
+          client_key?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          execution_status?: string
+          id?: string
+          oauth_client_id?: string | null
+          risk_level?: string
+          summary?: string | null
+          tool_name: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_status?: string
+          client_key?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          execution_status?: string
+          id?: string
+          oauth_client_id?: string | null
+          risk_level?: string
+          summary?: string | null
+          tool_name?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      mcp_tool_permissions: {
+        Row: {
+          access_level: string
+          created_at: string
+          id: string
+          permission_group: string
+          require_approval: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string
+          id?: string
+          permission_group: string
+          require_approval?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          id?: string
+          permission_group?: string
+          require_approval?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_tool_permissions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_credits: {
         Row: {
           email_balance: number
