@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import AiAgentConnectionsTab from "@/components/settings/AiAgentConnectionsTab";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -710,7 +711,7 @@ const VALID_TABS = [
   "profile", "billing", "usage", "channels", "senders", "buy-credits",
   "wa-templates", "meta-channel", "tracking", "branding", "team",
   "integrations", "webhooks", "api-keys", "automations", "notifications", "security",
-  "ai-sales", "custom-code",
+  "ai-sales", "ai-agents", "custom-code",
 ] as const;
 
 const DashboardSettings = () => {
@@ -772,6 +773,7 @@ const DashboardSettings = () => {
             <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
             <TabsTrigger value="security" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Security</TabsTrigger>
             <TabsTrigger value="ai-sales" className="gap-1.5"><Bot className="h-3.5 w-3.5" />AI Sales</TabsTrigger>
+            <TabsTrigger value="ai-agents" className="gap-1.5"><Sparkles className="h-3.5 w-3.5" />AI Agent Connections</TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="custom-code" className="gap-1.5"><Globe className="h-3.5 w-3.5" />Custom Code</TabsTrigger>
             )}
@@ -798,6 +800,7 @@ const DashboardSettings = () => {
             <TabsContent value="notifications"><NotificationsTab /></TabsContent>
             <TabsContent value="security"><SecurityTab /></TabsContent>
             <TabsContent value="ai-sales"><SalesCloserSettingsTab workspaceId={workspaceId} /></TabsContent>
+            <TabsContent value="ai-agents"><AiAgentConnectionsTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="custom-code">{isAdmin ? <CustomCodeTab /> : <AccessDeniedCard />}</TabsContent>
           </div>
         </Tabs>
