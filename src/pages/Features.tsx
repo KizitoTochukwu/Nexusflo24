@@ -151,7 +151,7 @@ const useCases = [
 ];
 
 /* ── Section 16: FAQ ── */
-const faqs: { q: string; a: string; node?: React.ReactNode }[] = [
+const faqs: { q: string; a: string; node?: ReactNode }[] = [
   { q: "What is NexusFlo24?", a: "NexusFlo24 is an AI-powered sales and marketing platform that combines CRM, funnels, email, WhatsApp and SMS messaging, automations, bookings and analytics in one connected system." },
   { q: "Who is NexusFlo24 built for?", a: "Coaches and consultants, creators, agencies, SMEs and local businesses, and busy professionals running service-based businesses." },
   { q: "Can I manage email, WhatsApp and SMS from NexusFlo24?", a: "Yes. You can send individual messages and bulk campaigns over email, WhatsApp (Meta Cloud API or Twilio) and SMS, with message history linked to the relevant CRM record." },
