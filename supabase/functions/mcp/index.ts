@@ -250,41 +250,25 @@ var create_lead_default = defineTool2({
 });
 
 // src/lib/mcp/tools/list-campaigns.ts
-import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.95.3";
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z3 } from "npm:zod@^3.25.76";
-function client2(ctx) {
-  return createClient3(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    }
-  );
-}
 var list_campaigns_default = defineTool3({
   name: "list_campaigns",
   title: "List campaigns",
-  description: "List the signed-in user's marketing campaigns (Email / WhatsApp / SMS) in NexusFlo24 with status and channel.",
+  description: "List the workspace's NexusFlo24 marketing campaigns (Email / WhatsApp / SMS) with channel, status and schedule. Max 50 rows.",
   inputSchema: {
     workspace_id: z3.string().uuid().optional(),
-    limit: z3.number().int().min(1).max(100).optional()
+    status: z3.string().optional(),
+    limit: z3.number().int().optional()
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ workspace_id, limit }, ctx) => {
-    if (!ctx.isAuthenticated())
-      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    let q = client2(ctx).from("campaigns").select("id, name, type, status, created_at, updated_at").order("created_at", { ascending: false }).limit(limit ?? 25);
-    if (workspace_id) q = q.eq("workspace_id", workspace_id);
+  handler: async ({ workspace_id, status, limit }, ctx) => withGuard(ctx, { tool: "list_campaigns", group: "campaigns", workspaceId: workspace_id }, async ({ supabase, workspaceId }) => {
+    let q = supabase.from("campaigns").select("id, name, type, objective, status, scheduled_at, created_at, updated_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(clampLimit(limit));
+    if (status) q = q.eq("status", status);
     const { data, error } = await q;
-    if (error)
-      return { content: [{ type: "text", text: error.message }], isError: true };
-    return {
-      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
-      structuredContent: { campaigns: data ?? [] }
-    };
-  }
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return ok(JSON.stringify(data ?? []), { campaigns: data ?? [] });
+  })
 });
 
 // src/lib/mcp/tools/list-workspaces.ts
