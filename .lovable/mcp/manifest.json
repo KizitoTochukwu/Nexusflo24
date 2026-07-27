@@ -35,7 +35,7 @@
       {
         "name": "list_leads",
         "title": "List leads",
-        "description": "List the signed-in user's most recent leads in NexusFlo24 (name, email, phone, status, stage, score, source, tags, created_at). Optional workspace_id, status, and search filters.",
+        "description": "List the most recent NexusFlo24 leads for the signed-in user's workspace (name, email, phone, status, stage, score, source, tags, created_at). Optional workspace_id, status, and search filters. Max 50 rows.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -51,7 +51,7 @@
             },
             "status": {
               "type": "string",
-              "description": "Optional status filter (e.g. New, Contacted, Qualified)."
+              "description": "Optional status filter (e.g. New, Warm, Hot)."
             },
             "search": {
               "type": "string",
@@ -59,9 +59,7 @@
             },
             "limit": {
               "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "description": "Max rows to return (default 25)."
+              "description": "Max rows to return (default 25, max 50)."
             }
           },
           "additionalProperties": false,

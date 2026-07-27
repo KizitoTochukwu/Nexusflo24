@@ -6,151 +6,16 @@
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/tools/list-leads.ts
-import { createClient } from "npm:@supabase/supabase-js@^2.95.3";
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z } from "npm:zod@^3.25.76";
-function client(ctx) {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    }
-  );
-}
-var list_leads_default = defineTool({
-  name: "list_leads",
-  title: "List leads",
-  description: "List the signed-in user's most recent leads in NexusFlo24 (name, email, phone, status, stage, score, source, tags, created_at). Optional workspace_id, status, and search filters.",
-  inputSchema: {
-    workspace_id: z.string().uuid().optional().describe("Optional workspace to scope leads to."),
-    status: z.string().optional().describe("Optional status filter (e.g. New, Contacted, Qualified)."),
-    search: z.string().optional().describe("Optional case-insensitive match on name or email."),
-    limit: z.number().int().min(1).max(100).optional().describe("Max rows to return (default 25).")
-  },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ workspace_id, status, search, limit }, ctx) => {
-    if (!ctx.isAuthenticated())
-      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    let q = client(ctx).from("leads").select("id, full_name, email, phone, status, pipeline_stage, score, source, tags, created_at").order("created_at", { ascending: false }).limit(limit ?? 25);
-    if (workspace_id) q = q.eq("workspace_id", workspace_id);
-    if (status) q = q.eq("status", status);
-    if (search) q = q.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
-    const { data, error } = await q;
-    if (error)
-      return { content: [{ type: "text", text: error.message }], isError: true };
-    return {
-      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
-      structuredContent: { leads: data ?? [] }
-    };
-  }
-});
-
-// src/lib/mcp/tools/create-lead.ts
-import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.95.3";
-import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
-import { z as z2 } from "npm:zod@^3.25.76";
-function client2(ctx) {
-  return createClient2(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    }
-  );
-}
-var create_lead_default = defineTool2({
-  name: "create_lead",
-  title: "Create lead",
-  description: "Create a new CRM lead in NexusFlo24 for the signed-in user's workspace. Requires at least full_name or email. Optional notes, source, tags, status.",
-  inputSchema: {
-    workspace_id: z2.string().uuid().describe("Workspace to add the lead to."),
-    full_name: z2.string().optional(),
-    email: z2.string().email().optional(),
-    phone: z2.string().optional(),
-    source: z2.string().optional().describe("Where the lead came from (e.g. 'ChatGPT MCP')."),
-    status: z2.string().optional(),
-    notes: z2.string().optional(),
-    tags: z2.array(z2.string()).optional()
-  },
-  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-  handler: async (input, ctx) => {
-    if (!ctx.isAuthenticated())
-      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    if (!input.full_name && !input.email)
-      return {
-        content: [{ type: "text", text: "Provide at least full_name or email." }],
-        isError: true
-      };
-    const { data, error } = await client2(ctx).from("leads").insert({
-      user_id: ctx.getUserId(),
-      workspace_id: input.workspace_id,
-      full_name: input.full_name ?? null,
-      email: input.email ?? null,
-      phone: input.phone ?? null,
-      source: input.source ?? "MCP",
-      status: input.status ?? "New",
-      notes: input.notes ?? null,
-      tags: input.tags ?? null
-    }).select().single();
-    if (error)
-      return { content: [{ type: "text", text: error.message }], isError: true };
-    return {
-      content: [{ type: "text", text: `Lead created: ${data.id}` }],
-      structuredContent: { lead: data }
-    };
-  }
-});
-
-// src/lib/mcp/tools/list-campaigns.ts
-import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.95.3";
-import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
-import { z as z3 } from "npm:zod@^3.25.76";
-function client3(ctx) {
-  return createClient3(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false }
-    }
-  );
-}
-var list_campaigns_default = defineTool3({
-  name: "list_campaigns",
-  title: "List campaigns",
-  description: "List the signed-in user's marketing campaigns (Email / WhatsApp / SMS) in NexusFlo24 with status and channel.",
-  inputSchema: {
-    workspace_id: z3.string().uuid().optional(),
-    limit: z3.number().int().min(1).max(100).optional()
-  },
-  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ workspace_id, limit }, ctx) => {
-    if (!ctx.isAuthenticated())
-      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
-    let q = client3(ctx).from("campaigns").select("id, name, type, status, created_at, updated_at").order("created_at", { ascending: false }).limit(limit ?? 25);
-    if (workspace_id) q = q.eq("workspace_id", workspace_id);
-    const { data, error } = await q;
-    if (error)
-      return { content: [{ type: "text", text: error.message }], isError: true };
-    return {
-      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
-      structuredContent: { campaigns: data ?? [] }
-    };
-  }
-});
-
-// src/lib/mcp/tools/list-workspaces.ts
-import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/guard.ts
-import { createClient as createClient4 } from "npm:@supabase/supabase-js@^2.95.3";
+import { createClient } from "npm:@supabase/supabase-js@^2.95.3";
+var MAX_ROWS = 50;
 var RATE_LIMIT_PER_MINUTE = 60;
 var DEFAULT_ACCESS = "view";
 function userClient(ctx) {
-  return createClient4(
+  return createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_PUBLISHABLE_KEY,
     {
@@ -162,7 +27,7 @@ function userClient(ctx) {
 function adminClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return null;
-  return createClient4(process.env.SUPABASE_URL, key, {
+  return createClient(process.env.SUPABASE_URL, key, {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 }
@@ -171,6 +36,10 @@ function fail(text) {
 }
 function ok(text, structured) {
   return { content: [{ type: "text", text }], structuredContent: structured };
+}
+function clampLimit(limit) {
+  if (!limit || !Number.isFinite(limit) || limit < 1) return 25;
+  return Math.min(Math.floor(limit), MAX_ROWS);
 }
 async function audit(params) {
   const admin = adminClient();
@@ -301,7 +170,125 @@ async function withGuard(ctx, opts, run) {
   }
 }
 
+// src/lib/mcp/tools/list-leads.ts
+var list_leads_default = defineTool({
+  name: "list_leads",
+  title: "List leads",
+  description: "List the most recent NexusFlo24 leads for the signed-in user's workspace (name, email, phone, status, stage, score, source, tags, created_at). Optional workspace_id, status, and search filters. Max 50 rows.",
+  inputSchema: {
+    workspace_id: z.string().uuid().optional().describe("Optional workspace to scope leads to."),
+    status: z.string().optional().describe("Optional status filter (e.g. New, Warm, Hot)."),
+    search: z.string().optional().describe("Optional case-insensitive match on name or email."),
+    limit: z.number().int().optional().describe("Max rows to return (default 25, max 50).")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ workspace_id, status, search, limit }, ctx) => withGuard(ctx, { tool: "list_leads", group: "crm", workspaceId: workspace_id }, async ({ supabase, workspaceId }) => {
+    let q = supabase.from("leads").select("id, full_name, email, phone, status, pipeline_stage, score, source, tags, created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(clampLimit(limit));
+    if (status) q = q.eq("status", status);
+    if (search) q = q.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+    const { data, error } = await q;
+    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    return ok(JSON.stringify(data ?? []), { leads: data ?? [] });
+  })
+});
+
+// src/lib/mcp/tools/create-lead.ts
+import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.95.3";
+import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z2 } from "npm:zod@^3.25.76";
+function client(ctx) {
+  return createClient2(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_PUBLISHABLE_KEY,
+    {
+      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    }
+  );
+}
+var create_lead_default = defineTool2({
+  name: "create_lead",
+  title: "Create lead",
+  description: "Create a new CRM lead in NexusFlo24 for the signed-in user's workspace. Requires at least full_name or email. Optional notes, source, tags, status.",
+  inputSchema: {
+    workspace_id: z2.string().uuid().describe("Workspace to add the lead to."),
+    full_name: z2.string().optional(),
+    email: z2.string().email().optional(),
+    phone: z2.string().optional(),
+    source: z2.string().optional().describe("Where the lead came from (e.g. 'ChatGPT MCP')."),
+    status: z2.string().optional(),
+    notes: z2.string().optional(),
+    tags: z2.array(z2.string()).optional()
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  handler: async (input, ctx) => {
+    if (!ctx.isAuthenticated())
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    if (!input.full_name && !input.email)
+      return {
+        content: [{ type: "text", text: "Provide at least full_name or email." }],
+        isError: true
+      };
+    const { data, error } = await client(ctx).from("leads").insert({
+      user_id: ctx.getUserId(),
+      workspace_id: input.workspace_id,
+      full_name: input.full_name ?? null,
+      email: input.email ?? null,
+      phone: input.phone ?? null,
+      source: input.source ?? "MCP",
+      status: input.status ?? "New",
+      notes: input.notes ?? null,
+      tags: input.tags ?? null
+    }).select().single();
+    if (error)
+      return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: `Lead created: ${data.id}` }],
+      structuredContent: { lead: data }
+    };
+  }
+});
+
+// src/lib/mcp/tools/list-campaigns.ts
+import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.95.3";
+import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { z as z3 } from "npm:zod@^3.25.76";
+function client2(ctx) {
+  return createClient3(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_PUBLISHABLE_KEY,
+    {
+      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
+      auth: { persistSession: false, autoRefreshToken: false }
+    }
+  );
+}
+var list_campaigns_default = defineTool3({
+  name: "list_campaigns",
+  title: "List campaigns",
+  description: "List the signed-in user's marketing campaigns (Email / WhatsApp / SMS) in NexusFlo24 with status and channel.",
+  inputSchema: {
+    workspace_id: z3.string().uuid().optional(),
+    limit: z3.number().int().min(1).max(100).optional()
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ workspace_id, limit }, ctx) => {
+    if (!ctx.isAuthenticated())
+      return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
+    let q = client2(ctx).from("campaigns").select("id, name, type, status, created_at, updated_at").order("created_at", { ascending: false }).limit(limit ?? 25);
+    if (workspace_id) q = q.eq("workspace_id", workspace_id);
+    const { data, error } = await q;
+    if (error)
+      return { content: [{ type: "text", text: error.message }], isError: true };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data ?? []) }],
+      structuredContent: { campaigns: data ?? [] }
+    };
+  }
+});
+
 // src/lib/mcp/tools/list-workspaces.ts
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.0";
 var list_workspaces_default = defineTool4({
   name: "list_workspaces",
   title: "List workspaces",
