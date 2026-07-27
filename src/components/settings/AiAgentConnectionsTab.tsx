@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useAiAgentConnections } from "@/hooks/useAiAgentConnections";
+import McpPermissionsPanel from "./ai-agents/McpPermissionsPanel";
+import McpActivityLog from "./ai-agents/McpActivityLog";
 import {
   CAPABILITIES,
   CAPABILITY_CATEGORIES,
@@ -368,17 +370,18 @@ export default function AiAgentConnectionsTab({ workspaceId, workspaceName }: Pr
         </CardContent>
       </Card>
 
-      <McpPermissionsPanelLazy
-        loading={loading}
-        permissions={permissions}
-        canEdit={!!isAdmin}
-        onChange={async (g, patch) => {
-          const { error } = await savePermission(g, patch);
-          if (error) toast.error(error.message);
-        }}
-      />
+      {!loading && (
+        <McpPermissionsPanel
+          permissions={permissions}
+          canEdit={!!isAdmin}
+          onChange={async (g, patch) => {
+            const { error } = await savePermission(g, patch);
+            if (error) toast.error(error.message);
+          }}
+        />
+      )}
 
-      <ActivityLogLazy activity={activity} />
+      <McpActivityLog activity={activity} />
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <Terminal className="h-3.5 w-3.5" />
@@ -386,22 +389,4 @@ export default function AiAgentConnectionsTab({ workspaceId, workspaceName }: Pr
       </p>
     </div>
   );
-}
-
-import McpPermissionsPanel from "./ai-agents/McpPermissionsPanel";
-import McpActivityLog from "./ai-agents/McpActivityLog";
-import type { McpActivity, McpPermission } from "@/hooks/useAiAgentConnections";
-
-function McpPermissionsPanelLazy(props: {
-  loading: boolean;
-  permissions: McpPermission[];
-  canEdit: boolean;
-  onChange: (g: McpPermission["permission_group"], patch: Partial<McpPermission>) => void;
-}) {
-  if (props.loading) return null;
-  return <McpPermissionsPanel permissions={props.permissions} canEdit={props.canEdit} onChange={props.onChange} />;
-}
-
-function ActivityLogLazy({ activity }: { activity: McpActivity[] }) {
-  return <McpActivityLog activity={activity} />;
 }
