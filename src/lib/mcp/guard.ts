@@ -102,9 +102,9 @@ async function withinRateLimit(userId: string, workspaceId: string | null): Prom
       .select("id, request_count")
       .eq("user_id", userId)
       .eq("window_start", window)
-      .is("workspace_id", workspaceId === null ? null : undefined)
-      .eq(workspaceId ? "workspace_id" : "user_id", workspaceId ?? userId)
+      .limit(1)
       .maybeSingle();
+
 
     if (!data) {
       await admin
