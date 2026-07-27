@@ -37,12 +37,12 @@ serve(async (req) => {
 
   let userId: string | undefined;
   if (!isInternal) {
-    const authedClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: claims } = await authedClient.auth.getClaims();
-    userId = claims?.sub;
-    if (!userId) return json({ error: "Unauthorized" }, 401);
+    const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(bearer);
+    userId = claimsData?.claims?.sub as string | undefined;
+    if (claimsErr || !userId) {
+      console.error("[ai-sales-closer] auth failed:", claimsErr?.message ?? "no sub in token");
+      return json({ error: "Unauthorized", details: claimsErr?.message ?? "Invalid or expired session" }, 401);
+    }
   }
 
   try {

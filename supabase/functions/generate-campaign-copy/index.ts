@@ -20,15 +20,15 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const authedClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: claims } = await authedClient.auth.getClaims();
-  if (!claims?.sub) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  const authedClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const token = authHeader.replace("Bearer ", "").trim();
+  const { data: claimsData, error: claimsErr } = await authedClient.auth.getClaims(token);
+  if (claimsErr || !claimsData?.claims?.sub) {
+    console.error("[generate-campaign-copy] auth failed:", claimsErr?.message ?? "no sub in token");
+    return new Response(
+      JSON.stringify({ error: "Unauthorized", details: claimsErr?.message ?? "Invalid or expired session" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   try {

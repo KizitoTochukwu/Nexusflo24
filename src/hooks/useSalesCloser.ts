@@ -100,6 +100,30 @@ export function useUpsertSalesCloserSettings() {
   });
 }
 
+async function invokeSalesCloser<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("ai-sales-closer", { body });
+  if (error) {
+    // Surface the function's own JSON error instead of the generic
+    // "Edge Function returned a non-2xx status code".
+    let detail = "";
+    const ctx = (error as any)?.context;
+    try {
+      if (ctx && typeof ctx.json === "function") {
+        const payload = await ctx.json();
+        detail = [payload?.error, payload?.details].filter(Boolean).join(" — ");
+      }
+    } catch {
+      /* body already consumed or not JSON */
+    }
+    throw new Error(detail || error.message);
+  }
+  if ((data as any)?.error) {
+    const d = data as any;
+    throw new Error([d.error, d.details].filter(Boolean).join(" — "));
+  }
+  return data as T;
+}
+
 export function useProcessInbound() {
   const qc = useQueryClient();
   return useMutation({
@@ -108,13 +132,11 @@ export function useProcessInbound() {
       lead_id: string;
       message: string;
       channel: string;
-    }) => {
-      const { data, error } = await supabase.functions.invoke("ai-sales-closer", {
-        body: { action: "process_inbound", ...params },
-      });
-      if (error) throw error;
-      return data as { intent: string; confidence: number; reply: string; status: string };
-    },
+    }) =>
+      invokeSalesCloser<{ intent: string; confidence: number; reply: string; status: string }>({
+        action: "process_inbound",
+        ...params,
+      }),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["sales-conversations", vars.lead_id] });
       qc.invalidateQueries({ queryKey: ["leads"] });
@@ -130,13 +152,11 @@ export function useGenerateFollowUp() {
       workspace_id: string;
       lead_id: string;
       channel: string;
-    }) => {
-      const { data, error } = await supabase.functions.invoke("ai-sales-closer", {
-        body: { action: "generate_follow_up", ...params },
-      });
-      if (error) throw error;
-      return data as { reply: string; status: string };
-    },
+    }) =>
+      invokeSalesCloser<{ reply: string; status: string }>({
+        action: "generate_follow_up",
+        ...params,
+      }),
     onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ["sales-conversations", vars.lead_id] });
       toast.success("Follow-up generated");
