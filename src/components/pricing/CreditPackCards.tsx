@@ -76,10 +76,10 @@ export default function CreditPackCards() {
     <section className="bg-muted/40 py-12">
       <div className="container">
         <h2 className="mb-2 text-center text-2xl font-bold text-foreground">
-          Need More Credits?
+          Top Up Your Communication Wallet
         </h2>
         <p className="mx-auto mb-6 max-w-md text-center text-foreground/70">
-          Purchase additional credit packs anytime — no subscription change required.
+          Your plan includes a monthly email, WhatsApp and SMS allowance. Recharge anytime with credit packs — no subscription change required.
         </p>
 
         <div className="mx-auto grid max-w-3xl gap-5 sm:grid-cols-3">
