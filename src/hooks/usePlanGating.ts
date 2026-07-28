@@ -1,22 +1,17 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useAdminRole";
-import { getPlanTier, getPlanLimits, PLAN_LIMITS, type PlanTier, type PlanLimits } from "@/lib/billing/planLimits";
+import { getPlanTier, getPlanLimits, PLAN_LIMITS, type PlanTier, type PlanLimits, type CountableLimit } from "@/lib/billing/planLimits";
 
 const ADMIN_LIMITS: PlanLimits = {
-  maxLeads: Infinity,
+  ...PLAN_LIMITS.enterprise,
+  maxForms: Infinity,
   maxFunnels: Infinity,
+  maxBookingPages: Infinity,
+  maxLeads: Infinity,
   maxCampaigns: Infinity,
-  whatsappAutomation: true,
-  smsAutomation: true,
-  aiCopyUnlimited: true,
+  maxAutomations: Infinity,
   aiCopyDailyLimit: Infinity,
-  behaviourTriggeredAutomation: true,
-  advancedAnalytics: true,
-  multiWorkspace: true,
-  whiteLabelBranding: true,
-  teamInvites: true,
-  apiAccess: true,
-  watermarkedExports: false,
+  maxSeats: Infinity,
   monthlyCredits: { email: Infinity, sms: Infinity, whatsapp: Infinity },
 };
 
@@ -38,7 +33,7 @@ export function usePlanGating() {
       isAdmin: true,
       isBillingWarning: false,
       canAccess: (_feature: keyof PlanLimits) => true,
-      checkLimit: (_feature: "maxLeads" | "maxFunnels" | "maxCampaigns", _currentCount: number) => ({
+      checkLimit: (_feature: CountableLimit, _currentCount: number) => ({
         allowed: true,
         limit: Infinity,
         remaining: Infinity,
@@ -69,7 +64,7 @@ export function usePlanGating() {
     return false;
   }
 
-  function checkLimit(feature: "maxLeads" | "maxFunnels" | "maxCampaigns", currentCount: number) {
+  function checkLimit(feature: CountableLimit, currentCount: number) {
     const limit = effectiveLimits[feature];
     const remaining = Math.max(0, limit - currentCount);
     return { allowed: currentCount < limit, limit, remaining };

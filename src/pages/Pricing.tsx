@@ -45,103 +45,59 @@ const tiers: PricingTier[] = [
   {
     name: "Starter",
     key: "starter",
-    subtitle: "For solopreneurs & side hustlers just getting started",
+    subtitle: "For beginners getting their first lead system live",
     trialNote: "14-day free trial — no card required",
     highlight: false,
     featureGroups: [
-      {
-        title: "Core Platform",
-        features: [
-          "Up to 250 contacts",
-          "1 funnel page",
-          "2 active campaigns",
-          "Basic CRM & pipeline",
-        ],
-      },
-      { title: "AI-Powered", features: ["10 AI copy generations/day"] },
-      { title: "Channels", features: ["Email only"] },
-      { title: "Monthly Credits", features: ["500 email credits"] },
+      { title: "Capture", features: ["3 lead forms", "1 funnel page", "1 booking page"] },
+      { title: "CRM & Pipeline", features: ["1,000 contacts", "Full CRM & pipeline", "Lead scoring & activity timeline"] },
+      { title: "AI & Automation", features: ["15 AI copy generations/day", "2 active automations", "3 active campaigns"] },
+      { title: "Communication Wallet", features: ["1,000 email credits/mo", "100 WhatsApp credits/mo", "Top up anytime"] },
+      { title: "Insights", features: ["Core dashboard & lead reporting"] },
+      { title: "Team", features: ["1 seat"] },
     ],
   },
   {
     name: "Plus",
     key: "plus",
-    subtitle: "For growing businesses scaling their outreach",
+    subtitle: "The clear upgrade for growing businesses and small teams",
     highlight: false,
     featureGroups: [
-      {
-        title: "Core Platform",
-        features: [
-          "Up to 2,500 contacts",
-          "3 funnel pages",
-          "10 active campaigns",
-          "Full CRM & pipeline",
-          "Nurture Flow Builder",
-        ],
-      },
-      {
-        title: "AI-Powered",
-        features: ["50 AI copy generations/day", "Behaviour-triggered automations"],
-      },
-      { title: "Channels", features: ["Email + WhatsApp"] },
-      { title: "Monthly Credits", features: ["2,500 email", "100 SMS", "100 WhatsApp"] },
+      { title: "Capture", features: ["15 lead forms", "5 funnel pages", "3 booking pages"] },
+      { title: "CRM & Pipeline", features: ["5,000 contacts", "Smart lists & segments", "Lead routing rules"] },
+      { title: "AI & Automation", features: ["100 AI copy generations/day", "10 active automations", "15 active campaigns", "Behaviour-triggered automations", "AI lead qualification"] },
+      { title: "Communication Wallet", features: ["5,000 email credits/mo", "500 WhatsApp credits/mo", "250 SMS credits/mo"] },
+      { title: "Insights", features: ["Campaign & funnel reporting"] },
+      { title: "Team", features: ["3 seats"] },
     ],
   },
   {
     name: "Pro",
     key: "pro",
-    subtitle: "For serious marketers who want everything",
+    subtitle: "Best value — the full stack for serious marketers",
     highlight: true,
     badge: "Most Popular",
     featureGroups: [
-      {
-        title: "Core Platform",
-        features: [
-          "Unlimited contacts",
-          "10 funnel pages",
-          "Unlimited campaigns",
-          "Full CRM & pipeline",
-          "Nurture Flow Builder",
-          "Team invites & collaboration",
-        ],
-      },
-      {
-        title: "AI-Powered",
-        features: [
-          "Unlimited AI copy generation",
-          "Behaviour-triggered automations",
-          "Advanced analytics & reporting",
-        ],
-      },
-      { title: "Channels", features: ["Email + WhatsApp + SMS"] },
-      { title: "Monthly Credits", features: ["10,000 email", "500 SMS", "500 WhatsApp"] },
+      { title: "Capture", features: ["50 lead forms", "20 funnel pages", "10 booking pages"] },
+      { title: "CRM & Pipeline", features: ["25,000 contacts", "Smart lists & segments", "Lead routing rules"] },
+      { title: "AI & Automation", features: ["500 AI copy generations/day", "50 active automations", "60 active campaigns", "Full automation builder", "AI Sales Closer & follow-ups"] },
+      { title: "Communication Wallet", features: ["20,000 email credits/mo", "2,000 WhatsApp credits/mo", "1,000 SMS credits/mo"] },
+      { title: "Insights", features: ["Advanced analytics & cohorts", "Data exports"] },
+      { title: "Team & Advanced", features: ["10 seats", "AI Agent Connections (MCP)"] },
     ],
   },
   {
     name: "Enterprise",
     key: "enterprise",
-    subtitle: "For agencies & teams managing multiple clients",
+    subtitle: "Sales-led, for agencies & high-volume senders",
     highlight: false,
     featureGroups: [
-      {
-        title: "Core Platform",
-        features: ["Everything in Pro", "Unlimited funnels", "Multi-client workspaces"],
-      },
-      {
-        title: "AI-Powered",
-        features: ["Unlimited AI across all tools", "Priority AI processing"],
-      },
-      { title: "Channels", features: ["All channels + priority delivery"] },
-      { title: "Monthly Credits", features: ["50,000 email", "2,000 SMS", "2,000 WhatsApp"] },
-      {
-        title: "Advanced",
-        features: [
-          "White-label dashboard",
-          "Custom branding",
-          "API access",
-          "Dedicated account manager",
-        ],
-      },
+      { title: "Capture", features: ["250 lead forms", "100 funnel pages", "50 booking pages"] },
+      { title: "CRM & Pipeline", features: ["100,000 contacts", "Custom volumes available"] },
+      { title: "AI & Automation", features: ["2,000 AI copy generations/day", "250 active automations", "300 active campaigns", "Priority AI processing"] },
+      { title: "Communication Wallet", features: ["75,000 email credits/mo", "6,000 WhatsApp credits/mo", "4,000 SMS credits/mo", "Custom top-up agreements"] },
+      { title: "Insights", features: ["Advanced analytics & exports", "Multi-client reporting"] },
+      { title: "Team & Advanced", features: ["50 seats", "Multi-client workspaces", "White-label dashboard & branding", "API access", "Dedicated account manager"] },
     ],
   },
 ];
@@ -149,23 +105,30 @@ const tiers: PricingTier[] = [
 const fmtCredits = (n: number) => (n === 0 ? "—" : n.toLocaleString());
 
 const comparisonFeatures = [
-  { name: "Contacts", starter: "250", plus: "2,500", pro: "Unlimited", enterprise: "Unlimited" },
-  { name: "Funnels", starter: "1", plus: "3", pro: "10", enterprise: "Unlimited" },
-  { name: "Campaigns", starter: "2", plus: "10", pro: "Unlimited", enterprise: "Unlimited" },
-  { name: "Email Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.email), plus: fmtCredits(PLAN_CREDITS.plus.email), pro: fmtCredits(PLAN_CREDITS.pro.email), enterprise: fmtCredits(PLAN_CREDITS.enterprise.email) },
-  { name: "SMS Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.sms), plus: fmtCredits(PLAN_CREDITS.plus.sms), pro: fmtCredits(PLAN_CREDITS.pro.sms), enterprise: fmtCredits(PLAN_CREDITS.enterprise.sms) },
-  { name: "WhatsApp Credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.whatsapp), plus: fmtCredits(PLAN_CREDITS.plus.whatsapp), pro: fmtCredits(PLAN_CREDITS.pro.whatsapp), enterprise: fmtCredits(PLAN_CREDITS.enterprise.whatsapp) },
+  { name: "Lead forms", starter: "3", plus: "15", pro: "50", enterprise: "250" },
+  { name: "Funnel pages", starter: "1", plus: "5", pro: "20", enterprise: "100" },
+  { name: "Booking pages", starter: "1", plus: "3", pro: "10", enterprise: "50" },
+  { name: "Contacts", starter: "1,000", plus: "5,000", pro: "25,000", enterprise: "100,000" },
+  { name: "Smart lists & segments", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
+  { name: "Active campaigns", starter: "3", plus: "15", pro: "60", enterprise: "300" },
+  { name: "Active automations", starter: "2", plus: "10", pro: "50", enterprise: "250" },
+  { name: "AI copy generations", starter: "15/day", plus: "100/day", pro: "500/day", enterprise: "2,000/day" },
+  { name: "Behaviour triggers", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
+  { name: "AI lead qualification", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
+  { name: "AI Sales Closer", starter: "—", plus: "—", pro: "✓", enterprise: "✓" },
   { name: "Email", starter: "✓", plus: "✓", pro: "✓", enterprise: "✓" },
-  { name: "WhatsApp", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
-  { name: "SMS", starter: "—", plus: "—", pro: "✓", enterprise: "✓" },
-  { name: "AI Copywriter", starter: "10/day", plus: "50/day", pro: "Unlimited", enterprise: "Unlimited" },
-  { name: "Nurture Flows", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
-  { name: "Behaviour Triggers", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
-  { name: "Analytics", starter: "Basic", plus: "Basic", pro: "Advanced", enterprise: "Advanced+" },
-  { name: "Team Invites", starter: "—", plus: "—", pro: "✓", enterprise: "✓" },
-  { name: "Multi-Workspace", starter: "—", plus: "—", pro: "—", enterprise: "✓" },
-  { name: "White-Label", starter: "—", plus: "—", pro: "—", enterprise: "✓" },
-  { name: "API Access", starter: "—", plus: "—", pro: "—", enterprise: "✓" },
+  { name: "WhatsApp", starter: "✓", plus: "✓", pro: "✓", enterprise: "✓" },
+  { name: "SMS", starter: "—", plus: "✓", pro: "✓", enterprise: "✓" },
+  { name: "Wallet: email credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.email), plus: fmtCredits(PLAN_CREDITS.plus.email), pro: fmtCredits(PLAN_CREDITS.pro.email), enterprise: fmtCredits(PLAN_CREDITS.enterprise.email) },
+  { name: "Wallet: WhatsApp credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.whatsapp), plus: fmtCredits(PLAN_CREDITS.plus.whatsapp), pro: fmtCredits(PLAN_CREDITS.pro.whatsapp), enterprise: fmtCredits(PLAN_CREDITS.enterprise.whatsapp) },
+  { name: "Wallet: SMS credits/mo", starter: fmtCredits(PLAN_CREDITS.starter.sms), plus: fmtCredits(PLAN_CREDITS.plus.sms), pro: fmtCredits(PLAN_CREDITS.pro.sms), enterprise: fmtCredits(PLAN_CREDITS.enterprise.sms) },
+  { name: "Wallet top-ups", starter: "✓", plus: "✓", pro: "✓", enterprise: "Custom" },
+  { name: "Analytics", starter: "Core", plus: "Campaign & funnel", pro: "Advanced", enterprise: "Advanced + multi-client" },
+  { name: "Seats", starter: "1", plus: "3", pro: "10", enterprise: "50" },
+  { name: "AI Agent Connections (MCP)", starter: "—", plus: "—", pro: "✓", enterprise: "✓" },
+  { name: "Multi-client workspaces", starter: "—", plus: "—", pro: "—", enterprise: "✓" },
+  { name: "White-label & branding", starter: "—", plus: "—", pro: "—", enterprise: "✓" },
+  { name: "API access", starter: "—", plus: "—", pro: "—", enterprise: "✓" },
 ];
 
 const Pricing = () => {
@@ -217,7 +180,7 @@ const Pricing = () => {
     <Layout>
       <Seo
         title="Pricing – Plans for Creators, Startups & Agencies"
-        description="Simple monthly or yearly pricing. Start free for 14 days, then choose Starter, Plus, Pro or Enterprise. Includes credits for email, SMS and WhatsApp."
+        description="Simple monthly or yearly pricing. Start free for 14 days, then choose Starter, Plus, Pro or Enterprise. Every plan includes a Communication Wallet for email, WhatsApp and SMS."
       />
       {/* Hero */}
       <section className="bg-hero py-20 text-center">
@@ -341,14 +304,18 @@ const Pricing = () => {
                     }`}
                     variant={tier.highlight ? "default" : "outline"}
                     disabled={loadingPlan === tier.key}
-                    onClick={() => handleSubscribe(tier.key)}
+                    onClick={() =>
+                      tier.key === "enterprise"
+                        ? navigate("/contact?plan=enterprise")
+                        : handleSubscribe(tier.key)
+                    }
                   >
                     {loadingPlan === tier.key ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…
                       </>
                     ) : (
-                      "Buy Now"
+                      tier.key === "enterprise" ? "Talk to Sales" : "Buy Now"
                     )}
                   </Button>
                 </div>

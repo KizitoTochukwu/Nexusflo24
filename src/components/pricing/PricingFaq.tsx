@@ -12,6 +12,16 @@ const faqs = [
       "Yes! The Starter plan includes a 14-day free trial — no credit card required. You can explore the platform risk-free before committing.",
   },
   {
+    question: "How does the Communication Wallet work?",
+    answer:
+      "Every plan includes a monthly allowance of email, WhatsApp and SMS credits. One credit equals one message sent on that channel. Allowances reset each billing cycle, and you can recharge the wallet at any time with credit packs — no plan change needed.",
+  },
+  {
+    question: "What happens if I run out of credits?",
+    answer:
+      "Sending on that channel pauses until you top up or your allowance resets. We alert you in the dashboard when your balance drops below 20 credits so you can recharge before anything stops.",
+  },
+  {
     question: "Can I switch plans later?",
     answer:
       "Absolutely. You can upgrade or downgrade your plan at any time from your dashboard settings. Changes take effect at the start of your next billing cycle.",
@@ -19,7 +29,7 @@ const faqs = [
   {
     question: "What happens when I hit my contact limit?",
     answer:
-      "You'll receive a notification as you approach your limit. You can upgrade your plan to unlock more contacts, or archive inactive contacts to free up space.",
+      "You'll receive a notification as you approach your limit. You can upgrade your plan for a higher contact allowance, or archive inactive contacts to free up space.",
   },
   {
     question: "Do yearly plans really save 20%?",
