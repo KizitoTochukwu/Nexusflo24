@@ -1,43 +1,37 @@
+# AI Workflow Generator
 
-# Repackage NexusFlo24 Plans
+Let users describe an automation in plain English and get a ready-to-edit visual workflow on the canvas — reviewable, editable, and only published when they choose.
 
-Prices stay as they are (Starter / Plus / Pro / Enterprise at the current Stripe price IDs). What changes is **how features are grouped, what each tier includes, and the enforced limits**.
+## What the user sees
 
-## Packaging principles
+1. On **Dashboard → Workflows**, a new "Generate with AI" card/button sits next to "Create workflow" and the template gallery.
+2. Clicking it opens a dialog:
+   - A large prompt box with the placeholder example ("When a new insurance lead submits the assessment form, assign the lead to the insurance sales team, send a confirmation email, wait one day, create a follow-up task, and notify the sales manager if the lead has not been contacted.")
+   - A few one-click starter prompts (lead follow-up, booking reminder, re-engagement, hot-lead alert).
+   - Generate button with a loading state.
+3. After generation, a **review step** inside the dialog shows the proposed workflow: name, description, detected enrollment trigger, and a readable step-by-step list (with delays, branches and any fields the AI could not fill flagged as "Needs setup").
+4. User can regenerate with edits to the prompt, or "Open in builder" — this creates the workflow as a **draft** and navigates to the existing Workflow Editor, where every node can be edited normally. Nothing is ever auto-activated; publishing stays the existing Activate action.
 
-- Every plan is described using the same six groups, in the same order, so the ladder is easy to scan:
-  1. **Capture** — forms, funnel pages, booking pages
-  2. **CRM & Pipeline** — contacts, pipeline, smart lists, lead scoring
-  3. **AI & Automation** — AI copy, nurture flows, behaviour triggers, AI qualification
-  4. **Communication Wallet** — monthly email / WhatsApp / SMS credits, top-up packs
-  5. **Insights** — analytics depth, exports
-  6. **Team & Advanced** — seats, workspaces, white-label, API
-- **No "unlimited" anywhere.** Every usage figure becomes a real number. Enterprise uses "Custom" plus a sales conversation, not "unlimited".
-- Messaging is presented as one **Communication Wallet**: a monthly credit allowance per channel that can be topped up anytime with credit packs (existing packs stay).
-- Starter is made genuinely usable (real CRM, booking, forms, automation basics). Pro is the best-value anchor and keeps "Most Popular". Plus is positioned as the clear step up for growing teams. Enterprise becomes sales-led.
+## Access control
 
-## Proposed tier contents
+- Visible and usable only for **Pro and Enterprise** plans and **admins** (admin already bypasses all gating via `usePlanGating`).
+- Starter/Plus users see the entry point wrapped in the existing `LockedFeature` treatment with an upgrade prompt, matching how other gated features look.
+- The backend enforces the same rule, so the feature cannot be used by calling the function directly.
 
-**Starter — for beginners getting their first system live**
-Capture: 3 forms, 1 funnel page, 1 booking page · CRM: 1,000 contacts, full pipeline & lead scoring · AI & Automation: 15 AI generations/day, 2 active automations, 3 campaigns · Wallet: 1,000 email + 100 WhatsApp credits/mo · Insights: core dashboard · Team: 1 seat. Keeps the 14-day trial note.
+## Technical notes
 
-**Plus — for growing businesses and small teams**
-Capture: 15 forms, 5 funnel pages, 3 booking pages · CRM: 5,000 contacts + smart lists · AI & Automation: 100 AI generations/day, 10 automations, 15 campaigns, behaviour triggers, AI lead qualification · Wallet: 5,000 email + 500 WhatsApp + 250 SMS/mo · Insights: campaign & funnel reporting · Team: 3 seats.
+**Plan flag**
+- Add `aiWorkflowGenerator: boolean` to `PlanLimits` in `src/lib/billing/planLimits.ts`: false for starter/plus, true for pro/enterprise (admin override already grants everything).
 
-**Pro — most popular, best value**
-Capture: 50 forms, 20 funnel pages, 10 booking pages · CRM: 25,000 contacts · AI & Automation: 500 AI generations/day, 50 automations, 60 campaigns, full automation builder, AI Sales Closer · Wallet: 20,000 email + 2,000 WhatsApp + 1,000 SMS/mo · Insights: advanced analytics, cohort & attribution, exports · Team: 10 seats, AI Agent Connections (MCP).
+**Edge function `generate-workflow`**
+- New function modelled on `generate-funnel`: takes `{ prompt, workspace_id }`, verifies the bearer token with `supabase.auth.getClaims(bearer)`, checks workspace membership, then checks admin role or an active pro/enterprise subscription; returns 403 otherwise.
+- Calls Lovable AI Gateway (`google/gemini-3.5-flash`) with a system prompt that embeds the **exact allowed vocabulary** from `src/lib/workflows/types.ts` and `nodeLibrary.ts` (trigger/action/condition subTypes) plus the enrollment-trigger catalog fields, and instructs JSON-only output matching `WorkflowCanvasJSON` plus `name`, `description`, `enrollment` (object type, method, source, event, config, filter_groups).
+- Response is normalised server-side: strip code fences, drop unknown subTypes, ensure exactly one trigger node, auto-lay out node positions on a vertical grid (branch offsets for condition yes/no), rebuild edge ids, and guarantee every edge references existing nodes. Any node missing required config keeps a `needsSetup: true` marker in its data so the review list and canvas can flag it.
 
-**Enterprise — sales-led, for agencies and high-volume senders**
-Everything in Pro with custom capture/CRM volumes, 100,000 contacts baseline, multi-client workspaces, white-label dashboard, API access, priority delivery, dedicated account manager. Wallet: 75,000 email + 6,000 WhatsApp + 4,000 SMS/mo with custom top-ups. CTA becomes **Talk to Sales** (routes to /contact) instead of Buy Now.
+**Frontend**
+- `src/components/workflows/AiWorkflowGeneratorDialog.tsx` — prompt step + review step, calls the function via `supabase.functions.invoke`, surfaces real JSON error messages in the toast.
+- `src/lib/workflows/aiWorkflowNormalize.ts` — shared client-side type guard/normaliser reused for the review summary, validated against `src/lib/workflows/validation.ts`.
+- On confirm, use the existing `useCreateWorkflow` mutation with `status: "draft"` and the generated `canvas_json`, persist the enrollment trigger columns, then navigate to `/dashboard/:workspaceId/workflows/:id`.
+- Wire the entry point in `src/pages/dashboard/DashboardWorkflows.tsx` behind the plan check.
 
-## Technical changes
-
-- `src/lib/billing/planLimits.ts` — replace all `Infinity` values with the concrete numbers above; add fields the new grouping needs (`maxForms`, `maxBookingPages`, `maxAutomations`, `maxSeats`, `aiQualification`, `aiSalesCloser`, `mcpConnections`) and drop `aiCopyUnlimited` in favour of the daily limit only.
-- `src/hooks/usePlanGating.ts` — update `ADMIN_LIMITS` to the new shape (admins keep bypass), and widen `checkLimit` to accept the new countable keys.
-- `src/lib/stripe/creditPacks.ts` — update `PLAN_CREDITS` to the new wallet allowances so the pricing table and wallet UI stay in sync.
-- `src/pages/Pricing.tsx` — rewrite `tiers` with the six-group structure, rewrite `comparisonFeatures` to match (no "Unlimited" cells), and make the Enterprise CTA sales-led.
-- `src/components/pricing/CreditPackCards.tsx` — reframe the section heading as "Top up your Communication Wallet" (copy only, same checkout).
-- Check the consumers of the changed limits (`useLeads`, `useFunnels`, `useCampaigns`, `UsageCreditsTab`, `LockedFeature` call sites) and update any that assumed `Infinity` or the removed `aiCopyUnlimited` flag.
-- Update `PricingFaq` copy for the wallet model, and refresh the pricing memory file.
-
-No database or Stripe changes are required; existing subscriptions keep their plan key and simply resolve to the new limits.
+**Out of scope**: no changes to the execution engine, no new node types, no auto-activation.
