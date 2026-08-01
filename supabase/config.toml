@@ -105,3 +105,5 @@ project_id = "stuaikfyuwcjmchcvfie"
     verify_jwt = false
   [functions.twilio-whatsapp-status]
     verify_jwt = false
+  [functions.generate-workflow]
+    verify_jwt = false
