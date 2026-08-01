@@ -17,6 +17,7 @@ export interface PlanLimits {
   whatsappAutomation: boolean;
   smsAutomation: boolean;
   behaviourTriggeredAutomation: boolean;
+  aiWorkflowGenerator: boolean;
   // Insights
   advancedAnalytics: boolean;
   watermarkedExports: boolean;
@@ -46,6 +47,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     whatsappAutomation: true,
     smsAutomation: false,
     behaviourTriggeredAutomation: false,
+    aiWorkflowGenerator: false,
     advancedAnalytics: false,
     watermarkedExports: true,
     maxSeats: 1,
@@ -70,6 +72,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     whatsappAutomation: true,
     smsAutomation: true,
     behaviourTriggeredAutomation: true,
+    aiWorkflowGenerator: false,
     advancedAnalytics: false,
     watermarkedExports: false,
     maxSeats: 3,
@@ -94,6 +97,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     whatsappAutomation: true,
     smsAutomation: true,
     behaviourTriggeredAutomation: true,
+    aiWorkflowGenerator: true,
     advancedAnalytics: true,
     watermarkedExports: false,
     maxSeats: 10,
@@ -118,6 +122,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     whatsappAutomation: true,
     smsAutomation: true,
     behaviourTriggeredAutomation: true,
+    aiWorkflowGenerator: true,
     advancedAnalytics: true,
     watermarkedExports: false,
     maxSeats: 50,

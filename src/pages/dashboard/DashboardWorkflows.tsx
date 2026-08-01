@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Workflow as WorkflowIcon, Sparkles, Play, Pause, Archive, Trash2, MoreVertical, Loader2 } from "lucide-react";
+import { Plus, Workflow as WorkflowIcon, Sparkles, Play, Pause, Archive, Trash2, MoreVertical, Loader2, Wand2 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,9 @@ import { useWorkflows, useWorkflowTemplates, useCreateWorkflow, useUpdateWorkflo
 import { TEMPLATE_SEEDS } from "@/lib/workflows/templateSeeds";
 import { toast } from "@/hooks/use-toast";
 import type { Workflow, WorkflowStatus } from "@/lib/workflows/types";
+import { usePlanGating } from "@/hooks/usePlanGating";
+import LockedFeature from "@/components/billing/LockedFeature";
+import AiWorkflowGeneratorDialog from "@/components/workflows/AiWorkflowGeneratorDialog";
 
 const STATUS_COLOR: Record<WorkflowStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -34,6 +37,9 @@ export default function DashboardWorkflows() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("my");
   const [pendingDelete, setPendingDelete] = useState<Workflow | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  const { canAccess } = usePlanGating();
+  const canUseAiGenerator = canAccess("aiWorkflowGenerator");
 
   const { data: workflows = [], isLoading } = useWorkflows(workspaceId);
   const { data: dbTemplates = [] } = useWorkflowTemplates();
@@ -96,6 +102,11 @@ export default function DashboardWorkflows() {
             <Button variant="outline" onClick={() => setTab("templates")}>
               <Sparkles className="mr-2 h-4 w-4" /> Browse templates
             </Button>
+            <LockedFeature locked={!canUseAiGenerator} featureName="the AI Workflow Generator" requiredPlan="pro">
+              <Button variant="outline" className="border-accent/50 text-accent hover:bg-accent/10" onClick={() => setAiOpen(true)}>
+                <Wand2 className="mr-2 h-4 w-4" /> Generate with AI
+              </Button>
+            </LockedFeature>
             <Button onClick={handleNewBlank} disabled={create.isPending}>
               <Plus className="mr-2 h-4 w-4" /> New workflow
             </Button>
@@ -196,6 +207,8 @@ export default function DashboardWorkflows() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AiWorkflowGeneratorDialog open={aiOpen} onOpenChange={setAiOpen} />
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && !remove.isPending && setPendingDelete(null)}>
         <AlertDialogContent className="border-border/60 shadow-2xl sm:max-w-md">
