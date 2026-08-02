@@ -313,6 +313,9 @@ const DashboardAutomations = () => {
         open={drawerOpen}
         onClose={closeDrawer}
       />
+
+      <AiWorkflowGeneratorDialog open={aiOpen} onOpenChange={setAiOpen} />
+
     </DashboardLayout>
   );
 };
