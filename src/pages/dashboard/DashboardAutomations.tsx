@@ -22,7 +22,7 @@ import {
 import { getDefaultExitCriteria } from "@/lib/automations/exitCriteria";
 import CreateAutomationDialog from "@/components/automations/CreateAutomationDialog";
 import AutomationDetailsDrawer from "@/components/automations/AutomationDetailsDrawer";
-import AiWorkflowGeneratorDialog from "@/components/workflows/AiWorkflowGeneratorDialog";
+import AiAutomationGeneratorDialog from "@/components/automations/AiAutomationGeneratorDialog";
 import LockedFeature from "@/components/billing/LockedFeature";
 import { usePlanGating } from "@/hooks/usePlanGating";
 import { format } from "date-fns";
