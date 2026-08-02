@@ -50,6 +50,9 @@ const DashboardAutomations = () => {
     setSearchParams(next, { replace: true });
   };
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const { canAccess } = usePlanGating();
+
 
   // Count nurture automations missing exit criteria — for the backfill banner.
   const missingExitCount = useMemo(() => {
