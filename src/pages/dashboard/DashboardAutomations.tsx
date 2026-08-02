@@ -314,7 +314,15 @@ const DashboardAutomations = () => {
         onClose={closeDrawer}
       />
 
-      <AiWorkflowGeneratorDialog open={aiOpen} onOpenChange={setAiOpen} />
+      <AiAutomationGeneratorDialog
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        onCreated={(id) => {
+          const next = new URLSearchParams(searchParams);
+          next.set("edit", id);
+          setSearchParams(next, { replace: false });
+        }}
+      />
 
     </DashboardLayout>
   );
