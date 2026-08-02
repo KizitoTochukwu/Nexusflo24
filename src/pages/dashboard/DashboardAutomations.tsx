@@ -126,12 +126,22 @@ const DashboardAutomations = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Automations</h1>
           <p className="mt-1 text-sm text-muted-foreground">Build trigger-based multi-step workflows.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <LockedFeature
+            locked={!canAccess("aiWorkflowGenerator")}
+            featureName="AI Workflow Generator"
+            requiredPlan="pro"
+          >
+            <Button onClick={() => setAiOpen(true)} className="w-full gap-1.5 sm:w-auto">
+              <Sparkles className="h-4 w-4" />
+              Generate with AI
+            </Button>
+          </LockedFeature>
           {!hasMetaLeadAdTemplate && (
             <Button variant="outline" onClick={seedMetaLeadAd} disabled={createAutomation.isPending} className="gap-1.5">
               <Facebook className="h-4 w-4" />
@@ -147,6 +157,7 @@ const DashboardAutomations = () => {
           <CreateAutomationDialog />
         </div>
       </div>
+
 
 
       {/* Backfill banner — surfaces legacy nurture automations missing exit criteria */}
