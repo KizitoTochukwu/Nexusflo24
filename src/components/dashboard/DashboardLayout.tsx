@@ -54,14 +54,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
-  { icon: Contact2, label: "Contacts", to: `/dashboard/${workspaceId}/crm/contacts` },
-  { icon: Building2, label: "Companies", to: `/dashboard/${workspaceId}/crm/companies` },
-  { icon: Users, label: "Leads", to: `/dashboard/${workspaceId}/leads` },
-  { icon: Handshake, label: "Deals", to: `/dashboard/${workspaceId}/crm/deals` },
-  { icon: ListChecks, label: "Tasks", to: `/dashboard/${workspaceId}/crm/tasks` },
-  { icon: FileText, label: "Import & Export", to: `/dashboard/${workspaceId}/crm/import-export` },
-  { icon: PieChart, label: "CRM Insights", to: `/dashboard/${workspaceId}/crm/insights` },
-  { icon: Settings2, label: "CRM Settings", to: `/dashboard/${workspaceId}/crm/settings` },
+  { icon: Contact2, label: "CRM", to: `/dashboard/${workspaceId}/crm/contacts` },
   { icon: FormInput, label: "Forms", to: `/dashboard/${workspaceId}/forms` },
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },

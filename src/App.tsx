@@ -27,6 +27,11 @@ import DashboardCrmSettings from "./pages/dashboard/crm/DashboardCrmSettings";
 import DashboardCrmInsights from "./pages/dashboard/crm/DashboardCrmInsights";
 import CompanyProfile from "./pages/dashboard/crm/CompanyProfile";
 import ContactProfile from "./pages/dashboard/crm/ContactProfile";
+import DashboardPipelines from "./pages/dashboard/crm/DashboardPipelines";
+import DashboardCrmFields from "./pages/dashboard/crm/DashboardCrmFields";
+import DashboardCrmTags from "./pages/dashboard/crm/DashboardCrmTags";
+import DashboardLeadScoring from "./pages/dashboard/crm/DashboardLeadScoring";
+import CrmWorkspaceLayout from "./components/crm/CrmWorkspaceLayout";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
 import DashboardAutomations from "./pages/dashboard/DashboardAutomations";
 import DashboardFunnels from "./pages/dashboard/DashboardFunnels";
@@ -159,17 +164,23 @@ const App = () => (
               {/* Workspace-scoped dashboard routes */}
               <Route path="/dashboard/:workspaceId" element={<WorkspaceGuard />}>
                 <Route path="overview" element={<Dashboard />} />
-                <Route path="leads" element={<DashboardLeads />} />
                 <Route path="crm" element={<Navigate to="contacts" replace />} />
-                <Route path="crm/contacts" element={<DashboardContacts />} />
-                <Route path="crm/contacts/:contactId" element={<ContactProfile />} />
-                <Route path="crm/companies" element={<DashboardCompanies />} />
-                <Route path="crm/companies/:companyId" element={<CompanyProfile />} />
-                <Route path="crm/deals" element={<DashboardDeals />} />
-                <Route path="crm/tasks" element={<DashboardTasks />} />
-                <Route path="crm/import-export" element={<DashboardImportExport />} />
-                <Route path="crm/insights" element={<DashboardCrmInsights />} />
-                <Route path="crm/settings" element={<DashboardCrmSettings />} />
+                <Route element={<CrmWorkspaceLayout />}>
+                  <Route path="leads" element={<DashboardLeads />} />
+                  <Route path="crm/contacts" element={<DashboardContacts />} />
+                  <Route path="crm/contacts/:contactId" element={<ContactProfile />} />
+                  <Route path="crm/companies" element={<DashboardCompanies />} />
+                  <Route path="crm/companies/:companyId" element={<CompanyProfile />} />
+                  <Route path="crm/deals" element={<DashboardDeals />} />
+                  <Route path="crm/tasks" element={<DashboardTasks />} />
+                  <Route path="crm/pipelines" element={<DashboardPipelines />} />
+                  <Route path="crm/import-export" element={<DashboardImportExport />} />
+                  <Route path="crm/fields" element={<DashboardCrmFields />} />
+                  <Route path="crm/tags" element={<DashboardCrmTags />} />
+                  <Route path="crm/lead-scoring" element={<DashboardLeadScoring />} />
+                  <Route path="crm/insights" element={<DashboardCrmInsights />} />
+                  <Route path="crm/settings" element={<DashboardCrmSettings />} />
+                </Route>
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
