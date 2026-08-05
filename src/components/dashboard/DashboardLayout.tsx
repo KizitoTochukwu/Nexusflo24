@@ -10,7 +10,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, Users, Contact2, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket, Handshake } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import NexusAiPanel, { openNexusAi } from "@/components/ai/NexusAiPanel";
@@ -57,6 +57,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: Contact2, label: "Contacts", to: `/dashboard/${workspaceId}/crm/contacts` },
   { icon: Building2, label: "Companies", to: `/dashboard/${workspaceId}/crm/companies` },
   { icon: Users, label: "Leads", to: `/dashboard/${workspaceId}/leads` },
+  { icon: Handshake, label: "Deals", to: `/dashboard/${workspaceId}/crm/deals` },
   { icon: FormInput, label: "Forms", to: `/dashboard/${workspaceId}/forms` },
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },

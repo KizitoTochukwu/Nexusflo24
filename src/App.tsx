@@ -20,6 +20,7 @@ import Dashboard from "./pages/Dashboard";
 import DashboardLeads from "./pages/dashboard/DashboardLeads";
 import DashboardContacts from "./pages/dashboard/crm/DashboardContacts";
 import DashboardCompanies from "./pages/dashboard/crm/DashboardCompanies";
+import DashboardDeals from "./pages/dashboard/crm/DashboardDeals";
 import CompanyProfile from "./pages/dashboard/crm/CompanyProfile";
 import ContactProfile from "./pages/dashboard/crm/ContactProfile";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
@@ -160,6 +161,7 @@ const App = () => (
                 <Route path="crm/contacts/:contactId" element={<ContactProfile />} />
                 <Route path="crm/companies" element={<DashboardCompanies />} />
                 <Route path="crm/companies/:companyId" element={<CompanyProfile />} />
+                <Route path="crm/deals" element={<DashboardDeals />} />
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
