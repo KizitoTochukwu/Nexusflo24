@@ -754,6 +754,7 @@ const DashboardSettings = () => {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="profile" className="gap-1.5"><User className="h-3.5 w-3.5" />Profile</TabsTrigger>
+            <TabsTrigger value="onboarding" className="gap-1.5"><Rocket className="h-3.5 w-3.5" />Onboarding</TabsTrigger>
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
             <TabsTrigger value="usage" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Usage</TabsTrigger>
             <TabsTrigger value="channels" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Channels</TabsTrigger>
