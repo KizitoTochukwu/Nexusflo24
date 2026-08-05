@@ -22,7 +22,7 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-surface">
-      <Seo title="Get started | NexusFlo24" description="Set up your NexusFlo24 workspace in a few guided steps." noindex />
+      <Seo title="Get started | NexusFlo24" description="Set up your NexusFlo24 workspace in a few guided steps." />
       <header className="flex h-14 items-center border-b bg-primary px-4 sm:px-6">
         <SidebarLogo collapsed={false} />
       </header>
