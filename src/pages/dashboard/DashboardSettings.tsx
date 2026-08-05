@@ -19,7 +19,7 @@ import {
   User, Users, Shield, Bell, CreditCard, Loader2, Save, Upload, Key,
   Mail, MessageCircle, Smartphone, Webhook, Settings2, Clock,
   Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor,
-  CheckCircle2, XCircle, ShieldAlert, Palette
+  CheckCircle2, XCircle, ShieldAlert, Palette, Rocket
 } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
@@ -37,6 +37,7 @@ import MetaChannelTab from "@/components/settings/MetaChannelTab";
 import SenderProfilesTab from "@/components/settings/SenderProfilesTab";
 import BuyCreditsTab from "@/components/settings/BuyCreditsTab";
 import ApiKeysTab from "@/components/settings/ApiKeysTab";
+import OnboardingTab from "@/components/settings/OnboardingTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -780,8 +781,9 @@ const DashboardSettings = () => {
             )}
           </TabsList>
 
-          <div className="mt-6 max-w-3xl">
+          <div className="mt-6 max-w-4xl">
             <TabsContent value="profile"><ProfileTab /></TabsContent>
+            <TabsContent value="onboarding"><OnboardingTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="billing"><BillingTab /></TabsContent>
             <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
