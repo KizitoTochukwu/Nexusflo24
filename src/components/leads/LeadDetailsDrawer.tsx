@@ -20,8 +20,33 @@ import { useLeadActivities, useUpdateLead, useLogActivity, PIPELINE_STAGES, type
 import { useQualifyLead, type AiQualification } from "@/hooks/useQualifyLead";
 import { useLeadTasks, useCreateLeadTask, useToggleLeadTask, useDeleteLeadTask } from "@/hooks/useLeadTasks";
 import SalesConversationTimeline from "@/components/leads/SalesConversationTimeline";
+import { openNexusAi } from "@/components/ai/NexusAiPanel";
+import type { NexusCapability } from "@/hooks/useNexusAi";
 
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
+
+/** Opens the global Nexus AI panel focused on this contact. */
+function askNexusAi(lead: Lead, capability: NexusCapability, prompt: string) {
+  openNexusAi({
+    recordType: "Contact",
+    recordId: lead.id,
+    recordSummary: [
+      `Name: ${lead.full_name || "Unknown"}`,
+      `Email: ${lead.email || "none"}`,
+      `Phone: ${lead.phone || "none"}`,
+      `Status: ${lead.status}`,
+      `Score: ${lead.score}`,
+      `Pipeline stage: ${lead.pipeline_stage || "none"}`,
+      `Source: ${lead.source}`,
+      `Tags: ${(lead.tags || []).join(", ") || "none"}`,
+      `Last activity: ${lead.last_activity_at || "none"}`,
+      `Notes: ${(lead.notes || "").slice(0, 800) || "none"}`,
+    ].join("\n"),
+    prompt,
+    capability,
+  });
+}
+
 
 const statusColor: Record<string, string> = {
   New: "bg-blue-100 text-blue-700",
@@ -123,6 +148,35 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
             {lead.full_name || lead.email || "Unnamed Lead"}
           </SheetTitle>
         </SheetHeader>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() =>
+              askNexusAi(
+                lead,
+                "next_actions",
+                "What are the best next actions for this contact, and why?",
+              )
+            }
+          >
+            <Sparkles className="h-3 w-3 text-accent" /> Ask Nexus AI
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() =>
+              askNexusAi(lead, "lead_score_explain", "Explain this contact's score and confidence level.")
+            }
+          >
+            <Sparkles className="h-3 w-3 text-accent" /> Explain score
+          </Button>
+        </div>
+
+
 
         <div className="mt-6 space-y-4">
           <div className="grid gap-3 text-sm">

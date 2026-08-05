@@ -38,6 +38,359 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_action_audit: {
+        Row: {
+          action_id: string | null
+          action_type: string
+          after_snapshot: Json | null
+          before_snapshot: Json | null
+          created_at: string
+          id: string
+          result: string
+          target_id: string | null
+          target_table: string | null
+          undo_available: boolean
+          undone_at: string | null
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action_id?: string | null
+          action_type: string
+          after_snapshot?: Json | null
+          before_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          result?: string
+          target_id?: string | null
+          target_table?: string | null
+          undo_available?: boolean
+          undone_at?: string | null
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action_id?: string | null
+          action_type?: string
+          after_snapshot?: Json | null
+          before_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          result?: string
+          target_id?: string | null
+          target_table?: string | null
+          undo_available?: boolean
+          undone_at?: string | null
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_audit_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "ai_proposed_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_conversations: {
+        Row: {
+          context: Json
+          created_at: string
+          id: string
+          route: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          id?: string
+          route?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          id?: string
+          route?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      ai_feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          message_id: string
+          rating: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          message_id: string
+          rating: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          message_id?: string
+          rating?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ai_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_lead_scores: {
+        Row: {
+          band: string | null
+          calculated_at: string
+          confidence: string
+          created_at: string
+          data_used: Json
+          factors: Json
+          id: string
+          lead_id: string
+          model: string | null
+          rationale: string | null
+          score: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          band?: string | null
+          calculated_at?: string
+          confidence?: string
+          created_at?: string
+          data_used?: Json
+          factors?: Json
+          id?: string
+          lead_id: string
+          model?: string | null
+          rationale?: string | null
+          score?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          band?: string | null
+          calculated_at?: string
+          confidence?: string
+          created_at?: string
+          data_used?: Json
+          factors?: Json
+          id?: string
+          lead_id?: string
+          model?: string | null
+          rationale?: string | null
+          score?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_lead_scores_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_messages: {
+        Row: {
+          capability: string | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          model: string | null
+          role: string
+          structured: Json
+          tokens: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          capability?: string | null
+          content?: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          role: string
+          structured?: Json
+          tokens?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          capability?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          model?: string | null
+          role?: string
+          structured?: Json
+          tokens?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_proposed_actions: {
+        Row: {
+          action_type: string
+          changes: Json
+          completed_at: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          message_id: string | null
+          payload: Json
+          status: string
+          summary: string | null
+          target_id: string | null
+          target_table: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          action_type: string
+          changes?: Json
+          completed_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          message_id?: string | null
+          payload?: Json
+          status?: string
+          summary?: string | null
+          target_id?: string | null
+          target_table?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          action_type?: string
+          changes?: Json
+          completed_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          message_id?: string | null
+          payload?: Json
+          status?: string
+          summary?: string | null
+          target_id?: string | null
+          target_table?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_proposed_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_proposed_actions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ai_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_usage: {
+        Row: {
+          capability: string
+          created_at: string
+          error_code: string | null
+          id: string
+          model: string | null
+          success: boolean
+          tokens: number
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          capability: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          model?: string | null
+          success?: boolean
+          tokens?: number
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          capability?: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          model?: string | null
+          success?: boolean
+          tokens?: number
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       automation_logs: {
         Row: {
           automation_id: string
