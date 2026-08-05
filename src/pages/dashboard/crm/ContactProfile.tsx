@@ -204,6 +204,7 @@ const ContactProfile = () => {
                 <TabsTrigger value="comms">Communications</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="files">Files</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
               </TabsList>
               <TabsContent value="timeline" className="mt-4">
                 <CrmTimeline recordType="contact" recordId={contact.id} />
