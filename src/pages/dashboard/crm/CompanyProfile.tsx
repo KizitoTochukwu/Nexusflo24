@@ -23,6 +23,7 @@ import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
 import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 import CustomFieldsPanel from "@/components/crm/CustomFieldsPanel";
+import CrmAuditPanel from "@/components/crm/CrmAuditPanel";
 
 const CompanyProfile = () => {
   const workspaceId = useWorkspaceId();
@@ -137,6 +138,7 @@ const CompanyProfile = () => {
             <TabsTrigger value="files">Files</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="fields">Fields</TabsTrigger>
+            <TabsTrigger value="audit">Audit</TabsTrigger>
           </TabsList>
 
           <TabsContent value="contacts" className="mt-4 space-y-4">
@@ -234,6 +236,9 @@ const CompanyProfile = () => {
           </TabsContent>
           <TabsContent value="fields" className="mt-4">
             <CustomFieldsPanel workspaceId={workspaceId} recordType="company" recordId={company.id} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="audit" className="mt-4">
+            <CrmAuditPanel workspaceId={workspaceId} recordId={company.id} />
           </TabsContent>
         </Tabs>
 
