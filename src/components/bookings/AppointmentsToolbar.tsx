@@ -4,12 +4,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Search, CalendarIcon, List, LayoutGrid, CalendarDays, CalendarRange, X } from "lucide-react";
+import { Search, CalendarIcon, List, LayoutGrid, CalendarDays, CalendarRange, Columns, X } from "lucide-react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import type { BookingPage } from "@/hooks/useBookings";
 
-export type ViewMode = "list" | "calendar" | "week" | "month";
+export type ViewMode = "list" | "calendar" | "day" | "week" | "month";
 export type Timeframe = "upcoming" | "past" | "all";
 
 interface Props {
@@ -25,14 +25,14 @@ interface Props {
 export default function AppointmentsToolbar(p: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 p-3">
-      <div className="relative flex-1 min-w-[200px] max-w-xs">
+      <div className="relative min-w-[200px] max-w-xs flex-1">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search guest…" value={p.search} onChange={(e) => p.onSearchChange(e.target.value)} className="pl-8 h-9" />
+        <Input placeholder="Search guest…" value={p.search} onChange={(e) => p.onSearchChange(e.target.value)} className="h-9 pl-8" />
       </div>
 
       <Select value={p.pageId} onValueChange={p.onPageChange}>
         <SelectTrigger className="h-9 w-[170px]"><SelectValue placeholder="Booking page" /></SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[70]">
           <SelectItem value="all">All pages</SelectItem>
           {p.pages.map((page) => (
             <SelectItem key={page.id} value={page.id}>{page.name}</SelectItem>
@@ -42,8 +42,9 @@ export default function AppointmentsToolbar(p: Props) {
 
       <Select value={p.status} onValueChange={p.onStatusChange}>
         <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[70]">
           <SelectItem value="all">All statuses</SelectItem>
+          <SelectItem value="pending">Pending</SelectItem>
           <SelectItem value="confirmed">Confirmed</SelectItem>
           <SelectItem value="completed">Completed</SelectItem>
           <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -53,7 +54,7 @@ export default function AppointmentsToolbar(p: Props) {
 
       <Select value={p.timeframe} onValueChange={(v) => p.onTimeframeChange(v as Timeframe)}>
         <SelectTrigger className="h-9 w-[130px]"><SelectValue /></SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[70]">
           <SelectItem value="upcoming">Upcoming</SelectItem>
           <SelectItem value="past">Past</SelectItem>
           <SelectItem value="all">All time</SelectItem>
@@ -75,13 +76,14 @@ export default function AppointmentsToolbar(p: Props) {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar mode="range" selected={p.dateRange} onSelect={p.onDateRangeChange} numberOfMonths={2} className="p-3 pointer-events-auto" />
+          <Calendar mode="range" selected={p.dateRange} onSelect={p.onDateRangeChange} numberOfMonths={2} className="pointer-events-auto p-3" />
         </PopoverContent>
       </Popover>
 
       <div className="ml-auto">
         <ToggleGroup type="single" value={p.view} onValueChange={(v) => v && p.onViewChange(v as ViewMode)} size="sm">
           <ToggleGroupItem value="list" aria-label="List"><List className="h-4 w-4" /></ToggleGroupItem>
+          <ToggleGroupItem value="day" aria-label="Day"><Columns className="h-4 w-4" /></ToggleGroupItem>
           <ToggleGroupItem value="week" aria-label="Week"><CalendarRange className="h-4 w-4" /></ToggleGroupItem>
           <ToggleGroupItem value="month" aria-label="Month"><CalendarDays className="h-4 w-4" /></ToggleGroupItem>
           <ToggleGroupItem value="calendar" aria-label="Agenda"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>

@@ -42,6 +42,20 @@ export type Booking = {
   notes: string | null;
   reschedule_token: string | null;
   created_at: string;
+  appointment_type_id?: string | null;
+  host_user_id?: string | null;
+  contact_id?: string | null;
+  company_id?: string | null;
+  deal_id?: string | null;
+  answers?: Record<string, unknown>;
+  utm?: Record<string, unknown>;
+  source?: string;
+  cancel_reason?: string | null;
+  reschedule_count?: number;
+  meeting_url?: string | null;
+  meeting_location?: string | null;
+  internal_notes?: string | null;
+  reminder_sent_at?: string | null;
 };
 
 

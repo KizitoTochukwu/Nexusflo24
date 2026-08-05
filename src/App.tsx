@@ -74,7 +74,11 @@ import AdminMessagesInbox from "./pages/admin/communication/AdminMessagesInbox";
 import AuthCallback from "./pages/AuthCallback";
 import OAuthConsent from "./pages/OAuthConsent";
 import PublicFunnel from "./pages/PublicFunnel";
-import DashboardBookings from "./pages/dashboard/DashboardBookings";
+import BookingsWorkspaceLayout from "./components/bookings/BookingsWorkspaceLayout";
+import BookingsOverview from "./pages/dashboard/bookings/BookingsOverview";
+import BookingsCalendar from "./pages/dashboard/bookings/BookingsCalendar";
+import BookingsTypes from "./pages/dashboard/bookings/BookingsTypes";
+import BookingsPages from "./pages/dashboard/bookings/BookingsPages";
 import DashboardMessages from "./pages/dashboard/DashboardMessages";
 import EmbedForm from "./pages/EmbedForm";
 import DashboardForms from "./pages/dashboard/DashboardForms";
@@ -187,7 +191,12 @@ const App = () => (
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="forms" element={<DashboardForms />} />
                 <Route path="forms/:formId" element={<FormBuilder />} />
-                <Route path="bookings" element={<DashboardBookings />} />
+                <Route path="bookings" element={<BookingsWorkspaceLayout />}>
+                  <Route index element={<BookingsOverview />} />
+                  <Route path="calendar" element={<BookingsCalendar />} />
+                  <Route path="types" element={<BookingsTypes />} />
+                  <Route path="pages" element={<BookingsPages />} />
+                </Route>
                 
                 <Route path="messages" element={<DashboardMessages />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />

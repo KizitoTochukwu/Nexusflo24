@@ -13,16 +13,17 @@ interface Props {
   bookings: Booking[];
   pages: BookingPage[];
   workspaceId: string;
+  defaultView?: ViewMode;
   onUpdateStatus: (id: string, status: string) => void;
 }
 
-export default function AppointmentsPanel({ bookings, pages, workspaceId, onUpdateStatus }: Props) {
+export default function AppointmentsPanel({ bookings, pages, workspaceId, defaultView = "list", onUpdateStatus }: Props) {
   const [search, setSearch] = useState("");
   const [pageId, setPageId] = useState("all");
   const [status, setStatus] = useState("all");
   const [timeframe, setTimeframe] = useState<Timeframe>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>(defaultView);
   const [selected, setSelected] = useState<Booking | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
