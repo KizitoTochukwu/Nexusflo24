@@ -23,6 +23,7 @@ import DashboardCompanies from "./pages/dashboard/crm/DashboardCompanies";
 import DashboardDeals from "./pages/dashboard/crm/DashboardDeals";
 import DashboardTasks from "./pages/dashboard/crm/DashboardTasks";
 import DashboardImportExport from "./pages/dashboard/crm/DashboardImportExport";
+import DashboardCrmSettings from "./pages/dashboard/crm/DashboardCrmSettings";
 import CompanyProfile from "./pages/dashboard/crm/CompanyProfile";
 import ContactProfile from "./pages/dashboard/crm/ContactProfile";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
@@ -166,6 +167,7 @@ const App = () => (
                 <Route path="crm/deals" element={<DashboardDeals />} />
                 <Route path="crm/tasks" element={<DashboardTasks />} />
                 <Route path="crm/import-export" element={<DashboardImportExport />} />
+                <Route path="crm/settings" element={<DashboardCrmSettings />} />
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />

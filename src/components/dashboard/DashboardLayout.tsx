@@ -60,6 +60,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: Handshake, label: "Deals", to: `/dashboard/${workspaceId}/crm/deals` },
   { icon: ListChecks, label: "Tasks", to: `/dashboard/${workspaceId}/crm/tasks` },
   { icon: FileText, label: "Import & Export", to: `/dashboard/${workspaceId}/crm/import-export` },
+  { icon: Settings2, label: "CRM Settings", to: `/dashboard/${workspaceId}/crm/settings` },
   { icon: FormInput, label: "Forms", to: `/dashboard/${workspaceId}/forms` },
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
