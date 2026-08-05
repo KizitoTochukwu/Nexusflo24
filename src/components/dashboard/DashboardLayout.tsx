@@ -145,7 +145,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
               <Link
                 key={item.label}
                 to={item.to}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 isActive ?
                 "bg-sidebar-accent text-sidebar-accent-foreground" :
                 "text-primary-foreground/60 hover:bg-sidebar-accent/50 hover:text-primary-foreground"}`
