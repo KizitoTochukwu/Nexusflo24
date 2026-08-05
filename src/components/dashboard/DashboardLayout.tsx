@@ -54,14 +54,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
   const sidebarItems = [
   { icon: LayoutDashboard, label: "Overview", to: `/dashboard/${workspaceId}/overview` },
-  { icon: Contact2, label: "Contacts", to: `/dashboard/${workspaceId}/crm/contacts` },
-  { icon: Building2, label: "Companies", to: `/dashboard/${workspaceId}/crm/companies` },
-  { icon: Users, label: "Leads", to: `/dashboard/${workspaceId}/leads` },
-  { icon: Handshake, label: "Deals", to: `/dashboard/${workspaceId}/crm/deals` },
-  { icon: ListChecks, label: "Tasks", to: `/dashboard/${workspaceId}/crm/tasks` },
-  { icon: FileText, label: "Import & Export", to: `/dashboard/${workspaceId}/crm/import-export` },
-  { icon: PieChart, label: "CRM Insights", to: `/dashboard/${workspaceId}/crm/insights` },
-  { icon: Settings2, label: "CRM Settings", to: `/dashboard/${workspaceId}/crm/settings` },
+  { icon: Contact2, label: "CRM", to: `/dashboard/${workspaceId}/crm/contacts`, match: [`/dashboard/${workspaceId}/crm`, `/dashboard/${workspaceId}/leads`] },
   { icon: FormInput, label: "Forms", to: `/dashboard/${workspaceId}/forms` },
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
@@ -144,7 +137,10 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4 my-[20px]">
           {sidebarItems.map((item) => {
-            const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+            const prefixes = ("match" in item && item.match ? item.match : [item.to]) as string[];
+            const isActive = prefixes.some(
+              (p) => location.pathname === p || location.pathname.startsWith(p + "/")
+            );
             return (
               <Link
                 key={item.label}
