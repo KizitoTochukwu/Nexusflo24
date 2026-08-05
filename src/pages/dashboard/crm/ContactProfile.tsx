@@ -82,7 +82,7 @@ const ContactProfile = () => {
 
   return (
     <div className="space-y-6">
-      <Seo title={`${title} | NexusFlo24 CRM`} description="Contact profile, activity timeline, notes and files." noindex />
+      <Seo title={`${title} | NexusFlo24 CRM`} description="Contact profile, activity timeline, notes and files." />
 
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" asChild>

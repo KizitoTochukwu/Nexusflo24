@@ -110,7 +110,7 @@ const DashboardContacts = () => {
 
   return (
     <div className="space-y-6">
-      <Seo title="Contacts | NexusFlo24 CRM" description="Manage every person in your CRM: filter, segment, and act on contacts across email, SMS and WhatsApp." noindex />
+      <Seo title="Contacts | NexusFlo24 CRM" description="Manage every person in your CRM: filter, segment, and act on contacts across email, SMS and WhatsApp." />
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
