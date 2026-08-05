@@ -17,15 +17,10 @@ export const BOOKINGS_PRIMARY_NAV: BookingsNavItem[] = [
   { key: "calendar", label: "Calendar", path: "bookings/calendar", icon: CalendarDays },
   { key: "types", label: "Appointment Types", path: "bookings/types", icon: Layers },
   { key: "pages", label: "Booking Pages", path: "bookings/pages", icon: Link2 },
-  { key: "availability", label: "Availability", path: "bookings/availability", icon: Clock },
-  { key: "teams", label: "Team Scheduling", path: "bookings/teams", icon: Users2 },
 ];
 
 /** Secondary sections tucked into the "More" menu. */
-export const BOOKINGS_SECONDARY_NAV: BookingsNavItem[] = [
-  { key: "integrations", label: "Integrations", path: "bookings/integrations", icon: Plug },
-  { key: "settings", label: "Booking Settings", path: "bookings/settings", icon: Settings2 },
-];
+export const BOOKINGS_SECONDARY_NAV: BookingsNavItem[] = [];
 
 export const BOOKINGS_ALL_NAV = [...BOOKINGS_PRIMARY_NAV, ...BOOKINGS_SECONDARY_NAV];
 
