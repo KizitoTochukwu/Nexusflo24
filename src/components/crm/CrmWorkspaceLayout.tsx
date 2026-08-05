@@ -33,7 +33,7 @@ const CrmWorkspaceLayout = () => {
 
   return (
     <div className="mx-auto w-full max-w-[1400px] space-y-5 overflow-x-hidden">
-      <div className="sticky top-14 z-10 w-full space-y-2 border-b border-border/50 bg-background/90 pb-3 pt-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
+      <div className="sticky top-0 z-10 w-full space-y-2 border-b border-border/50 bg-background/90 pb-3 pt-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
 
 
         <Breadcrumb>
