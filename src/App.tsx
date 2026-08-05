@@ -187,7 +187,12 @@ const App = () => (
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="forms" element={<DashboardForms />} />
                 <Route path="forms/:formId" element={<FormBuilder />} />
-                <Route path="bookings" element={<DashboardBookings />} />
+                <Route path="bookings" element={<BookingsWorkspaceLayout />}>
+                  <Route index element={<BookingsOverview />} />
+                  <Route path="calendar" element={<BookingsCalendar />} />
+                  <Route path="types" element={<BookingsTypes />} />
+                  <Route path="pages" element={<BookingsPages />} />
+                </Route>
                 
                 <Route path="messages" element={<DashboardMessages />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
