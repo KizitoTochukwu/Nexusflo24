@@ -223,6 +223,9 @@ const ContactProfile = () => {
               <TabsContent value="files" className="mt-4">
                 <CrmFilesPanel workspaceId={workspaceId} recordType="contact" recordId={contact.id} canEdit={canEdit} />
               </TabsContent>
+              <TabsContent value="tasks" className="mt-4">
+                <CrmTasksPanel workspaceId={workspaceId} link={{ contact_id: contact.id }} canEdit={canEdit} />
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
