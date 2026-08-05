@@ -19,6 +19,7 @@ import ContactQuickActions from "@/components/crm/ContactQuickActions";
 import CrmTimeline from "@/components/crm/CrmTimeline";
 import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
+import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 
 const COMMS_TYPES = [
   "email_sent", "email_delivered", "email_opened", "email_clicked", "email_bounced", "email_replied",

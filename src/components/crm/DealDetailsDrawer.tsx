@@ -12,6 +12,7 @@ import { Trash2, Trophy, XCircle } from "lucide-react";
 import CrmTimeline from "@/components/crm/CrmTimeline";
 import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
+import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 import { formatMoney, useDeleteDeal, useUpdateDeal, type Deal, type PipelineStage } from "@/hooks/useDeals";
 
 type Props = {

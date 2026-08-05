@@ -21,6 +21,7 @@ import { COMPANY_SIZE_BANDS, INDUSTRIES, LIFECYCLE_STAGES, lifecycleMeta, scoreB
 import CrmTimeline from "@/components/crm/CrmTimeline";
 import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
+import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 
 const CompanyProfile = () => {
   const workspaceId = useWorkspaceId();
