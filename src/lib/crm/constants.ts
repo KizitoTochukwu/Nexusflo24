@@ -99,3 +99,38 @@ export function activityLabel(type: string) {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+/** Company reference data (CRM Phase 2). */
+export const COMPANY_SIZE_BANDS = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"] as const;
+
+export const INDUSTRIES = [
+  "Agency & Consulting",
+  "E-commerce & Retail",
+  "Education & Training",
+  "Financial Services",
+  "Health & Wellness",
+  "Hospitality & Travel",
+  "Manufacturing",
+  "Media & Entertainment",
+  "Non-profit",
+  "Professional Services",
+  "Property & Construction",
+  "SaaS & Technology",
+  "Other",
+] as const;
+
+export type CompanyColumnKey =
+  | "name" | "domain" | "industry" | "size_band" | "lifecycle_stage"
+  | "city" | "country" | "owner_user_id" | "created_at" | "last_activity_at";
+
+export const COMPANY_COLUMNS: { key: CompanyColumnKey; label: string; sortable?: boolean }[] = [
+  { key: "name", label: "Company", sortable: true },
+  { key: "domain", label: "Domain", sortable: true },
+  { key: "industry", label: "Industry", sortable: true },
+  { key: "size_band", label: "Size" },
+  { key: "lifecycle_stage", label: "Stage", sortable: true },
+  { key: "city", label: "City" },
+  { key: "country", label: "Country" },
+  { key: "owner_user_id", label: "Owner" },
+  { key: "created_at", label: "Created", sortable: true },
+];
