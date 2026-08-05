@@ -136,6 +136,7 @@ const CompanyProfile = () => {
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="files">Files</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="fields">Fields</TabsTrigger>
           </TabsList>
 
           <TabsContent value="contacts" className="mt-4 space-y-4">
@@ -230,6 +231,9 @@ const CompanyProfile = () => {
           </TabsContent>
           <TabsContent value="tasks" className="mt-4">
             <CrmTasksPanel workspaceId={workspaceId} link={{ company_id: company.id }} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="fields" className="mt-4">
+            <CustomFieldsPanel workspaceId={workspaceId} recordType="company" recordId={company.id} canEdit={canEdit} />
           </TabsContent>
         </Tabs>
 

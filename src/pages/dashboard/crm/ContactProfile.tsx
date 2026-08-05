@@ -207,6 +207,7 @@ const ContactProfile = () => {
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="files">Files</TabsTrigger>
                 <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="fields">Fields</TabsTrigger>
               </TabsList>
               <TabsContent value="timeline" className="mt-4">
                 <CrmTimeline recordType="contact" recordId={contact.id} />
@@ -227,6 +228,9 @@ const ContactProfile = () => {
               </TabsContent>
               <TabsContent value="tasks" className="mt-4">
                 <CrmTasksPanel workspaceId={workspaceId} link={{ contact_id: contact.id }} canEdit={canEdit} />
+              </TabsContent>
+              <TabsContent value="fields" className="mt-4">
+                <CustomFieldsPanel workspaceId={workspaceId} recordType="contact" recordId={contact.id} canEdit={canEdit} />
               </TabsContent>
             </Tabs>
           </CardContent>

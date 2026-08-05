@@ -83,6 +83,7 @@ const DealDetailsDrawer = ({ deal, stages, workspaceId, canEdit, onOpenChange }:
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="files">Files</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="fields">Fields</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-4 pt-4">
@@ -165,6 +166,9 @@ const DealDetailsDrawer = ({ deal, stages, workspaceId, canEdit, onOpenChange }:
           </TabsContent>
           <TabsContent value="tasks" className="pt-4">
             <CrmTasksPanel workspaceId={workspaceId} link={{ deal_id: deal.id }} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="fields" className="pt-4">
+            <CustomFieldsPanel workspaceId={workspaceId} recordType="deal" recordId={deal.id} canEdit={canEdit} />
           </TabsContent>
         </Tabs>
       </SheetContent>
