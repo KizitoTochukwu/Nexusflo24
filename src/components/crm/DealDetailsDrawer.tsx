@@ -162,6 +162,9 @@ const DealDetailsDrawer = ({ deal, stages, workspaceId, canEdit, onOpenChange }:
           <TabsContent value="files" className="pt-4">
             <CrmFilesPanel workspaceId={workspaceId} recordType="deal" recordId={deal.id} canEdit={canEdit} />
           </TabsContent>
+          <TabsContent value="tasks" className="pt-4">
+            <CrmTasksPanel workspaceId={workspaceId} link={{ deal_id: deal.id }} canEdit={canEdit} />
+          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
