@@ -164,6 +164,8 @@ const App = () => (
                 <Route path="crm/companies" element={<DashboardCompanies />} />
                 <Route path="crm/companies/:companyId" element={<CompanyProfile />} />
                 <Route path="crm/deals" element={<DashboardDeals />} />
+                <Route path="crm/tasks" element={<DashboardTasks />} />
+                <Route path="crm/import-export" element={<DashboardImportExport />} />
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
