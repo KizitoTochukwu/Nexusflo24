@@ -138,9 +138,6 @@ const CrmWorkspaceLayout = () => {
       <div className="min-w-0 max-w-full">
         <Outlet />
       </div>
-
-
-      <Outlet />
     </div>
   );
 };
