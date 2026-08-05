@@ -10,9 +10,11 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
+import { OPEN_CHECKLIST_EVENT } from "@/components/dashboard/GettingStartedChecklist";
+import { OPEN_TOUR_EVENT } from "@/components/onboarding/ProductTour";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
