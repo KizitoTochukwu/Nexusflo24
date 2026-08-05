@@ -1091,6 +1091,111 @@ export type Database = {
           },
         ]
       }
+      contacts: {
+        Row: {
+          archived_at: string | null
+          avatar_url: string | null
+          company_id: string | null
+          company_name: string | null
+          consent_status: string
+          consent_updated_at: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          first_name: string | null
+          full_name: string | null
+          id: string
+          job_title: string | null
+          last_activity_at: string | null
+          last_name: string | null
+          lead_status: string | null
+          lifecycle_stage: string
+          notes: string | null
+          origin_lead_id: string | null
+          owner_user_id: string | null
+          phone: string | null
+          score: number
+          source: string | null
+          tags: string[]
+          updated_at: string
+          whatsapp_number: string | null
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          avatar_url?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          consent_status?: string
+          consent_updated_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          last_activity_at?: string | null
+          last_name?: string | null
+          lead_status?: string | null
+          lifecycle_stage?: string
+          notes?: string | null
+          origin_lead_id?: string | null
+          owner_user_id?: string | null
+          phone?: string | null
+          score?: number
+          source?: string | null
+          tags?: string[]
+          updated_at?: string
+          whatsapp_number?: string | null
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          avatar_url?: string | null
+          company_id?: string | null
+          company_name?: string | null
+          consent_status?: string
+          consent_updated_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          last_activity_at?: string | null
+          last_name?: string | null
+          lead_status?: string | null
+          lifecycle_stage?: string
+          notes?: string | null
+          origin_lead_id?: string | null
+          owner_user_id?: string | null
+          phone?: string | null
+          score?: number
+          source?: string | null
+          tags?: string[]
+          updated_at?: string
+          whatsapp_number?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_origin_lead_id_fkey"
+            columns: ["origin_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_packages: {
         Row: {
           channel: Database["public"]["Enums"]["sender_channel"]
@@ -1203,6 +1308,434 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "credit_transactions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_activities: {
+        Row: {
+          activity_type: string
+          actor_label: string | null
+          actor_user_id: string | null
+          created_at: string
+          description: string | null
+          external_event_id: string | null
+          id: string
+          meta: Json
+          occurred_at: string
+          record_id: string
+          record_type: string
+          related_id: string | null
+          related_type: string | null
+          source: string
+          status: string | null
+          title: string | null
+          workspace_id: string
+        }
+        Insert: {
+          activity_type: string
+          actor_label?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          external_event_id?: string | null
+          id?: string
+          meta?: Json
+          occurred_at?: string
+          record_id: string
+          record_type: string
+          related_id?: string | null
+          related_type?: string | null
+          source?: string
+          status?: string | null
+          title?: string | null
+          workspace_id: string
+        }
+        Update: {
+          activity_type?: string
+          actor_label?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          external_event_id?: string | null
+          id?: string
+          meta?: Json
+          occurred_at?: string
+          record_id?: string
+          record_type?: string
+          related_id?: string | null
+          related_type?: string | null
+          source?: string
+          status?: string | null
+          title?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_activities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_audit_log: {
+        Row: {
+          action: string
+          actor_label: string | null
+          actor_user_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          id: string
+          record_id: string | null
+          record_type: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          actor_label?: string | null
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          record_type: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          actor_label?: string | null
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          id?: string
+          record_id?: string | null
+          record_type?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_audit_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_custom_field_defs: {
+        Row: {
+          created_at: string
+          default_value: Json | null
+          field_key: string
+          field_type: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          label: string
+          options: Json
+          record_type: string
+          sort_order: number
+          updated_at: string
+          validation: Json
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_value?: Json | null
+          field_key: string
+          field_type: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label: string
+          options?: Json
+          record_type: string
+          sort_order?: number
+          updated_at?: string
+          validation?: Json
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          default_value?: Json | null
+          field_key?: string
+          field_type?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          label?: string
+          options?: Json
+          record_type?: string
+          sort_order?: number
+          updated_at?: string
+          validation?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_custom_field_defs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_custom_field_values: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          record_id: string
+          record_type: string
+          updated_at: string
+          value: Json | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          record_id: string
+          record_type: string
+          updated_at?: string
+          value?: Json | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          record_id?: string
+          record_type?: string
+          updated_at?: string
+          value?: Json | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_custom_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "crm_custom_field_defs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_custom_field_values_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_files: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          record_id: string
+          record_type: string
+          size_bytes: number | null
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          record_id: string
+          record_type: string
+          size_bytes?: number | null
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          record_id?: string
+          record_type?: string
+          size_bytes?: number | null
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_notes: {
+        Row: {
+          archived_at: string | null
+          author_user_id: string | null
+          body: string
+          body_html: string | null
+          created_at: string
+          edit_history: Json
+          edited_at: string | null
+          id: string
+          is_internal: boolean
+          is_pinned: boolean
+          record_id: string
+          record_type: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          author_user_id?: string | null
+          body: string
+          body_html?: string | null
+          created_at?: string
+          edit_history?: Json
+          edited_at?: string | null
+          id?: string
+          is_internal?: boolean
+          is_pinned?: boolean
+          record_id: string
+          record_type: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          author_user_id?: string | null
+          body?: string
+          body_html?: string | null
+          created_at?: string
+          edit_history?: Json
+          edited_at?: string | null
+          id?: string
+          is_internal?: boolean
+          is_pinned?: boolean
+          record_id?: string
+          record_type?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_notes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_saved_views: {
+        Row: {
+          columns: Json
+          created_at: string
+          filters: Json
+          id: string
+          is_default: boolean
+          name: string
+          record_type: string
+          sort: Json
+          updated_at: string
+          user_id: string
+          visibility: string
+          workspace_id: string
+        }
+        Insert: {
+          columns?: Json
+          created_at?: string
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          name: string
+          record_type?: string
+          sort?: Json
+          updated_at?: string
+          user_id: string
+          visibility?: string
+          workspace_id: string
+        }
+        Update: {
+          columns?: Json
+          created_at?: string
+          filters?: Json
+          id?: string
+          is_default?: boolean
+          name?: string
+          record_type?: string
+          sort?: Json
+          updated_at?: string
+          user_id?: string
+          visibility?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_saved_views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_tags: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tags_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
