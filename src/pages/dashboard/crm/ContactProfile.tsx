@@ -19,6 +19,7 @@ import ContactQuickActions from "@/components/crm/ContactQuickActions";
 import CrmTimeline from "@/components/crm/CrmTimeline";
 import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
+import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 
 const COMMS_TYPES = [
   "email_sent", "email_delivered", "email_opened", "email_clicked", "email_bounced", "email_replied",
@@ -204,6 +205,7 @@ const ContactProfile = () => {
                 <TabsTrigger value="comms">Communications</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="files">Files</TabsTrigger>
+                <TabsTrigger value="tasks">Tasks</TabsTrigger>
               </TabsList>
               <TabsContent value="timeline" className="mt-4">
                 <CrmTimeline recordType="contact" recordId={contact.id} />
@@ -221,6 +223,9 @@ const ContactProfile = () => {
               </TabsContent>
               <TabsContent value="files" className="mt-4">
                 <CrmFilesPanel workspaceId={workspaceId} recordType="contact" recordId={contact.id} canEdit={canEdit} />
+              </TabsContent>
+              <TabsContent value="tasks" className="mt-4">
+                <CrmTasksPanel workspaceId={workspaceId} link={{ contact_id: contact.id }} canEdit={canEdit} />
               </TabsContent>
             </Tabs>
           </CardContent>

@@ -21,6 +21,7 @@ import { COMPANY_SIZE_BANDS, INDUSTRIES, LIFECYCLE_STAGES, lifecycleMeta, scoreB
 import CrmTimeline from "@/components/crm/CrmTimeline";
 import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
+import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 
 const CompanyProfile = () => {
   const workspaceId = useWorkspaceId();
@@ -133,6 +134,7 @@ const CompanyProfile = () => {
             <TabsTrigger value="timeline">Activity</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="files">Files</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="contacts" className="mt-4 space-y-4">
@@ -224,6 +226,9 @@ const CompanyProfile = () => {
           </TabsContent>
           <TabsContent value="files" className="mt-4">
             <CrmFilesPanel workspaceId={workspaceId} recordType="company" recordId={company.id} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="tasks" className="mt-4">
+            <CrmTasksPanel workspaceId={workspaceId} link={{ company_id: company.id }} canEdit={canEdit} />
           </TabsContent>
         </Tabs>
 

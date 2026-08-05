@@ -22,6 +22,8 @@ import { useLeadTasks, useCreateLeadTask, useToggleLeadTask, useDeleteLeadTask }
 import SalesConversationTimeline from "@/components/leads/SalesConversationTimeline";
 import { openNexusAi } from "@/components/ai/NexusAiPanel";
 import type { NexusCapability } from "@/hooks/useNexusAi";
+import { useNavigate } from "react-router-dom";
+import { useConvertLeadToContact } from "@/hooks/useConvertLead";
 
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
 
@@ -102,6 +104,9 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
   const [editingScore, setEditingScore] = useState(false);
   const [scoreVal, setScoreVal] = useState(0);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const navigate = useNavigate();
+  const convertLead = useConvertLeadToContact();
+
 
   if (!lead) return null;
 
@@ -173,6 +178,19 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
             }
           >
             <Sparkles className="h-3 w-3 text-accent" /> Explain score
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5 text-xs"
+            disabled={convertLead.isPending}
+            onClick={async () => {
+              const contactId = await convertLead.mutateAsync(lead.id);
+              if (contactId) navigate(`/dashboard/${workspaceId}/crm/contacts/${contactId}`);
+            }}
+          >
+            <UserCheck className="h-3 w-3 text-accent" />
+            {convertLead.isPending ? "Converting…" : "Convert to contact"}
           </Button>
         </div>
 
