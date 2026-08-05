@@ -179,6 +179,19 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
           >
             <Sparkles className="h-3 w-3 text-accent" /> Explain score
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 gap-1.5 text-xs"
+            disabled={convertLead.isPending}
+            onClick={async () => {
+              const contactId = await convertLead.mutateAsync(lead.id);
+              if (contactId) navigate(`/dashboard/${workspaceId}/crm/contacts/${contactId}`);
+            }}
+          >
+            <UserCheck className="h-3 w-3 text-accent" />
+            {convertLead.isPending ? "Converting…" : "Convert to contact"}
+          </Button>
         </div>
 
 
