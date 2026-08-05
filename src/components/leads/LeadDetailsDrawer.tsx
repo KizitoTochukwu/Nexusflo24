@@ -104,6 +104,9 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
   const [editingScore, setEditingScore] = useState(false);
   const [scoreVal, setScoreVal] = useState(0);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const navigate = useNavigate();
+  const convertLead = useConvertLeadToContact();
+
 
   if (!lead) return null;
 
