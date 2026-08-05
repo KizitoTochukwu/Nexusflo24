@@ -196,7 +196,36 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Help menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Help and getting started"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Help & onboarding</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(OPEN_CHECKLIST_EVENT))}>
+                  <ListChecks className="mr-2 h-4 w-4" /> Getting Started checklist
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(OPEN_TOUR_EVENT))}>
+                  <Sparkles className="mr-2 h-4 w-4" /> Replay product tour
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate(`/dashboard/${workspaceId}/settings/onboarding`)}>
+                  <Rocket className="mr-2 h-4 w-4" /> Onboarding setup
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/academy")}>
+                  <FileText className="mr-2 h-4 w-4" /> Academy & guides
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <NotificationBell />
+
 
             {/* User dropdown */}
             <DropdownMenu>
