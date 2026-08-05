@@ -1091,6 +1091,101 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          address_line1: string | null
+          annual_revenue: number | null
+          archived_at: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          domain: string | null
+          email: string | null
+          id: string
+          industry: string | null
+          last_activity_at: string | null
+          lifecycle_stage: string
+          linkedin_url: string | null
+          logo_url: string | null
+          name: string
+          owner_user_id: string | null
+          phone: string | null
+          postal_code: string | null
+          size_band: string | null
+          state: string | null
+          tags: string[]
+          updated_at: string
+          website: string | null
+          workspace_id: string
+        }
+        Insert: {
+          address_line1?: string | null
+          annual_revenue?: number | null
+          archived_at?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          domain?: string | null
+          email?: string | null
+          id?: string
+          industry?: string | null
+          last_activity_at?: string | null
+          lifecycle_stage?: string
+          linkedin_url?: string | null
+          logo_url?: string | null
+          name: string
+          owner_user_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          size_band?: string | null
+          state?: string | null
+          tags?: string[]
+          updated_at?: string
+          website?: string | null
+          workspace_id: string
+        }
+        Update: {
+          address_line1?: string | null
+          annual_revenue?: number | null
+          archived_at?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          domain?: string | null
+          email?: string | null
+          id?: string
+          industry?: string | null
+          last_activity_at?: string | null
+          lifecycle_stage?: string
+          linkedin_url?: string | null
+          logo_url?: string | null
+          name?: string
+          owner_user_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          size_band?: string | null
+          state?: string | null
+          tags?: string[]
+          updated_at?: string
+          website?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           archived_at: string | null
@@ -1180,6 +1275,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contacts_origin_lead_id_fkey"
             columns: ["origin_lead_id"]
