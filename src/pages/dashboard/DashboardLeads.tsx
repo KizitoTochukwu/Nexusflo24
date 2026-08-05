@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { format } from "date-fns";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -220,7 +219,7 @@ const DashboardLeads = () => {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="flex gap-6">
         <div className="hidden lg:block w-56 shrink-0 space-y-4">
           <FolderPanel
@@ -493,7 +492,7 @@ const DashboardLeads = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashboardLayout>
+    </>
   );
 };
 
