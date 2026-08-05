@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ChevronDown, Users2 } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -32,8 +33,10 @@ const CrmWorkspaceLayout = () => {
   const moreActive = CRM_SECONDARY_NAV.some((i) => i.key === active?.key);
 
   return (
-    <div className="w-full max-w-full space-y-5 overflow-x-hidden">
-      <div className="sticky top-0 z-20 w-full space-y-2 border-b border-border/50 bg-background/90 pb-3 pt-1.5 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
+    <DashboardLayout>
+    <div className="mx-auto w-full max-w-[1400px] space-y-5 overflow-x-hidden">
+      <div className="sticky top-0 z-10 w-full space-y-2 border-b border-border/50 bg-background/90 pb-3 pt-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
+
 
         <Breadcrumb>
           <BreadcrumbList className="text-xs">
@@ -143,6 +146,7 @@ const CrmWorkspaceLayout = () => {
         <Outlet />
       </div>
     </div>
+    </DashboardLayout>
   );
 };
 
