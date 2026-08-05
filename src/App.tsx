@@ -18,6 +18,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import DashboardLeads from "./pages/dashboard/DashboardLeads";
+import DashboardContacts from "./pages/dashboard/crm/DashboardContacts";
+import ContactProfile from "./pages/dashboard/crm/ContactProfile";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
 import DashboardAutomations from "./pages/dashboard/DashboardAutomations";
 import DashboardFunnels from "./pages/dashboard/DashboardFunnels";
@@ -151,6 +153,9 @@ const App = () => (
               <Route path="/dashboard/:workspaceId" element={<WorkspaceGuard />}>
                 <Route path="overview" element={<Dashboard />} />
                 <Route path="leads" element={<DashboardLeads />} />
+                <Route path="crm" element={<Navigate to="contacts" replace />} />
+                <Route path="crm/contacts" element={<DashboardContacts />} />
+                <Route path="crm/contacts/:contactId" element={<ContactProfile />} />
                 <Route path="campaigns" element={<DashboardCampaigns />} />
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
