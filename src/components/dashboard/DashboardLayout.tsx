@@ -10,9 +10,11 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, Users, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
+import { OPEN_CHECKLIST_EVENT } from "@/components/dashboard/GettingStartedChecklist";
+import { OPEN_TOUR_EVENT } from "@/components/onboarding/ProductTour";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
@@ -70,6 +72,12 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
+  };
+
+  const openOverviewThen = (evt: string) => {
+    const overview = `/dashboard/${workspaceId}/overview`;
+    if (location.pathname !== overview) navigate(overview);
+    window.setTimeout(() => window.dispatchEvent(new Event(evt)), 350);
   };
 
   const handleSwitchWorkspace = (wsId: string) => {
@@ -196,7 +204,36 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Help menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Help and getting started"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Help & onboarding</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => openOverviewThen(OPEN_CHECKLIST_EVENT)}>
+                  <ListChecks className="mr-2 h-4 w-4" /> Getting Started checklist
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => openOverviewThen(OPEN_TOUR_EVENT)}>
+                  <Sparkles className="mr-2 h-4 w-4" /> Replay product tour
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate(`/dashboard/${workspaceId}/settings/onboarding`)}>
+                  <Rocket className="mr-2 h-4 w-4" /> Onboarding setup
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/academy")}>
+                  <FileText className="mr-2 h-4 w-4" /> Academy & guides
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <NotificationBell />
+
 
             {/* User dropdown */}
             <DropdownMenu>

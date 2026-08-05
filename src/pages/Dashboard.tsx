@@ -21,6 +21,8 @@ import { usePlanGating } from "@/hooks/usePlanGating";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import GettingStartedChecklist from "@/components/dashboard/GettingStartedChecklist";
+import ProductTour from "@/components/onboarding/ProductTour";
 
 const workflowNodes = [
   { label: "Form Submitted", type: "trigger" },
@@ -143,6 +145,8 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
+      <ProductTour workspaceId={workspaceId} />
+      <GettingStartedChecklist workspaceId={workspaceId} />
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">Dashboard Overview</h1>
         {isDemoMode && (

@@ -19,7 +19,7 @@ import {
   User, Users, Shield, Bell, CreditCard, Loader2, Save, Upload, Key,
   Mail, MessageCircle, Smartphone, Webhook, Settings2, Clock,
   Copy, Eye, EyeOff, RefreshCw, Trash2, Globe, Zap, Monitor,
-  CheckCircle2, XCircle, ShieldAlert, Palette
+  CheckCircle2, XCircle, ShieldAlert, Palette, Rocket
 } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
@@ -37,6 +37,7 @@ import MetaChannelTab from "@/components/settings/MetaChannelTab";
 import SenderProfilesTab from "@/components/settings/SenderProfilesTab";
 import BuyCreditsTab from "@/components/settings/BuyCreditsTab";
 import ApiKeysTab from "@/components/settings/ApiKeysTab";
+import OnboardingTab from "@/components/settings/OnboardingTab";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
@@ -708,7 +709,7 @@ function NotificationsTab() {
 /* ── Main Settings Page ──────────────────────────────────── */
 
 const VALID_TABS = [
-  "profile", "billing", "usage", "channels", "senders", "buy-credits",
+  "profile", "onboarding", "billing", "usage", "channels", "senders", "buy-credits",
   "wa-templates", "meta-channel", "tracking", "branding", "team",
   "integrations", "webhooks", "api-keys", "automations", "notifications", "security",
   "ai-sales", "ai-agents", "custom-code",
@@ -754,6 +755,7 @@ const DashboardSettings = () => {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
           <TabsList className="flex flex-wrap h-auto gap-1">
             <TabsTrigger value="profile" className="gap-1.5"><User className="h-3.5 w-3.5" />Profile</TabsTrigger>
+            <TabsTrigger value="onboarding" className="gap-1.5"><Rocket className="h-3.5 w-3.5" />Onboarding</TabsTrigger>
             <TabsTrigger value="billing" className="gap-1.5"><CreditCard className="h-3.5 w-3.5" />Billing</TabsTrigger>
             <TabsTrigger value="usage" className="gap-1.5"><Zap className="h-3.5 w-3.5" />Usage</TabsTrigger>
             <TabsTrigger value="channels" className="gap-1.5"><Radio className="h-3.5 w-3.5" />Channels</TabsTrigger>
@@ -779,8 +781,9 @@ const DashboardSettings = () => {
             )}
           </TabsList>
 
-          <div className="mt-6 max-w-3xl">
+          <div className="mt-6 max-w-4xl">
             <TabsContent value="profile"><ProfileTab /></TabsContent>
+            <TabsContent value="onboarding"><OnboardingTab workspaceId={workspaceId} /></TabsContent>
             <TabsContent value="billing"><BillingTab /></TabsContent>
             <TabsContent value="usage"><UsageCreditsTab /></TabsContent>
             <TabsContent value="channels"><ChannelSettingsTab workspaceId={workspaceId} /></TabsContent>
