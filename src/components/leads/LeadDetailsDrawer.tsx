@@ -24,7 +24,6 @@ import { openNexusAi } from "@/components/ai/NexusAiPanel";
 import type { NexusCapability } from "@/hooks/useNexusAi";
 import { useNavigate } from "react-router-dom";
 import { useConvertLeadToContact } from "@/hooks/useConvertLead";
-import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 const STATUSES = ["New", "Warm", "Hot", "Won", "Lost"];
 
