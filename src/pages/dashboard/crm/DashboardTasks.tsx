@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ListChecks, Plus, Search, AlarmClock, CheckCircle2, CalendarDays } from "lucide-react";
+import { ListChecks, Plus, Search, AlarmClock, CheckCircle2, CalendarDays, Download } from "lucide-react";
 import Seo from "@/components/seo/Seo";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -12,6 +12,7 @@ import { useWorkspaceMembers } from "@/hooks/useWorkspaceInvites";
 import { useCrmTasks, useTaskStats, type CrmTask, type TaskFilters } from "@/hooks/useCrmTasks";
 import { TaskRow } from "@/components/crm/CrmTasksPanel";
 import TaskCreateDrawer from "@/components/crm/TaskCreateDrawer";
+import { exportRowsToCsv } from "@/lib/crm/csv";
 
 const DashboardTasks = () => {
   const workspaceId = useWorkspaceId();
@@ -40,11 +41,30 @@ const DashboardTasks = () => {
           <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
           <p className="text-sm text-muted-foreground">Every follow-up across contacts, companies and deals.</p>
         </div>
-        {canEdit && (
-          <Button onClick={() => { setEditing(null); setOpen(true); }} className="gap-1.5">
-            <Plus className="h-4 w-4" /> New task
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={!tasks.length}
+            onClick={() =>
+              exportRowsToCsv("tasks", tasks, [
+                { key: "title", label: "Title" },
+                { key: "status", label: "Status" },
+                { key: "priority", label: "Priority" },
+                { key: "task_type", label: "Type" },
+                { key: "due_date", label: "Due date" },
+                { key: "completed_at", label: "Completed at" },
+                { key: "created_at", label: "Created" },
+              ])
+            }
+          >
+            <Download className="mr-1.5 h-4 w-4" /> Export
           </Button>
-        )}
+          {canEdit && (
+            <Button onClick={() => { setEditing(null); setOpen(true); }} className="gap-1.5">
+              <Plus className="h-4 w-4" /> New task
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

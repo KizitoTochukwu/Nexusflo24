@@ -185,8 +185,15 @@ const ContactsTable = ({
               {visible.map((col) => (
                 <TableCell
                   key={col.key}
-                  className="max-w-[240px] truncate"
+                  className="max-w-[240px] truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  tabIndex={0}
                   onDoubleClick={() => startEdit(c, col.key)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.currentTarget === e.target) {
+                      e.preventDefault();
+                      startEdit(c, col.key);
+                    }
+                  }}
                 >
                   {cell(c, col.key)}
                 </TableCell>

@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useCompanies";
 import { COMPANY_SIZE_BANDS, INDUSTRIES, LIFECYCLE_STAGES, lifecycleMeta } from "@/lib/crm/constants";
 import CompanyCreateDrawer from "@/components/crm/CompanyCreateDrawer";
+import SavedViewsMenu from "@/components/crm/SavedViewsMenu";
 
 const csvEscape = (v: unknown) => {
   const s = v == null ? "" : Array.isArray(v) ? v.join("; ") : String(v);
@@ -92,7 +93,13 @@ const DashboardCompanies = () => {
           <h1 className="text-2xl font-semibold tracking-tight">Companies</h1>
           <p className="text-sm text-muted-foreground">Account-level view of every organisation in your CRM.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <SavedViewsMenu
+            workspaceId={workspaceId}
+            recordType="company"
+            filters={filters as Record<string, unknown>}
+            onApplyView={(view) => setFilters({ ...(view.filters as CompanyFilters), page: 0 })}
+          />
           <Button variant="outline" onClick={exportCsv} disabled={exporting}>
             <Download className="mr-2 h-4 w-4" /> {exporting ? "Exporting…" : "Export"}
           </Button>

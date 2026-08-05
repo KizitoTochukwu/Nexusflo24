@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Handshake, Plus, Search, Settings2 } from "lucide-react";
+import { Download, Handshake, Plus, Search, Settings2 } from "lucide-react";
 import Seo from "@/components/seo/Seo";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -18,6 +18,8 @@ import DealsBoard from "@/components/crm/DealsBoard";
 import DealCreateDrawer from "@/components/crm/DealCreateDrawer";
 import DealDetailsDrawer from "@/components/crm/DealDetailsDrawer";
 import PipelineManagerDialog from "@/components/crm/PipelineManagerDialog";
+import SavedViewsMenu from "@/components/crm/SavedViewsMenu";
+import { exportRowsToCsv } from "@/lib/crm/csv";
 
 const DashboardDeals = () => {
   const workspaceId = useWorkspaceId();
@@ -57,6 +59,23 @@ const DashboardDeals = () => {
 
   const stageName = (id: string | null) => stages.find((s) => s.id === id)?.name ?? "—";
 
+  const exportCsv = () => {
+    if (!deals.length) return;
+    exportRowsToCsv("deals", deals, [
+      { key: "name", label: "Deal" },
+      { key: "stage", label: "Stage", value: (d) => stageName(d.stage_id) },
+      { key: "amount", label: "Amount" },
+      { key: "currency", label: "Currency" },
+      { key: "status", label: "Status" },
+      { key: "probability", label: "Probability" },
+      { key: "expected_close_date", label: "Expected close" },
+      { key: "closed_at", label: "Closed at" },
+      { key: "lost_reason", label: "Lost reason" },
+      { key: "source", label: "Source" },
+      { key: "created_at", label: "Created" },
+    ]);
+  };
+
   const statCards = [
     { label: "Open pipeline", value: formatMoney(stats.openValue, stats.currency), sub: `${stats.openCount} open deals` },
     { label: "Weighted forecast", value: formatMoney(stats.weighted, stats.currency), sub: "By stage probability" },
@@ -76,6 +95,20 @@ const DashboardDeals = () => {
           <p className="text-sm text-muted-foreground">Move opportunities through your pipeline and forecast revenue.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <SavedViewsMenu
+            workspaceId={workspaceId}
+            recordType="deal"
+            filters={{ search, status, pipelineId: activePipelineId }}
+            onApplyView={(view) => {
+              const f = view.filters as { search?: string; status?: string; pipelineId?: string };
+              setSearch(f.search ?? "");
+              setStatus(f.status ?? "all");
+              if (f.pipelineId) setPipelineId(f.pipelineId);
+            }}
+          />
+          <Button variant="outline" onClick={exportCsv} disabled={!deals.length}>
+            <Download className="mr-1.5 h-4 w-4" /> Export
+          </Button>
           <Button variant="outline" onClick={() => setManageOpen(true)} disabled={!activePipeline}>
             <Settings2 className="mr-1.5 h-4 w-4" /> Pipeline settings
           </Button>

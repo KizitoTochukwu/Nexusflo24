@@ -14,6 +14,7 @@ import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
 import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 import CustomFieldsPanel from "@/components/crm/CustomFieldsPanel";
+import CrmAuditPanel from "@/components/crm/CrmAuditPanel";
 import { formatMoney, useDeleteDeal, useUpdateDeal, type Deal, type PipelineStage } from "@/hooks/useDeals";
 
 type Props = {
@@ -84,6 +85,7 @@ const DealDetailsDrawer = ({ deal, stages, workspaceId, canEdit, onOpenChange }:
             <TabsTrigger value="files">Files</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="fields">Fields</TabsTrigger>
+            <TabsTrigger value="audit">Audit</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-4 pt-4">
@@ -169,6 +171,9 @@ const DealDetailsDrawer = ({ deal, stages, workspaceId, canEdit, onOpenChange }:
           </TabsContent>
           <TabsContent value="fields" className="pt-4">
             <CustomFieldsPanel workspaceId={workspaceId} recordType="deal" recordId={deal.id} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="audit" className="pt-4">
+            <CrmAuditPanel workspaceId={workspaceId} recordId={deal.id} />
           </TabsContent>
         </Tabs>
       </SheetContent>
