@@ -21,6 +21,8 @@ import DashboardLeads from "./pages/dashboard/DashboardLeads";
 import DashboardContacts from "./pages/dashboard/crm/DashboardContacts";
 import DashboardCompanies from "./pages/dashboard/crm/DashboardCompanies";
 import DashboardDeals from "./pages/dashboard/crm/DashboardDeals";
+import DashboardTasks from "./pages/dashboard/crm/DashboardTasks";
+import DashboardImportExport from "./pages/dashboard/crm/DashboardImportExport";
 import CompanyProfile from "./pages/dashboard/crm/CompanyProfile";
 import ContactProfile from "./pages/dashboard/crm/ContactProfile";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
