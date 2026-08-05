@@ -32,13 +32,13 @@ const CrmWorkspaceLayout = () => {
   const moreActive = CRM_SECONDARY_NAV.some((i) => i.key === active?.key);
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-3">
+    <div className="w-full max-w-full space-y-6 overflow-x-hidden">
+      <div className="sticky top-0 z-[61] -mx-2 space-y-2.5 border-b border-border/60 bg-background/85 px-2 pb-3 pt-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <Breadcrumb>
-          <BreadcrumbList>
+          <BreadcrumbList className="text-xs">
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <NavLink to={to("crm/contacts")} className="flex items-center gap-1.5">
+                <NavLink to={to("crm/contacts")} className="flex items-center gap-1.5 font-medium">
                   <Users2 className="h-3.5 w-3.5" /> CRM
                 </NavLink>
               </BreadcrumbLink>
@@ -47,7 +47,7 @@ const CrmWorkspaceLayout = () => {
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>{active.label}</BreadcrumbPage>
+                  <BreadcrumbPage className="font-semibold">{active.label}</BreadcrumbPage>
                 </BreadcrumbItem>
               </>
             )}
@@ -59,7 +59,7 @@ const CrmWorkspaceLayout = () => {
             const item = CRM_ALL_NAV.find((i) => i.key === key);
             if (item) navigate(to(item.path));
           }}>
-            <SelectTrigger className="w-full" aria-label="CRM section">
+            <SelectTrigger className="w-full rounded-xl" aria-label="CRM section">
               <SelectValue placeholder="Choose a CRM section" />
             </SelectTrigger>
             <SelectContent className="z-[70]">
@@ -80,46 +80,50 @@ const CrmWorkspaceLayout = () => {
         ) : (
           <nav
             aria-label="CRM sections"
-            className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-card p-1"
+            className="flex w-full items-center gap-2 rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-sm ring-1 ring-inset ring-background/40"
           >
-            {CRM_PRIMARY_NAV.map((item) => {
-              const isActive = active?.key === item.key;
-              return (
-                <NavLink
-                  key={item.key}
-                  to={to(item.path)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </NavLink>
-              );
-            })}
+            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {CRM_PRIMARY_NAV.map((item) => {
+                const isActive = active?.key === item.key;
+                return (
+                  <NavLink
+                    key={item.key}
+                    to={to(item.path)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </NavLink>
+                );
+              })}
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`ml-auto gap-1 rounded-lg text-sm font-medium ${
-                    moreActive ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : "text-muted-foreground"
+                  className={`shrink-0 gap-1 rounded-xl text-sm font-medium ${
+                    moreActive
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 hover:text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   }`}
                 >
-                  {moreActive ? active?.label : "More"}
+                  <span className="max-w-[9rem] truncate">{moreActive ? active?.label : "More"}</span>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-[70] w-56 bg-popover">
+              <DropdownMenuContent align="end" className="z-[70] w-56 rounded-xl bg-popover shadow-lg">
                 {CRM_SECONDARY_NAV.map((item) => (
                   <DropdownMenuItem
                     key={item.key}
                     onSelect={() => navigate(to(item.path))}
-                    className={active?.key === item.key ? "bg-accent/10 font-medium" : ""}
+                    className={`rounded-lg ${active?.key === item.key ? "bg-accent/10 font-medium" : ""}`}
                   >
                     <item.icon className="mr-2 h-4 w-4" />
                     {item.label}
@@ -131,7 +135,9 @@ const CrmWorkspaceLayout = () => {
         )}
       </div>
 
-      <Outlet />
+      <div className="min-w-0 max-w-full">
+        <Outlet />
+      </div>
     </div>
   );
 };
