@@ -42,8 +42,9 @@ const ContactQuickActions = ({ contact, workspaceId }: { contact: Contact; works
   const { data: automations = [] } = useAutomations(workspaceId);
   const createTask = useCreateLeadTask();
 
-  const emailReady = !!(emailStatus as any)?.data?.configured ?? false;
-  const smsReady = !!(smsStatus as any)?.data?.configured ?? false;
+  const emailReady = Boolean((emailStatus as any)?.data?.configured);
+  const smsReady = Boolean((smsStatus as any)?.data?.configured);
+
   const waReady = !!(wa as any)?.isConnected;
   const optedOut = contact.consent_status === "opted_out";
   const activeAutomations = (automations as any[]).filter((a) => a.status === "active");
