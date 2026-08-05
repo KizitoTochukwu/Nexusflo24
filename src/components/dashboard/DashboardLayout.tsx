@@ -74,6 +74,12 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
     navigate("/login");
   };
 
+  const openOverviewThen = (evt: string) => {
+    const overview = `/dashboard/${workspaceId}/overview`;
+    if (location.pathname !== overview) navigate(overview);
+    window.setTimeout(() => window.dispatchEvent(new Event(evt)), 350);
+  };
+
   const handleSwitchWorkspace = (wsId: string) => {
     navigate(`/dashboard/${wsId}/overview`);
   };
@@ -210,10 +216,10 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuLabel className="text-xs text-muted-foreground">Help & onboarding</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(OPEN_CHECKLIST_EVENT))}>
+                <DropdownMenuItem onClick={() => openOverviewThen(OPEN_CHECKLIST_EVENT)}>
                   <ListChecks className="mr-2 h-4 w-4" /> Getting Started checklist
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.dispatchEvent(new Event(OPEN_TOUR_EVENT))}>
+                <DropdownMenuItem onClick={() => openOverviewThen(OPEN_TOUR_EVENT)}>
                   <Sparkles className="mr-2 h-4 w-4" /> Replay product tour
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
