@@ -13,6 +13,7 @@ import CrmTimeline from "@/components/crm/CrmTimeline";
 import CrmNotesPanel from "@/components/crm/CrmNotesPanel";
 import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
 import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
+import CustomFieldsPanel from "@/components/crm/CustomFieldsPanel";
 import { formatMoney, useDeleteDeal, useUpdateDeal, type Deal, type PipelineStage } from "@/hooks/useDeals";
 
 type Props = {
