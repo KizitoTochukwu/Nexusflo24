@@ -17,7 +17,7 @@ import { logCrmActivity } from "@/lib/crm/events";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmailStatus } from "@/hooks/useEmailStatus";
 import { useSmsStatus } from "@/hooks/useSmsStatus";
-import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
+import { useActiveWhatsAppProvider } from "@/hooks/useWhatsAppConnection";
 import { useAutomations } from "@/hooks/useAutomations";
 import { useCreateLeadTask } from "@/hooks/useLeadTasks";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,14 +38,14 @@ const ContactQuickActions = ({ contact, workspaceId }: { contact: Contact; works
   const qc = useQueryClient();
   const emailStatus = useEmailStatus(workspaceId);
   const smsStatus = useSmsStatus(workspaceId);
-  const wa = useWhatsAppConnection(workspaceId);
+  const { data: waProvider } = useActiveWhatsAppProvider(workspaceId);
   const { data: automations = [] } = useAutomations(workspaceId);
   const createTask = useCreateLeadTask();
 
   const emailReady = Boolean((emailStatus as any)?.data?.configured);
   const smsReady = Boolean((smsStatus as any)?.data?.configured);
 
-  const waReady = !!(wa as any)?.isConnected;
+  const waReady = !!waProvider;
   const optedOut = contact.consent_status === "opted_out";
   const activeAutomations = (automations as any[]).filter((a) => a.status === "active");
 
