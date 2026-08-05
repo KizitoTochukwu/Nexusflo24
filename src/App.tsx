@@ -30,6 +30,7 @@ import ChatbotWidget from "./components/ChatbotWidget";
 import CookieConsentBanner from "./components/CookieConsentBanner";
 import InactivityManager from "./components/auth/InactivityManager";
 import DashboardRedirect from "./pages/DashboardRedirect";
+import Onboarding from "./pages/Onboarding";
 import Referral from "./pages/Referral";
 import Academy from "./pages/Academy";
 import AcademyCourse from "./pages/AcademyCourse";
@@ -144,6 +145,7 @@ const App = () => (
 
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
+              <Route path="/onboarding" element={<Onboarding />} />
 
               {/* Workspace-scoped dashboard routes */}
               <Route path="/dashboard/:workspaceId" element={<WorkspaceGuard />}>
