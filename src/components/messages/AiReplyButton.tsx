@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { runNexusCapability } from "@/hooks/useNexusAi";
 
 interface AiReplyButtonProps {
   conversationContext: string;
@@ -11,27 +12,25 @@ interface AiReplyButtonProps {
 
 export default function AiReplyButton({ conversationContext, onSuggestion }: AiReplyButtonProps) {
   const [loading, setLoading] = useState(false);
+  const workspaceId = useWorkspaceId();
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("nexus-ai-chat", {
-        body: {
-          messages: [
-            { role: "system", content: "You are a helpful sales assistant. Generate a concise, professional reply based on the conversation context below. Keep it under 3 sentences. Only return the reply text, nothing else." },
-            { role: "user", content: `Conversation:\n${conversationContext}\n\nSuggest a reply:` },
-          ],
-        },
+      const reply = await runNexusCapability({
+        workspaceId,
+        capability: "reply_suggestion",
+        prompt:
+          `Draft the next reply in this conversation. Keep it under 3 sentences and return only the message text.\n\nConversation:\n${conversationContext}`,
+        context: { recordType: "Conversation", recordSummary: conversationContext.slice(0, 4000) },
       });
-      if (error) throw error;
-      const reply = data?.reply || data?.message || "";
-      if (reply) {
-        onSuggestion(reply);
+      if (reply?.trim()) {
+        onSuggestion(reply.trim());
       } else {
         toast.error("No suggestion generated");
       }
-    } catch (err: any) {
-      toast.error("Failed to generate suggestion");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate suggestion");
     } finally {
       setLoading(false);
     }

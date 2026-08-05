@@ -13,6 +13,9 @@ import {
   BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
+import NexusAiPanel, { openNexusAi } from "@/components/ai/NexusAiPanel";
+import nexusAiMark from "@/assets/nexus-ai-mark.png";
+
 import { OPEN_CHECKLIST_EVENT } from "@/components/dashboard/GettingStartedChecklist";
 import { OPEN_TOUR_EVENT } from "@/components/onboarding/ProductTour";
 import { useNotificationWatcher } from "@/hooks/useNotifications";
@@ -204,7 +207,18 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Nexus AI */}
+            <button
+              onClick={() => openNexusAi()}
+              className="flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent/20"
+              aria-label="Open Nexus AI assistant"
+            >
+              <img src={nexusAiMark} alt="" width={16} height={16} loading="lazy" className="h-4 w-4 rounded" />
+              <span className="hidden sm:inline">Nexus AI</span>
+            </button>
+
             {/* Help menu */}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -264,6 +278,8 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
         <div className="p-4 sm:p-6 lg:p-8">
           <BillingWarningBanner />
+          <NexusAiPanel />
+
           {children}
         </div>
       </main>
