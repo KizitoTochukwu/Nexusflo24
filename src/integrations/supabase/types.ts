@@ -391,6 +391,143 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_types: {
+        Row: {
+          availability_schedule_id: string | null
+          booking_page_id: string | null
+          buffer_after_minutes: number
+          buffer_before_minutes: number
+          cancel_cutoff_minutes: number
+          capacity: number
+          color: string
+          created_at: string
+          created_by: string | null
+          description: string
+          duration_minutes: number
+          host_user_id: string | null
+          id: string
+          is_published: boolean
+          kind: string
+          location_type: string
+          location_value: string | null
+          max_days_ahead: number
+          max_per_day: number | null
+          max_reschedules: number
+          min_notice_minutes: number
+          name: string
+          position: number
+          questions: Json
+          reminder_sequence: Json
+          require_confirmation: boolean
+          reschedule_cutoff_minutes: number
+          slot_interval_minutes: number
+          slug: string | null
+          team_id: string | null
+          timezone: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          availability_schedule_id?: string | null
+          booking_page_id?: string | null
+          buffer_after_minutes?: number
+          buffer_before_minutes?: number
+          cancel_cutoff_minutes?: number
+          capacity?: number
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          duration_minutes?: number
+          host_user_id?: string | null
+          id?: string
+          is_published?: boolean
+          kind?: string
+          location_type?: string
+          location_value?: string | null
+          max_days_ahead?: number
+          max_per_day?: number | null
+          max_reschedules?: number
+          min_notice_minutes?: number
+          name: string
+          position?: number
+          questions?: Json
+          reminder_sequence?: Json
+          require_confirmation?: boolean
+          reschedule_cutoff_minutes?: number
+          slot_interval_minutes?: number
+          slug?: string | null
+          team_id?: string | null
+          timezone?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          availability_schedule_id?: string | null
+          booking_page_id?: string | null
+          buffer_after_minutes?: number
+          buffer_before_minutes?: number
+          cancel_cutoff_minutes?: number
+          capacity?: number
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          duration_minutes?: number
+          host_user_id?: string | null
+          id?: string
+          is_published?: boolean
+          kind?: string
+          location_type?: string
+          location_value?: string | null
+          max_days_ahead?: number
+          max_per_day?: number | null
+          max_reschedules?: number
+          min_notice_minutes?: number
+          name?: string
+          position?: number
+          questions?: Json
+          reminder_sequence?: Json
+          require_confirmation?: boolean
+          reschedule_cutoff_minutes?: number
+          slot_interval_minutes?: number
+          slug?: string | null
+          team_id?: string | null
+          timezone?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_types_booking_page_id_fkey"
+            columns: ["booking_page_id"]
+            isOneToOne: false
+            referencedRelation: "booking_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_types_schedule_fk"
+            columns: ["availability_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "availability_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_types_team_fk"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "booking_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_types_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_logs: {
         Row: {
           automation_id: string
@@ -615,6 +752,143 @@ export type Database = {
           },
         ]
       }
+      availability_overrides: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          is_unavailable: boolean
+          label: string | null
+          override_date: string
+          schedule_id: string
+          start_time: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          is_unavailable?: boolean
+          label?: string | null
+          override_date: string
+          schedule_id: string
+          start_time?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          is_unavailable?: boolean
+          label?: string | null
+          override_date?: string
+          schedule_id?: string
+          start_time?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_overrides_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "availability_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_overrides_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_rules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          schedule_id: string
+          start_time: string
+          weekday: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          schedule_id: string
+          start_time: string
+          weekday: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          schedule_id?: string
+          start_time?: string
+          weekday?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_rules_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "availability_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          timezone: string
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           author: string
@@ -693,9 +967,115 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_attendees: {
+        Row: {
+          answers: Json
+          booking_id: string
+          created_at: string
+          email: string
+          id: string
+          lead_id: string | null
+          name: string
+          phone: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          answers?: Json
+          booking_id: string
+          created_at?: string
+          email: string
+          id?: string
+          lead_id?: string | null
+          name: string
+          phone?: string | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          answers?: Json
+          booking_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          lead_id?: string | null
+          name?: string
+          phone?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_attendees_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_attendees_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_events: {
+        Row: {
+          actor_user_id: string | null
+          booking_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          idempotency_key: string
+          payload: Json
+          source: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          booking_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          idempotency_key: string
+          payload?: Json
+          source?: string
+          workspace_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          booking_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          payload?: Json
+          source?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_pages: {
         Row: {
           availability: Json
+          brand_color: string | null
           buffer_minutes: number
           color: string | null
           created_at: string
@@ -703,9 +1083,14 @@ export type Database = {
           duration_minutes: number
           google_calendar_id: string | null
           google_token_id: string | null
+          host_avatar_url: string | null
+          host_display_name: string | null
           id: string
+          intro_text: string | null
+          is_published: boolean
           location_type: string
           location_value: string | null
+          logo_url: string | null
           max_days_ahead: number
           name: string
           notify_guest_whatsapp: boolean
@@ -722,6 +1107,7 @@ export type Database = {
         }
         Insert: {
           availability?: Json
+          brand_color?: string | null
           buffer_minutes?: number
           color?: string | null
           created_at?: string
@@ -729,9 +1115,14 @@ export type Database = {
           duration_minutes?: number
           google_calendar_id?: string | null
           google_token_id?: string | null
+          host_avatar_url?: string | null
+          host_display_name?: string | null
           id?: string
+          intro_text?: string | null
+          is_published?: boolean
           location_type?: string
           location_value?: string | null
+          logo_url?: string | null
           max_days_ahead?: number
           name: string
           notify_guest_whatsapp?: boolean
@@ -748,6 +1139,7 @@ export type Database = {
         }
         Update: {
           availability?: Json
+          brand_color?: string | null
           buffer_minutes?: number
           color?: string | null
           created_at?: string
@@ -755,9 +1147,14 @@ export type Database = {
           duration_minutes?: number
           google_calendar_id?: string | null
           google_token_id?: string | null
+          host_avatar_url?: string | null
+          host_display_name?: string | null
           id?: string
+          intro_text?: string | null
+          is_published?: boolean
           location_type?: string
           location_value?: string | null
+          logo_url?: string | null
           max_days_ahead?: number
           name?: string
           notify_guest_whatsapp?: boolean
@@ -796,15 +1193,184 @@ export type Database = {
           },
         ]
       }
+      booking_reminders: {
+        Row: {
+          attempts: number
+          audience: string
+          booking_id: string
+          channel: string
+          created_at: string
+          id: string
+          offset_minutes: number
+          provider_response: Json | null
+          send_at: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attempts?: number
+          audience?: string
+          booking_id: string
+          channel: string
+          created_at?: string
+          id?: string
+          offset_minutes: number
+          provider_response?: Json | null
+          send_at: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attempts?: number
+          audience?: string
+          booking_id?: string
+          channel?: string
+          created_at?: string
+          id?: string
+          offset_minutes?: number
+          provider_response?: Json | null
+          send_at?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reminders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_team_members: {
+        Row: {
+          availability_schedule_id: string | null
+          created_at: string
+          id: string
+          is_paused: boolean
+          is_required: boolean
+          max_per_day: number | null
+          priority: number
+          team_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          availability_schedule_id?: string | null
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          is_required?: boolean
+          max_per_day?: number | null
+          priority?: number
+          team_id: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          availability_schedule_id?: string | null
+          created_at?: string
+          id?: string
+          is_paused?: boolean
+          is_required?: boolean
+          max_per_day?: number | null
+          priority?: number
+          team_id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_team_members_availability_schedule_id_fkey"
+            columns: ["availability_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "availability_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "booking_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_team_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_teams: {
+        Row: {
+          assignment_method: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          assignment_method?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          assignment_method?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_teams_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
+          answers: Json
+          appointment_type_id: string | null
           booking_page_id: string
+          cancel_reason: string | null
+          company_id: string | null
+          contact_id: string | null
           created_at: string
+          deal_id: string | null
           end_time: string
           google_event_id: string | null
           guest_email: string
           guest_name: string
           guest_phone: string | null
+          host_user_id: string | null
           id: string
           internal_notes: string | null
           lead_id: string | null
@@ -812,25 +1378,37 @@ export type Database = {
           meeting_url: string | null
           notes: string | null
           reminder_sent_at: string | null
+          reschedule_count: number
           reschedule_token: string | null
           sms_consent: boolean
           sms_consent_source: string | null
           sms_consent_text: string | null
           sms_consent_timestamp: string | null
           sms_opt_out: boolean
+          source: string
           start_time: string
           status: string
+          status_actor_id: string | null
+          status_changed_at: string | null
           updated_at: string
+          utm: Json
           workspace_id: string
         }
         Insert: {
+          answers?: Json
+          appointment_type_id?: string | null
           booking_page_id: string
+          cancel_reason?: string | null
+          company_id?: string | null
+          contact_id?: string | null
           created_at?: string
+          deal_id?: string | null
           end_time: string
           google_event_id?: string | null
           guest_email: string
           guest_name: string
           guest_phone?: string | null
+          host_user_id?: string | null
           id?: string
           internal_notes?: string | null
           lead_id?: string | null
@@ -838,25 +1416,37 @@ export type Database = {
           meeting_url?: string | null
           notes?: string | null
           reminder_sent_at?: string | null
+          reschedule_count?: number
           reschedule_token?: string | null
           sms_consent?: boolean
           sms_consent_source?: string | null
           sms_consent_text?: string | null
           sms_consent_timestamp?: string | null
           sms_opt_out?: boolean
+          source?: string
           start_time: string
           status?: string
+          status_actor_id?: string | null
+          status_changed_at?: string | null
           updated_at?: string
+          utm?: Json
           workspace_id: string
         }
         Update: {
+          answers?: Json
+          appointment_type_id?: string | null
           booking_page_id?: string
+          cancel_reason?: string | null
+          company_id?: string | null
+          contact_id?: string | null
           created_at?: string
+          deal_id?: string | null
           end_time?: string
           google_event_id?: string | null
           guest_email?: string
           guest_name?: string
           guest_phone?: string | null
+          host_user_id?: string | null
           id?: string
           internal_notes?: string | null
           lead_id?: string | null
@@ -864,18 +1454,30 @@ export type Database = {
           meeting_url?: string | null
           notes?: string | null
           reminder_sent_at?: string | null
+          reschedule_count?: number
           reschedule_token?: string | null
           sms_consent?: boolean
           sms_consent_source?: string | null
           sms_consent_text?: string | null
           sms_consent_timestamp?: string | null
           sms_opt_out?: boolean
+          source?: string
           start_time?: string
           status?: string
+          status_actor_id?: string | null
+          status_changed_at?: string | null
           updated_at?: string
+          utm?: Json
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_appointment_type_id_fkey"
+            columns: ["appointment_type_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_booking_page_id_fkey"
             columns: ["booking_page_id"]
@@ -6174,6 +6776,21 @@ export type Database = {
           token_id: string
         }[]
       }
+      get_public_appointment_types: {
+        Args: { p_page_id: string }
+        Returns: {
+          capacity: number
+          color: string
+          description: string
+          duration_minutes: number
+          id: string
+          kind: string
+          location_type: string
+          location_value: string
+          name: string
+          questions: Json
+        }[]
+      }
       get_public_blog_post: {
         Args: { p_slug: string }
         Returns: {
@@ -6326,6 +6943,10 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      pick_booking_host: {
+        Args: { _end: string; _start: string; _team_id: string }
+        Returns: string
       }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
