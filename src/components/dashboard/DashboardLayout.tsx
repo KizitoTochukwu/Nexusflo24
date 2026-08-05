@@ -135,7 +135,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-hidden px-2 py-2">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4 my-[20px]">
           {sidebarItems.map((item) => {
             const prefixes = ("match" in item && item.match ? item.match : [item.to]) as string[];
             const isActive = prefixes.some(
@@ -145,7 +145,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
               <Link
                 key={item.label}
                 to={item.to}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 isActive ?
                 "bg-sidebar-accent text-sidebar-accent-foreground" :
                 "text-primary-foreground/60 hover:bg-sidebar-accent/50 hover:text-primary-foreground"}`
