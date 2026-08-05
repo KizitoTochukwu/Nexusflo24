@@ -708,7 +708,7 @@ function NotificationsTab() {
 /* ── Main Settings Page ──────────────────────────────────── */
 
 const VALID_TABS = [
-  "profile", "billing", "usage", "channels", "senders", "buy-credits",
+  "profile", "onboarding", "billing", "usage", "channels", "senders", "buy-credits",
   "wa-templates", "meta-channel", "tracking", "branding", "team",
   "integrations", "webhooks", "api-keys", "automations", "notifications", "security",
   "ai-sales", "ai-agents", "custom-code",
