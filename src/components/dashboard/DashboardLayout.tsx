@@ -9,7 +9,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  LayoutDashboard, Users, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
+  LayoutDashboard, Users, Contact2, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
   BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
