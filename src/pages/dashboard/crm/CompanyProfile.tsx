@@ -227,6 +227,9 @@ const CompanyProfile = () => {
           <TabsContent value="files" className="mt-4">
             <CrmFilesPanel workspaceId={workspaceId} recordType="company" recordId={company.id} canEdit={canEdit} />
           </TabsContent>
+          <TabsContent value="tasks" className="mt-4">
+            <CrmTasksPanel workspaceId={workspaceId} link={{ company_id: company.id }} canEdit={canEdit} />
+          </TabsContent>
         </Tabs>
 
         <Card className="h-fit">
