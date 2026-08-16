@@ -161,11 +161,24 @@ export default function AutomationFinder() {
               <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-accent" />
               <h2 className="text-2xl font-bold">Here is what we recommend</h2>
               <p className="mt-3 text-muted-foreground">
-                We have also emailed these to you along with a short explanation of why they fit.
+                {aiSummary || "We have also emailed these to you along with a short explanation of why they fit."}
               </p>
+              {aiSlugs && (
+                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+                  <Sparkles className="h-3.5 w-3.5" /> Matched by Nexus AI
+                </span>
+              )}
               <div className="mt-8 grid gap-6 text-left md:grid-cols-2">
                 {recommendations.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <div key={product.id} className="space-y-2">
+                    <ProductCard product={product} />
+                    {aiReasons[product.slug] && (
+                      <p className="rounded-lg bg-surface px-3 py-2 text-xs text-muted-foreground">
+                        <strong className="text-foreground">Why this fits: </strong>
+                        {aiReasons[product.slug]}
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
               {recommendations.length === 0 && (
