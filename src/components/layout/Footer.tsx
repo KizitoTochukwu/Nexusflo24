@@ -69,7 +69,7 @@ const Footer = () => {
           {/* Product */}
           <div className="space-y-3">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-accent">Product</h4>
-            {["Features", "Pricing", "Dashboard", "Integrations"].map((item) =>
+            {["Features", "Pricing", "Dashboard"].map((item) =>
             <Link key={item} to={`/${item.toLowerCase()}`} className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
                 {item}
               </Link>
