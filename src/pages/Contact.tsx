@@ -109,7 +109,7 @@ const Contact = () => {
             lead_name: form.name,
             lead_phone: form.phone || null,
             notify_channels: { email: true, whatsapp: true, sms: false },
-            notify_emails: ["admin@nexusflo24.com"],
+            notify_emails: ["support@nexusflo24.com"],
             notify_phones: ["+447517327597"],
             send_confirmation: true,
             send_lead_whatsapp: !!form.phone,
@@ -124,7 +124,7 @@ const Contact = () => {
   };
 
   const channels = [
-    { icon: Mail, title: "Email us", value: "admin@nexusflo24.com", sub: "Reply within 24h" },
+    { icon: Mail, title: "Email us", value: "support@nexusflo24.com", sub: "Reply within 24h" },
     { icon: MessageCircle, title: "WhatsApp", value: "+44 7517 327597", sub: "Chat live with our team" },
     { icon: Clock, title: "Response time", value: "Under 2 hours", sub: "Mon–Fri · 9–6 GMT" },
     { icon: Star, title: "Trusted", value: "10k+ businesses", sub: "Creators & SMBs" },
