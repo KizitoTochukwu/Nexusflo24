@@ -13,7 +13,7 @@ import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 
 const navLinks = [
   { label: "Features", to: "/features" },
-  { label: "Automation Store", to: "/automations" },
+  { label: "Store", to: "/automations" },
   { label: "Pricing", to: "/pricing" },
   { label: "Referral", to: "/referral" },
   { label: "About", to: "/about" },
