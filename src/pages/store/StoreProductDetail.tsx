@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ConfiguratorDialog from "@/components/store/ConfiguratorDialog";
 import ProductCard from "@/components/store/ProductCard";
+import ProductReviews from "@/components/store/ProductReviews";
 import {
   LevelBadge, SectionHeading, StoreCta, WorkflowChain,
 } from "@/components/store/StorePrimitives";
