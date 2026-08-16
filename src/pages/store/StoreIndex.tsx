@@ -32,7 +32,7 @@ export default function StoreIndex() {
       <Seo
         title="Automation Store | Buy Done-For-You Business Automations"
         description="Browse ready-made AI and business automations. Choose your outcome, configure it in minutes, and NexusFlo24 builds, tests and launches it for you."
-        canonical="https://nexusflo24.com/automations"
+        path="/automations"
       />
 
       {/* Hero */}
