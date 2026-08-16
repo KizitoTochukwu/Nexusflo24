@@ -13,6 +13,7 @@ import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 
 const navLinks = [
   { label: "Features", to: "/features" },
+  { label: "Automation Store", to: "/automations" },
   { label: "Pricing", to: "/pricing" },
   { label: "Referral", to: "/referral" },
   { label: "About", to: "/about" },
@@ -20,6 +21,8 @@ const navLinks = [
 ];
 
 const resourcesLinks = [
+  { label: "Automation Finder", to: "/automation-finder" },
+  { label: "Automation Bundles", to: "/automation-bundles" },
   { label: "Academy", to: "/academy" },
   { label: "Blog", to: "/blog" },
   { label: "ROI Savings Calculator", to: "/tools/roi-savings-calculator" },

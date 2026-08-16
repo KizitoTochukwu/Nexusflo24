@@ -101,6 +101,13 @@ import MetaPixelRouteTracker from "./components/analytics/MetaPixelRouteTracker"
 import SiteCustomCodeInjector from "./components/analytics/SiteCustomCodeInjector";
 import AiSeoVisibilityEngine from "./pages/AiSeoVisibilityEngine";
 import RoiSavingsCalculator from "./pages/tools/RoiSavingsCalculator";
+import StoreIndex from "./pages/store/StoreIndex";
+import StoreCatalogue from "./pages/store/StoreCatalogue";
+import StoreCategory from "./pages/store/StoreCategory";
+import StoreProductDetail from "./pages/store/StoreProductDetail";
+import AutomationFinder from "./pages/store/AutomationFinder";
+import AutomationBundles from "./pages/store/AutomationBundles";
+import BuildMyAutomation from "./pages/store/BuildMyAutomation";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -131,6 +138,13 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/features" element={<Features />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/automations" element={<StoreIndex />} />
+              <Route path="/automations/all" element={<StoreCatalogue />} />
+              <Route path="/automations/category/:category" element={<StoreCategory />} />
+              <Route path="/automation-finder" element={<AutomationFinder />} />
+              <Route path="/automation-bundles" element={<AutomationBundles />} />
+              <Route path="/build-my-automation" element={<BuildMyAutomation />} />
+              <Route path="/automations/:slug" element={<StoreProductDetail />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/referral" element={<Referral />} />
