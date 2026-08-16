@@ -135,30 +135,6 @@ export default function AutomationFinder() {
       selected ? "border-accent bg-accent/10 font-medium text-accent" : "hover:bg-muted"
     }`;
 
-  const handleFinish = async () => {
-    if (!contact.email.trim() || !contact.full_name.trim()) {
-      toast.error("Add your name and email so we can send your recommendations.");
-      return;
-    }
-    try {
-      await submit.mutateAsync({
-        request_type: "finder",
-        full_name: contact.full_name,
-        email: contact.email,
-        business_name: contact.business_name || null,
-        industry: industry || null,
-        answers: {
-          goal,
-          problems: problemSlugs,
-          budget,
-          recommended: recommendations.map((p) => p.slug),
-        },
-      });
-      setSubmitted(true);
-    } catch (err: any) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
-    }
-  };
 
   return (
     <Layout>
