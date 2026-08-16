@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ConfiguratorDialog from "@/components/store/ConfiguratorDialog";
 import ProductCard from "@/components/store/ProductCard";
+import ProductReviews from "@/components/store/ProductReviews";
 import {
   LevelBadge, SectionHeading, StoreCta, WorkflowChain,
 } from "@/components/store/StorePrimitives";
@@ -195,6 +196,8 @@ export default function StoreProductDetail() {
           </div>
         </div>
       </section>
+
+      <ProductReviews productSlug={product.slug} />
 
       {related.length > 0 && (
         <section className="bg-surface py-14">

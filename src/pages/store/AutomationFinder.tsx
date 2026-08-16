@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import Seo from "@/components/seo/Seo";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import ProductCard from "@/components/store/ProductCard";
 import { SectionHeading } from "@/components/store/StorePrimitives";
 import { INDUSTRIES } from "@/lib/store/constants";
+import { supabase } from "@/integrations/supabase/client";
 import {
   useStoreProblems, useStoreProducts, useSubmitStoreRequest, type StoreProduct,
 } from "@/hooks/useStore";
@@ -38,7 +39,12 @@ export default function AutomationFinder() {
   const [contact, setContact] = useState({ full_name: "", email: "", business_name: "" });
   const [submitted, setSubmitted] = useState(false);
 
-  const recommendations = useMemo(() => {
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiReasons, setAiReasons] = useState<Record<string, string>>({});
+  const [aiSlugs, setAiSlugs] = useState<string[] | null>(null);
+  const [thinking, setThinking] = useState(false);
+
+  const fallbackRecommendations = useMemo(() => {
     const scored = products.map((product) => {
       let score = 0;
       if (problemSlugs.some((slug) => (product.problem_slugs ?? []).includes(slug))) score += 4;
@@ -58,6 +64,65 @@ export default function AutomationFinder() {
       .map((item) => item.product) as StoreProduct[];
   }, [products, problemSlugs, industry, goal, budget]);
 
+  const recommendations: StoreProduct[] = aiSlugs
+    ? (aiSlugs.map((slug) => products.find((p) => p.slug === slug)).filter(Boolean) as StoreProduct[])
+    : fallbackRecommendations;
+
+  const runAiRecommendation = async () => {
+    setThinking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("store-recommend", {
+        body: {
+          mode: "finder",
+          goal,
+          problems: problemSlugs,
+          industry,
+          budget,
+          business_name: contact.business_name,
+        },
+      });
+      if (error) throw error;
+      const recs = (data?.recommendations ?? []) as { slug: string; reason: string }[];
+      if (recs.length) {
+        setAiSlugs(recs.map((r) => r.slug));
+        setAiReasons(Object.fromEntries(recs.map((r) => [r.slug, r.reason])));
+      }
+      if (data?.summary) setAiSummary(data.summary);
+    } catch {
+      // Silently fall back to the rule-based match so the user always gets results.
+    } finally {
+      setThinking(false);
+    }
+  };
+
+  const handleFinish = async () => {
+    if (!contact.email.trim() || !contact.full_name.trim()) {
+      toast.error("Add your name and email so we can send your recommendations.");
+      return;
+    }
+    await runAiRecommendation();
+    try {
+      await submit.mutateAsync({
+        request_type: "finder",
+        full_name: contact.full_name,
+        email: contact.email,
+        business_name: contact.business_name || null,
+        industry: industry || null,
+        answers: {
+          goal,
+          problems: problemSlugs,
+          budget,
+          recommended: (aiSlugs ?? fallbackRecommendations.map((p) => p.slug)),
+          ai_summary: aiSummary || null,
+        },
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
+    }
+  };
+
+
   const steps = [
     { title: "What is your main goal right now?", canNext: !!goal },
     { title: "Which problems do you recognise?", canNext: problemSlugs.length > 0 },
@@ -71,30 +136,6 @@ export default function AutomationFinder() {
       selected ? "border-accent bg-accent/10 font-medium text-accent" : "hover:bg-muted"
     }`;
 
-  const handleFinish = async () => {
-    if (!contact.email.trim() || !contact.full_name.trim()) {
-      toast.error("Add your name and email so we can send your recommendations.");
-      return;
-    }
-    try {
-      await submit.mutateAsync({
-        request_type: "finder",
-        full_name: contact.full_name,
-        email: contact.email,
-        business_name: contact.business_name || null,
-        industry: industry || null,
-        answers: {
-          goal,
-          problems: problemSlugs,
-          budget,
-          recommended: recommendations.map((p) => p.slug),
-        },
-      });
-      setSubmitted(true);
-    } catch (err: any) {
-      toast.error(err?.message || "Something went wrong. Please try again.");
-    }
-  };
 
   return (
     <Layout>
@@ -120,11 +161,24 @@ export default function AutomationFinder() {
               <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-accent" />
               <h2 className="text-2xl font-bold">Here is what we recommend</h2>
               <p className="mt-3 text-muted-foreground">
-                We have also emailed these to you along with a short explanation of why they fit.
+                {aiSummary || "We have also emailed these to you along with a short explanation of why they fit."}
               </p>
+              {aiSlugs && (
+                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+                  <Sparkles className="h-3.5 w-3.5" /> Matched by Nexus AI
+                </span>
+              )}
               <div className="mt-8 grid gap-6 text-left md:grid-cols-2">
                 {recommendations.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <div key={product.id} className="space-y-2">
+                    <ProductCard product={product} />
+                    {aiReasons[product.slug] && (
+                      <p className="rounded-lg bg-surface px-3 py-2 text-xs text-muted-foreground">
+                        <strong className="text-foreground">Why this fits: </strong>
+                        {aiReasons[product.slug]}
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
               {recommendations.length === 0 && (
@@ -261,10 +315,10 @@ export default function AutomationFinder() {
                   <Button
                     className="bg-accent text-accent-foreground hover:bg-gold-dark"
                     onClick={handleFinish}
-                    disabled={submit.isPending}
+                    disabled={submit.isPending || thinking}
                   >
-                    {submit.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Show my recommendations
+                    {(submit.isPending || thinking) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {thinking ? "Matching automations…" : "Show my recommendations"}
                   </Button>
                 )}
               </div>

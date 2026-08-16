@@ -16,6 +16,8 @@ import {
   PROJECT_STATUSES, projectStatusLabel, useAddProjectUpdate, useAdminStoreOrders,
   useAdminStoreProjects, useUpdateStoreProject, type StoreProject,
 } from "@/hooks/useStoreOrders";
+import { useStoreAnalytics } from "@/hooks/useStoreAdmin";
+import { useAdminReviews, useDeleteReview, useModerateReview } from "@/hooks/useStoreReviews";
 import { formatGbp } from "@/lib/store/price";
 
 function ProjectRow({ project }: { project: StoreProject }) {
@@ -115,6 +117,135 @@ function ProjectRow({ project }: { project: StoreProject }) {
   );
 }
 
+function AnalyticsTab() {
+  const { data, isLoading } = useStoreAnalytics();
+  if (isLoading || !data) return <Skeleton className="h-64" />;
+
+  const cards = [
+    { label: "Paid orders", value: String(data.paidOrders) },
+    { label: "Setup revenue", value: formatGbp(data.setupRevenuePence) },
+    { label: "Recurring revenue", value: `${formatGbp(data.monthlyRevenuePence)}/mo` },
+    { label: "Average order", value: formatGbp(data.averageOrderPence) },
+    { label: "Checkout conversion", value: `${data.conversionRate}%` },
+    { label: "Custom requests", value: String(data.requests) },
+    { label: "Live automations", value: String(data.liveProjects) },
+    { label: "In delivery", value: String(data.activeProjects) },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => (
+          <div key={card.label} className="rounded-xl border bg-card p-4">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{card.label}</p>
+            <p className="mt-1 text-2xl font-bold">{card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border bg-card p-5">
+          <h3 className="font-semibold">Best sellers</h3>
+          {data.byProduct.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">No paid items yet.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {data.byProduct.slice(0, 8).map((row) => (
+                <li key={row.slug} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate">{row.name}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {row.orders} × · {formatGbp(row.revenuePence)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="rounded-xl border bg-card p-5">
+          <h3 className="font-semibold">Revenue by month</h3>
+          {data.byMonth.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">No revenue recorded yet.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {data.byMonth.map((row) => (
+                <li key={row.month} className="flex items-center justify-between gap-3 text-sm">
+                  <span>{row.month}</span>
+                  <span className="text-muted-foreground">
+                    {row.orders} orders · {formatGbp(row.revenue)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewsTab() {
+  const { data: reviews = [], isLoading } = useAdminReviews();
+  const moderate = useModerateReview();
+  const remove = useDeleteReview();
+
+  if (isLoading) return <Skeleton className="h-40" />;
+  if (reviews.length === 0) {
+    return (
+      <p className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+        No customer reviews submitted yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {reviews.map((review) => (
+        <div key={review.id} className="rounded-xl border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{review.author_name}</span>
+            <span className="text-xs text-muted-foreground">/{review.product_slug}</span>
+            <Badge variant="secondary">{review.rating}/5</Badge>
+            {review.is_verified && <Badge className="bg-accent/15 text-accent hover:bg-accent/15">Verified</Badge>}
+            <Badge variant={review.is_published ? "default" : "outline"}>
+              {review.is_published ? "Published" : "Pending"}
+            </Badge>
+            <div className="ml-auto flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  moderate.mutate({ id: review.id, patch: { is_published: !review.is_published } })
+                }
+              >
+                {review.is_published ? "Unpublish" : "Publish"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => moderate.mutate({ id: review.id, patch: { is_verified: !review.is_verified } })}
+              >
+                {review.is_verified ? "Unverify" : "Verify"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (window.confirm("Delete this review?")) remove.mutate(review.id);
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+          {review.title && <p className="mt-2 font-semibold">{review.title}</p>}
+          {review.body && <p className="mt-1 text-sm text-muted-foreground">{review.body}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function AdminStoreOrders() {
   const { data: orders = [], isLoading } = useAdminStoreOrders();
   const { data: projects = [], isLoading: loadingProjects } = useAdminStoreProjects();
@@ -125,15 +256,26 @@ export default function AdminStoreOrders() {
         <div>
           <h1 className="text-2xl font-bold">Automation Store fulfilment</h1>
           <p className="text-sm text-muted-foreground">
-            Track paid orders and move each delivery project through build, testing and go-live.
+            Track paid orders, revenue and reviews, and move each delivery project through build, testing and go-live.
           </p>
         </div>
 
         <Tabs defaultValue="projects">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="projects">Projects ({projects.length})</TabsTrigger>
             <TabsTrigger value="orders">Orders ({orders.length})</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="analytics" className="mt-4">
+            <AnalyticsTab />
+          </TabsContent>
+
+          <TabsContent value="reviews" className="mt-4">
+            <ReviewsTab />
+          </TabsContent>
+
 
           <TabsContent value="projects" className="mt-4 space-y-4">
             {loadingProjects ? (

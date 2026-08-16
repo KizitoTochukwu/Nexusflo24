@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Star } from "lucide-react";
+import LeaveReviewDialog from "@/components/store/LeaveReviewDialog";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ export default function StoreProjectDetail() {
   const { data: updates = [] } = useStoreProjectUpdates(projectId);
   const update = useUpdateStoreProject();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     if (project) setAnswers((project.onboarding_data ?? {}) as Record<string, string>);
@@ -121,7 +123,31 @@ export default function StoreProjectDetail() {
                   </Button>
                 </div>
               )}
+
+              {project.status === "live" && project.product_slug && (
+                <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border bg-surface p-4">
+                  <div className="min-w-[200px] flex-1">
+                    <p className="text-sm font-medium">How is this automation working for you?</p>
+                    <p className="text-xs text-muted-foreground">
+                      Share a short review to help other businesses choose.
+                    </p>
+                  </div>
+                  <Button variant="outline" onClick={() => setReviewing(true)}>
+                    <Star className="mr-2 h-4 w-4" /> Leave a review
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {project.product_slug && (
+              <LeaveReviewDialog
+                open={reviewing}
+                onOpenChange={setReviewing}
+                productSlug={project.product_slug}
+                projectId={project.id}
+                productName={project.name}
+              />
+            )}
 
             <div className="rounded-2xl border bg-card p-6">
               <div className="flex items-center justify-between gap-3">

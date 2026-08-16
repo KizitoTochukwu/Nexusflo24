@@ -5961,6 +5961,62 @@ export type Database = {
         }
         Relationships: []
       }
+      store_reviews: {
+        Row: {
+          author_name: string
+          body: string | null
+          business_name: string | null
+          created_at: string
+          id: string
+          is_published: boolean
+          is_verified: boolean
+          product_slug: string
+          project_id: string | null
+          rating: number
+          title: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          author_name: string
+          body?: string | null
+          business_name?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          is_verified?: boolean
+          product_slug: string
+          project_id?: string | null
+          rating?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          author_name?: string
+          body?: string | null
+          business_name?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          is_verified?: boolean
+          product_slug?: string
+          project_id?: string | null
+          rating?: number
+          title?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_reviews_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "store_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           amount_minor: number | null

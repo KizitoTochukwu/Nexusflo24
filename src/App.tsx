@@ -114,6 +114,7 @@ import StoreSuccess from "./pages/store/StoreSuccess";
 import MyAutomations from "./pages/dashboard/store/MyAutomations";
 import StoreProjectDetail from "./pages/dashboard/store/StoreProjectDetail";
 import AdminStoreOrders from "./pages/admin/AdminStoreOrders";
+import AdminStoreCatalogue from "./pages/admin/AdminStoreCatalogue";
 import { CartProvider } from "./contexts/CartContext";
 import CartLauncher from "./components/store/CartLauncher";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
@@ -239,6 +240,7 @@ const App = () => (
                   <Route path="admin/smart-actions" element={<AdminSmartActions />} />
                   <Route path="admin/pricing" element={<AdminPricing />} />
                   <Route path="admin/store-orders" element={<AdminStoreOrders />} />
+                  <Route path="admin/store-catalogue" element={<AdminStoreCatalogue />} />
                   <Route path="admin/communication" element={<AdminCommunicationOverview />} />
                   <Route path="admin/communication/organisations" element={<AdminOrganisations />} />
                   <Route path="admin/communication/organisations/:orgId" element={<AdminOrgDetail />} />
