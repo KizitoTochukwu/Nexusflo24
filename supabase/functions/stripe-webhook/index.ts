@@ -97,6 +97,79 @@ serve(async (req) => {
           break;
         }
 
+        // Handle Automation Store orders (setup fees, optional managed plan)
+        if (session.metadata?.type === "store_order") {
+          const orderId = session.metadata.orderId;
+          if (!orderId) {
+            log("WARNING: store order session without orderId", session.metadata);
+            break;
+          }
+
+          const paymentIntentId = typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : (session.payment_intent as any)?.id ?? null;
+
+          await supabase
+            .from("store_orders")
+            .update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              stripe_payment_intent: paymentIntentId,
+            })
+            .eq("id", orderId);
+
+          const { data: order } = await supabase
+            .from("store_orders")
+            .select("id, user_id, workspace_id")
+            .eq("id", orderId)
+            .maybeSingle();
+
+          const { data: orderItems } = await supabase
+            .from("store_order_items")
+            .select("id, name, product_slug, bundle_slug, configuration")
+            .eq("order_id", orderId);
+
+          const { data: existing } = await supabase
+            .from("store_projects")
+            .select("id")
+            .eq("order_id", orderId)
+            .limit(1);
+
+          if (!existing?.length && orderItems?.length) {
+            const projects = orderItems.map((item) => ({
+              order_id: orderId,
+              order_item_id: item.id,
+              user_id: order?.user_id ?? null,
+              workspace_id: order?.workspace_id ?? null,
+              name: item.name,
+              product_slug: item.product_slug,
+              bundle_slug: item.bundle_slug,
+              status: "onboarding",
+              progress: 10,
+              configuration: item.configuration ?? {},
+            }));
+            const { data: created, error: projErr } = await supabase
+              .from("store_projects")
+              .insert(projects)
+              .select("id");
+            if (projErr) log("ERROR creating store projects", projErr);
+
+            if (created?.length) {
+              await supabase.from("store_project_updates").insert(
+                created.map((p) => ({
+                  project_id: p.id,
+                  title: "Order confirmed",
+                  body: "Payment received. Complete your onboarding so our team can start the build.",
+                  update_type: "status",
+                })),
+              );
+            }
+          }
+
+          log("Store order fulfilled", { orderId });
+          break;
+        }
+
         // Handle subscription checkout
         const userId = session.metadata?.userId;
         const plan = session.metadata?.plan || "pro";
