@@ -74,6 +74,15 @@ const Footer = () => {
                 {item}
               </Link>
             )}
+            <Link to="/automations" className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+              Automation Store
+            </Link>
+            <Link to="/automation-bundles" className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+              Automation Bundles
+            </Link>
+            <Link to="/build-my-automation" className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
+              Build My Automation
+            </Link>
             <Link to="/tools/roi-savings-calculator" className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
               ROI Savings Calculator
             </Link>
