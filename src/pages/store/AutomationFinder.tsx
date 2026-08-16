@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import ProductCard from "@/components/store/ProductCard";
 import { SectionHeading } from "@/components/store/StorePrimitives";
 import { INDUSTRIES } from "@/lib/store/constants";
+import { supabase } from "@/integrations/supabase/client";
 import {
   useStoreProblems, useStoreProducts, useSubmitStoreRequest, type StoreProduct,
 } from "@/hooks/useStore";
