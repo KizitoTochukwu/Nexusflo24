@@ -38,7 +38,12 @@ export default function AutomationFinder() {
   const [contact, setContact] = useState({ full_name: "", email: "", business_name: "" });
   const [submitted, setSubmitted] = useState(false);
 
-  const recommendations = useMemo(() => {
+  const [aiSummary, setAiSummary] = useState("");
+  const [aiReasons, setAiReasons] = useState<Record<string, string>>({});
+  const [aiSlugs, setAiSlugs] = useState<string[] | null>(null);
+  const [thinking, setThinking] = useState(false);
+
+  const fallbackRecommendations = useMemo(() => {
     const scored = products.map((product) => {
       let score = 0;
       if (problemSlugs.some((slug) => (product.problem_slugs ?? []).includes(slug))) score += 4;
@@ -57,6 +62,65 @@ export default function AutomationFinder() {
       .filter((item) => item.score > 0)
       .map((item) => item.product) as StoreProduct[];
   }, [products, problemSlugs, industry, goal, budget]);
+
+  const recommendations: StoreProduct[] = aiSlugs
+    ? (aiSlugs.map((slug) => products.find((p) => p.slug === slug)).filter(Boolean) as StoreProduct[])
+    : fallbackRecommendations;
+
+  const runAiRecommendation = async () => {
+    setThinking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("store-recommend", {
+        body: {
+          mode: "finder",
+          goal,
+          problems: problemSlugs,
+          industry,
+          budget,
+          business_name: contact.business_name,
+        },
+      });
+      if (error) throw error;
+      const recs = (data?.recommendations ?? []) as { slug: string; reason: string }[];
+      if (recs.length) {
+        setAiSlugs(recs.map((r) => r.slug));
+        setAiReasons(Object.fromEntries(recs.map((r) => [r.slug, r.reason])));
+      }
+      if (data?.summary) setAiSummary(data.summary);
+    } catch {
+      // Silently fall back to the rule-based match so the user always gets results.
+    } finally {
+      setThinking(false);
+    }
+  };
+
+  const handleFinish = async () => {
+    if (!contact.email.trim() || !contact.full_name.trim()) {
+      toast.error("Add your name and email so we can send your recommendations.");
+      return;
+    }
+    await runAiRecommendation();
+    try {
+      await submit.mutateAsync({
+        request_type: "finder",
+        full_name: contact.full_name,
+        email: contact.email,
+        business_name: contact.business_name || null,
+        industry: industry || null,
+        answers: {
+          goal,
+          problems: problemSlugs,
+          budget,
+          recommended: (aiSlugs ?? fallbackRecommendations.map((p) => p.slug)),
+          ai_summary: aiSummary || null,
+        },
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Something went wrong. Please try again.");
+    }
+  };
+
 
   const steps = [
     { title: "What is your main goal right now?", canNext: !!goal },
