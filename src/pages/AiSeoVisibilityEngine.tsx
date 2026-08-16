@@ -302,7 +302,7 @@ export default function AiSeoVisibilityEngine() {
             lead_email: form.email,
             lead_name: form.full_name,
             notify_channels: { email: true, whatsapp: true, sms: false },
-            notify_emails: ["admin@nexusflo24.com"],
+            notify_emails: ["support@nexusflo24.com"],
             notify_phones: ["+447517327597"],
             send_confirmation: true,
           },
