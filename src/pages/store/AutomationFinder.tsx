@@ -315,10 +315,10 @@ export default function AutomationFinder() {
                   <Button
                     className="bg-accent text-accent-foreground hover:bg-gold-dark"
                     onClick={handleFinish}
-                    disabled={submit.isPending}
+                    disabled={submit.isPending || thinking}
                   >
-                    {submit.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Show my recommendations
+                    {(submit.isPending || thinking) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {thinking ? "Matching automations…" : "Show my recommendations"}
                   </Button>
                 )}
               </div>
