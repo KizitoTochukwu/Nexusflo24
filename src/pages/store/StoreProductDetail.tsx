@@ -40,7 +40,7 @@ export default function StoreProductDetail() {
           <Link to="/automations/all" className="mt-6 inline-block">
             <Button>Browse all automations</Button>
           </Link>
-        </div>
+        </div></div>
       </Layout>
     );
   }
