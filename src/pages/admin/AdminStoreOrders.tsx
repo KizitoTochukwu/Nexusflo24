@@ -16,6 +16,8 @@ import {
   PROJECT_STATUSES, projectStatusLabel, useAddProjectUpdate, useAdminStoreOrders,
   useAdminStoreProjects, useUpdateStoreProject, type StoreProject,
 } from "@/hooks/useStoreOrders";
+import { useStoreAnalytics } from "@/hooks/useStoreAdmin";
+import { useAdminReviews, useDeleteReview, useModerateReview } from "@/hooks/useStoreReviews";
 import { formatGbp } from "@/lib/store/price";
 
 function ProjectRow({ project }: { project: StoreProject }) {
