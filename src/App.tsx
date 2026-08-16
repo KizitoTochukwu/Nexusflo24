@@ -114,6 +114,7 @@ import StoreSuccess from "./pages/store/StoreSuccess";
 import MyAutomations from "./pages/dashboard/store/MyAutomations";
 import StoreProjectDetail from "./pages/dashboard/store/StoreProjectDetail";
 import AdminStoreOrders from "./pages/admin/AdminStoreOrders";
+import AdminStoreCatalogue from "./pages/admin/AdminStoreCatalogue";
 import { CartProvider } from "./contexts/CartContext";
 import CartLauncher from "./components/store/CartLauncher";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
