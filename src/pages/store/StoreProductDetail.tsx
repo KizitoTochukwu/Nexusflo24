@@ -196,6 +196,8 @@ export default function StoreProductDetail() {
         </div>
       </section>
 
+      <ProductReviews productSlug={product.slug} />
+
       {related.length > 0 && (
         <section className="bg-surface py-14">
           <div className="container">
