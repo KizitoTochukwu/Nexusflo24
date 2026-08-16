@@ -5393,6 +5393,336 @@ export type Database = {
           },
         ]
       }
+      store_bundles: {
+        Row: {
+          badge: string | null
+          best_for: string | null
+          created_at: string
+          delivery_estimate: string | null
+          description: string | null
+          id: string
+          includes: Json
+          is_published: boolean
+          name: string
+          position: number
+          price_pence: number
+          product_slugs: Json
+          saving_pence: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          badge?: string | null
+          best_for?: string | null
+          created_at?: string
+          delivery_estimate?: string | null
+          description?: string | null
+          id?: string
+          includes?: Json
+          is_published?: boolean
+          name: string
+          position?: number
+          price_pence?: number
+          product_slugs?: Json
+          saving_pence?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          badge?: string | null
+          best_for?: string | null
+          created_at?: string
+          delivery_estimate?: string | null
+          description?: string | null
+          id?: string
+          includes?: Json
+          is_published?: boolean
+          name?: string
+          position?: number
+          price_pence?: number
+          product_slugs?: Json
+          saving_pence?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_published: boolean
+          name: string
+          position: number
+          slug: string
+          tagline: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean
+          name: string
+          position?: number
+          slug: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean
+          name?: string
+          position?: number
+          slug?: string
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_plans: {
+        Row: {
+          billing_interval: string
+          created_at: string
+          description: string | null
+          features: Json
+          id: string
+          is_published: boolean
+          name: string
+          position: number
+          price_pence: number
+          price_prefix: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          billing_interval?: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_published?: boolean
+          name: string
+          position?: number
+          price_pence?: number
+          price_prefix?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          billing_interval?: string
+          created_at?: string
+          description?: string | null
+          features?: Json
+          id?: string
+          is_published?: boolean
+          name?: string
+          position?: number
+          price_pence?: number
+          price_prefix?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_problems: {
+        Row: {
+          category_slug: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_published: boolean
+          position: number
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category_slug?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean
+          position?: number
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category_slug?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean
+          position?: number
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_products: {
+        Row: {
+          badge: string | null
+          base_price_pence: number
+          best_for: Json
+          category_slug: string
+          config_schema: Json
+          created_at: string
+          deliverables: Json
+          delivery_days: number | null
+          delivery_estimate: string | null
+          id: string
+          industries: Json
+          integrations: Json
+          is_popular: boolean
+          is_published: boolean
+          level: string
+          managed_support: boolean
+          name: string
+          outcome: string
+          position: number
+          problem_slugs: Json
+          problem_statement: string | null
+          slug: string
+          summary: string | null
+          tags: Json
+          updated_at: string
+          workflow: Json
+        }
+        Insert: {
+          badge?: string | null
+          base_price_pence?: number
+          best_for?: Json
+          category_slug: string
+          config_schema?: Json
+          created_at?: string
+          deliverables?: Json
+          delivery_days?: number | null
+          delivery_estimate?: string | null
+          id?: string
+          industries?: Json
+          integrations?: Json
+          is_popular?: boolean
+          is_published?: boolean
+          level?: string
+          managed_support?: boolean
+          name: string
+          outcome: string
+          position?: number
+          problem_slugs?: Json
+          problem_statement?: string | null
+          slug: string
+          summary?: string | null
+          tags?: Json
+          updated_at?: string
+          workflow?: Json
+        }
+        Update: {
+          badge?: string | null
+          base_price_pence?: number
+          best_for?: Json
+          category_slug?: string
+          config_schema?: Json
+          created_at?: string
+          deliverables?: Json
+          delivery_days?: number | null
+          delivery_estimate?: string | null
+          id?: string
+          industries?: Json
+          integrations?: Json
+          is_popular?: boolean
+          is_published?: boolean
+          level?: string
+          managed_support?: boolean
+          name?: string
+          outcome?: string
+          position?: number
+          problem_slugs?: Json
+          problem_statement?: string | null
+          slug?: string
+          summary?: string | null
+          tags?: Json
+          updated_at?: string
+          workflow?: Json
+        }
+        Relationships: []
+      }
+      store_requests: {
+        Row: {
+          answers: Json
+          bundle_slug: string | null
+          business_name: string | null
+          created_at: string
+          currency: string
+          email: string | null
+          estimated_price_pence: number | null
+          full_name: string | null
+          id: string
+          industry: string | null
+          message: string | null
+          phone: string | null
+          plan_slug: string | null
+          product_slug: string | null
+          request_type: string
+          status: string
+          updated_at: string
+          user_id: string | null
+          website: string | null
+        }
+        Insert: {
+          answers?: Json
+          bundle_slug?: string | null
+          business_name?: string | null
+          created_at?: string
+          currency?: string
+          email?: string | null
+          estimated_price_pence?: number | null
+          full_name?: string | null
+          id?: string
+          industry?: string | null
+          message?: string | null
+          phone?: string | null
+          plan_slug?: string | null
+          product_slug?: string | null
+          request_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+        }
+        Update: {
+          answers?: Json
+          bundle_slug?: string | null
+          business_name?: string | null
+          created_at?: string
+          currency?: string
+          email?: string | null
+          estimated_price_pence?: number | null
+          full_name?: string | null
+          id?: string
+          industry?: string | null
+          message?: string | null
+          phone?: string | null
+          plan_slug?: string | null
+          product_slug?: string | null
+          request_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount_minor: number | null
