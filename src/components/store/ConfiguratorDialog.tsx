@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_CONFIG_SCHEMA } from "@/lib/store/constants";
 import { useStorePrice } from "@/lib/store/price";
 import { useStorePlans, useSubmitStoreRequest, type StoreProduct } from "@/hooks/useStore";
+import { useCart } from "@/contexts/CartContext";
+import { useNavigate } from "react-router-dom";
 
 type Question = {
   id: string;
@@ -33,6 +35,8 @@ export default function ConfiguratorDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { format } = useStorePrice();
+  const navigate = useNavigate();
+  const { addItem, setPlan: setCartPlan } = useCart();
   const { data: plans = [] } = useStorePlans();
   const submit = useSubmitStoreRequest();
 
@@ -85,6 +89,23 @@ export default function ConfiguratorDialog({
     setPlanSlug(null);
     setDetails({ full_name: "", email: "", phone: "", business_name: "", website: "", message: "" });
     setDone(false);
+  };
+
+  const handleAddToCart = (goToCart: boolean) => {
+    if (!product) return;
+    addItem({
+      kind: "product",
+      slug: product.slug,
+      name: product.name,
+      unitPricePence: estimate,
+      configuration: { ...answers },
+      deliveryEstimate: product.delivery_estimate,
+    });
+    if (plan) setCartPlan({ slug: plan.slug, name: plan.name, pricePence: plan.price_pence });
+    toast.success(`${product.name} added to your cart.`);
+    onOpenChange(false);
+    setTimeout(reset, 200);
+    if (goToCart) navigate("/automations/cart");
   };
 
   const handleSubmit = async () => {
@@ -298,15 +319,29 @@ export default function ConfiguratorDialog({
                 </span>
               </label>
 
-              <Button
-                className="w-full bg-accent text-accent-foreground hover:bg-gold-dark"
-                size="lg"
-                onClick={handleSubmit}
-                disabled={submit.isPending}
-              >
-                {submit.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit configuration
-              </Button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  className="w-full bg-accent text-accent-foreground hover:bg-gold-dark"
+                  size="lg"
+                  onClick={() => handleAddToCart(true)}
+                >
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Add to cart
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleSubmit}
+                  disabled={submit.isPending}
+                >
+                  {submit.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send configuration instead
+                </Button>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">
+                Add to cart to pay online now, or send your configuration and we will confirm the scope first.
+              </p>
             </div>
           </>
         )}

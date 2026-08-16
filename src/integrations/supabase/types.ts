@@ -5486,6 +5486,128 @@ export type Database = {
         }
         Relationships: []
       }
+      store_order_items: {
+        Row: {
+          bundle_slug: string | null
+          configuration: Json
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          order_id: string
+          plan_slug: string | null
+          product_slug: string | null
+          quantity: number
+          unit_price_pence: number
+        }
+        Insert: {
+          bundle_slug?: string | null
+          configuration?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          order_id: string
+          plan_slug?: string | null
+          product_slug?: string | null
+          quantity?: number
+          unit_price_pence?: number
+        }
+        Update: {
+          bundle_slug?: string | null
+          configuration?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          order_id?: string
+          plan_slug?: string | null
+          product_slug?: string | null
+          quantity?: number
+          unit_price_pence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_orders: {
+        Row: {
+          business_name: string | null
+          created_at: string
+          currency: string
+          email: string
+          full_name: string | null
+          id: string
+          industry: string | null
+          monthly_total_pence: number
+          notes: string | null
+          paid_at: string | null
+          phone: string | null
+          plan_slug: string | null
+          status: string
+          stripe_payment_intent: string | null
+          stripe_session_id: string | null
+          subtotal_pence: number
+          total_pence: number
+          updated_at: string
+          user_id: string | null
+          website: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          business_name?: string | null
+          created_at?: string
+          currency?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          industry?: string | null
+          monthly_total_pence?: number
+          notes?: string | null
+          paid_at?: string | null
+          phone?: string | null
+          plan_slug?: string | null
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+          subtotal_pence?: number
+          total_pence?: number
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          business_name?: string | null
+          created_at?: string
+          currency?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          industry?: string | null
+          monthly_total_pence?: number
+          notes?: string | null
+          paid_at?: string | null
+          phone?: string | null
+          plan_slug?: string | null
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+          subtotal_pence?: number
+          total_pence?: number
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       store_plans: {
         Row: {
           billing_interval: string
@@ -5656,6 +5778,122 @@ export type Database = {
           workflow?: Json
         }
         Relationships: []
+      }
+      store_project_updates: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          created_at: string
+          id: string
+          project_id: string
+          title: string
+          update_type: string
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          title: string
+          update_type?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          title?: string
+          update_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_project_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "store_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_projects: {
+        Row: {
+          approval_requested_at: string | null
+          approved_at: string | null
+          bundle_slug: string | null
+          configuration: Json
+          created_at: string
+          go_live_at: string | null
+          id: string
+          name: string
+          onboarding_completed_at: string | null
+          onboarding_data: Json
+          order_id: string | null
+          order_item_id: string | null
+          product_slug: string | null
+          progress: number
+          status: string
+          updated_at: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          approval_requested_at?: string | null
+          approved_at?: string | null
+          bundle_slug?: string | null
+          configuration?: Json
+          created_at?: string
+          go_live_at?: string | null
+          id?: string
+          name: string
+          onboarding_completed_at?: string | null
+          onboarding_data?: Json
+          order_id?: string | null
+          order_item_id?: string | null
+          product_slug?: string | null
+          progress?: number
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          approval_requested_at?: string | null
+          approved_at?: string | null
+          bundle_slug?: string | null
+          configuration?: Json
+          created_at?: string
+          go_live_at?: string | null
+          id?: string
+          name?: string
+          onboarding_completed_at?: string | null
+          onboarding_data?: Json
+          order_id?: string | null
+          order_item_id?: string | null
+          product_slug?: string | null
+          progress?: number
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_projects_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "store_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_projects_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "store_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_requests: {
         Row: {

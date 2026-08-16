@@ -10,7 +10,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, Users, Contact2, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket, Handshake, Settings2, PieChart } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket, Handshake, Settings2, PieChart, ShoppingBag } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import NexusAiPanel, { openNexusAi } from "@/components/ai/NexusAiPanel";
@@ -62,9 +62,11 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
   { icon: MessageCircle, label: "Messages", to: `/dashboard/${workspaceId}/messages` },
   { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
+  { icon: ShoppingBag, label: "My Automations", to: `/dashboard/${workspaceId}/my-automations` },
   { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
   ...(isAdmin ? [
     { icon: Zap, label: "Workflow Builder", to: `/dashboard/${workspaceId}/workflows` },
+    { icon: ShoppingBag, label: "Store Fulfilment", to: `/dashboard/${workspaceId}/admin/store-orders` },
     { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
     { icon: Radio, label: "Communication", to: `/dashboard/${workspaceId}/admin/communication` },
     { icon: Sparkles, label: "Smart Actions", to: `/dashboard/${workspaceId}/admin/smart-actions` },

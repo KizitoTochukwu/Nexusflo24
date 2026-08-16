@@ -108,6 +108,14 @@ import StoreProductDetail from "./pages/store/StoreProductDetail";
 import AutomationFinder from "./pages/store/AutomationFinder";
 import AutomationBundles from "./pages/store/AutomationBundles";
 import BuildMyAutomation from "./pages/store/BuildMyAutomation";
+import StoreCart from "./pages/store/StoreCart";
+import StoreCheckout from "./pages/store/StoreCheckout";
+import StoreSuccess from "./pages/store/StoreSuccess";
+import MyAutomations from "./pages/dashboard/store/MyAutomations";
+import StoreProjectDetail from "./pages/dashboard/store/StoreProjectDetail";
+import AdminStoreOrders from "./pages/admin/AdminStoreOrders";
+import { CartProvider } from "./contexts/CartContext";
+import CartLauncher from "./components/store/CartLauncher";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -131,6 +139,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CurrencyProvider>
+          <CartProvider>
           <WorkspaceProvider>
             <MetaPixelRouteTracker />
             <SiteCustomCodeInjector />
@@ -140,6 +149,9 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/automations" element={<StoreIndex />} />
               <Route path="/automations/all" element={<StoreCatalogue />} />
+              <Route path="/automations/cart" element={<StoreCart />} />
+              <Route path="/automations/checkout" element={<StoreCheckout />} />
+              <Route path="/automations/success" element={<StoreSuccess />} />
               <Route path="/automations/category/:category" element={<StoreCategory />} />
               <Route path="/automation-finder" element={<AutomationFinder />} />
               <Route path="/automation-bundles" element={<AutomationBundles />} />
@@ -214,6 +226,8 @@ const App = () => (
                 
                 <Route path="messages" element={<DashboardMessages />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
+                <Route path="my-automations" element={<MyAutomations />} />
+                <Route path="my-automations/:projectId" element={<StoreProjectDetail />} />
                 <Route path="settings" element={<DashboardSettings />} />
                 <Route path="settings/*" element={<DashboardSettings />} />
                 <Route element={<AdminGuard />}>
@@ -224,6 +238,7 @@ const App = () => (
                   <Route path="admin/blog" element={<AdminBlogManager />} />
                   <Route path="admin/smart-actions" element={<AdminSmartActions />} />
                   <Route path="admin/pricing" element={<AdminPricing />} />
+                  <Route path="admin/store-orders" element={<AdminStoreOrders />} />
                   <Route path="admin/communication" element={<AdminCommunicationOverview />} />
                   <Route path="admin/communication/organisations" element={<AdminOrganisations />} />
                   <Route path="admin/communication/organisations/:orgId" element={<AdminOrgDetail />} />
@@ -257,10 +272,12 @@ const App = () => (
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CartLauncher />
             <InactivityManager />
             <ChatbotWidget />
             <CookieConsentBanner />
           </WorkspaceProvider>
+          </CartProvider>
           </CurrencyProvider>
         </AuthProvider>
       </BrowserRouter>
