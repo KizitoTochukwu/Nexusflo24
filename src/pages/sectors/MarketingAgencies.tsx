@@ -12,7 +12,9 @@ import {
   UserCog,
 } from "lucide-react";
 import SectorPage, { type SectorContent } from "@/components/sectors/SectorPage";
-import heroImg from "@/assets/sectors/agencies-hero.jpg";
+import heroAsset from "@/assets/sectors/agencies-hero.png.asset.json";
+
+const heroImg = heroAsset.url;
 
 const content: SectorContent = {
   route: "/marketing-agencies",
