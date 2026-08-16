@@ -130,7 +130,7 @@ export default function StoreProductDetail() {
       </section>
 
       {product.workflow?.length > 0 && (
-        <section className="py-14">
+        <section className="bg-background py-14">
           <div className="container">
             <SectionHeading eyebrow="How it works" title="Your automation, step by step" align="left" />
             <WorkflowChain steps={product.workflow} />
@@ -179,7 +179,7 @@ export default function StoreProductDetail() {
         </div>
       </section>
 
-      <section className="py-14">
+      <section className="bg-background py-14">
         <div className="container">
           <SectionHeading eyebrow="Delivery" title="What happens after you buy" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

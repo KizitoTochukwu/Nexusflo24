@@ -68,7 +68,7 @@ export default function AutomationBundles() {
         </div>
       </section>
 
-      <section className="py-14">
+      <section className="bg-background py-14">
         <div className="container grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {bundles.map((bundle) => (
             <div key={bundle.id} className="flex flex-col rounded-xl border bg-card p-6 shadow-card">

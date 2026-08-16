@@ -78,7 +78,7 @@ export default function StoreIndex() {
       <TrustStrip />
 
       {/* Problem finder */}
-      <section className="py-16 md:py-20">
+      <section className="bg-background py-16 md:py-20">
         <div className="container">
           <SectionHeading
             eyebrow="Start with the problem"
@@ -134,7 +134,7 @@ export default function StoreIndex() {
       </section>
 
       {/* Featured products */}
-      <section className="py-16 md:py-20">
+      <section className="bg-background py-16 md:py-20">
         <div className="container">
           <SectionHeading
             eyebrow="Most popular"
@@ -183,7 +183,7 @@ export default function StoreIndex() {
       </section>
 
       {/* How delivery works */}
-      <section className="py-16 md:py-20">
+      <section className="bg-background py-16 md:py-20">
         <div className="container">
           <SectionHeading eyebrow="How it works" title="A clear path from purchase to go-live" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -240,7 +240,7 @@ export default function StoreIndex() {
 
       {/* Managed plans */}
       {plans.length > 0 && (
-        <section className="py-16 md:py-20">
+        <section className="bg-background py-16 md:py-20">
           <div className="container">
             <SectionHeading
               eyebrow="Ongoing care"

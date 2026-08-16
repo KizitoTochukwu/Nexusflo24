@@ -195,7 +195,7 @@ export default function StoreCatalogue() {
         </div>
       </section>
 
-      <section className="py-10">
+      <section className="bg-background py-10">
         <div className="container grid gap-8 lg:grid-cols-[260px_1fr]">
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-xl border bg-card p-5">{filters}</div>

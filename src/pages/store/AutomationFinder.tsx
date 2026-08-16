@@ -113,7 +113,7 @@ export default function AutomationFinder() {
         </div>
       </section>
 
-      <section className="py-14">
+      <section className="bg-background py-14">
         <div className="container max-w-3xl">
           {submitted ? (
             <div className="rounded-2xl border bg-card p-8 text-center shadow-card">

@@ -75,7 +75,7 @@ export default function BuildMyAutomation() {
         </div>
       </section>
 
-      <section className="py-14">
+      <section className="bg-background py-14">
         <div className="container max-w-3xl">
           {done ? (
             <div className="rounded-2xl border bg-card p-10 text-center shadow-card">

@@ -50,7 +50,7 @@ export default function StoreCategory() {
         </div>
       </section>
 
-      <section className="py-12">
+      <section className="bg-background py-12">
         <div className="container">
           {isLoading ? (
             <p className="text-muted-foreground">Loading automations...</p>
