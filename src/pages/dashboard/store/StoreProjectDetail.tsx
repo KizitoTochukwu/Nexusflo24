@@ -33,6 +33,7 @@ export default function StoreProjectDetail() {
   const { data: updates = [] } = useStoreProjectUpdates(projectId);
   const update = useUpdateStoreProject();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     if (project) setAnswers((project.onboarding_data ?? {}) as Record<string, string>);
