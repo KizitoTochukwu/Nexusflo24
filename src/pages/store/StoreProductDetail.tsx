@@ -24,7 +24,7 @@ export default function StoreProductDetail() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="container py-24 text-center text-muted-foreground">Loading automation...</div>
+        <div className="bg-background"><div className="container py-24 text-center text-muted-foreground">Loading automation...</div></div>
       </Layout>
     );
   }
@@ -32,7 +32,7 @@ export default function StoreProductDetail() {
   if (!product) {
     return (
       <Layout>
-        <div className="container py-24 text-center">
+        <div className="bg-background"><div className="container py-24 text-center">
           <h1 className="text-2xl font-bold">Automation not found</h1>
           <p className="mt-3 text-muted-foreground">
             This automation may have been renamed or retired.
