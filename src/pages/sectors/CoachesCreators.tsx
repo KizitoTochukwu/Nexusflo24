@@ -26,7 +26,7 @@ const content: SectorContent = {
     headline: "Automate Your Coaching or Creator Business Without Chasing Leads Manually",
     subheadline:
       "Capture leads, nurture your audience automatically, and convert followers into paying clients using one powerful platform.",
-    image: heroImg,
+    image: heroAsset.url,
     imageAlt: "Online coach working from a bright studio desk",
   },
   trustStrip: "Built for coaches, course creators, and personal brands",
