@@ -166,6 +166,19 @@ serve(async (req) => {
             }
           }
 
+          try {
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/store-notify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ event: "order_paid", order_id: orderId }),
+            });
+          } catch (notifyErr) {
+            log("WARNING: store-notify failed", notifyErr);
+          }
+
           log("Store order fulfilled", { orderId });
           break;
         }
