@@ -12,7 +12,9 @@ import {
   Zap,
 } from "lucide-react";
 import SectorPage, { type SectorContent } from "@/components/sectors/SectorPage";
-import heroImg from "@/assets/sectors/smb-hero.jpg";
+import heroAsset from "@/assets/sectors/smb-hero.png.asset.json";
+
+const heroImg = heroAsset.url;
 
 const content: SectorContent = {
   route: "/small-business",
