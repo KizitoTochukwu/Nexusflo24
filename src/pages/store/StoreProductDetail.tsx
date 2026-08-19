@@ -122,6 +122,7 @@ export default function StoreProductDetail() {
               Configure this automation
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
+            <FitCallCta />
             <Link to="/build-my-automation">
               <Button
                 variant="outline"
@@ -130,6 +131,7 @@ export default function StoreProductDetail() {
                 Ask for a custom version
               </Button>
             </Link>
+            <OrderAssurance />
             <p className="mt-5 flex items-start gap-2 text-xs text-white/50">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
               Fixed price confirmed in writing before payment. We build, test and launch it for you.
