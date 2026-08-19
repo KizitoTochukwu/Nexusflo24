@@ -133,33 +133,60 @@ Deno.serve(async (req) => {
           Next step: complete your onboarding questions so our team can start building. You will get an
           update at every stage — build, testing, your approval, then go live.</p>`;
 
-      results.push(
-        await sendEmail(
-          order.email,
-          "Your automation order is confirmed",
-          shell(
-            "Thank you — your order is confirmed",
-            `Hi ${esc(order.full_name || "there")}, we have received your payment and your delivery project is open.`,
-            table,
-            "Complete onboarding",
-            `${SITE_URL}/dashboard`,
+      if (body.event === "order_paid") {
+        results.push(
+          await sendEmail(
+            order.email,
+            "Your automation order is confirmed",
+            shell(
+              "Thank you — your order is confirmed",
+              `Hi ${esc(order.full_name || "there")}, we have received your payment and your delivery project is open. Your order status is <strong>Awaiting onboarding</strong>.`,
+              table,
+              "Open my automations",
+              `${SITE_URL}/dashboard/automations`,
+            ),
           ),
-        ),
-      );
+        );
+      }
 
-      results.push(
-        await sendEmail(
-          TEAM_EMAIL,
-          `New Automation Store order — ${gbp(order.total_pence)}`,
-          shell(
-            "New order received",
-            `${esc(order.full_name || order.email)} (${esc(order.email)}) has paid for an automation setup.`,
-            `${table}<p style="margin:14px 0 0;font-size:13px;color:#41506b">Business: ${esc(
-              order.business_name || "—",
-            )} · Phone: ${esc(order.phone || "—")} · Website: ${esc(order.website || "—")}</p>`,
+      if (body.event === "onboarding_invite") {
+        results.push(
+          await sendEmail(
+            order.email,
+            "Next step: complete your automation onboarding",
+            shell(
+              "Let us start building",
+              `Hi ${esc(order.full_name || "there")}, we need a few details before the build begins. It takes about five minutes.`,
+              `<ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.8;color:#41506b">
+                 <li>Confirm the tools this automation must connect to</li>
+                 <li>Tell us who should receive notifications</li>
+                 <li>Send secure access invitations — never your passwords</li>
+               </ul>
+               <p style="margin:16px 0 0;font-size:14px;color:#41506b">Once onboarding is in, we build, test the full workflow, ask for your approval, then take it live.</p>`,
+              "Complete onboarding",
+              `${SITE_URL}/dashboard/automations`,
+            ),
           ),
-        ),
-      );
+        );
+      }
+
+      if (body.event === "admin_new_order") {
+        results.push(
+          await sendEmail(
+            TEAM_EMAIL,
+            `New Automation Store order — ${money(order.total_pence, order.currency)}`,
+            shell(
+              "New order received",
+              `${esc(order.full_name || order.email)} (${esc(order.email)}) has paid for an automation setup.`,
+              `${table}<p style="margin:14px 0 0;font-size:13px;color:#41506b">Business: ${esc(
+                order.business_name || "—",
+              )} · Phone: ${esc(order.phone || "—")} · Website: ${esc(order.website || "—")} · Currency: ${esc(
+                order.currency || "GBP",
+              )}</p>`,
+            ),
+          ),
+        );
+      }
     } else {
       if (!body.project_id) throw new Error("project_id is required");
       const { data: project } = await supabase
