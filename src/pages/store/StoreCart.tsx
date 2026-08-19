@@ -1,15 +1,16 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
+import { ArrowRight, Check, ShoppingBag, Trash2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useStorePrice } from "@/lib/store/price";
 import { useStorePlans } from "@/hooks/useStore";
+import { ORDER_ASSURANCE } from "@/lib/store/constants";
 
 export default function StoreCart() {
   const navigate = useNavigate();
-  const { format } = useStorePrice();
+  const { format, currency, chargeCurrency } = useStorePrice();
   const { data: plans = [] } = useStorePlans();
   const {
     items, plan, setPlan, removeItem, setQuantity, oneTimeTotalPence, monthlyTotalPence,
