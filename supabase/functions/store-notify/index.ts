@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
               `Hi ${esc(order.full_name || "there")}, we have received your payment and your delivery project is open. Your order status is <strong>Awaiting onboarding</strong>.`,
               table,
               "Open my automations",
-              `${SITE_URL}/dashboard/automations`,
+              `${SITE_URL}/dashboard/my-automations`,
             ),
           ),
         );
@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
                </ul>
                <p style="margin:16px 0 0;font-size:14px;color:#41506b">Once onboarding is in, we build, test the full workflow, ask for your approval, then take it live.</p>`,
               "Complete onboarding",
-              `${SITE_URL}/dashboard/automations`,
+              `${SITE_URL}/dashboard/my-automations`,
             ),
           ),
         );
