@@ -12,11 +12,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useStorePrice } from "@/lib/store/price";
+import { ORDER_ASSURANCE } from "@/lib/store/constants";
+import { Check } from "lucide-react";
 
 export default function StoreCheckout() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { format } = useStorePrice();
+  const { format, currency, chargeCurrency } = useStorePrice();
   const { items, plan, oneTimeTotalPence, monthlyTotalPence } = useCart();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -54,6 +56,8 @@ export default function StoreCheckout() {
           })),
           plan: plan ? { slug: plan.slug, name: plan.name, pricePence: plan.pricePence } : null,
           customer: form,
+          currency: chargeCurrency,
+          displayCurrency: currency,
         },
       });
       if (error) throw error;
@@ -166,8 +170,18 @@ export default function StoreCheckout() {
                 Pay securely
               </Button>
               <p className="mt-3 text-xs text-muted-foreground">
-                Charged in GBP by Stripe. Other currencies are shown as a guide only.
+                {chargeCurrency === currency
+                  ? `Charged securely in ${currency} by Stripe.`
+                  : `${currency} is not supported by our card processor, so payment is taken securely in GBP.`}
               </p>
+              <ul className="mt-4 space-y-2 border-t pt-4 text-xs text-muted-foreground">
+                {ORDER_ASSURANCE.map((point) => (
+                  <li key={point} className="flex items-start gap-2">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
               <Button asChild variant="ghost" className="mt-2 w-full" onClick={() => navigate("/automations/cart")}>
                 <Link to="/automations/cart">Back to cart</Link>
               </Button>
