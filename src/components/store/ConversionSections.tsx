@@ -140,12 +140,14 @@ export function ProductFaq() {
   );
 }
 
-export const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: PRODUCT_FAQS.map((f) => ({
+export const faqMainEntity = PRODUCT_FAQS.map((f) => ({
     "@type": "Question",
     name: f.q,
     acceptedAnswer: { "@type": "Answer", text: f.a },
-  })),
+  }));
+
+export const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqMainEntity,
 };

@@ -11,6 +11,9 @@ import ProductReviews from "@/components/store/ProductReviews";
 import {
   LevelBadge, SectionHeading, StoreCta, WorkflowChain,
 } from "@/components/store/StorePrimitives";
+import {
+  FitCallCta, NotIncludedSection, OrderAssurance, ProductFaq, ProductTrustSection, faqMainEntity,
+} from "@/components/store/ConversionSections";
 import { DELIVERY_STEPS, LEVELS } from "@/lib/store/constants";
 import { useStorePrice } from "@/lib/store/price";
 import { useStoreProduct, useStoreProducts, type StoreProduct } from "@/hooks/useStore";
@@ -58,16 +61,21 @@ export default function StoreProductDetail() {
         path={`/automations/${product.slug}`}
         jsonLd={{
           "@context": "https://schema.org",
-          "@type": "Product",
-          name: product.name,
-          description: product.summary ?? product.outcome,
-          brand: { "@type": "Brand", name: "NexusFlo24" },
-          offers: {
-            "@type": "Offer",
-            price: (product.base_price_pence / 100).toFixed(2),
-            priceCurrency: "GBP",
-            availability: "https://schema.org/InStock",
-          },
+          "@graph": [
+            {
+              "@type": "Product",
+              name: product.name,
+              description: product.summary ?? product.outcome,
+              brand: { "@type": "Brand", name: "NexusFlo24" },
+              offers: {
+                "@type": "Offer",
+                price: (product.base_price_pence / 100).toFixed(2),
+                priceCurrency: "GBP",
+                availability: "https://schema.org/InStock",
+              },
+            },
+            { "@type": "FAQPage", mainEntity: faqMainEntity },
+          ],
         }}
       />
 
@@ -114,6 +122,7 @@ export default function StoreProductDetail() {
               Configure this automation
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
+            <FitCallCta />
             <Link to="/build-my-automation">
               <Button
                 variant="outline"
@@ -122,6 +131,7 @@ export default function StoreProductDetail() {
                 Ask for a custom version
               </Button>
             </Link>
+            <OrderAssurance />
             <p className="mt-5 flex items-start gap-2 text-xs text-white/50">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
               Fixed price confirmed in writing before payment. We build, test and launch it for you.
@@ -197,6 +207,12 @@ export default function StoreProductDetail() {
         </div>
       </section>
 
+      <ProductTrustSection />
+
+      <NotIncludedSection />
+
+      <ProductFaq />
+
       <ProductReviews productSlug={product.slug} />
 
       {related.length > 0 && (
@@ -211,6 +227,12 @@ export default function StoreProductDetail() {
           </div>
         </section>
       )}
+
+      <section className="bg-background pt-14">
+        <div className="container max-w-3xl text-center">
+          <FitCallCta variant="light" />
+        </div>
+      </section>
 
       <StoreCta
         title={`Ready to launch ${product.name}?`}

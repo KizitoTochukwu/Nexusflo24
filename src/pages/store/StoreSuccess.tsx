@@ -48,7 +48,9 @@ export default function StoreSuccess() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="font-semibold">Order {order.id.slice(0, 8).toUpperCase()}</h2>
                   <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-                    {order.status === "paid" ? "Payment received" : "Awaiting payment confirmation"}
+                    {order.status === "awaiting_onboarding" || order.status === "paid"
+                      ? "Payment received — awaiting onboarding"
+                      : "Awaiting payment confirmation"}
                   </span>
                 </div>
                 <ul className="mt-4 space-y-2 text-sm">

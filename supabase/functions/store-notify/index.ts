@@ -14,6 +14,8 @@ const TEAM_EMAIL = Deno.env.get("STORE_TEAM_EMAIL") || "support@nexusflo24.com";
 
 type EventType =
   | "order_paid"
+  | "onboarding_invite"
+  | "admin_new_order"
   | "onboarding_reminder"
   | "project_update"
   | "approval_requested"
@@ -35,9 +37,9 @@ function esc(value: unknown) {
     .replace(/"/g, "&quot;");
 }
 
-const gbp = (pence: number) =>
-  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 })
-    .format((pence ?? 0) / 100);
+const SYMBOLS: Record<string, string> = { GBP: "£", USD: "$", EUR: "€", NGN: "₦" };
+const money = (minor: number, currency = "GBP") =>
+  `${SYMBOLS[currency] ?? "£"}${Math.round((minor ?? 0) / 100).toLocaleString("en-GB")}`;
 
 function shell(heading: string, intro: string, inner: string, ctaLabel?: string, ctaUrl?: string) {
   return `<!doctype html><html><body style="margin:0;background:#f4f6fa;padding:24px;font-family:Inter,Arial,sans-serif;color:#0B1F3B">
@@ -94,7 +96,7 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as Body;
     const results: unknown[] = [];
 
-    if (body.event === "order_paid") {
+    if (body.event === "order_paid" || body.event === "onboarding_invite" || body.event === "admin_new_order") {
       if (!body.order_id) throw new Error("order_id is required");
       const { data: order } = await supabase
         .from("store_orders")
@@ -112,51 +114,79 @@ Deno.serve(async (req) => {
           (i: any) =>
             `<tr><td style="padding:8px 0;font-size:14px">${esc(i.name)}${
               i.quantity > 1 ? ` × ${i.quantity}` : ""
-            }</td><td style="padding:8px 0;text-align:right;font-size:14px">${gbp(
+            }</td><td style="padding:8px 0;text-align:right;font-size:14px">${money(
               i.unit_price_pence * (i.quantity ?? 1),
+              order.currency,
             )}</td></tr>`,
         )
         .join("");
 
       const table = `<table style="width:100%;border-collapse:collapse;border-top:1px solid #e6e9f0">${rows}
         <tr><td style="padding:10px 0;border-top:1px solid #e6e9f0;font-weight:700">Setup total</td>
-        <td style="padding:10px 0;border-top:1px solid #e6e9f0;text-align:right;font-weight:700">${gbp(order.total_pence)}</td></tr>
+        <td style="padding:10px 0;border-top:1px solid #e6e9f0;text-align:right;font-weight:700">${money(order.total_pence, order.currency)}</td></tr>
         ${
           order.monthly_total_pence
-            ? `<tr><td style="padding:6px 0;font-size:13px;color:#41506b">Managed support</td><td style="padding:6px 0;text-align:right;font-size:13px;color:#41506b">${gbp(order.monthly_total_pence)}/month</td></tr>`
+            ? `<tr><td style="padding:6px 0;font-size:13px;color:#41506b">Managed support</td><td style="padding:6px 0;text-align:right;font-size:13px;color:#41506b">${money(order.monthly_total_pence, order.currency)}/month</td></tr>`
             : ""
         }</table>
         <p style="margin:18px 0 0;font-size:14px;line-height:1.6;color:#41506b">
           Next step: complete your onboarding questions so our team can start building. You will get an
           update at every stage — build, testing, your approval, then go live.</p>`;
 
-      results.push(
-        await sendEmail(
-          order.email,
-          "Your automation order is confirmed",
-          shell(
-            "Thank you — your order is confirmed",
-            `Hi ${esc(order.full_name || "there")}, we have received your payment and your delivery project is open.`,
-            table,
-            "Complete onboarding",
-            `${SITE_URL}/dashboard`,
+      if (body.event === "order_paid") {
+        results.push(
+          await sendEmail(
+            order.email,
+            "Your automation order is confirmed",
+            shell(
+              "Thank you — your order is confirmed",
+              `Hi ${esc(order.full_name || "there")}, we have received your payment and your delivery project is open. Your order status is <strong>Awaiting onboarding</strong>.`,
+              table,
+              "Open my automations",
+              `${SITE_URL}/dashboard/my-automations`,
+            ),
           ),
-        ),
-      );
+        );
+      }
 
-      results.push(
-        await sendEmail(
-          TEAM_EMAIL,
-          `New Automation Store order — ${gbp(order.total_pence)}`,
-          shell(
-            "New order received",
-            `${esc(order.full_name || order.email)} (${esc(order.email)}) has paid for an automation setup.`,
-            `${table}<p style="margin:14px 0 0;font-size:13px;color:#41506b">Business: ${esc(
-              order.business_name || "—",
-            )} · Phone: ${esc(order.phone || "—")} · Website: ${esc(order.website || "—")}</p>`,
+      if (body.event === "onboarding_invite") {
+        results.push(
+          await sendEmail(
+            order.email,
+            "Next step: complete your automation onboarding",
+            shell(
+              "Let us start building",
+              `Hi ${esc(order.full_name || "there")}, we need a few details before the build begins. It takes about five minutes.`,
+              `<ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.8;color:#41506b">
+                 <li>Confirm the tools this automation must connect to</li>
+                 <li>Tell us who should receive notifications</li>
+                 <li>Send secure access invitations — never your passwords</li>
+               </ul>
+               <p style="margin:16px 0 0;font-size:14px;color:#41506b">Once onboarding is in, we build, test the full workflow, ask for your approval, then take it live.</p>`,
+              "Complete onboarding",
+              `${SITE_URL}/dashboard/my-automations`,
+            ),
           ),
-        ),
-      );
+        );
+      }
+
+      if (body.event === "admin_new_order") {
+        results.push(
+          await sendEmail(
+            TEAM_EMAIL,
+            `New Automation Store order — ${money(order.total_pence, order.currency)}`,
+            shell(
+              "New order received",
+              `${esc(order.full_name || order.email)} (${esc(order.email)}) has paid for an automation setup.`,
+              `${table}<p style="margin:14px 0 0;font-size:13px;color:#41506b">Business: ${esc(
+                order.business_name || "—",
+              )} · Phone: ${esc(order.phone || "—")} · Website: ${esc(order.website || "—")} · Currency: ${esc(
+                order.currency || "GBP",
+              )}</p>`,
+            ),
+          ),
+        );
+      }
     } else {
       if (!body.project_id) throw new Error("project_id is required");
       const { data: project } = await supabase
@@ -171,7 +201,7 @@ Deno.serve(async (req) => {
       const name = (project as any).store_orders?.full_name || "there";
       const link = `${SITE_URL}/dashboard`;
 
-      const copy: Record<Exclude<EventType, "order_paid">, { subject: string; heading: string; intro: string }> = {
+      const copy: Record<Exclude<EventType, "order_paid" | "onboarding_invite" | "admin_new_order">, { subject: string; heading: string; intro: string }> = {
         onboarding_reminder: {
           subject: `Quick step needed for ${project.name}`,
           heading: "We need a few details to start building",
@@ -194,7 +224,7 @@ Deno.serve(async (req) => {
         },
       };
 
-      const c = copy[body.event as Exclude<EventType, "order_paid">];
+      const c = copy[body.event as Exclude<EventType, "order_paid" | "onboarding_invite" | "admin_new_order">];
       const inner = body.body
         ? `<div style="background:#f7f9fc;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#41506b">${esc(body.body)}</div>`
         : "";
