@@ -61,16 +61,21 @@ export default function StoreProductDetail() {
         path={`/automations/${product.slug}`}
         jsonLd={{
           "@context": "https://schema.org",
-          "@type": "Product",
-          name: product.name,
-          description: product.summary ?? product.outcome,
-          brand: { "@type": "Brand", name: "NexusFlo24" },
-          offers: {
-            "@type": "Offer",
-            price: (product.base_price_pence / 100).toFixed(2),
-            priceCurrency: "GBP",
-            availability: "https://schema.org/InStock",
-          },
+          "@graph": [
+            {
+              "@type": "Product",
+              name: product.name,
+              description: product.summary ?? product.outcome,
+              brand: { "@type": "Brand", name: "NexusFlo24" },
+              offers: {
+                "@type": "Offer",
+                price: (product.base_price_pence / 100).toFixed(2),
+                priceCurrency: "GBP",
+                availability: "https://schema.org/InStock",
+              },
+            },
+            { "@type": "FAQPage", mainEntity: faqMainEntity },
+          ],
         }}
       />
 
