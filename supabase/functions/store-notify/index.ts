@@ -14,6 +14,8 @@ const TEAM_EMAIL = Deno.env.get("STORE_TEAM_EMAIL") || "support@nexusflo24.com";
 
 type EventType =
   | "order_paid"
+  | "onboarding_invite"
+  | "admin_new_order"
   | "onboarding_reminder"
   | "project_update"
   | "approval_requested"
@@ -35,9 +37,9 @@ function esc(value: unknown) {
     .replace(/"/g, "&quot;");
 }
 
-const gbp = (pence: number) =>
-  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 })
-    .format((pence ?? 0) / 100);
+const SYMBOLS: Record<string, string> = { GBP: "£", USD: "$", EUR: "€", NGN: "₦" };
+const money = (minor: number, currency = "GBP") =>
+  `${SYMBOLS[currency] ?? "£"}${Math.round((minor ?? 0) / 100).toLocaleString("en-GB")}`;
 
 function shell(heading: string, intro: string, inner: string, ctaLabel?: string, ctaUrl?: string) {
   return `<!doctype html><html><body style="margin:0;background:#f4f6fa;padding:24px;font-family:Inter,Arial,sans-serif;color:#0B1F3B">
@@ -94,7 +96,7 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as Body;
     const results: unknown[] = [];
 
-    if (body.event === "order_paid") {
+    if (body.event === "order_paid" || body.event === "onboarding_invite" || body.event === "admin_new_order") {
       if (!body.order_id) throw new Error("order_id is required");
       const { data: order } = await supabase
         .from("store_orders")
@@ -112,18 +114,19 @@ Deno.serve(async (req) => {
           (i: any) =>
             `<tr><td style="padding:8px 0;font-size:14px">${esc(i.name)}${
               i.quantity > 1 ? ` × ${i.quantity}` : ""
-            }</td><td style="padding:8px 0;text-align:right;font-size:14px">${gbp(
+            }</td><td style="padding:8px 0;text-align:right;font-size:14px">${money(
               i.unit_price_pence * (i.quantity ?? 1),
+              order.currency,
             )}</td></tr>`,
         )
         .join("");
 
       const table = `<table style="width:100%;border-collapse:collapse;border-top:1px solid #e6e9f0">${rows}
         <tr><td style="padding:10px 0;border-top:1px solid #e6e9f0;font-weight:700">Setup total</td>
-        <td style="padding:10px 0;border-top:1px solid #e6e9f0;text-align:right;font-weight:700">${gbp(order.total_pence)}</td></tr>
+        <td style="padding:10px 0;border-top:1px solid #e6e9f0;text-align:right;font-weight:700">${money(order.total_pence, order.currency)}</td></tr>
         ${
           order.monthly_total_pence
-            ? `<tr><td style="padding:6px 0;font-size:13px;color:#41506b">Managed support</td><td style="padding:6px 0;text-align:right;font-size:13px;color:#41506b">${gbp(order.monthly_total_pence)}/month</td></tr>`
+            ? `<tr><td style="padding:6px 0;font-size:13px;color:#41506b">Managed support</td><td style="padding:6px 0;text-align:right;font-size:13px;color:#41506b">${money(order.monthly_total_pence, order.currency)}/month</td></tr>`
             : ""
         }</table>
         <p style="margin:18px 0 0;font-size:14px;line-height:1.6;color:#41506b">
