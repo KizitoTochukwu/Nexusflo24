@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  PROJECT_STATUSES, projectStatusLabel, useAddProjectUpdate, useAdminStoreOrders,
+  PROJECT_STATUSES, orderStatusLabel, projectStatusLabel, useAddProjectUpdate, useAdminStoreOrders,
   useAdminStoreProjects, useUpdateStoreProject, type StoreProject,
 } from "@/hooks/useStoreOrders";
 import { useStoreAnalytics } from "@/hooks/useStoreAdmin";
@@ -314,7 +314,7 @@ export default function AdminStoreOrders() {
                           <div className="text-xs text-muted-foreground">{o.email}</div>
                         </td>
                         <td className="p-3">
-                          <Badge variant={o.status === "paid" ? "default" : "secondary"}>{o.status}</Badge>
+                          <Badge variant={o.status === "pending" ? "secondary" : "default"}>{orderStatusLabel(o.status)}</Badge>
                         </td>
                         <td className="p-3">{formatGbp(o.total_pence)}</td>
                         <td className="p-3">

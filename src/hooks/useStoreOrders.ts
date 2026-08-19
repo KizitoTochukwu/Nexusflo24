@@ -76,6 +76,18 @@ export const PROJECT_STATUSES = [
   { value: "on_hold", label: "On hold" },
 ] as const;
 
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  pending: "Awaiting payment",
+  awaiting_onboarding: "Awaiting onboarding",
+  paid: "Awaiting onboarding",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+};
+
+export function orderStatusLabel(status: string) {
+  return ORDER_STATUS_LABELS[status] ?? status;
+}
+
 export function projectStatusLabel(status: string) {
   return PROJECT_STATUSES.find((s) => s.value === status)?.label ?? status;
 }
