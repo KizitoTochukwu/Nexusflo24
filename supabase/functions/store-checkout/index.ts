@@ -33,7 +33,11 @@ interface Body {
     notes?: string;
   };
   workspaceId?: string | null;
+  /** Currency the customer chose. Non-Stripe currencies fall back to GBP. */
+  currency?: string;
 }
+
+const STRIPE_CURRENCIES: Record<string, string> = { GBP: "gbp", USD: "usd", EUR: "eur" };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -66,6 +70,31 @@ serve(async (req) => {
     );
     const monthlyTotal = body.plan?.pricePence ?? 0;
 
+    // Resolve the charging currency. Catalogue prices are stored in GBP pence;
+    // convert server-side from the live rates table (never trust client amounts).
+    const requested = (body.currency ?? "GBP").toUpperCase();
+    const currency = STRIPE_CURRENCIES[requested] ? requested : "GBP";
+    let fx = 1;
+    if (currency !== "GBP") {
+      const { data: rateRows } = await supabase
+        .from("currency_rates")
+        .select("quote, rate")
+        .eq("base", "USD")
+        .in("quote", ["GBP", currency]);
+      const map = new Map((rateRows ?? []).map((r: any) => [r.quote, Number(r.rate)]));
+      const gbpRate = map.get("GBP");
+      const target = map.get(currency);
+      if (gbpRate && target) fx = target / gbpRate;
+      else currencyFallback();
+    }
+    function currencyFallback() {
+      console.warn("[store-checkout] missing FX rate, charging in GBP");
+    }
+    const stripeCurrency = fx === 1 && currency !== "GBP" ? "gbp" : STRIPE_CURRENCIES[currency];
+    const orderCurrency = stripeCurrency === "gbp" ? "GBP" : currency;
+    const toCharge = (pence: number) =>
+      orderCurrency === "GBP" ? pence : Math.round((pence * fx) / 50) * 50;
+
     const { data: order, error: orderErr } = await supabase
       .from("store_orders")
       .insert({
@@ -79,7 +108,7 @@ serve(async (req) => {
         industry: body.customer.industry ?? null,
         notes: body.customer.notes ?? null,
         status: "pending",
-        currency: "GBP",
+        currency: orderCurrency,
         subtotal_pence: oneTimeTotal,
         total_pence: oneTimeTotal,
         monthly_total_pence: monthlyTotal,
@@ -113,8 +142,8 @@ serve(async (req) => {
     const setupLines = items.map((i) => ({
       quantity: Math.max(1, Math.min(20, i.quantity ?? 1)),
       price_data: {
-        currency: "gbp",
-        unit_amount: i.unitPricePence,
+        currency: stripeCurrency,
+        unit_amount: toCharge(i.unitPricePence),
         product_data: { name: `${i.name} — automation setup` },
       },
     }));
@@ -138,8 +167,8 @@ serve(async (req) => {
           {
             quantity: 1,
             price_data: {
-              currency: "gbp",
-              unit_amount: monthlyTotal,
+              currency: stripeCurrency,
+              unit_amount: toCharge(monthlyTotal),
               recurring: { interval: "month" as const },
               product_data: { name: `${body.plan.name} — managed automation plan` },
             },
