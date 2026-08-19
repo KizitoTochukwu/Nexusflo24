@@ -64,11 +64,7 @@ serve(async (req) => {
       userId = data.user?.id ?? null;
     }
 
-    const oneTimeTotal = items.reduce(
-      (sum, i) => sum + i.unitPricePence * Math.max(1, Math.min(20, i.quantity ?? 1)),
-      0,
-    );
-    const monthlyTotal = body.plan?.pricePence ?? 0;
+    const monthlyBase = body.plan?.pricePence ?? 0;
 
     // Resolve the charging currency. Catalogue prices are stored in GBP pence;
     // convert server-side from the live rates table (never trust client amounts).
@@ -85,15 +81,21 @@ serve(async (req) => {
       const gbpRate = map.get("GBP");
       const target = map.get(currency);
       if (gbpRate && target) fx = target / gbpRate;
-      else currencyFallback();
-    }
-    function currencyFallback() {
-      console.warn("[store-checkout] missing FX rate, charging in GBP");
+      else console.warn("[store-checkout] missing FX rate, charging in GBP");
     }
     const stripeCurrency = fx === 1 && currency !== "GBP" ? "gbp" : STRIPE_CURRENCIES[currency];
     const orderCurrency = stripeCurrency === "gbp" ? "GBP" : currency;
     const toCharge = (pence: number) =>
       orderCurrency === "GBP" ? pence : Math.round((pence * fx) / 50) * 50;
+
+    // All stored amounts are in the order's charging currency (minor units).
+    const priced = items.map((i) => ({
+      ...i,
+      quantity: Math.max(1, Math.min(20, i.quantity ?? 1)),
+      chargeUnit: toCharge(i.unitPricePence),
+    }));
+    const oneTimeTotal = priced.reduce((sum, i) => sum + i.chargeUnit * i.quantity, 0);
+    const monthlyTotal = toCharge(monthlyBase);
 
     const { data: order, error: orderErr } = await supabase
       .from("store_orders")
@@ -118,14 +120,14 @@ serve(async (req) => {
       .maybeSingle();
     if (orderErr || !order) throw new Error(orderErr?.message || "Could not create the order.");
 
-    const itemRows = items.map((i) => ({
+    const itemRows = priced.map((i) => ({
       order_id: order.id,
       kind: i.kind ?? "product",
       product_slug: i.kind === "bundle" ? null : i.slug,
       bundle_slug: i.kind === "bundle" ? i.slug : null,
       name: i.name,
-      unit_price_pence: i.unitPricePence,
-      quantity: Math.max(1, Math.min(20, i.quantity ?? 1)),
+      unit_price_pence: i.chargeUnit,
+      quantity: i.quantity,
       configuration: i.configuration ?? {},
     }));
     const { error: itemsErr } = await supabase.from("store_order_items").insert(itemRows);
@@ -139,11 +141,11 @@ serve(async (req) => {
     const successUrl = `${origin}/automations/success?order=${order.id}`;
     const cancelUrl = `${origin}/automations/checkout?cancelled=1`;
 
-    const setupLines = items.map((i) => ({
-      quantity: Math.max(1, Math.min(20, i.quantity ?? 1)),
+    const setupLines = priced.map((i) => ({
+      quantity: i.quantity,
       price_data: {
         currency: stripeCurrency,
-        unit_amount: toCharge(i.unitPricePence),
+        unit_amount: i.chargeUnit,
         product_data: { name: `${i.name} — automation setup` },
       },
     }));
@@ -168,7 +170,7 @@ serve(async (req) => {
             quantity: 1,
             price_data: {
               currency: stripeCurrency,
-              unit_amount: toCharge(monthlyTotal),
+              unit_amount: monthlyTotal,
               recurring: { interval: "month" as const },
               product_data: { name: `${body.plan.name} — managed automation plan` },
             },
