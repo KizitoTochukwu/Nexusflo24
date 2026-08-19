@@ -11,6 +11,9 @@ import ProductReviews from "@/components/store/ProductReviews";
 import {
   LevelBadge, SectionHeading, StoreCta, WorkflowChain,
 } from "@/components/store/StorePrimitives";
+import {
+  FitCallCta, NotIncludedSection, OrderAssurance, ProductFaq, ProductTrustSection, faqMainEntity,
+} from "@/components/store/ConversionSections";
 import { DELIVERY_STEPS, LEVELS } from "@/lib/store/constants";
 import { useStorePrice } from "@/lib/store/price";
 import { useStoreProduct, useStoreProducts, type StoreProduct } from "@/hooks/useStore";
