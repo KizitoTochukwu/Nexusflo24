@@ -145,8 +145,18 @@ export default function StoreCart() {
                   Continue to checkout <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Secure payment by Stripe. Setup begins once onboarding is complete.
+                  {chargeCurrency === currency
+                    ? `Secure payment by Stripe in ${currency}. Setup begins once onboarding is complete.`
+                    : `${currency} is not supported by our card processor, so payment is taken securely in GBP.`}
                 </p>
+                <ul className="mt-4 space-y-2 border-t pt-4 text-xs text-muted-foreground">
+                  {ORDER_ASSURANCE.map((point) => (
+                    <li key={point} className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
               </aside>
             </div>
           )}
