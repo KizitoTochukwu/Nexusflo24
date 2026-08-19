@@ -207,6 +207,12 @@ export default function StoreProductDetail() {
         </div>
       </section>
 
+      <ProductTrustSection />
+
+      <NotIncludedSection />
+
+      <ProductFaq />
+
       <ProductReviews productSlug={product.slug} />
 
       {related.length > 0 && (
@@ -221,6 +227,12 @@ export default function StoreProductDetail() {
           </div>
         </section>
       )}
+
+      <section className="bg-background pt-14">
+        <div className="container max-w-3xl text-center">
+          <FitCallCta variant="light" />
+        </div>
+      </section>
 
       <StoreCta
         title={`Ready to launch ${product.name}?`}
