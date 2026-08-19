@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
       const name = (project as any).store_orders?.full_name || "there";
       const link = `${SITE_URL}/dashboard`;
 
-      const copy: Record<Exclude<EventType, "order_paid">, { subject: string; heading: string; intro: string }> = {
+      const copy: Record<Exclude<EventType, "order_paid" | "onboarding_invite" | "admin_new_order">, { subject: string; heading: string; intro: string }> = {
         onboarding_reminder: {
           subject: `Quick step needed for ${project.name}`,
           heading: "We need a few details to start building",
@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
         },
       };
 
-      const c = copy[body.event as Exclude<EventType, "order_paid">];
+      const c = copy[body.event as Exclude<EventType, "order_paid" | "onboarding_invite" | "admin_new_order">];
       const inner = body.body
         ? `<div style="background:#f7f9fc;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#41506b">${esc(body.body)}</div>`
         : "";
