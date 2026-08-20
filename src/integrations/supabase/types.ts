@@ -7373,6 +7373,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      active_funnel_workspace_id: {
+        Args: { p_funnel_id: string }
+        Returns: string
+      }
       assign_next_round_robin: {
         Args: { _workspace_id: string }
         Returns: string

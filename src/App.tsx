@@ -75,6 +75,9 @@ import AuthCallback from "./pages/AuthCallback";
 import OAuthConsent from "./pages/OAuthConsent";
 import PublicFunnel from "./pages/PublicFunnel";
 import BookingsWorkspaceLayout from "./components/bookings/BookingsWorkspaceLayout";
+import AdsWorkspaceLayout from "./components/ads/AdsWorkspaceLayout";
+import AdsOverview from "./pages/dashboard/ads/AdsOverview";
+import AdsAccounts from "./pages/dashboard/ads/AdsAccounts";
 import BookingsOverview from "./pages/dashboard/bookings/BookingsOverview";
 import BookingsCalendar from "./pages/dashboard/bookings/BookingsCalendar";
 import BookingsTypes from "./pages/dashboard/bookings/BookingsTypes";
@@ -224,6 +227,15 @@ const App = () => (
                   <Route path="types" element={<BookingsTypes />} />
                   <Route path="pages" element={<BookingsPages />} />
                 </Route>
+                <Route path="ads" element={<AdsWorkspaceLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<AdsOverview />} />
+                  <Route path="accounts" element={<AdsAccounts />} />
+                  {/* Sections still in build-out fall back to the overview. */}
+                  <Route path="*" element={<Navigate to="overview" replace />} />
+                </Route>
+
+
                 
                 <Route path="messages" element={<DashboardMessages />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
