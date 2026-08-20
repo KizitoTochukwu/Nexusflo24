@@ -20,10 +20,14 @@ const DashboardRedirect = () => {
   if (!user) return <Navigate to="/login" replace />;
 
   if (firstWorkspaceId) {
-    // New users (no onboarding record yet) get the guided setup first.
-    if (!onboarding) return <Navigate to="/onboarding" replace />;
+    // Only genuinely new accounts get the guided setup. Existing users have no
+    // onboarding row either (the table is new), so gate on account age.
+    const createdAt = user?.created_at ? new Date(user.created_at).getTime() : 0;
+    const isNewAccount = createdAt > 0 && Date.now() - createdAt < 3 * 24 * 60 * 60 * 1000;
+    if (!onboarding && isNewAccount) return <Navigate to="/onboarding" replace />;
     return <Navigate to={`/dashboard/${firstWorkspaceId}/overview`} replace />;
   }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
