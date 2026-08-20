@@ -227,6 +227,15 @@ const App = () => (
                   <Route path="types" element={<BookingsTypes />} />
                   <Route path="pages" element={<BookingsPages />} />
                 </Route>
+                <Route path="ads" element={<AdsWorkspaceLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<AdsOverview />} />
+                  <Route path="accounts" element={<AdsAccounts />} />
+                  {/* Sections still in build-out fall back to the overview. */}
+                  <Route path="*" element={<Navigate to="overview" replace />} />
+                </Route>
+
+
                 
                 <Route path="messages" element={<DashboardMessages />} />
                 <Route path="analytics" element={<DashboardAnalytics />} />
