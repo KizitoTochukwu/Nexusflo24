@@ -171,8 +171,34 @@ const scrollTo = (id: string) => {
   });
 };
 
+/** Legacy homepage anchors → current section ids on this page. */
+const HASH_ALIASES: Record<string, string> = {
+  "ai-lead-gen": "lead-capture",
+  "smart-crm": "crm",
+  "email-whatsapp": "messaging",
+  "bulk-sms": "messaging",
+  "nurture-flow": "automations",
+  "funnel-builder": "lead-capture",
+  "ai-copywriter": "ai-mcp",
+  "analytics": "analytics",
+};
+
 const Features = () => {
+  // Scroll to the requested section, mapping legacy anchors to current ids.
+  useEffect(() => {
+    const raw = window.location.hash.replace("#", "");
+    if (!raw) return;
+    const targetId = HASH_ALIASES[raw] ?? raw;
+    const scroll = () => {
+      const el = document.getElementById(targetId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    const t = window.setTimeout(scroll, 120);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const track = useCallback((event: string, params?: Record<string, unknown>) => {
+
     fbqTrackCustom(event, params);
   }, []);
 
