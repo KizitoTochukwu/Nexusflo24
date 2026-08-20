@@ -26,8 +26,11 @@ const WorkspaceGuard = () => {
     return () => window.clearTimeout(t);
   }, [authLoading, wsLoading]);
 
-  if (authLoading || wsLoading) {
+  // Error state is checked outside the loading gate: fetchWorkspaces clears
+  // `loading` in its finally block, so an error would otherwise fall through.
+  if (error || authLoading || wsLoading) {
     if (showStuck || error) {
+
       return (
         <div className="flex min-h-screen items-center justify-center bg-surface p-6">
           <div className="w-full max-w-sm rounded-xl border bg-background p-6 text-center shadow-sm">
