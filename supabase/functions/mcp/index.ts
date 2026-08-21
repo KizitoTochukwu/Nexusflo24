@@ -76,7 +76,21 @@ async function withinRateLimit(userId, workspaceId) {
     return true;
   }
 }
-async function touchConnection(workspaceId, clientId, userId) {
+function resolveClientKey(ctx) {
+  const raw = (() => {
+    try {
+      const info = ctx?.getClientInfo?.() ?? ctx?.clientInfo ?? null;
+      return String(info?.name ?? ctx?.getClientName?.() ?? "").toLowerCase();
+    } catch {
+      return "";
+    }
+  })();
+  if (!raw) return { key: "custom", name: null };
+  if (raw.includes("chatgpt") || raw.includes("openai")) return { key: "chatgpt", name: raw };
+  if (raw.includes("claude") || raw.includes("anthropic")) return { key: "claude", name: raw };
+  return { key: "custom", name: raw };
+}
+async function touchConnection(workspaceId, clientId, userId, client) {
   const admin = adminClient();
   if (!admin || !clientId) return;
   try {
@@ -86,7 +100,8 @@ async function touchConnection(workspaceId, clientId, userId) {
     } else {
       await admin.from("mcp_connections").insert({
         workspace_id: workspaceId,
-        client_key: "custom",
+        client_key: client.key,
+        client_name: client.name,
         oauth_client_id: clientId,
         status: "active",
         last_seen_at: (/* @__PURE__ */ new Date()).toISOString(),
@@ -148,7 +163,7 @@ async function withGuard(ctx, opts, run) {
       await audit({ workspaceId, userId, clientId, tool: opts.tool, summary: "approval required", risk, execution: "rejected", errorCode: "approval_required" });
       return fail("This action requires approval inside NexusFlo24 before an AI assistant can run it.");
     }
-    await touchConnection(workspaceId, clientId, userId);
+    await touchConnection(workspaceId, clientId, userId, resolveClientKey(ctx));
   }
   try {
     const result = await run({ supabase, workspaceId, userId });

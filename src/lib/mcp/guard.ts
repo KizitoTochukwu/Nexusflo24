@@ -124,7 +124,24 @@ async function withinRateLimit(userId: string, workspaceId: string | null): Prom
 }
 
 /** Touch/record the connected client so the app can show real connection state. */
-async function touchConnection(workspaceId: string, clientId: string | null, userId: string) {
+
+/** Best-effort mapping of the connected MCP client to a known card in Settings. */
+function resolveClientKey(ctx: any): { key: string; name: string | null } {
+  const raw = (() => {
+    try {
+      const info = (ctx as any)?.getClientInfo?.() ?? (ctx as any)?.clientInfo ?? null;
+      return String(info?.name ?? (ctx as any)?.getClientName?.() ?? "").toLowerCase();
+    } catch {
+      return "";
+    }
+  })();
+  if (!raw) return { key: "custom", name: null };
+  if (raw.includes("chatgpt") || raw.includes("openai")) return { key: "chatgpt", name: raw };
+  if (raw.includes("claude") || raw.includes("anthropic")) return { key: "claude", name: raw };
+  return { key: "custom", name: raw };
+}
+
+async function touchConnection(workspaceId: string, clientId: string | null, userId: string, client: { key: string; name: string | null }) {
   const admin = adminClient();
   if (!admin || !clientId) return;
   try {
@@ -139,7 +156,8 @@ async function touchConnection(workspaceId: string, clientId: string | null, use
     } else {
       await admin.from("mcp_connections").insert({
         workspace_id: workspaceId,
-        client_key: "custom",
+        client_key: client.key,
+        client_name: client.name,
         oauth_client_id: clientId,
         status: "active",
         last_seen_at: new Date().toISOString(),
@@ -243,7 +261,7 @@ export async function withGuard(
       await audit({ workspaceId, userId, clientId, tool: opts.tool, summary: "approval required", risk, execution: "rejected", errorCode: "approval_required" });
       return fail("This action requires approval inside NexusFlo24 before an AI assistant can run it.");
     }
-    await touchConnection(workspaceId, clientId, userId);
+    await touchConnection(workspaceId, clientId, userId, resolveClientKey(ctx));
   }
 
   try {
