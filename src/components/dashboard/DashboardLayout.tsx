@@ -58,6 +58,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: FormInput, label: "Forms", to: `/dashboard/${workspaceId}/forms` },
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
+  { icon: PieChart, label: "Ads Hub", to: `/dashboard/${workspaceId}/ads/overview`, match: [`/dashboard/${workspaceId}/ads`] },
   { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
   { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
   { icon: MessageCircle, label: "Messages", to: `/dashboard/${workspaceId}/messages` },
