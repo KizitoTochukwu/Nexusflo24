@@ -714,25 +714,51 @@ Deno.serve(async (req) => {
           );
         }
 
+        // Self-heal: the configured default is gone from Meta (or none was
+        // ever configured). Pick any other locally-known approved template
+        // that still resolves live and promote it to the workspace default.
+        if (!live) {
+          const rescued = await findAnyLiveTemplate(
+            adminClient,
+            workspaceId,
+            creds.config.access_token.trim(),
+            creds.config.phone_number_id.trim(),
+            defaultTpl?.name,
+          );
+          if (rescued) {
+            live = rescued;
+            console.log("WA default template unavailable — self-healed to", rescued.name);
+            if (rescued.templateId) {
+              await adminClient
+                .from("whatsapp_settings")
+                .update({
+                  default_reengagement_template_id: rescued.templateId,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("workspace_id", workspaceId);
+            }
+          }
+        }
+
         if (live) {
           autoTemplated = true;
           const safeBody = msgBody
             .replace(/[\r\n\t]+/g, " ")
             .replace(/\s{4,}/g, "   ")
             .slice(0, 1024);
-          const components: any[] = [];
-          if ((defaultTpl?.variable_count ?? 0) > 0) {
-            components.push({ type: "body", parameters: [{ type: "text", text: safeBody }] });
-          }
+          // Build the parameter set from the LIVE definition so the count
+          // always matches the approved template (avoids Meta 131008).
+          const components = reconcileTemplateComponents(live.components, null, safeBody);
           effectiveTemplate = {
             name: live.name,
             language: live.language,
             ...(components.length ? { components } : {}),
           };
           console.log("WA window closed — auto-sending via live-resolved template", {
-            workspaceId, template: live.name, language: live.language,
+            workspaceId, template: live.name, language: live.language, params: components.length,
           });
         } else if (isPreview) {
+
           // Test-send from the editor: fall back to Meta's universal
           // `hello_world` so users get a clean credentials-verified signal
           // regardless of template/state (matches HubSpot/GHL "Send test").
