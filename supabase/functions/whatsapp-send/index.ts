@@ -295,6 +295,124 @@ async function resolveLiveTemplate(
   };
 }
 
+/** Count distinct {{n}} placeholders in a template text fragment. */
+function countPlaceholders(text: unknown): number {
+  const matches = String(text ?? "").match(/\{\{\s*\d+\s*\}\}/g);
+  if (!matches) return 0;
+  return new Set(matches.map((m) => m.replace(/\D/g, ""))).size;
+}
+
+function findComponent(components: any[] | null | undefined, type: string): any | null {
+  return (components || []).find((c: any) => String(c?.type || "").toUpperCase() === type) || null;
+}
+
+/**
+ * Meta rejects a template send with 131008 / 132000 when the number of
+ * supplied parameters does not exactly match the number of {{n}} placeholders
+ * in the APPROVED template. This reconciles a caller-supplied (or
+ * auto-generated) component array against the LIVE template definition:
+ * missing parameters are padded with the supplied fallback text, extras are
+ * dropped, and components the template doesn't declare are removed.
+ */
+function reconcileTemplateComponents(
+  liveComponents: any[] | null,
+  suppliedComponents: any[] | null | undefined,
+  fallbackText: string,
+): any[] {
+  const safeFallback = (fallbackText || " ").replace(/[\r\n\t]+/g, " ").slice(0, 1024) || " ";
+  const out: any[] = [];
+
+  const supplied = Array.isArray(suppliedComponents) ? suppliedComponents : [];
+  const suppliedFor = (type: string) =>
+    supplied.find((c: any) => String(c?.type || "").toUpperCase() === type.toUpperCase());
+
+  // HEADER — only text headers can carry {{n}} variables.
+  const liveHeader = findComponent(liveComponents, "HEADER");
+  if (liveHeader && String(liveHeader.format || "TEXT").toUpperCase() === "TEXT") {
+    const need = countPlaceholders(liveHeader.text);
+    if (need > 0) {
+      const given = (suppliedFor("header")?.parameters as any[]) || [];
+      const params = [];
+      for (let i = 0; i < need; i++) {
+        const v = given[i]?.text ?? given[i]?.parameter_name ?? safeFallback;
+        params.push({ type: "text", text: String(v || safeFallback).slice(0, 60) });
+      }
+      out.push({ type: "header", parameters: params });
+    }
+  }
+
+  // BODY
+  const liveBody = findComponent(liveComponents, "BODY");
+  const bodyNeed = liveBody ? countPlaceholders(liveBody.text) : 0;
+  if (bodyNeed > 0) {
+    const given = (suppliedFor("body")?.parameters as any[]) || [];
+    const params = [];
+    for (let i = 0; i < bodyNeed; i++) {
+      const v = given[i]?.text ?? safeFallback;
+      params.push({ type: "text", text: String(v ?? safeFallback).slice(0, 1024) || " " });
+    }
+    out.push({ type: "body", parameters: params });
+  }
+
+  // BUTTONS — only URL buttons with a {{1}} suffix need a parameter.
+  const liveButtons = findComponent(liveComponents, "BUTTONS");
+  const buttons: any[] = liveButtons?.buttons || [];
+  buttons.forEach((btn: any, index: number) => {
+    const isDynamicUrl =
+      String(btn?.type || "").toUpperCase() === "URL" && countPlaceholders(btn?.url) > 0;
+    if (!isDynamicUrl) return;
+    const givenBtn = supplied.find(
+      (c: any) => String(c?.type || "").toLowerCase() === "button" && Number(c?.index) === index,
+    );
+    const v = (givenBtn?.parameters as any[])?.[0]?.text ?? safeFallback;
+    out.push({
+      type: "button",
+      sub_type: "url",
+      index: String(index),
+      parameters: [{ type: "text", text: String(v || safeFallback).slice(0, 1024) }],
+    });
+  });
+
+  return out;
+}
+
+/**
+ * When the configured default re-engagement template is gone from Meta, fall
+ * back to any other locally-known approved template that still live-resolves,
+ * and persist it as the new default so the workspace self-heals.
+ */
+async function findAnyLiveTemplate(
+  adminClient: any,
+  workspaceId: string,
+  accessToken: string,
+  phoneNumberId: string,
+  excludeName?: string,
+): Promise<{ name: string; language: string; components: any[] | null; templateId?: string } | null> {
+  const { data: rows } = await adminClient
+    .from("whatsapp_templates")
+    .select("id, name, language, category, status, meta_template_id")
+    .eq("workspace_id", workspaceId)
+    .eq("status", "approved")
+    .not("meta_template_id", "is", null)
+    .order("category", { ascending: true }) // AUTHENTICATION → MARKETING → UTILITY
+    .limit(10);
+
+  for (const row of rows || []) {
+    if (excludeName && row.name === excludeName) continue;
+    const live = await resolveLiveTemplate(
+      adminClient,
+      workspaceId,
+      accessToken,
+      phoneNumberId,
+      row.name,
+      row.language,
+    );
+    if (live) return { ...live, templateId: row.id };
+  }
+  return null;
+}
+
+
 /** Check if the 24-hour conversation window is open for a given phone number */
 async function isWindowOpen(
   adminClient: any,
@@ -596,25 +714,51 @@ Deno.serve(async (req) => {
           );
         }
 
+        // Self-heal: the configured default is gone from Meta (or none was
+        // ever configured). Pick any other locally-known approved template
+        // that still resolves live and promote it to the workspace default.
+        if (!live) {
+          const rescued = await findAnyLiveTemplate(
+            adminClient,
+            workspaceId,
+            creds.config.access_token.trim(),
+            creds.config.phone_number_id.trim(),
+            defaultTpl?.name,
+          );
+          if (rescued) {
+            live = rescued;
+            console.log("WA default template unavailable — self-healed to", rescued.name);
+            if (rescued.templateId) {
+              await adminClient
+                .from("whatsapp_settings")
+                .update({
+                  default_reengagement_template_id: rescued.templateId,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("workspace_id", workspaceId);
+            }
+          }
+        }
+
         if (live) {
           autoTemplated = true;
           const safeBody = msgBody
             .replace(/[\r\n\t]+/g, " ")
             .replace(/\s{4,}/g, "   ")
             .slice(0, 1024);
-          const components: any[] = [];
-          if ((defaultTpl?.variable_count ?? 0) > 0) {
-            components.push({ type: "body", parameters: [{ type: "text", text: safeBody }] });
-          }
+          // Build the parameter set from the LIVE definition so the count
+          // always matches the approved template (avoids Meta 131008).
+          const components = reconcileTemplateComponents(live.components, null, safeBody);
           effectiveTemplate = {
             name: live.name,
             language: live.language,
             ...(components.length ? { components } : {}),
           };
           console.log("WA window closed — auto-sending via live-resolved template", {
-            workspaceId, template: live.name, language: live.language,
+            workspaceId, template: live.name, language: live.language, params: components.length,
           });
         } else if (isPreview) {
+
           // Test-send from the editor: fall back to Meta's universal
           // `hello_world` so users get a clean credentials-verified signal
           // regardless of template/state (matches HubSpot/GHL "Send test").
