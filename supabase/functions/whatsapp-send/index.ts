@@ -818,7 +818,10 @@ Deno.serve(async (req) => {
     // supplied parameter count differs from the approved template's {{n}}
     // placeholders. Resolve the template live and rebuild the component
     // array from the real definition before sending.
-    if (effectiveTemplate && !autoTemplated && effectiveTemplate.name !== "hello_world") {
+    if (
+      effectiveTemplate && !autoTemplated && effectiveTemplate.name !== "hello_world" &&
+      creds?.config?.access_token && creds?.config?.phone_number_id
+    ) {
       try {
         const liveForCaller = await resolveLiveTemplate(
           adminClient,
