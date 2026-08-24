@@ -178,6 +178,31 @@ Deno.serve(async (req) => {
       }
     }
 
+    // If the workspace's default re-engagement template was just invalidated,
+    // clear it so the send path can pick a live one instead of failing.
+    const { data: waSettings } = await admin
+      .from("whatsapp_settings")
+      .select("id, default_reengagement_template_id")
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+    let defaultCleared = false;
+    if (waSettings?.default_reengagement_template_id) {
+      const { data: defTpl } = await admin
+        .from("whatsapp_templates")
+        .select("status")
+        .eq("id", waSettings.default_reengagement_template_id)
+        .maybeSingle();
+      if (!defTpl || defTpl.status !== "approved") {
+        await admin
+          .from("whatsapp_settings")
+          .update({ default_reengagement_template_id: null, updated_at: new Date().toISOString() })
+          .eq("id", waSettings.id);
+        defaultCleared = true;
+      }
+    }
+
+
+
     return new Response(
       JSON.stringify({ success: true, synced: upserts, total: all.length, removed: markedDeleted }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
