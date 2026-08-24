@@ -133,8 +133,15 @@ function buildWhatsAppError(waRes: Response, waData: any) {
   // the generic Graph string.
   const isTemplateError = graphCode >= 132000 && graphCode < 133000;
 
-  const errMsg = isTemplateError
+  // 131008 = the template parameters we sent don't match the approved
+  // template's {{n}} placeholders.
+  const isParamMismatch = graphCode === 131008;
+
+  const errMsg = isParamMismatch
+    ? `WhatsApp template parameters don't match the approved template [131008]: ${graphMessage}. Re-sync templates in Settings → Channels → WhatsApp so NexusFlo24 has the current variable list, then resend.`
+    : isTemplateError
     ? `WhatsApp template error [${graphCode}]: ${graphMessage}. Open Settings → Channels → WhatsApp and click "Sync templates from Meta", then pick an APPROVED template (matching name + language) as your default re-engagement template.`
+
     : isCredentialMismatch
     ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Reconnect WhatsApp in Settings → Channels."
     : isTokenOrPermissionError
