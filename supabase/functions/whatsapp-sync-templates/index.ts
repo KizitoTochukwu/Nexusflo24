@@ -204,7 +204,14 @@ Deno.serve(async (req) => {
 
 
     return new Response(
-      JSON.stringify({ success: true, synced: upserts, total: all.length, removed: markedDeleted }),
+      JSON.stringify({
+        success: true,
+        synced: upserts,
+        total: all.length,
+        removed: markedDeleted,
+        default_template_cleared: defaultCleared,
+      }),
+
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
