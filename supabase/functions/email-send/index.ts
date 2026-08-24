@@ -285,6 +285,14 @@ Deno.serve(async (req) => {
         lead_id: leadId || null,
         sender_profile_id: resolvedSender?.profile?.id || null,
       });
+      await adminClient.from("email_send_log").insert({
+        message_id: result.messageId || `app-${crypto.randomUUID()}`,
+        template_name: "app-email",
+        recipient_email: to,
+        status: "sent",
+        metadata: { workspace_id: workspaceId, lead_id: leadId || null, source: "email-send", preview: isPreview },
+      });
+
       if (!isPreview) {
         await logCommunicationUsage({
           workspaceId, channel: "email",
