@@ -416,6 +416,8 @@ Deno.serve(async (req) => {
     const errCode = Number(err?.code || 0);
     const isTwilioPairError = /current combination of 'To'.*'From'|and\/or 'From' parameters/i.test(errMsgRaw);
     const isGeoPermissionError = errCode === 21408 || /Permission to send an SMS has not been enabled for the region/i.test(errMsgRaw);
+    const isUnreachablePair = errCode === 21612 || errCode === 21606 || /not.*capable of sending|is not a valid.*message-capable/i.test(errMsgRaw);
+
     const isInvalidToError = errCode === 21211 || /Invalid 'To' Phone Number/i.test(errMsgRaw);
     const isInvalidFromError = errCode === 21212 || /Invalid 'From' Phone Number/i.test(errMsgRaw);
     const isUnverifiedTrial = errCode === 21608 || /unverified/i.test(errMsgRaw);
