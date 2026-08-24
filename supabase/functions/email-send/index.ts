@@ -254,7 +254,18 @@ Deno.serve(async (req) => {
           error: errorMessage,
           lead_id: leadId || null,
         });
+        // Mirror into email_send_log — the source of truth for delivery
+        // dashboards (email_logs alone left the analytics blank).
+        await adminClient.from("email_send_log").insert({
+          message_id: `app-${crypto.randomUUID()}`,
+          template_name: "app-email",
+          recipient_email: to,
+          status: "failed",
+          error_message: errorMessage,
+          metadata: { workspace_id: workspaceId, lead_id: leadId || null, source: "email-send", preview: isPreview },
+        });
       } catch (_) { /* ignore logging errors */ }
+
       return new Response(
         JSON.stringify({ success: false, error: errorMessage }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -274,6 +285,14 @@ Deno.serve(async (req) => {
         lead_id: leadId || null,
         sender_profile_id: resolvedSender?.profile?.id || null,
       });
+      await adminClient.from("email_send_log").insert({
+        message_id: result.messageId || `app-${crypto.randomUUID()}`,
+        template_name: "app-email",
+        recipient_email: to,
+        status: "sent",
+        metadata: { workspace_id: workspaceId, lead_id: leadId || null, source: "email-send", preview: isPreview },
+      });
+
       if (!isPreview) {
         await logCommunicationUsage({
           workspaceId, channel: "email",
