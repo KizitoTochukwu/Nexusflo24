@@ -806,6 +806,45 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Parameter reconciliation for caller-supplied templates ──
+    // Meta returns 131008 ("Required parameter is missing") whenever the
+    // supplied parameter count differs from the approved template's {{n}}
+    // placeholders. Resolve the template live and rebuild the component
+    // array from the real definition before sending.
+    if (effectiveTemplate && !autoTemplated && effectiveTemplate.name !== "hello_world") {
+      try {
+        const liveForCaller = await resolveLiveTemplate(
+          adminClient,
+          workspaceId,
+          creds.config.access_token.trim(),
+          creds.config.phone_number_id.trim(),
+          effectiveTemplate.name,
+          effectiveTemplate.language,
+        );
+        if (liveForCaller) {
+          const reconciled = reconcileTemplateComponents(
+            liveForCaller.components,
+            effectiveTemplate.components as any[] | undefined,
+            msgBody || "",
+          );
+          effectiveTemplate = {
+            name: liveForCaller.name,
+            language: liveForCaller.language,
+            ...(reconciled.length ? { components: reconciled } : {}),
+          };
+          console.log("WA template reconciled against live definition", {
+            template: liveForCaller.name,
+            language: liveForCaller.language,
+            components: reconciled.length,
+          });
+        }
+      } catch (err) {
+        console.warn("WA template reconciliation skipped:", err);
+      }
+    }
+
+
+
     // ── Template category compliance (Meta MARKETING vs UTILITY vs AUTH) ──
     // MARKETING templates: require lead opt-in (or workspace assume_opt_in),
     //   and reject if the lead is on the opt-out list.
