@@ -427,7 +427,9 @@ Deno.serve(async (req) => {
       /cannot be the same/i.test(errMsgRaw) ||
       isTwilioPairError ||
       isGeoPermissionError ||
+      isUnreachablePair ||
       isCredentialFailure;
+
 
     let errMsg = errMsgRaw;
     if (isCredentialFailure) {
