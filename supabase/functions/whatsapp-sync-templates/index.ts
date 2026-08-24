@@ -156,12 +156,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Mark previously-synced templates that no longer exist in Meta as deleted.
+    // Mark Meta templates that no longer exist on the WABA as deleted. This
+    // includes locally-seeded rows that were never on Meta (no
+    // meta_template_id) — those are the ones that fail at send time with
+    // "template no longer exists".
     const { data: localTpls } = await admin
       .from("whatsapp_templates")
       .select("id, name, language, status, meta_template_id")
       .eq("workspace_id", workspaceId)
-      .not("meta_template_id", "is", null);
+      .eq("provider", "meta");
+
     let markedDeleted = 0;
     for (const tpl of localTpls || []) {
       const key = `${tpl.name}::${tpl.language}`;
