@@ -445,6 +445,9 @@ Deno.serve(async (req) => {
       errMsg = "Your Twilio account is in trial mode and this recipient hasn't been verified. Verify the number in Twilio Console → Phone Numbers → Verified Caller IDs, or upgrade to a paid Twilio account.";
     } else if (isTwilioPairError) {
       errMsg = "Twilio rejected this To/From combination. If your account is in trial mode, verify the recipient number in Twilio and ensure SMS permissions are enabled for that destination country.";
+    } else if (isUnreachablePair) {
+      errMsg = "Your Twilio sender number can't reach this destination country. Buy or assign a sender number in the recipient's country (or use a Messaging Service SID with international routing) in Settings → Channels → SMS.";
+
     }
 
     return new Response(JSON.stringify({ success: false, error: errMsg, code: errCode || undefined }), { status: isClientError ? 400 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
