@@ -290,14 +290,49 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "SMS sender not configured. Add TWILIO_FROM_NUMBER (E.164 number or MG... Messaging Service SID) or save your own Twilio credentials in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const sender = resolveTwilioSender(senderRaw);
+    let sender = resolveTwilioSender(senderRaw);
     if (!sender) {
       return new Response(JSON.stringify({ error: "Configured SMS sender is invalid. Use a valid E.164 number (e.g. +14155552671), Twilio Messaging Service SID (MG...), or supported alphanumeric sender ID." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── Country-aware sender selection ──
+    // Twilio rejects (21408 / 21612) many cross-border pairs, e.g. a US
+    // long code texting a UK mobile. If the resolved sender is a plain
+    // number in a different country than the recipient, prefer an approved
+    // workspace sender registered for the destination country.
+    if (sender.kind === "from" && sender.value.startsWith("+") && toCountry) {
+      const senderCountry = countryFromE164(sender.value);
+      if (senderCountry && senderCountry !== toCountry) {
+        const { data: candidates } = await adminClient
+          .from("sms_senders")
+          .select("phone_number, country, verification_status, sender_profiles!inner(workspace_id, channel, status)")
+          .eq("country", toCountry)
+          .eq("sender_profiles.workspace_id", workspaceId)
+          .eq("sender_profiles.channel", "sms")
+          .eq("sender_profiles.status", "approved")
+          .limit(5);
+
+        const match = (candidates || []).find((c: any) => {
+          const n = normalizePhoneNumber(String(c.phone_number || ""));
+          return !!n && countryFromE164(n) === toCountry;
+        });
+
+        if (match) {
+          const swapped = normalizePhoneNumber(String((match as any).phone_number));
+          if (swapped) {
+            console.log("sms-send sender swapped for destination country", { toCountry, from: senderCountry });
+            sender = { kind: "from", value: swapped };
+          }
+        } else {
+          console.warn("sms-send cross-country send with no local sender", { senderCountry, toCountry });
+        }
+      }
     }
 
     if (sender.kind === "from" && sender.value.startsWith("+") && normalizedTo === sender.value) {
       return new Response(JSON.stringify({ error: "'To' and 'From' number cannot be the same" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     const accountSid = String(creds.config.account_sid || "").trim();
     const authToken = String(creds.config.auth_token || "").trim();
