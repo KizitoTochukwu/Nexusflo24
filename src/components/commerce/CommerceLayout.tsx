@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useParams } from "react-router-dom";
-import { BarChart3, Package, Palette, Settings, ShoppingBag, Users } from "lucide-react";
+import { BarChart3, MessagesSquare, Package, Palette, Settings, ShoppingBag, Users } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ const TABS = [
   { to: "products", label: "Products", icon: Package },
   { to: "orders", label: "Orders", icon: ShoppingBag },
   { to: "customers", label: "Customers", icon: Users },
+  { to: "community", label: "Community", icon: MessagesSquare },
   { to: "storefront", label: "Storefront", icon: Palette },
   { to: "settings", label: "Settings", icon: Settings },
 ];

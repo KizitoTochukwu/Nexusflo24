@@ -126,6 +126,7 @@ import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
 import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
 import CommerceCustomers from "./pages/dashboard/commerce/CommerceCustomers";
+import CommerceCommunity from "./pages/dashboard/commerce/CommerceCommunity";
 import CommerceStorefront from "./pages/dashboard/commerce/CommerceStorefront";
 import CommerceSettings from "./pages/dashboard/commerce/CommerceSettings";
 import StorefrontHome from "./pages/storefront/StorefrontHome";
@@ -133,6 +134,8 @@ import StorefrontProduct from "./pages/storefront/StorefrontProduct";
 import StorefrontCheckout from "./pages/storefront/StorefrontCheckout";
 import StorefrontOrder from "./pages/storefront/StorefrontOrder";
 import StorefrontAccount from "./pages/storefront/StorefrontAccount";
+import StorefrontCommunities from "./pages/storefront/StorefrontCommunities";
+import StorefrontCommunity from "./pages/storefront/StorefrontCommunity";
 import StripeConnectCallback from "./pages/callback/StripeConnectCallback";
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -257,6 +260,7 @@ const App = () => (
                   <Route path="products" element={<CommerceProducts />} />
                   <Route path="orders" element={<CommerceOrders />} />
                   <Route path="customers" element={<CommerceCustomers />} />
+                  <Route path="community" element={<CommerceCommunity />} />
                   <Route path="storefront" element={<CommerceStorefront />} />
                   <Route path="settings" element={<CommerceSettings />} />
                 </Route>
@@ -294,6 +298,8 @@ const App = () => (
               <Route path="/s/:storeSlug/checkout" element={<StorefrontCheckout />} />
               <Route path="/s/:storeSlug/order/:orderId" element={<StorefrontOrder />} />
               <Route path="/s/:storeSlug/account" element={<StorefrontAccount />} />
+              <Route path="/s/:storeSlug/community" element={<StorefrontCommunities />} />
+              <Route path="/s/:storeSlug/community/:communitySlug" element={<StorefrontCommunity />} />
 
               {/* Stripe Connect OAuth return */}
               <Route path="/callback/stripe-connect" element={<StripeConnectCallback />} />

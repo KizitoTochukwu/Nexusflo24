@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingCart, User } from "lucide-react";
+import { MessagesSquare, ShoppingCart, User } from "lucide-react";
 import type { PublicStore } from "@/hooks/useStorefront";
 
 export default function StorefrontShell({
@@ -25,6 +25,12 @@ export default function StorefrontShell({
             <span className="font-semibold">{store.name}</span>
           </Link>
           <div className="flex items-center gap-2">
+            <Link
+              to={`/s/${store.slug}/community`}
+              className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground sm:flex"
+            >
+              <MessagesSquare className="h-4 w-4" /> Community
+            </Link>
             <Link
               to={`/s/${store.slug}/account`}
               className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground sm:flex"
