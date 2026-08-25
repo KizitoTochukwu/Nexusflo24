@@ -341,7 +341,7 @@ serve(async (req) => {
         if (!subscriptionId) break;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, currency, customer_id")
+          .select("id, workspace_id, store_id, currency, customer_id, email, full_name, phone, order_number")
           .eq("stripe_subscription_id", subscriptionId)
           .maybeSingle();
         if (!order) break;
@@ -363,8 +363,26 @@ serve(async (req) => {
           customer_id: order.customer_id,
           payload: { amount: invoice.amount_paid },
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: order.id,
+          },
+          event_type: "subscription_renewed",
+          title: "Subscription payment received",
+          description: `${((invoice.amount_paid ?? 0) / 100).toFixed(2)} ${String(order.currency).toUpperCase()} for order ${order.order_number}`,
+          status: "paid",
+          external_event_id: `sub_renewed:${invoice.id}`,
+          meta: { order_id: order.id, amount: invoice.amount_paid, currency: order.currency },
+        });
         break;
       }
+
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
