@@ -11,7 +11,7 @@ export type EnrollmentMethod = "event" | "filter" | "schedule" | "webhook" | "ma
 export type TriggerSourceKey =
   | "crm" | "forms" | "funnels" | "meta_lead_ads" | "linkedin_lead_gen"
   | "google_lead_forms" | "bookings" | "email" | "whatsapp" | "sms"
-  | "payments" | "campaigns" | "webhooks";
+  | "payments" | "commerce" | "campaigns" | "webhooks";
 
 export type ScopeFieldKey =
   // CRM
@@ -27,6 +27,8 @@ export type ScopeFieldKey =
   | "meta_form_id" | "meta_campaign_id" | "meta_adset_id" | "meta_ad_id"
   // Campaigns
   | "campaign_id"
+  // Commerce
+  | "store_id" | "shop_product_id"
   // Webhook
   | "webhook_path";
 
@@ -188,6 +190,24 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
     objects: ["payment", "contact"],
     scopeFields: [],
     events: [{ key: "purchase_event", label: "Purchase completed" }],
+  },
+  {
+    key: "commerce", label: "Commerce store", description: "Your storefront orders, subscriptions and refunds",
+    objects: ["payment", "subscription", "contact", "lead"],
+    scopeFields: [
+      { key: "store_id", label: "Store", allowAny: true },
+      { key: "shop_product_id", label: "Product", allowAny: true },
+    ],
+    events: [
+      { key: "order_paid", label: "Order paid", description: "Any successful storefront purchase", defaultDedupKey: "order_id" },
+      { key: "first_order_placed", label: "First order placed", description: "Buyer's very first paid order" },
+      { key: "order_refunded", label: "Order refunded" },
+      { key: "checkout_abandoned", label: "Checkout abandoned", description: "Checkout session expired without payment" },
+      { key: "payment_failed", label: "Payment failed" },
+      { key: "subscription_started", label: "Subscription started" },
+      { key: "subscription_renewed", label: "Subscription renewed" },
+      { key: "subscription_cancelled", label: "Subscription cancelled" },
+    ],
   },
   {
     key: "campaigns", label: "Campaigns", description: "Broadcasts and drips",
