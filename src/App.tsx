@@ -250,6 +250,15 @@ const App = () => (
 
                 
                 <Route path="messages" element={<DashboardMessages />} />
+                <Route path="commerce" element={<CommerceLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<CommerceOverview />} />
+                  <Route path="products" element={<CommerceProducts />} />
+                  <Route path="orders" element={<CommerceOrders />} />
+                  <Route path="customers" element={<CommerceCustomers />} />
+                  <Route path="storefront" element={<CommerceStorefront />} />
+                  <Route path="settings" element={<CommerceSettings />} />
+                </Route>
                 <Route path="analytics" element={<DashboardAnalytics />} />
                 <Route path="my-automations" element={<MyAutomations />} />
                 <Route path="my-automations/:projectId" element={<StoreProjectDetail />} />
