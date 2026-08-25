@@ -3,6 +3,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { adminClient, logCommerceEvent } from "../_shared/shop.ts";
+import { handleCommerceEvent, fireCommerceTrigger } from "../_shared/commerce-crm.ts";
+
 
 const log = (step: string, details?: unknown) =>
   console.log(`[SHOP-WEBHOOK] ${step}`, details ? JSON.stringify(details) : "");
