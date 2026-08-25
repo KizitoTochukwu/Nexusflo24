@@ -285,7 +285,7 @@ serve(async (req) => {
         if (!paymentIntentId) break;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, currency, total_amount, status")
+          .select("id, workspace_id, store_id, currency, total_amount, status, email, full_name, phone, customer_id, order_number")
           .eq("stripe_payment_intent_id", paymentIntentId)
           .maybeSingle();
         if (!order) break;
@@ -311,9 +311,27 @@ serve(async (req) => {
           order_id: order.id,
           payload: { refunded },
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: order.id,
+          },
+          event_type: "order_refunded",
+          title: `Order ${order.order_number} refunded`,
+          description: `${(refunded / 100).toFixed(2)} ${String(order.currency).toUpperCase()} refunded`,
+          status: refunded >= order.total_amount ? "refunded" : "partially_refunded",
+          external_event_id: `order_refunded:${order.id}:${charge.id}`,
+          meta: { order_id: order.id, refunded, currency: order.currency },
+        });
         log("order refunded", { orderId: order.id, refunded });
         break;
       }
+
 
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
