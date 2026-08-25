@@ -265,7 +265,7 @@ serve(async (req) => {
         if (!orderId) break;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, status, currency")
+          .select("id, workspace_id, store_id, status, currency, email, full_name, phone, customer_id, order_number, total_amount")
           .eq("id", orderId)
           .maybeSingle();
         if (!order || order.status === "paid") break;
@@ -277,8 +277,26 @@ serve(async (req) => {
           to_status: "failed",
           source: "stripe",
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: orderId,
+          },
+          event_type: event.type === "checkout.session.expired" ? "checkout_abandoned" : "payment_failed",
+          title: event.type === "checkout.session.expired" ? "Checkout abandoned" : "Payment failed",
+          description: `Order ${order.order_number} — ${(order.total_amount / 100).toFixed(2)} ${String(order.currency).toUpperCase()}`,
+          status: "failed",
+          external_event_id: `${event.type}:${orderId}`,
+          meta: { order_id: orderId, total: order.total_amount, currency: order.currency },
+        });
         log("order failed", { orderId, type: event.type });
         break;
+
       }
 
       case "charge.refunded": {
