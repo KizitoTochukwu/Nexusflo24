@@ -3,6 +3,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { adminClient, logCommerceEvent } from "../_shared/shop.ts";
+import { handleCommerceEvent, fireCommerceTrigger } from "../_shared/commerce-crm.ts";
+
 
 const log = (step: string, details?: unknown) =>
   console.log(`[SHOP-WEBHOOK] ${step}`, details ? JSON.stringify(details) : "");
@@ -180,11 +182,81 @@ serve(async (req) => {
           payload: { total: order.total_amount, currency: order.currency },
         });
 
+        // ---- Phase 5: CRM sync, timeline + commerce automation triggers ----
+        {
+          const { data: fullItems } = await admin
+            .from("shop_order_items")
+            .select("product_id, title, quantity, total_amount")
+            .eq("order_id", orderId);
+          const productIds = (fullItems ?? []).map((i: any) => i.product_id).filter(Boolean);
+          const isSubscription = Boolean(subscriptionId);
+          const { count: priorOrders } = await admin
+            .from("shop_orders")
+            .select("id", { count: "exact", head: true })
+            .eq("workspace_id", order.workspace_id)
+            .eq("status", "paid")
+            .ilike("email", order.email ?? "")
+            .neq("id", orderId);
+
+          const crm = await handleCommerceEvent(admin, {
+            party: {
+              workspace_id: order.workspace_id,
+              store_id: order.store_id,
+              email: order.email,
+              full_name: order.full_name,
+              phone: order.phone,
+              customer_id: order.customer_id,
+              order_id: orderId,
+            },
+            event_type: "order_paid",
+            title: `Order ${order.order_number} paid`,
+            description: (fullItems ?? []).map((i: any) => `${i.quantity} × ${i.title}`).join(", ") || null,
+            status: "paid",
+            external_event_id: `order_paid:${orderId}`,
+            meta: {
+              order_id: orderId,
+              order_number: order.order_number,
+              total: order.total_amount,
+              currency: order.currency,
+              items: fullItems ?? [],
+            },
+            event_config: { product_ids: productIds, is_subscription: isSubscription },
+          });
+
+          if ((priorOrders ?? 0) === 0) {
+            await fireCommerceTrigger({
+              workspace_id: order.workspace_id,
+              lead_id: crm.lead_id,
+              event_type: "first_order_placed",
+              event_config: {
+                store_id: order.store_id,
+                order_id: orderId,
+                product_ids: productIds,
+                external_event_id: `first_order:${orderId}`,
+              },
+            });
+          }
+          if (isSubscription) {
+            await fireCommerceTrigger({
+              workspace_id: order.workspace_id,
+              lead_id: crm.lead_id,
+              event_type: "subscription_started",
+              event_config: {
+                store_id: order.store_id,
+                order_id: orderId,
+                product_ids: productIds,
+                external_event_id: `sub_started:${orderId}`,
+              },
+            });
+          }
+        }
+
         await notify("order_paid", orderId);
         await notify("seller_new_order", orderId);
         log("order paid", { orderId });
         break;
       }
+
 
       case "checkout.session.expired":
       case "payment_intent.payment_failed": {
@@ -193,7 +265,7 @@ serve(async (req) => {
         if (!orderId) break;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, status, currency")
+          .select("id, workspace_id, store_id, status, currency, email, full_name, phone, customer_id, order_number, total_amount")
           .eq("id", orderId)
           .maybeSingle();
         if (!order || order.status === "paid") break;
@@ -205,8 +277,26 @@ serve(async (req) => {
           to_status: "failed",
           source: "stripe",
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: orderId,
+          },
+          event_type: event.type === "checkout.session.expired" ? "checkout_abandoned" : "payment_failed",
+          title: event.type === "checkout.session.expired" ? "Checkout abandoned" : "Payment failed",
+          description: `Order ${order.order_number} — ${(order.total_amount / 100).toFixed(2)} ${String(order.currency).toUpperCase()}`,
+          status: "failed",
+          external_event_id: `${event.type}:${orderId}`,
+          meta: { order_id: orderId, total: order.total_amount, currency: order.currency },
+        });
         log("order failed", { orderId, type: event.type });
         break;
+
       }
 
       case "charge.refunded": {
@@ -215,7 +305,7 @@ serve(async (req) => {
         if (!paymentIntentId) break;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, currency, total_amount, status")
+          .select("id, workspace_id, store_id, currency, total_amount, status, email, full_name, phone, customer_id, order_number")
           .eq("stripe_payment_intent_id", paymentIntentId)
           .maybeSingle();
         if (!order) break;
@@ -241,9 +331,27 @@ serve(async (req) => {
           order_id: order.id,
           payload: { refunded },
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: order.id,
+          },
+          event_type: "order_refunded",
+          title: `Order ${order.order_number} refunded`,
+          description: `${(refunded / 100).toFixed(2)} ${String(order.currency).toUpperCase()} refunded`,
+          status: refunded >= order.total_amount ? "refunded" : "partially_refunded",
+          external_event_id: `order_refunded:${order.id}:${charge.id}`,
+          meta: { order_id: order.id, refunded, currency: order.currency },
+        });
         log("order refunded", { orderId: order.id, refunded });
         break;
       }
+
 
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
@@ -253,7 +361,7 @@ serve(async (req) => {
         if (!subscriptionId) break;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, currency, customer_id")
+          .select("id, workspace_id, store_id, currency, customer_id, email, full_name, phone, order_number")
           .eq("stripe_subscription_id", subscriptionId)
           .maybeSingle();
         if (!order) break;
@@ -275,14 +383,32 @@ serve(async (req) => {
           customer_id: order.customer_id,
           payload: { amount: invoice.amount_paid },
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: order.id,
+          },
+          event_type: "subscription_renewed",
+          title: "Subscription payment received",
+          description: `${((invoice.amount_paid ?? 0) / 100).toFixed(2)} ${String(order.currency).toUpperCase()} for order ${order.order_number}`,
+          status: "paid",
+          external_event_id: `sub_renewed:${invoice.id}`,
+          meta: { order_id: order.id, amount: invoice.amount_paid, currency: order.currency },
+        });
         break;
       }
+
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, customer_id")
+          .select("id, workspace_id, store_id, customer_id, email, full_name, phone, order_number")
           .eq("stripe_subscription_id", sub.id)
           .maybeSingle();
         if (!order) break;
@@ -309,7 +435,25 @@ serve(async (req) => {
           customer_id: order.customer_id,
           payload: {},
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: order.id,
+          },
+          event_type: "subscription_cancelled",
+          title: "Subscription cancelled",
+          description: `Access from order ${order.order_number} was revoked`,
+          status: "cancelled",
+          external_event_id: `sub_cancelled:${sub.id}`,
+          meta: { order_id: order.id, stripe_subscription_id: sub.id },
+        });
         break;
+
       }
 
       case "account.updated": {

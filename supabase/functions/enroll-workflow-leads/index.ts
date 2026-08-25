@@ -38,8 +38,17 @@ function triggerMatches(wf: any, triggerNode: any, eventType: string, eventConfi
   if (sub === "score_threshold" && !isAny(cfg.threshold) && eventConfig.score !== undefined) {
     return Number(eventConfig.score) >= Number(cfg.threshold);
   }
+  // Commerce scoping: optional store and product filters.
+  if (!isAny(cfg.store_id) && eventConfig.store_id) {
+    if (String(cfg.store_id) !== String(eventConfig.store_id)) return false;
+  }
+  if (!isAny(cfg.shop_product_id)) {
+    const ids: string[] = Array.isArray(eventConfig.product_ids) ? eventConfig.product_ids.map(String) : [];
+    if (ids.length && !ids.includes(String(cfg.shop_product_id))) return false;
+  }
   return true;
 }
+
 
 /** Evaluate additional filter groups (AND across groups by default; OR/AND inside a group). */
 function leadPassesFilters(lead: any, filterGroups: any[]): boolean {
