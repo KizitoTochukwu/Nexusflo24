@@ -28,10 +28,10 @@ export interface SyncResult {
 async function workspaceOwnerId(admin: any, workspaceId: string): Promise<string | null> {
   const { data: ws } = await admin
     .from("workspaces")
-    .select("owner_id")
+    .select("owner_user_id")
     .eq("id", workspaceId)
     .maybeSingle();
-  if (ws?.owner_id) return ws.owner_id;
+  if (ws?.owner_user_id) return ws.owner_user_id;
   const { data: member } = await admin
     .from("workspace_members")
     .select("user_id")
