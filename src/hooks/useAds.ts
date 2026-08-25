@@ -379,7 +379,21 @@ export function useStartAdOAuth() {
           redirect_to: `${window.location.origin}/dashboard/${params.workspaceId}/ads/accounts`,
         },
       });
-      if (error) throw error;
+      if (error) {
+        let status: number | undefined;
+        let serverMessage: string | undefined;
+        try {
+          status = error.context?.status;
+          const payload = await error.context?.json();
+          serverMessage = payload?.error;
+        } catch {
+          // The function may be undeployed, so there is no JSON response to parse.
+        }
+        if (status === 404 || /requested function was not found|failed to send a request/i.test(error.message || "")) {
+          throw new Error("Meta connection setup is not yet deployed. Please contact your workspace administrator.");
+        }
+        throw new Error(serverMessage || error.message || "Could not start the advertising connection.");
+      }
       return data as { authorize_url?: string; configured: boolean; message?: string };
     },
   });

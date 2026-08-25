@@ -48,7 +48,8 @@ export default function ConnectAccountDialog({
       setMessage(res?.message || `${meta.label} is not configured for this workspace yet.`);
       setPhase("not_configured");
     } catch (e: any) {
-      setMessage(e?.message || "We could not start the authorisation flow.");
+      const fallback = `${meta.label} connection setup is not yet deployed. Please contact your workspace administrator.`;
+      setMessage(e?.message || fallback);
       setPhase("error");
     }
   };
@@ -114,7 +115,9 @@ export default function ConnectAccountDialog({
             <Alert variant="destructive">
               <TriangleAlert className="h-4 w-4" />
               <AlertTitle>Something went wrong</AlertTitle>
-              <AlertDescription className="text-sm">{message}</AlertDescription>
+              <AlertDescription className="text-sm">
+                {message || `${meta.label} connection setup is not yet deployed. Please contact your workspace administrator.`}
+              </AlertDescription>
             </Alert>
           )}
 
