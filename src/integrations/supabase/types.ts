@@ -5439,6 +5439,367 @@ export type Database = {
           },
         ]
       }
+      shop_communities: {
+        Row: {
+          access_type: string
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          guidelines: string | null
+          id: string
+          member_count: number
+          name: string
+          product_id: string | null
+          slug: string
+          status: string
+          store_id: string
+          tagline: string | null
+          updated_at: string
+          visibility: string
+          workspace_id: string
+        }
+        Insert: {
+          access_type?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          guidelines?: string | null
+          id?: string
+          member_count?: number
+          name: string
+          product_id?: string | null
+          slug: string
+          status?: string
+          store_id: string
+          tagline?: string | null
+          updated_at?: string
+          visibility?: string
+          workspace_id: string
+        }
+        Update: {
+          access_type?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          guidelines?: string | null
+          id?: string
+          member_count?: number
+          name?: string
+          product_id?: string | null
+          slug?: string
+          status?: string
+          store_id?: string
+          tagline?: string | null
+          updated_at?: string
+          visibility?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_communities_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_communities_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_communities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_community_comments: {
+        Row: {
+          author_name: string | null
+          author_user_id: string | null
+          body: string
+          community_id: string
+          created_at: string
+          id: string
+          post_id: string
+          workspace_id: string
+        }
+        Insert: {
+          author_name?: string | null
+          author_user_id?: string | null
+          body: string
+          community_id: string
+          created_at?: string
+          id?: string
+          post_id: string
+          workspace_id: string
+        }
+        Update: {
+          author_name?: string | null
+          author_user_id?: string | null
+          body?: string
+          community_id?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_community_comments_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "shop_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "shop_community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_comments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_community_members: {
+        Row: {
+          avatar_url: string | null
+          community_id: string
+          display_name: string | null
+          email: string | null
+          id: string
+          joined_at: string
+          last_seen_at: string | null
+          order_id: string | null
+          role: string
+          status: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          community_id: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          joined_at?: string
+          last_seen_at?: string | null
+          order_id?: string | null
+          role?: string
+          status?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          community_id?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          joined_at?: string
+          last_seen_at?: string | null
+          order_id?: string | null
+          role?: string
+          status?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_community_members_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "shop_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_members_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_community_post_likes: {
+        Row: {
+          community_id: string
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_community_post_likes_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "shop_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "shop_community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_community_posts: {
+        Row: {
+          author_name: string | null
+          author_user_id: string | null
+          body: string
+          comment_count: number
+          community_id: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          like_count: number
+          media_url: string | null
+          space_id: string | null
+          title: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          author_name?: string | null
+          author_user_id?: string | null
+          body: string
+          comment_count?: number
+          community_id: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          like_count?: number
+          media_url?: string | null
+          space_id?: string | null
+          title?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          author_name?: string | null
+          author_user_id?: string | null
+          body?: string
+          comment_count?: number
+          community_id?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          like_count?: number
+          media_url?: string | null
+          space_id?: string | null
+          title?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_community_posts_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "shop_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_posts_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "shop_community_spaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_posts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_community_spaces: {
+        Row: {
+          community_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          position: number
+          slug: string
+          workspace_id: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          position?: number
+          slug: string
+          workspace_id: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          position?: number
+          slug?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_community_spaces_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "shop_communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_community_spaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_customers: {
         Row: {
           contact_id: string | null
@@ -9146,6 +9507,11 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      can_moderate_community: {
+        Args: { _community_id: string; _user_id: string }
+        Returns: boolean
+      }
+      claim_community_memberships: { Args: never; Returns: number }
       claim_shop_orders: { Args: never; Returns: number }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
       decay_inactive_leads: { Args: never; Returns: number }
@@ -9257,6 +9623,21 @@ export type Database = {
         Returns: {
           slug: string
           status: string
+        }[]
+      }
+      get_public_communities: {
+        Args: { p_store_slug: string }
+        Returns: {
+          access_type: string
+          cover_url: string
+          description: string
+          id: string
+          member_count: number
+          name: string
+          product_id: string
+          product_slug: string
+          slug: string
+          tagline: string
         }[]
       }
       get_public_form: {
@@ -9443,6 +9824,10 @@ export type Database = {
       increment_automation_run: {
         Args: { _automation_id: string }
         Returns: undefined
+      }
+      is_community_member: {
+        Args: { _community_id: string; _user_id: string }
+        Returns: boolean
       }
       is_email_in_admin_allowlist: {
         Args: { _email: string }
