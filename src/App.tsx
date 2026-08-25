@@ -127,6 +127,7 @@ import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
 import CommerceCustomers from "./pages/dashboard/commerce/CommerceCustomers";
 import CommerceCommunity from "./pages/dashboard/commerce/CommerceCommunity";
+import CommerceAccess from "./pages/dashboard/commerce/CommerceAccess";
 import CommerceStorefront from "./pages/dashboard/commerce/CommerceStorefront";
 import CommerceSettings from "./pages/dashboard/commerce/CommerceSettings";
 import StorefrontHome from "./pages/storefront/StorefrontHome";
@@ -261,6 +262,7 @@ const App = () => (
                   <Route path="orders" element={<CommerceOrders />} />
                   <Route path="customers" element={<CommerceCustomers />} />
                   <Route path="community" element={<CommerceCommunity />} />
+                  <Route path="access" element={<CommerceAccess />} />
                   <Route path="storefront" element={<CommerceStorefront />} />
                   <Route path="settings" element={<CommerceSettings />} />
                 </Route>
