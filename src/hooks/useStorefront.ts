@@ -158,6 +158,89 @@ export function useBasket(storeSlug?: string) {
   return { lines, add, setQuantity, remove, clear, subtotal, count };
 }
 
+/* ---------------------------- Customer portal ---------------------------- */
+
+export type PortalOrder = {
+  id: string;
+  order_number: string;
+  status: string;
+  fulfilment_status: string;
+  currency: string;
+  subtotal_amount: number;
+  discount_amount: number;
+  shipping_amount: number;
+  tax_amount: number;
+  total_amount: number;
+  refunded_amount: number;
+  email: string;
+  full_name: string | null;
+  shipping_address: Record<string, string> | null;
+  store_slug: string;
+  store_name: string;
+  stripe_subscription_id: string | null;
+  created_at: string;
+  items: { id: string; name: string; quantity: number; unit_amount: number; total_amount: number }[];
+  files: { id: string; file_name: string; product_id: string }[];
+};
+
+/** Order lookup for the buyer: signed-in owner, or a guest proving the order email. */
+export function usePublicOrder(orderId?: string, email?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["public-shop-order", orderId, email ?? null],
+    enabled: !!orderId && enabled,
+    retry: false,
+    queryFn: async (): Promise<PortalOrder | null> => {
+      const { data, error } = await db.rpc("get_public_shop_order", {
+        p_order_id: orderId,
+        p_email: email || null,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+}
+
+export type PurchaseSummary = {
+  id: string;
+  order_number: string;
+  status: string;
+  fulfilment_status: string;
+  currency: string;
+  total_amount: number;
+  created_at: string;
+  store_slug: string;
+  store_name: string;
+  store_logo_url: string | null;
+  stripe_subscription_id: string | null;
+  item_count: number;
+};
+
+/** Every purchase the signed-in shopper has made, newest first. */
+export function useMyPurchases(enabled = true) {
+  return useQuery({
+    queryKey: ["my-shop-purchases"],
+    enabled,
+    queryFn: async (): Promise<PurchaseSummary[]> => {
+      await db.rpc("claim_shop_orders");
+      const { data, error } = await db.rpc("get_my_shop_purchases");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function orderStatusLabel(status: string) {
+  const map: Record<string, string> = {
+    pending: "Awaiting payment",
+    paid: "Paid",
+    partially_refunded: "Partially refunded",
+    refunded: "Refunded",
+    cancelled: "Cancelled",
+    failed: "Payment failed",
+  };
+  return map[status] ?? status.replace(/_/g, " ");
+}
+
 export function money(minor: number, currency = "GBP") {
   try {
     return new Intl.NumberFormat(undefined, { style: "currency", currency }).format((minor ?? 0) / 100);

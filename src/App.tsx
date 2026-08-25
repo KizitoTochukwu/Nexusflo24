@@ -132,6 +132,7 @@ import StorefrontHome from "./pages/storefront/StorefrontHome";
 import StorefrontProduct from "./pages/storefront/StorefrontProduct";
 import StorefrontCheckout from "./pages/storefront/StorefrontCheckout";
 import StorefrontOrder from "./pages/storefront/StorefrontOrder";
+import StorefrontAccount from "./pages/storefront/StorefrontAccount";
 import StripeConnectCallback from "./pages/callback/StripeConnectCallback";
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -292,6 +293,7 @@ const App = () => (
               <Route path="/s/:storeSlug/p/:productSlug" element={<StorefrontProduct />} />
               <Route path="/s/:storeSlug/checkout" element={<StorefrontCheckout />} />
               <Route path="/s/:storeSlug/order/:orderId" element={<StorefrontOrder />} />
+              <Route path="/s/:storeSlug/account" element={<StorefrontAccount />} />
 
               {/* Stripe Connect OAuth return */}
               <Route path="/callback/stripe-connect" element={<StripeConnectCallback />} />
