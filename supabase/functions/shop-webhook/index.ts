@@ -388,7 +388,7 @@ serve(async (req) => {
         const sub = event.data.object as Stripe.Subscription;
         const { data: order } = await admin
           .from("shop_orders")
-          .select("id, workspace_id, store_id, customer_id")
+          .select("id, workspace_id, store_id, customer_id, email, full_name, phone, order_number")
           .eq("stripe_subscription_id", sub.id)
           .maybeSingle();
         if (!order) break;
@@ -415,7 +415,25 @@ serve(async (req) => {
           customer_id: order.customer_id,
           payload: {},
         });
+        await handleCommerceEvent(admin, {
+          party: {
+            workspace_id: order.workspace_id,
+            store_id: order.store_id,
+            email: order.email,
+            full_name: order.full_name,
+            phone: order.phone,
+            customer_id: order.customer_id,
+            order_id: order.id,
+          },
+          event_type: "subscription_cancelled",
+          title: "Subscription cancelled",
+          description: `Access from order ${order.order_number} was revoked`,
+          status: "cancelled",
+          external_event_id: `sub_cancelled:${sub.id}`,
+          meta: { order_id: order.id, stripe_subscription_id: sub.id },
+        });
         break;
+
       }
 
       case "account.updated": {
