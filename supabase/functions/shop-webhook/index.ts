@@ -286,6 +286,21 @@ serve(async (req) => {
           .eq("stripe_subscription_id", sub.id)
           .maybeSingle();
         if (!order) break;
+        // Subscription lifecycle: end access bought through this plan
+        await admin
+          .from("shop_entitlements")
+          .update({
+            status: "revoked",
+            revoked_at: new Date().toISOString(),
+            revoke_reason: "subscription_cancelled",
+          })
+          .eq("stripe_subscription_id", sub.id)
+          .eq("status", "active");
+        await admin
+          .from("shop_community_members")
+          .update({ status: "suspended" })
+          .eq("order_id", order.id)
+          .eq("status", "active");
         await logCommerceEvent(admin, {
           workspace_id: order.workspace_id,
           store_id: order.store_id,

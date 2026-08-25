@@ -14,10 +14,14 @@ import {
   Users,
 } from "lucide-react";
 import { getCourseBySlug, courses } from "@/data/academyCourses";
+import { useAuth } from "@/contexts/AuthContext";
+import { useHasEntitlement } from "@/hooks/useEntitlements";
 
 const AcademyCourse = () => {
   const { slug } = useParams<{ slug: string }>();
   const course = getCourseBySlug(slug);
+  const { user } = useAuth();
+  const { data: hasAccess } = useHasEntitlement("course", slug, !!user);
 
   if (!course) return <Navigate to="/academy" replace />;
 
@@ -67,11 +71,26 @@ const AcademyCourse = () => {
                 <Clock className="h-4 w-4 text-accent" /> {course.duration}
               </span>
             </div>
+            {hasAccess && (
+              <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-navy-light/50 px-4 py-1.5 text-sm text-gold">
+                <CheckCircle2 className="h-3.5 w-3.5" /> You have full access to this course
+              </p>
+            )}
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to={`/register?plan=academy&intent=enroll&course=${course.slug}`}>
+              <Link
+                to={
+                  hasAccess
+                    ? `/academy/${course.slug}#syllabus`
+                    : `/register?plan=academy&intent=enroll&course=${course.slug}`
+                }
+              >
                 <Button size="lg" className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
                   <span className="font-semibold">
-                    {course.premium ? "Enroll in Course" : "Start Free Course"}
+                    {hasAccess
+                      ? "Continue Course"
+                      : course.premium
+                        ? "Enroll in Course"
+                        : "Start Free Course"}
                   </span>
                   <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
