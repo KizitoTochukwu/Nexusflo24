@@ -121,6 +121,18 @@ import AdminStoreCatalogue from "./pages/admin/AdminStoreCatalogue";
 import { CartProvider } from "./contexts/CartContext";
 import CartLauncher from "./components/store/CartLauncher";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
+import CommerceLayout from "./components/commerce/CommerceLayout";
+import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
+import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
+import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
+import CommerceCustomers from "./pages/dashboard/commerce/CommerceCustomers";
+import CommerceStorefront from "./pages/dashboard/commerce/CommerceStorefront";
+import CommerceSettings from "./pages/dashboard/commerce/CommerceSettings";
+import StorefrontHome from "./pages/storefront/StorefrontHome";
+import StorefrontProduct from "./pages/storefront/StorefrontProduct";
+import StorefrontCheckout from "./pages/storefront/StorefrontCheckout";
+import StorefrontOrder from "./pages/storefront/StorefrontOrder";
+import StripeConnectCallback from "./pages/callback/StripeConnectCallback";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
