@@ -180,11 +180,81 @@ serve(async (req) => {
           payload: { total: order.total_amount, currency: order.currency },
         });
 
+        // ---- Phase 5: CRM sync, timeline + commerce automation triggers ----
+        {
+          const { data: fullItems } = await admin
+            .from("shop_order_items")
+            .select("product_id, title, quantity, total_amount")
+            .eq("order_id", orderId);
+          const productIds = (fullItems ?? []).map((i: any) => i.product_id).filter(Boolean);
+          const isSubscription = Boolean(subscriptionId);
+          const { count: priorOrders } = await admin
+            .from("shop_orders")
+            .select("id", { count: "exact", head: true })
+            .eq("workspace_id", order.workspace_id)
+            .eq("status", "paid")
+            .ilike("email", order.email ?? "")
+            .neq("id", orderId);
+
+          const crm = await handleCommerceEvent(admin, {
+            party: {
+              workspace_id: order.workspace_id,
+              store_id: order.store_id,
+              email: order.email,
+              full_name: order.full_name,
+              phone: order.phone,
+              customer_id: order.customer_id,
+              order_id: orderId,
+            },
+            event_type: "order_paid",
+            title: `Order ${order.order_number} paid`,
+            description: (fullItems ?? []).map((i: any) => `${i.quantity} × ${i.title}`).join(", ") || null,
+            status: "paid",
+            external_event_id: `order_paid:${orderId}`,
+            meta: {
+              order_id: orderId,
+              order_number: order.order_number,
+              total: order.total_amount,
+              currency: order.currency,
+              items: fullItems ?? [],
+            },
+            event_config: { product_ids: productIds, is_subscription: isSubscription },
+          });
+
+          if ((priorOrders ?? 0) === 0) {
+            await fireCommerceTrigger({
+              workspace_id: order.workspace_id,
+              lead_id: crm.lead_id,
+              event_type: "first_order_placed",
+              event_config: {
+                store_id: order.store_id,
+                order_id: orderId,
+                product_ids: productIds,
+                external_event_id: `first_order:${orderId}`,
+              },
+            });
+          }
+          if (isSubscription) {
+            await fireCommerceTrigger({
+              workspace_id: order.workspace_id,
+              lead_id: crm.lead_id,
+              event_type: "subscription_started",
+              event_config: {
+                store_id: order.store_id,
+                order_id: orderId,
+                product_ids: productIds,
+                external_event_id: `sub_started:${orderId}`,
+              },
+            });
+          }
+        }
+
         await notify("order_paid", orderId);
         await notify("seller_new_order", orderId);
         log("order paid", { orderId });
         break;
       }
+
 
       case "checkout.session.expired":
       case "payment_intent.payment_failed": {
