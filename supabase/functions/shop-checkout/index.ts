@@ -266,6 +266,19 @@ serve(async (req) => {
     const feeBps = Number(store.platform_fee_bps || 0);
     const applicationFee = feeBps > 0 ? Math.round((total * feeBps) / 10000) : 0;
 
+    // Discounts must exist on the connected account to actually reduce the charge.
+    let stripeCouponId: string | null = null;
+    if (discountAmount > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: discountAmount,
+        currency: cur,
+        duration: "once",
+        name: discountCode ?? "Discount",
+        max_redemptions: 1,
+      }, { stripeAccount: seller.stripe_account_id });
+      stripeCouponId = coupon.id;
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode,
       customer_email: email,
@@ -292,9 +305,8 @@ serve(async (req) => {
             ...(feeBps > 0 ? { application_fee_percent: feeBps / 100 } : {}),
           },
         }),
-      ...(mode === "payment" && discountAmount > 0
-        ? { discounts: undefined }
-        : {}),
+      ...(stripeCouponId ? { discounts: [{ coupon: stripeCouponId }] } : {}),
+
     }, {
       stripeAccount: seller.stripe_account_id,
       idempotencyKey: `shop_order_${order.id}`,
