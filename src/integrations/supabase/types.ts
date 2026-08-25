@@ -1639,6 +1639,88 @@ export type Database = {
           },
         ]
       }
+      commerce_events: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          customer_id: string | null
+          event_type: string
+          id: string
+          order_id: string | null
+          payload: Json
+          product_id: string | null
+          store_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          event_type: string
+          id?: string
+          order_id?: string | null
+          payload?: Json
+          product_id?: string | null
+          store_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          event_type?: string
+          id?: string
+          order_id?: string | null
+          payload?: Json
+          product_id?: string | null
+          store_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "shop_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_usage: {
         Row: {
           channel: Database["public"]["Enums"]["sender_channel"]
@@ -4526,6 +4608,33 @@ export type Database = {
           },
         ]
       }
+      processed_webhook_events: {
+        Row: {
+          account_id: string | null
+          event_id: string
+          event_type: string | null
+          id: string
+          processed_at: string
+          source: string
+        }
+        Insert: {
+          account_id?: string | null
+          event_id: string
+          event_type?: string | null
+          id?: string
+          processed_at?: string
+          source?: string
+        }
+        Update: {
+          account_id?: string | null
+          event_id?: string
+          event_type?: string | null
+          id?: string
+          processed_at?: string
+          source?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -4975,6 +5084,71 @@ export type Database = {
           },
         ]
       }
+      seller_payment_accounts: {
+        Row: {
+          charges_enabled: boolean
+          connected_at: string | null
+          connected_by: string | null
+          country: string | null
+          created_at: string
+          default_currency: string | null
+          details_submitted: boolean
+          disconnected_at: string | null
+          id: string
+          last_synced_at: string | null
+          livemode: boolean
+          payouts_enabled: boolean
+          provider: string
+          stripe_account_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          charges_enabled?: boolean
+          connected_at?: string | null
+          connected_by?: string | null
+          country?: string | null
+          created_at?: string
+          default_currency?: string | null
+          details_submitted?: boolean
+          disconnected_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          livemode?: boolean
+          payouts_enabled?: boolean
+          provider?: string
+          stripe_account_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          charges_enabled?: boolean
+          connected_at?: string | null
+          connected_by?: string | null
+          country?: string | null
+          created_at?: string
+          default_currency?: string | null
+          details_submitted?: boolean
+          disconnected_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          livemode?: boolean
+          payouts_enabled?: boolean
+          provider?: string
+          stripe_account_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_payment_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sender_profiles: {
         Row: {
           address: string
@@ -5027,6 +5201,1589 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sender_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_cart_items: {
+        Row: {
+          cart_id: string
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          unit_amount: number
+          variant_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          cart_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          unit_amount: number
+          variant_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          cart_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          unit_amount?: number
+          variant_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_cart_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "shop_carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_cart_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "shop_product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_cart_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_carts: {
+        Row: {
+          abandoned_at: string | null
+          converted_order_id: string | null
+          created_at: string
+          currency: string
+          discount_code: string | null
+          email: string | null
+          id: string
+          status: string
+          store_id: string
+          token: string
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          abandoned_at?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          currency?: string
+          discount_code?: string | null
+          email?: string | null
+          id?: string
+          status?: string
+          store_id: string
+          token: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          abandoned_at?: string | null
+          converted_order_id?: string | null
+          created_at?: string
+          currency?: string
+          discount_code?: string | null
+          email?: string | null
+          id?: string
+          status?: string
+          store_id?: string
+          token?: string
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_carts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_carts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_collection_products: {
+        Row: {
+          collection_id: string
+          created_at: string
+          id: string
+          position: number
+          product_id: string
+          workspace_id: string
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          id?: string
+          position?: number
+          product_id: string
+          workspace_id: string
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          id?: string
+          position?: number
+          product_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_collection_products_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "shop_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_collection_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_collection_products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_public: boolean
+          name: string
+          position: number
+          slug: string
+          store_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_public?: boolean
+          name: string
+          position?: number
+          slug: string
+          store_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_public?: boolean
+          name?: string
+          position?: number
+          slug?: string
+          store_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_collections_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_collections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_customers: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          last_order_at: string | null
+          marketing_opt_in: boolean
+          phone: string | null
+          store_id: string
+          stripe_customer_id: string | null
+          total_orders: number
+          total_spent: number
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          last_order_at?: string | null
+          marketing_opt_in?: boolean
+          phone?: string | null
+          store_id: string
+          stripe_customer_id?: string | null
+          total_orders?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          last_order_at?: string | null
+          marketing_opt_in?: boolean
+          phone?: string | null
+          store_id?: string
+          stripe_customer_id?: string | null
+          total_orders?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_customers_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_customers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_discounts: {
+        Row: {
+          applies_to_product_ids: string[]
+          code: string
+          created_at: string
+          currency: string | null
+          description: string | null
+          discount_type: string
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          max_redemptions: number | null
+          min_subtotal: number | null
+          redemption_count: number
+          starts_at: string | null
+          store_id: string
+          updated_at: string
+          value: number
+          workspace_id: string
+        }
+        Insert: {
+          applies_to_product_ids?: string[]
+          code: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          discount_type?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          min_subtotal?: number | null
+          redemption_count?: number
+          starts_at?: string | null
+          store_id: string
+          updated_at?: string
+          value: number
+          workspace_id: string
+        }
+        Update: {
+          applies_to_product_ids?: string[]
+          code?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          discount_type?: string
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_redemptions?: number | null
+          min_subtotal?: number | null
+          redemption_count?: number
+          starts_at?: string | null
+          store_id?: string
+          updated_at?: string
+          value?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_discounts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_discounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_fulfilment_items: {
+        Row: {
+          created_at: string
+          fulfilment_id: string
+          id: string
+          order_item_id: string
+          quantity: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          fulfilment_id: string
+          id?: string
+          order_item_id: string
+          quantity?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          fulfilment_id?: string
+          id?: string
+          order_item_id?: string
+          quantity?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_fulfilment_items_fulfilment_id_fkey"
+            columns: ["fulfilment_id"]
+            isOneToOne: false
+            referencedRelation: "shop_fulfilments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_fulfilment_items_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "shop_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_fulfilment_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_fulfilments: {
+        Row: {
+          carrier: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          notified_at: string | null
+          order_id: string
+          status: string
+          tracking_number: string | null
+          tracking_url: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          carrier?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          notified_at?: string | null
+          order_id: string
+          status?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          carrier?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          notified_at?: string | null
+          order_id?: string
+          status?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_fulfilments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_fulfilments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_inventory_movements: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          product_id: string
+          reason: string
+          reference: string | null
+          variant_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          product_id: string
+          reason: string
+          reference?: string | null
+          variant_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          product_id?: string
+          reason?: string
+          reference?: string | null
+          variant_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_inventory_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_inventory_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "shop_product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_inventory_movements_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_order_items: {
+        Row: {
+          created_at: string
+          fulfilled_quantity: number
+          id: string
+          metadata: Json
+          name: string
+          order_id: string
+          product_id: string | null
+          product_type: string
+          quantity: number
+          requires_shipping: boolean
+          sku: string | null
+          total_amount: number
+          unit_amount: number
+          variant_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          fulfilled_quantity?: number
+          id?: string
+          metadata?: Json
+          name: string
+          order_id: string
+          product_id?: string | null
+          product_type?: string
+          quantity?: number
+          requires_shipping?: boolean
+          sku?: string | null
+          total_amount?: number
+          unit_amount?: number
+          variant_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          fulfilled_quantity?: number
+          id?: string
+          metadata?: Json
+          name?: string
+          order_id?: string
+          product_id?: string | null
+          product_type?: string
+          quantity?: number
+          requires_shipping?: boolean
+          sku?: string | null
+          total_amount?: number
+          unit_amount?: number
+          variant_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "shop_product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_order_status_history: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          order_id: string
+          source: string
+          to_status: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id: string
+          source?: string
+          to_status: string
+          workspace_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          order_id?: string
+          source?: string
+          to_status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_status_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_orders: {
+        Row: {
+          billing_address: Json
+          cancelled_at: string | null
+          contact_id: string | null
+          created_at: string
+          currency: string
+          customer_id: string | null
+          discount_amount: number
+          discount_code: string | null
+          email: string
+          fulfilment_status: string
+          full_name: string | null
+          id: string
+          notes: string | null
+          order_number: string
+          paid_at: string | null
+          phone: string | null
+          refunded_amount: number
+          shipping_address: Json
+          shipping_amount: number
+          shipping_rate_id: string | null
+          status: string
+          store_id: string
+          stripe_account_id: string | null
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_subscription_id: string | null
+          subtotal_amount: number
+          tax_amount: number
+          total_amount: number
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          billing_address?: Json
+          cancelled_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          discount_amount?: number
+          discount_code?: string | null
+          email: string
+          fulfilment_status?: string
+          full_name?: string | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          paid_at?: string | null
+          phone?: string | null
+          refunded_amount?: number
+          shipping_address?: Json
+          shipping_amount?: number
+          shipping_rate_id?: string | null
+          status?: string
+          store_id: string
+          stripe_account_id?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_subscription_id?: string | null
+          subtotal_amount?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          billing_address?: Json
+          cancelled_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          discount_amount?: number
+          discount_code?: string | null
+          email?: string
+          fulfilment_status?: string
+          full_name?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          paid_at?: string | null
+          phone?: string | null
+          refunded_amount?: number
+          shipping_address?: Json
+          shipping_amount?: number
+          shipping_rate_id?: string | null
+          status?: string
+          store_id?: string
+          stripe_account_id?: string | null
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_subscription_id?: string | null
+          subtotal_amount?: number
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_orders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "shop_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_shipping_rate_id_fkey"
+            columns: ["shipping_rate_id"]
+            isOneToOne: false
+            referencedRelation: "shop_shipping_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_orders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          position: number
+          product_id: string
+          storage_path: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          position?: number
+          product_id: string
+          storage_path: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          position?: number
+          product_id?: string
+          storage_path?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_product_files_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_product_files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_media: {
+        Row: {
+          alt: string | null
+          created_at: string
+          id: string
+          position: number
+          product_id: string
+          url: string
+          workspace_id: string
+        }
+        Insert: {
+          alt?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          product_id: string
+          url: string
+          workspace_id: string
+        }
+        Update: {
+          alt?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          product_id?: string
+          url?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_product_media_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_product_media_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_prices: {
+        Row: {
+          amount: number
+          billing_interval: string | null
+          billing_type: string
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean
+          product_id: string
+          stripe_price_id: string | null
+          updated_at: string
+          variant_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          billing_interval?: string | null
+          billing_type?: string
+          created_at?: string
+          currency: string
+          id?: string
+          is_active?: boolean
+          product_id: string
+          stripe_price_id?: string | null
+          updated_at?: string
+          variant_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          billing_interval?: string | null
+          billing_type?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          product_id?: string
+          stripe_price_id?: string | null
+          updated_at?: string
+          variant_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_product_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_product_prices_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "shop_product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_product_prices_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_variants: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_quantity: number
+          is_active: boolean
+          name: string
+          options: Json
+          position: number
+          price_amount: number | null
+          product_id: string
+          sku: string | null
+          updated_at: string
+          weight_grams: number | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_quantity?: number
+          is_active?: boolean
+          name: string
+          options?: Json
+          position?: number
+          price_amount?: number | null
+          product_id: string
+          sku?: string | null
+          updated_at?: string
+          weight_grams?: number | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_quantity?: number
+          is_active?: boolean
+          name?: string
+          options?: Json
+          position?: number
+          price_amount?: number | null
+          product_id?: string
+          sku?: string | null
+          updated_at?: string
+          weight_grams?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_product_variants_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_products: {
+        Row: {
+          academy_course_slug: string | null
+          access_duration_days: number | null
+          allow_backorder: boolean
+          appointment_type_id: string | null
+          billing_interval: string | null
+          billing_type: string
+          booking_page_id: string | null
+          button_text: string
+          compare_at_amount: number | null
+          created_at: string
+          currency: string
+          deliverables: string | null
+          description: string | null
+          download_expiry_days: number | null
+          download_limit: number | null
+          id: string
+          inventory_quantity: number
+          low_stock_threshold: number | null
+          metadata: Json
+          name: string
+          onboarding_instructions: string | null
+          price_amount: number
+          product_type: string
+          requires_shipping: boolean
+          seo_description: string | null
+          seo_title: string | null
+          shipping_class: string | null
+          short_description: string | null
+          sku: string | null
+          slug: string
+          status: string
+          store_id: string
+          tags: string[]
+          tax_category: string
+          track_inventory: boolean
+          trial_days: number | null
+          updated_at: string
+          visibility: string
+          weight_grams: number | null
+          workspace_id: string
+        }
+        Insert: {
+          academy_course_slug?: string | null
+          access_duration_days?: number | null
+          allow_backorder?: boolean
+          appointment_type_id?: string | null
+          billing_interval?: string | null
+          billing_type?: string
+          booking_page_id?: string | null
+          button_text?: string
+          compare_at_amount?: number | null
+          created_at?: string
+          currency?: string
+          deliverables?: string | null
+          description?: string | null
+          download_expiry_days?: number | null
+          download_limit?: number | null
+          id?: string
+          inventory_quantity?: number
+          low_stock_threshold?: number | null
+          metadata?: Json
+          name: string
+          onboarding_instructions?: string | null
+          price_amount?: number
+          product_type?: string
+          requires_shipping?: boolean
+          seo_description?: string | null
+          seo_title?: string | null
+          shipping_class?: string | null
+          short_description?: string | null
+          sku?: string | null
+          slug: string
+          status?: string
+          store_id: string
+          tags?: string[]
+          tax_category?: string
+          track_inventory?: boolean
+          trial_days?: number | null
+          updated_at?: string
+          visibility?: string
+          weight_grams?: number | null
+          workspace_id: string
+        }
+        Update: {
+          academy_course_slug?: string | null
+          access_duration_days?: number | null
+          allow_backorder?: boolean
+          appointment_type_id?: string | null
+          billing_interval?: string | null
+          billing_type?: string
+          booking_page_id?: string | null
+          button_text?: string
+          compare_at_amount?: number | null
+          created_at?: string
+          currency?: string
+          deliverables?: string | null
+          description?: string | null
+          download_expiry_days?: number | null
+          download_limit?: number | null
+          id?: string
+          inventory_quantity?: number
+          low_stock_threshold?: number | null
+          metadata?: Json
+          name?: string
+          onboarding_instructions?: string | null
+          price_amount?: number
+          product_type?: string
+          requires_shipping?: boolean
+          seo_description?: string | null
+          seo_title?: string | null
+          shipping_class?: string | null
+          short_description?: string | null
+          sku?: string | null
+          slug?: string
+          status?: string
+          store_id?: string
+          tags?: string[]
+          tax_category?: string
+          track_inventory?: boolean
+          trial_days?: number | null
+          updated_at?: string
+          visibility?: string
+          weight_grams?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_products_appointment_type_id_fkey"
+            columns: ["appointment_type_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_products_booking_page_id_fkey"
+            columns: ["booking_page_id"]
+            isOneToOne: false
+            referencedRelation: "booking_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_shipping_rates: {
+        Row: {
+          amount: number
+          created_at: string
+          delivery_estimate: string | null
+          free_over_amount: number | null
+          id: string
+          is_active: boolean
+          name: string
+          rate_type: string
+          shipping_class: string | null
+          updated_at: string
+          workspace_id: string
+          zone_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          delivery_estimate?: string | null
+          free_over_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          rate_type?: string
+          shipping_class?: string | null
+          updated_at?: string
+          workspace_id: string
+          zone_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          delivery_estimate?: string | null
+          free_over_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          rate_type?: string
+          shipping_class?: string | null
+          updated_at?: string
+          workspace_id?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_shipping_rates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_shipping_rates_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "shop_shipping_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_shipping_zones: {
+        Row: {
+          countries: string[]
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          regions: string[]
+          store_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          countries?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          regions?: string[]
+          store_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          countries?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          regions?: string[]
+          store_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_shipping_zones_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_shipping_zones_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_store_branding: {
+        Row: {
+          accent_color: string
+          cover_url: string | null
+          created_at: string
+          font_family: string
+          footer_text: string | null
+          id: string
+          logo_url: string | null
+          navigation: Json
+          primary_color: string
+          seo_description: string | null
+          seo_title: string | null
+          social_links: Json
+          store_id: string
+          tagline: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          accent_color?: string
+          cover_url?: string | null
+          created_at?: string
+          font_family?: string
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          navigation?: Json
+          primary_color?: string
+          seo_description?: string | null
+          seo_title?: string | null
+          social_links?: Json
+          store_id: string
+          tagline?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          accent_color?: string
+          cover_url?: string | null
+          created_at?: string
+          font_family?: string
+          footer_text?: string | null
+          id?: string
+          logo_url?: string | null
+          navigation?: Json
+          primary_color?: string
+          seo_description?: string | null
+          seo_title?: string | null
+          social_links?: Json
+          store_id?: string
+          tagline?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_store_branding_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_store_branding_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_store_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          store_id: string
+          updated_at: string
+          verified_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          store_id: string
+          updated_at?: string
+          verified_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          store_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_store_domains_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_store_domains_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_stores: {
+        Row: {
+          business_address: Json
+          business_email: string | null
+          business_name: string | null
+          business_phone: string | null
+          countries_served: string[]
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          id: string
+          is_primary: boolean
+          name: string
+          platform_fee_bps: number
+          policies: Json
+          product_types: string[]
+          published_at: string | null
+          setup_completed_at: string | null
+          setup_step: number
+          slug: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          business_address?: Json
+          business_email?: string | null
+          business_name?: string | null
+          business_phone?: string | null
+          countries_served?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          is_primary?: boolean
+          name: string
+          platform_fee_bps?: number
+          policies?: Json
+          product_types?: string[]
+          published_at?: string | null
+          setup_completed_at?: string | null
+          setup_step?: number
+          slug: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          business_address?: Json
+          business_email?: string | null
+          business_name?: string | null
+          business_phone?: string | null
+          countries_served?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          is_primary?: boolean
+          name?: string
+          platform_fee_bps?: number
+          policies?: Json
+          product_types?: string[]
+          published_at?: string | null
+          setup_completed_at?: string | null
+          setup_step?: number
+          slug?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_stores_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          failure_reason: string | null
+          fee_amount: number
+          id: string
+          order_id: string | null
+          status: string
+          store_id: string
+          stripe_object_id: string | null
+          type: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          failure_reason?: string | null
+          fee_amount?: number
+          id?: string
+          order_id?: string | null
+          status?: string
+          store_id: string
+          stripe_object_id?: string | null
+          type: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          failure_reason?: string | null
+          fee_amount?: number
+          id?: string
+          order_id?: string | null
+          status?: string
+          store_id?: string
+          stripe_object_id?: string | null
+          type?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_transactions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -7381,6 +9138,14 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: string
       }
+      can_fulfil_orders: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      can_manage_commerce: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
       decay_inactive_leads: { Args: never; Returns: number }
       delete_email: {
@@ -7521,6 +9286,91 @@ export type Database = {
           head_enabled: boolean
         }[]
       }
+      get_public_store: {
+        Args: { p_slug: string }
+        Returns: {
+          accent_color: string
+          business_email: string
+          business_name: string
+          business_phone: string
+          countries_served: string[]
+          cover_url: string
+          currency: string
+          description: string
+          font_family: string
+          footer_text: string
+          id: string
+          logo_url: string
+          name: string
+          navigation: Json
+          policies: Json
+          primary_color: string
+          seo_description: string
+          seo_title: string
+          slug: string
+          social_links: Json
+          tagline: string
+          workspace_id: string
+        }[]
+      }
+      get_public_store_collections: {
+        Args: { p_store_slug: string }
+        Returns: {
+          description: string
+          id: string
+          image_url: string
+          name: string
+          slug: string
+        }[]
+      }
+      get_public_store_product: {
+        Args: { p_product_slug: string; p_store_slug: string }
+        Returns: {
+          allow_backorder: boolean
+          billing_interval: string
+          billing_type: string
+          booking_page_id: string
+          button_text: string
+          compare_at_amount: number
+          currency: string
+          deliverables: string
+          description: string
+          id: string
+          inventory_quantity: number
+          media: Json
+          name: string
+          onboarding_instructions: string
+          price_amount: number
+          product_type: string
+          requires_shipping: boolean
+          seo_description: string
+          seo_title: string
+          short_description: string
+          slug: string
+          store_id: string
+          track_inventory: boolean
+          trial_days: number
+          variants: Json
+        }[]
+      }
+      get_public_store_products: {
+        Args: { p_collection_slug?: string; p_store_slug: string }
+        Returns: {
+          billing_interval: string
+          billing_type: string
+          button_text: string
+          compare_at_amount: number
+          currency: string
+          id: string
+          image_url: string
+          name: string
+          price_amount: number
+          product_type: string
+          short_description: string
+          slug: string
+          tags: string[]
+        }[]
+      }
       get_roi_calculator_settings: {
         Args: never
         Returns: {
@@ -7593,6 +9443,10 @@ export type Database = {
           scopes: string[]
           workspace_id: string
         }[]
+      }
+      workspace_role: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: string
       }
     }
     Enums: {
