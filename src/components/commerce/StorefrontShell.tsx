@@ -24,13 +24,22 @@ export default function StorefrontShell({
                 </span>}
             <span className="font-semibold">{store.name}</span>
           </Link>
-          <Link
-            to={`/s/${store.slug}/checkout`}
-            className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            {basketCount > 0 ? basketCount : "Basket"}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/s/${store.slug}/account`}
+              className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground sm:flex"
+            >
+              <User className="h-4 w-4" /> My purchases
+            </Link>
+            <Link
+              to={`/s/${store.slug}/checkout`}
+              className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {basketCount > 0 ? basketCount : "Basket"}
+            </Link>
+          </div>
+
         </div>
       </header>
 
