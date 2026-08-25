@@ -287,6 +287,15 @@ const App = () => (
                 <Route index element={<Navigate to="overview" replace />} />
               </Route>
 
+              {/* Public workspace storefronts */}
+              <Route path="/s/:storeSlug" element={<StorefrontHome />} />
+              <Route path="/s/:storeSlug/p/:productSlug" element={<StorefrontProduct />} />
+              <Route path="/s/:storeSlug/checkout" element={<StorefrontCheckout />} />
+              <Route path="/s/:storeSlug/order/:orderId" element={<StorefrontOrder />} />
+
+              {/* Stripe Connect OAuth return */}
+              <Route path="/callback/stripe-connect" element={<StripeConnectCallback />} />
+
               {/* Public funnel routes */}
               <Route path="/f/:slug" element={<PublicFunnel />} />
               <Route path="/f/:slug/:stepPath" element={<PublicFunnel />} />
