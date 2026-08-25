@@ -90,7 +90,9 @@ export const ACTIVITY_TYPE_GROUPS: { label: string; types: string[] }[] = [
   { label: "Engagement", types: ["form_submission", "campaign_engagement", "meeting_booked", "meeting_completed"] },
   { label: "Work", types: ["task_created", "task_completed", "note_added", "file_uploaded", "deal_stage_changed"] },
   { label: "Automation & AI", types: ["automation_enrolled", "automation_completed", "ai_recommendation", "ai_action_confirmed"] },
+  { label: "Commerce", types: ["order_paid", "order_refunded", "checkout_abandoned", "payment_failed", "subscription_renewed", "subscription_cancelled"] },
 ];
+
 
 export const ALL_ACTIVITY_TYPES = ACTIVITY_TYPE_GROUPS.flatMap((g) => g.types);
 
