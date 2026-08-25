@@ -14,6 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_accounts: {
+        Row: {
+          connection_id: string | null
+          created_at: string
+          currency: string
+          default_owner_id: string | null
+          default_pipeline_id: string | null
+          external_account_id: string
+          id: string
+          is_demo: boolean
+          is_enabled: boolean
+          last_sync_at: string | null
+          name: string
+          provider: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          connection_id?: string | null
+          created_at?: string
+          currency?: string
+          default_owner_id?: string | null
+          default_pipeline_id?: string | null
+          external_account_id: string
+          id?: string
+          is_demo?: boolean
+          is_enabled?: boolean
+          last_sync_at?: string | null
+          name: string
+          provider: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          connection_id?: string | null
+          created_at?: string
+          currency?: string
+          default_owner_id?: string | null
+          default_pipeline_id?: string | null
+          external_account_id?: string
+          id?: string
+          is_demo?: boolean
+          is_enabled?: boolean
+          last_sync_at?: string | null
+          name?: string
+          provider?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_accounts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ad_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_accounts_default_pipeline_id_fkey"
+            columns: ["default_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_connections: {
+        Row: {
+          business_name: string | null
+          created_at: string
+          created_by: string | null
+          credentials_encrypted: string | null
+          external_business_id: string | null
+          id: string
+          is_demo: boolean
+          last_error: string | null
+          last_sync_at: string | null
+          provider: string
+          scopes: string[]
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          business_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          credentials_encrypted?: string | null
+          external_business_id?: string | null
+          id?: string
+          is_demo?: boolean
+          last_error?: string | null
+          last_sync_at?: string | null
+          provider: string
+          scopes?: string[]
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          business_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          credentials_encrypted?: string | null
+          external_business_id?: string | null
+          id?: string
+          is_demo?: boolean
+          last_error?: string | null
+          last_sync_at?: string | null
+          provider?: string
+          scopes?: string[]
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_sync_logs: {
+        Row: {
+          connection_id: string | null
+          finished_at: string | null
+          id: string
+          message: string | null
+          provider: string
+          records_synced: number
+          started_at: string
+          status: string
+          technical_details: Json | null
+          workspace_id: string
+        }
+        Insert: {
+          connection_id?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          provider: string
+          records_synced?: number
+          started_at?: string
+          status: string
+          technical_details?: Json | null
+          workspace_id: string
+        }
+        Update: {
+          connection_id?: string | null
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          provider?: string
+          records_synced?: number
+          started_at?: string
+          status?: string
+          technical_details?: Json | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_sync_logs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "ad_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_sync_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_allowlist: {
         Row: {
           added_by_user_id: string | null
@@ -4536,6 +4728,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oauth_connection_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          provider: string
+          redirect_to: string
+          state: string
+          used_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          provider: string
+          redirect_to: string
+          state: string
+          used_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          provider?: string
+          redirect_to?: string
+          state?: string
+          used_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_connection_states_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
