@@ -125,23 +125,40 @@ export function useGrantEntitlement(storeId?: string) {
       product_id?: string | null;
       expires_at?: string | null;
     }) => {
-      const { error } = await db.from("shop_entitlements").upsert(
-        {
-          workspace_id: workspaceId,
-          store_id: storeId,
-          email: input.email.trim().toLowerCase(),
-          kind: input.kind,
-          resource_ref: input.resource_ref,
-          resource_label: input.resource_label ?? null,
-          product_id: input.product_id ?? null,
-          expires_at: input.expires_at || null,
-          status: "active",
-          source: "manual",
-          revoked_at: null,
-          revoke_reason: null,
-        },
-        { onConflict: "store_id,kind,resource_ref,email" },
-      );
+      const email = input.email.trim().toLowerCase();
+      const { data: existing } = await db
+        .from("shop_entitlements")
+        .select("id")
+        .eq("store_id", storeId)
+        .eq("kind", input.kind)
+        .eq("resource_ref", input.resource_ref)
+        .ilike("email", email)
+        .maybeSingle();
+
+      const payload = {
+        resource_label: input.resource_label ?? null,
+        product_id: input.product_id ?? null,
+        expires_at: input.expires_at || null,
+        status: "active",
+        source: "manual",
+        revoked_at: null,
+        revoke_reason: null,
+      };
+
+      if (existing?.id) {
+        const { error } = await db.from("shop_entitlements").update(payload).eq("id", existing.id);
+        if (error) throw error;
+        return;
+      }
+
+      const { error } = await db.from("shop_entitlements").insert({
+        ...payload,
+        workspace_id: workspaceId,
+        store_id: storeId,
+        email,
+        kind: input.kind,
+        resource_ref: input.resource_ref,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
