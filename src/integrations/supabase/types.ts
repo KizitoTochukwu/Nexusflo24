@@ -5951,6 +5951,97 @@ export type Database = {
           },
         ]
       }
+      shop_entitlements: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          kind: string
+          metadata: Json
+          order_id: string | null
+          product_id: string | null
+          resource_label: string | null
+          resource_ref: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          source: string
+          status: string
+          store_id: string
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          order_id?: string | null
+          product_id?: string | null
+          resource_label?: string | null
+          resource_ref: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          source?: string
+          status?: string
+          store_id: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          order_id?: string | null
+          product_id?: string | null
+          resource_label?: string | null
+          resource_ref?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          source?: string
+          status?: string
+          store_id?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_entitlements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_entitlements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_entitlements_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "shop_stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_fulfilment_items: {
         Row: {
           created_at: string
@@ -9512,6 +9603,7 @@ export type Database = {
         Returns: boolean
       }
       claim_community_memberships: { Args: never; Returns: number }
+      claim_shop_entitlements: { Args: never; Returns: number }
       claim_shop_orders: { Args: never; Returns: number }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
       decay_inactive_leads: { Args: never; Returns: number }
@@ -9534,6 +9626,22 @@ export type Database = {
           calendar_id: string
           connected: boolean
           token_id: string
+        }[]
+      }
+      get_my_shop_entitlements: {
+        Args: never
+        Returns: {
+          expires_at: string
+          granted_at: string
+          id: string
+          kind: string
+          order_id: string
+          product_id: string
+          resource_label: string
+          resource_ref: string
+          status: string
+          store_name: string
+          store_slug: string
         }[]
       }
       get_my_shop_purchases: {
@@ -9819,6 +9927,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_shop_entitlement: {
+        Args: { _kind: string; _resource_ref: string }
         Returns: boolean
       }
       increment_automation_run: {
