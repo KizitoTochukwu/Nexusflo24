@@ -22,6 +22,7 @@ import CrmFilesPanel from "@/components/crm/CrmFilesPanel";
 import CrmTasksPanel from "@/components/crm/CrmTasksPanel";
 import CustomFieldsPanel from "@/components/crm/CustomFieldsPanel";
 import CrmAuditPanel from "@/components/crm/CrmAuditPanel";
+import ContactPurchasesPanel from "@/components/crm/ContactPurchasesPanel";
 
 const COMMS_TYPES = [
   "email_sent", "email_delivered", "email_opened", "email_clicked", "email_bounced", "email_replied",
@@ -208,6 +209,7 @@ const ContactProfile = () => {
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="files">Files</TabsTrigger>
                 <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="purchases">Purchases</TabsTrigger>
                 <TabsTrigger value="fields">Fields</TabsTrigger>
                 <TabsTrigger value="audit">Audit</TabsTrigger>
               </TabsList>
@@ -230,6 +232,9 @@ const ContactProfile = () => {
               </TabsContent>
               <TabsContent value="tasks" className="mt-4">
                 <CrmTasksPanel workspaceId={workspaceId} link={{ contact_id: contact.id }} canEdit={canEdit} />
+              </TabsContent>
+              <TabsContent value="purchases" className="mt-4">
+                <ContactPurchasesPanel workspaceId={workspaceId} contactId={contact.id} email={contact.email} />
               </TabsContent>
               <TabsContent value="fields" className="mt-4">
                 <CustomFieldsPanel workspaceId={workspaceId} recordType="contact" recordId={contact.id} canEdit={canEdit} />
