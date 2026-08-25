@@ -9146,6 +9146,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      claim_shop_orders: { Args: never; Returns: number }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
       decay_inactive_leads: { Args: never; Returns: number }
       delete_email: {
@@ -9167,6 +9168,23 @@ export type Database = {
           calendar_id: string
           connected: boolean
           token_id: string
+        }[]
+      }
+      get_my_shop_purchases: {
+        Args: never
+        Returns: {
+          created_at: string
+          currency: string
+          fulfilment_status: string
+          id: string
+          item_count: number
+          order_number: string
+          status: string
+          store_logo_url: string
+          store_name: string
+          store_slug: string
+          stripe_subscription_id: string
+          total_amount: number
         }[]
       }
       get_public_appointment_types: {
@@ -9275,6 +9293,31 @@ export type Database = {
           page_content: Json
           step_order: number
           step_type: string
+        }[]
+      }
+      get_public_shop_order: {
+        Args: { p_email?: string; p_order_id: string }
+        Returns: {
+          created_at: string
+          currency: string
+          discount_amount: number
+          email: string
+          files: Json
+          fulfilment_status: string
+          full_name: string
+          id: string
+          items: Json
+          order_number: string
+          refunded_amount: number
+          shipping_address: Json
+          shipping_amount: number
+          status: string
+          store_name: string
+          store_slug: string
+          stripe_subscription_id: string
+          subtotal_amount: number
+          tax_amount: number
+          total_amount: number
         }[]
       }
       get_public_site_custom_code: {
