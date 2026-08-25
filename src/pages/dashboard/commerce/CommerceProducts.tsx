@@ -18,7 +18,7 @@ import {
   useShopProducts,
   useShopStore,
 } from "@/hooks/useCommerce";
-import { ACADEMY_COURSES } from "@/data/academyCourses";
+import { courses as ACADEMY_COURSES } from "@/data/academyCourses";
 
 const TYPES = [
   { value: "physical", label: "Physical product" },
