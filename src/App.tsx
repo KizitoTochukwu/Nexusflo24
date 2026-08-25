@@ -303,7 +303,8 @@ const App = () => (
               <Route path="/s/:storeSlug/community" element={<StorefrontCommunities />} />
               <Route path="/s/:storeSlug/community/:communitySlug" element={<StorefrontCommunity />} />
 
-              {/* Stripe Connect OAuth return */}
+              {/* Stripe Connect OAuth return (canonical + legacy alias) */}
+              <Route path="/stripe/connect/callback" element={<StripeConnectCallback />} />
               <Route path="/callback/stripe-connect" element={<StripeConnectCallback />} />
 
               {/* Public funnel routes */}
