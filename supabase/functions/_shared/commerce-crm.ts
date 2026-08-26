@@ -226,6 +226,16 @@ export async function fireCommerceTrigger(params: {
 }
 
 /**
+ * Promotion rule: a commerce party only becomes a CRM `customer` once money
+ * has actually moved — a paid order or a successful subscription renewal.
+ * Abandoned checkouts, failed payments, refunds and cancellations never
+ * promote a lead/contact to customer, and never demote an existing customer.
+ */
+export function commerceEventMarksCustomer(eventType: string): boolean {
+  return eventType === "order_paid" || eventType === "subscription_renewed";
+}
+
+/**
  * Convenience: sync buyer, log the timeline entry and fire the matching
  * commerce automation trigger in one call.
  */
@@ -240,7 +250,7 @@ export async function handleCommerceEvent(admin: any, input: {
   event_config?: Record<string, unknown>;
 }): Promise<SyncResult> {
   // Only verified revenue events promote a contact to lifecycle "customer".
-  const markCustomer = input.event_type === "order_paid" || input.event_type === "subscription_renewed";
+  const markCustomer = commerceEventMarksCustomer(input.event_type);
   const result = await syncCommerceContact(admin, input.party, { markCustomer });
   await logCommerceActivity(admin, {
     workspace_id: input.party.workspace_id,
