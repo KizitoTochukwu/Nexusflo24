@@ -19,7 +19,7 @@ import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import type { ExitCriterion } from "@/lib/automations/exitCriteria";
-import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
+import { useAutomationTagOptions, useAutomationStageOptions, FALLBACK_PIPELINE_STAGES } from "@/hooks/useAutomationOptions";
 import { AUTOMATION_SCORE_OPTIONS } from "@/lib/automations/scoreOptions";
 import { SenderProfilePicker } from "@/components/admin/SenderProfilePicker";
 import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
@@ -60,7 +60,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   end_automation: <DoorOpen className="h-4 w-4" />,
 };
 
-const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Customer", "Lost"];
+
 interface Props {
   steps: StepData[];
   onChange: (steps: StepData[]) => void;
@@ -74,6 +74,10 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
   const { data: smartActionOverrides } = useSmartActionOverrides(workspaceId);
   const { data: allAutomations } = useAutomations(workspaceId || "");
   const { data: workspaceMembers } = useWorkspaceMembers(workspaceId || "");
+  const { data: tagOptionsData } = useAutomationTagOptions(workspaceId || undefined);
+  const { data: stageOptionsData } = useAutomationStageOptions(workspaceId || undefined);
+  const AUTOMATION_TAG_OPTIONS = tagOptionsData ?? [];
+  const PIPELINE_STAGES = stageOptionsData ?? FALLBACK_PIPELINE_STAGES;
   const [collapsedSteps, setCollapsedSteps] = useState<Record<number, boolean>>({});
   const toggleCollapsed = (i: number) =>
     setCollapsedSteps((prev) => ({ ...prev, [i]: !prev[i] }));
