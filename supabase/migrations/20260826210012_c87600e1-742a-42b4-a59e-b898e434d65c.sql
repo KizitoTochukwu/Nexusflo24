@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.crm_upsert_contact(uuid, text, text, text, text, text, jsonb, text, text) FROM authenticated;

@@ -2062,32 +2062,272 @@ export type Database = {
           },
         ]
       }
+      contact_duplicate_candidates: {
+        Row: {
+          confidence: number
+          conflicting_fields: Json
+          contact_id: string
+          created_at: string
+          duplicate_contact_id: string
+          id: string
+          match_reason: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          confidence?: number
+          conflicting_fields?: Json
+          contact_id: string
+          created_at?: string
+          duplicate_contact_id: string
+          id?: string
+          match_reason: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          confidence?: number
+          conflicting_fields?: Json
+          contact_id?: string
+          created_at?: string
+          duplicate_contact_id?: string
+          id?: string
+          match_reason?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_duplicate_candidates_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_duplicate_candidates_duplicate_contact_id_fkey"
+            columns: ["duplicate_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_duplicate_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_identities: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          identity_type: string
+          identity_value: string
+          raw_value: string | null
+          updated_at: string
+          verified: boolean
+          workspace_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          identity_type: string
+          identity_value: string
+          raw_value?: string | null
+          updated_at?: string
+          verified?: boolean
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          identity_type?: string
+          identity_value?: string
+          raw_value?: string | null
+          updated_at?: string
+          verified?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_identities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_identities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_merge_log: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          id: string
+          merged_contact_id: string
+          merged_snapshot: Json
+          moved_counts: Json
+          reason: string | null
+          surviving_contact_id: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          merged_contact_id: string
+          merged_snapshot?: Json
+          moved_counts?: Json
+          reason?: string | null
+          surviving_contact_id: string
+          workspace_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          merged_contact_id?: string
+          merged_snapshot?: Json
+          moved_counts?: Json
+          reason?: string | null
+          surviving_contact_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_merge_log_surviving_contact_id_fkey"
+            columns: ["surviving_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_merge_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_source_map: {
+        Row: {
+          conflict_state: string | null
+          contact_id: string
+          created_at: string
+          id: string
+          match_confidence: number
+          match_method: string
+          migration_version: string | null
+          source_record_id: string
+          source_table: string
+          workspace_id: string
+        }
+        Insert: {
+          conflict_state?: string | null
+          contact_id: string
+          created_at?: string
+          id?: string
+          match_confidence?: number
+          match_method: string
+          migration_version?: string | null
+          source_record_id: string
+          source_table: string
+          workspace_id: string
+        }
+        Update: {
+          conflict_state?: string | null
+          contact_id?: string
+          created_at?: string
+          id?: string
+          match_confidence?: number
+          match_method?: string
+          migration_version?: string | null
+          source_record_id?: string
+          source_table?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_source_map_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_source_map_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           archived_at: string | null
           avatar_url: string | null
           company_id: string | null
           company_name: string | null
+          consent_email: boolean
+          consent_sms: boolean
           consent_status: string
           consent_updated_at: string | null
+          consent_whatsapp: boolean
+          conversion_reason: string | null
+          conversion_source: string | null
+          converted_at: string | null
           created_at: string
           created_by: string | null
           email: string | null
+          external_source_id: string | null
           first_name: string | null
+          first_touch: Json
+          first_touch_at: string | null
           full_name: string | null
           id: string
           job_title: string | null
           last_activity_at: string | null
           last_name: string | null
+          last_touch: Json
+          last_touch_at: string | null
           lead_status: string | null
           lifecycle_stage: string
+          merged_into_id: string | null
           notes: string | null
           origin_lead_id: string | null
           owner_user_id: string | null
           phone: string | null
           score: number
+          score_updated_at: string | null
           source: string | null
           tags: string[]
+          temperature: string
           updated_at: string
           whatsapp_number: string | null
           workspace_id: string
@@ -2097,26 +2337,40 @@ export type Database = {
           avatar_url?: string | null
           company_id?: string | null
           company_name?: string | null
+          consent_email?: boolean
+          consent_sms?: boolean
           consent_status?: string
           consent_updated_at?: string | null
+          consent_whatsapp?: boolean
+          conversion_reason?: string | null
+          conversion_source?: string | null
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          external_source_id?: string | null
           first_name?: string | null
+          first_touch?: Json
+          first_touch_at?: string | null
           full_name?: string | null
           id?: string
           job_title?: string | null
           last_activity_at?: string | null
           last_name?: string | null
+          last_touch?: Json
+          last_touch_at?: string | null
           lead_status?: string | null
           lifecycle_stage?: string
+          merged_into_id?: string | null
           notes?: string | null
           origin_lead_id?: string | null
           owner_user_id?: string | null
           phone?: string | null
           score?: number
+          score_updated_at?: string | null
           source?: string | null
           tags?: string[]
+          temperature?: string
           updated_at?: string
           whatsapp_number?: string | null
           workspace_id: string
@@ -2126,26 +2380,40 @@ export type Database = {
           avatar_url?: string | null
           company_id?: string | null
           company_name?: string | null
+          consent_email?: boolean
+          consent_sms?: boolean
           consent_status?: string
           consent_updated_at?: string | null
+          consent_whatsapp?: boolean
+          conversion_reason?: string | null
+          conversion_source?: string | null
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          external_source_id?: string | null
           first_name?: string | null
+          first_touch?: Json
+          first_touch_at?: string | null
           full_name?: string | null
           id?: string
           job_title?: string | null
           last_activity_at?: string | null
           last_name?: string | null
+          last_touch?: Json
+          last_touch_at?: string | null
           lead_status?: string | null
           lifecycle_stage?: string
+          merged_into_id?: string | null
           notes?: string | null
           origin_lead_id?: string | null
           owner_user_id?: string | null
           phone?: string | null
           score?: number
+          score_updated_at?: string | null
           source?: string | null
           tags?: string[]
+          temperature?: string
           updated_at?: string
           whatsapp_number?: string | null
           workspace_id?: string
@@ -2156,6 +2424,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_merged_into_id_fkey"
+            columns: ["merged_into_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -2563,6 +2838,60 @@ export type Database = {
           },
         ]
       }
+      crm_deal_stage_history: {
+        Row: {
+          change_source: string
+          changed_by: string | null
+          created_at: string
+          deal_id: string
+          entered_at: string
+          exited_at: string | null
+          from_stage_id: string | null
+          id: string
+          to_stage_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          change_source?: string
+          changed_by?: string | null
+          created_at?: string
+          deal_id: string
+          entered_at?: string
+          exited_at?: string | null
+          from_stage_id?: string | null
+          id?: string
+          to_stage_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          change_source?: string
+          changed_by?: string | null
+          created_at?: string
+          deal_id?: string
+          entered_at?: string
+          exited_at?: string | null
+          from_stage_id?: string | null
+          id?: string
+          to_stage_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_deal_stage_history_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deal_stage_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_deals: {
         Row: {
           amount: number
@@ -2859,6 +3188,7 @@ export type Database = {
           is_default: boolean
           name: string
           position: number
+          status: string
           updated_at: string
           workspace_id: string
         }
@@ -2870,6 +3200,7 @@ export type Database = {
           is_default?: boolean
           name: string
           position?: number
+          status?: string
           updated_at?: string
           workspace_id: string
         }
@@ -2881,12 +3212,72 @@ export type Database = {
           is_default?: boolean
           name?: string
           position?: number
+          status?: string
           updated_at?: string
           workspace_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "crm_pipelines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_reconciliation_runs: {
+        Row: {
+          ambiguous_count: number
+          counts_after: Json
+          counts_before: Json
+          created_at: string
+          created_count: number
+          details: Json
+          failed_count: number
+          id: string
+          linked_count: number
+          migration_version: string
+          phase: string
+          unresolved_count: number
+          updated_count: number
+          workspace_id: string
+        }
+        Insert: {
+          ambiguous_count?: number
+          counts_after?: Json
+          counts_before?: Json
+          created_at?: string
+          created_count?: number
+          details?: Json
+          failed_count?: number
+          id?: string
+          linked_count?: number
+          migration_version: string
+          phase: string
+          unresolved_count?: number
+          updated_count?: number
+          workspace_id: string
+        }
+        Update: {
+          ambiguous_count?: number
+          counts_after?: Json
+          counts_before?: Json
+          created_at?: string
+          created_count?: number
+          details?: Json
+          failed_count?: number
+          id?: string
+          linked_count?: number
+          migration_version?: string
+          phase?: string
+          unresolved_count?: number
+          updated_count?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_reconciliation_runs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -2993,15 +3384,21 @@ export type Database = {
           assigned_to: string | null
           company_id: string | null
           completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
           contact_id: string | null
           created_at: string
           created_by: string | null
           deal_id: string | null
+          dedupe_key: string | null
           description: string | null
           due_date: string | null
           id: string
           lead_id: string | null
           priority: string
+          reminder_at: string | null
+          source_execution_id: string | null
+          source_workflow_id: string | null
           status: string
           task_type: string
           title: string
@@ -3012,15 +3409,21 @@ export type Database = {
           assigned_to?: string | null
           company_id?: string | null
           completed_at?: string | null
+          completed_by?: string | null
+          completion_note?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           deal_id?: string | null
+          dedupe_key?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           lead_id?: string | null
           priority?: string
+          reminder_at?: string | null
+          source_execution_id?: string | null
+          source_workflow_id?: string | null
           status?: string
           task_type?: string
           title: string
@@ -3031,15 +3434,21 @@ export type Database = {
           assigned_to?: string | null
           company_id?: string | null
           completed_at?: string | null
+          completed_by?: string | null
+          completion_note?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           deal_id?: string | null
+          dedupe_key?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
           lead_id?: string | null
           priority?: string
+          reminder_at?: string | null
+          source_execution_id?: string | null
+          source_workflow_id?: string | null
           status?: string
           task_type?: string
           title?: string
@@ -3367,30 +3776,53 @@ export type Database = {
       }
       form_submissions: {
         Row: {
+          contact_id: string | null
           created_at: string
           data: Json
           form_id: string
           id: string
+          idempotency_key: string | null
           lead_id: string | null
+          processed_at: string | null
+          processing_error: string | null
+          processing_status: string
           workspace_id: string
         }
         Insert: {
+          contact_id?: string | null
           created_at?: string
           data?: Json
           form_id: string
           id?: string
+          idempotency_key?: string | null
           lead_id?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          processing_status?: string
           workspace_id: string
         }
         Update: {
+          contact_id?: string | null
           created_at?: string
           data?: Json
           form_id?: string
           id?: string
+          idempotency_key?: string | null
           lead_id?: string | null
+          processed_at?: string | null
+          processing_error?: string | null
+          processing_status?: string
           workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       forms: {
         Row: {
@@ -3977,9 +4409,12 @@ export type Database = {
         Row: {
           ai_qualification: Json | null
           assigned_owner_id: string | null
+          attribution: Json
           campaign_name: string | null
+          contact_id: string | null
           created_at: string
           email: string | null
+          external_source_id: string | null
           full_name: string | null
           funnel_name: string | null
           id: string
@@ -4005,9 +4440,12 @@ export type Database = {
         Insert: {
           ai_qualification?: Json | null
           assigned_owner_id?: string | null
+          attribution?: Json
           campaign_name?: string | null
+          contact_id?: string | null
           created_at?: string
           email?: string | null
+          external_source_id?: string | null
           full_name?: string | null
           funnel_name?: string | null
           id?: string
@@ -4033,9 +4471,12 @@ export type Database = {
         Update: {
           ai_qualification?: Json | null
           assigned_owner_id?: string | null
+          attribution?: Json
           campaign_name?: string | null
+          contact_id?: string | null
           created_at?: string
           email?: string | null
+          external_source_id?: string | null
           full_name?: string | null
           funnel_name?: string | null
           id?: string
@@ -4059,6 +4500,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leads_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -10197,6 +10645,22 @@ export type Database = {
       claim_shop_entitlements: { Args: never; Returns: number }
       claim_shop_orders: { Args: never; Returns: number }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
+      crm_normalize_email: { Args: { _email: string }; Returns: string }
+      crm_normalize_phone: { Args: { _phone: string }; Returns: string }
+      crm_upsert_contact: {
+        Args: {
+          _attribution?: Json
+          _email?: string
+          _external_source_id?: string
+          _full_name?: string
+          _phone?: string
+          _source?: string
+          _source_record_id?: string
+          _source_table?: string
+          _workspace_id: string
+        }
+        Returns: string
+      }
       decay_inactive_leads: { Args: never; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }

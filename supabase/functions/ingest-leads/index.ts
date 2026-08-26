@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sanitizeString, isValidEmail, isValidPhone, sanitizeTags, safeErrorResponse } from "../_shared/validation.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
+import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -190,6 +192,35 @@ Deno.serve(async (req) => {
       action = "created";
     }
 
+    // Canonical CRM contact
+    try {
+      const contactId = await upsertCanonicalContact(supabase, {
+        workspaceId: workspaceId!,
+        email: trimmedEmail || null,
+        phone: trimmedPhone || null,
+        fullName: full_name || null,
+        source: source || "Make.com",
+        attribution: { source: source || "Make.com", ...(utm ?? {}) },
+        sourceTable: "leads",
+        sourceRecordId: leadId,
+      });
+      if (contactId) {
+        await linkLeadToContact(supabase, leadId, contactId);
+        await recordContactTimeline(supabase, {
+          workspaceId: workspaceId!,
+          contactId,
+          activityType: "lead_captured",
+          title: "Lead ingested",
+          description: source || "Make.com",
+          source: source || "Make.com",
+          externalEventId: `lead:${leadId}`,
+          meta: { lead_id: leadId },
+        });
+      }
+    } catch (contactErr) {
+      console.error("[ingest-leads] canonical contact failed:", String(contactErr));
+    }
+
     // Log activity
     const activityMeta: Record<string, unknown> = {};
     if (meta) activityMeta.meta = meta;
@@ -205,6 +236,7 @@ Deno.serve(async (req) => {
       meta: activityMeta,
       ...((event as any)?.timestamp ? { created_at: (event as any).timestamp } : {}),
     });
+
 
     return new Response(
       JSON.stringify({ ok: true, action, lead_id: leadId, workspace_id: workspaceId }),
