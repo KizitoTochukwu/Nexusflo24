@@ -19,7 +19,10 @@ import { useEmailStatus } from "@/hooks/useEmailStatus";
 import { useSmsStatus } from "@/hooks/useSmsStatus";
 import { useActiveWhatsAppProvider } from "@/hooks/useWhatsAppConnection";
 import { useAutomations } from "@/hooks/useAutomations";
-import { useCreateLeadTask } from "@/hooks/useLeadTasks";
+import { useCreateTask } from "@/hooks/useCrmTasks";
+import { useContactEnrolmentEligibility, useEnrolContact } from "@/hooks/useContactEnrolment";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 type Channel = "email" | "sms" | "whatsapp" | "call" | "task" | "automation" | null;
@@ -40,7 +43,9 @@ const ContactQuickActions = ({ contact, workspaceId }: { contact: Contact; works
   const smsStatus = useSmsStatus(workspaceId);
   const { data: waProvider } = useActiveWhatsAppProvider(workspaceId);
   const { data: automations = [] } = useAutomations(workspaceId);
-  const createTask = useCreateLeadTask();
+  const createTask = useCreateTask();
+  const { data: eligibility = [], isLoading: eligibilityLoading } = useContactEnrolmentEligibility(workspaceId, contact);
+  const enrolContact = useEnrolContact(workspaceId);
 
   const emailReady = Boolean((emailStatus as any)?.data?.configured);
   const smsReady = Boolean((smsStatus as any)?.data?.configured);
@@ -136,44 +141,36 @@ const ContactQuickActions = ({ contact, workspaceId }: { contact: Contact; works
   };
 
   const addTask = async () => {
-    if (!contact.origin_lead_id) return;
     setBusy(true);
     try {
       await createTask.mutateAsync({
-        lead_id: contact.origin_lead_id,
         workspace_id: workspaceId,
+        contact_id: contact.id,
         title: taskTitle,
-        due_date: taskDue || undefined,
-      });
-      await logCrmActivity({
-        workspaceId, recordType: "contact", recordId: contact.id, activityType: "task_created",
-        title: taskTitle, actorUserId: user?.id, actorLabel: user?.email ?? undefined,
+        due_date: taskDue || null,
       });
       setTaskTitle(""); setTaskDue("");
       reset(); refresh();
+      qc.invalidateQueries({ queryKey: ["crm-tasks"] });
     } finally { setBusy(false); }
   };
 
   const enrol = async () => {
-    if (!contact.origin_lead_id || !automationId) return;
+    if (!automationId) return;
     setBusy(true);
     try {
-      const { error } = await supabase.functions.invoke("execute-automation", {
-        body: { automation_id: automationId, lead_id: contact.origin_lead_id, workspace_id: workspaceId },
-      });
-      if (error) throw error;
+      await enrolContact.mutateAsync({ contact, automationId });
       await logCrmActivity({
         workspaceId, recordType: "contact", recordId: contact.id, activityType: "automation_enrolled",
         title: "Enrolled in automation",
-        description: activeAutomations.find((a) => a.id === automationId)?.name ?? automationId,
+        description: eligibility.find((e) => e.automationId === automationId)?.name ?? automationId,
         actorUserId: user?.id, actorLabel: user?.email ?? undefined,
         relatedType: "automation", relatedId: automationId,
       });
-      toast.success("Contact enrolled");
       setAutomationId("");
       reset(); refresh();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to enrol contact");
+    } catch {
+      /* surfaced by the mutation */
     } finally { setBusy(false); }
   };
 
@@ -217,12 +214,10 @@ const ContactQuickActions = ({ contact, workspaceId }: { contact: Contact; works
 
         {action("call", <PhoneCall className="h-4 w-4" />, "Log call", null)}
 
-        {action("task", <CheckSquare className="h-4 w-4" />, "Task",
-          contact.origin_lead_id ? null : "Tasks attach to a linked lead record. This contact has no linked lead yet.")}
+        {action("task", <CheckSquare className="h-4 w-4" />, "Task", null)}
 
         {action("automation", <Workflow className="h-4 w-4" />, "Enrol",
-          !contact.origin_lead_id ? "Automations run on a linked lead record. This contact has no linked lead yet."
-            : activeAutomations.length === 0 ? "No active automations in this workspace" : null)}
+          activeAutomations.length === 0 ? "No active automations in this workspace" : null)}
 
         <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/${workspaceId}/bookings`)}>
           <CalendarPlus className="h-4 w-4" /><span className="ml-2">Meeting</span>
@@ -316,17 +311,61 @@ const ContactQuickActions = ({ contact, workspaceId }: { contact: Contact; works
 
       {/* Enrol in automation */}
       <Dialog open={open === "automation"} onOpenChange={(v) => !v && reset()}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Enrol in automation</DialogTitle>
-            <DialogDescription>Starts the automation immediately for this contact's linked lead record.</DialogDescription>
+            <DialogDescription>
+              Eligibility is checked against this contact. Nothing is sent until you press Enrol.
+            </DialogDescription>
           </DialogHeader>
-          <Select value={automationId} onValueChange={setAutomationId}>
-            <SelectTrigger><SelectValue placeholder="Choose an automation" /></SelectTrigger>
-            <SelectContent>
-              {activeAutomations.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+
+          {eligibilityLoading ? (
+            <p className="text-sm text-muted-foreground">Checking eligibility…</p>
+          ) : eligibility.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No automations exist in this workspace yet.</p>
+          ) : (
+            <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+              {eligibility.map((e) => {
+                const selected = automationId === e.automationId;
+                return (
+                  <button
+                    key={e.automationId}
+                    type="button"
+                    disabled={!e.eligible}
+                    onClick={() => setAutomationId(e.automationId)}
+                    className={`w-full rounded-lg border p-3 text-left transition ${
+                      selected ? "border-primary bg-primary/5" : "border-border"
+                    } ${e.eligible ? "hover:bg-muted/50" : "cursor-not-allowed opacity-70"}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{e.name}</p>
+                        {e.channels.length > 0 && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">Sends: {e.channels.join(", ")}</p>
+                        )}
+                        {e.reason && (
+                          <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                            {e.reason}
+                          </p>
+                        )}
+                      </div>
+                      {e.active ? (
+                        <Badge variant="secondary">Running</Badge>
+                      ) : e.eligible ? (
+                        <Badge variant="outline" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Eligible
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Blocked</Badge>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <DialogFooter>
             <Button variant="outline" onClick={reset}>Cancel</Button>
             <Button onClick={enrol} disabled={busy || !automationId}>Enrol</Button>
