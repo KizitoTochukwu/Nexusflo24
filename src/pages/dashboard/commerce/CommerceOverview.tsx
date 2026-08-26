@@ -30,24 +30,52 @@ export default function CommerceOverview() {
 
   const currency = store.currency;
 
+  const setupIssues: { message: string; cta: string; to: string }[] = [];
+  if (!seller?.charges_enabled) {
+    setupIssues.push({
+      message: "Connect Stripe so your store can take payments into your own account.",
+      cta: "Connect Stripe",
+      to: `/dashboard/${workspaceId}/commerce/settings`,
+    });
+  }
+  if (store.status !== "published") {
+    setupIssues.push({
+      message: "Your store is not published yet, so customers cannot see it.",
+      cta: "Publish store",
+      to: `/dashboard/${workspaceId}/commerce/settings`,
+    });
+  }
+  if (stats.liveProducts === 0) {
+    setupIssues.push({
+      message: "You have no live products. Publish at least one product so customers can buy.",
+      cta: "Add a product",
+      to: `/dashboard/${workspaceId}/commerce/products`,
+    });
+  }
+  if (/^store-[a-z0-9-]{8,}$/.test(store.slug ?? "") || store.slug === store.id) {
+    setupIssues.push({
+      message: "Your storefront is still using its auto-generated web address. Set a memorable slug.",
+      cta: "Customise address",
+      to: `/dashboard/${workspaceId}/commerce/storefront`,
+    });
+  }
+
   return (
     <div className="space-y-6">
-      {(!seller?.charges_enabled || store.status !== "published") && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-accent/40 bg-accent/10 p-4">
-          <AlertTriangle className="h-5 w-5 text-accent" />
-          <div className="flex-1 text-sm">
-            <p className="font-medium">Finish setting up your storefront</p>
-            <p className="text-muted-foreground">
-              {!seller?.charges_enabled
-                ? "Connect Stripe so your store can take payments into your own account."
-                : "Your store is not published yet, so customers cannot see it."}
-            </p>
+      {setupIssues.length > 0 && (
+        <div className="rounded-2xl border border-accent/40 bg-accent/10 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <AlertTriangle className="h-5 w-5 text-accent" />
+            Finish setting up your storefront
           </div>
-          <Button asChild size="sm">
-            <Link to={`/dashboard/${workspaceId}/commerce/settings`}>
-              {!seller?.charges_enabled ? "Connect Stripe" : "Publish store"}
-            </Link>
-          </Button>
+          {setupIssues.map((issue) => (
+            <div key={issue.message} className="flex flex-wrap items-center gap-3 text-sm pl-7">
+              <p className="flex-1 text-muted-foreground">{issue.message}</p>
+              <Button asChild size="sm" variant="outline">
+                <Link to={issue.to}>{issue.cta}</Link>
+              </Button>
+            </div>
+          ))}
         </div>
       )}
 
