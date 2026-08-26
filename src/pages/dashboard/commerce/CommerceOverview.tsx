@@ -52,7 +52,8 @@ export default function CommerceOverview() {
       to: `/dashboard/${workspaceId}/commerce/products`,
     });
   }
-  if (/^store-[a-z0-9-]{8,}$/.test(store.slug ?? "") || store.slug === store.id) {
+  // Auto-generated slugs end in a random 4-char suffix (see useCommerce.createStore).
+  if (/^[a-z0-9-]+-[a-z0-9]{4}$/.test(store.slug ?? "")) {
     setupIssues.push({
       message: "Your storefront is still using its auto-generated web address. Set a memorable slug.",
       cta: "Customise address",
