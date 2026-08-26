@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface SmsThread {
   to_number: string;
+  contact_id: string | null;
+  contact_name: string | null;
   last_message: string | null;
   last_message_at: string;
   count: number;
@@ -16,7 +18,7 @@ export function useSmsThreads(workspaceId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sms_logs")
-        .select("to_number, message, created_at, status")
+        .select("to_number, message, created_at, status, contact_id")
         .eq("workspace_id", workspaceId!)
         .order("created_at", { ascending: false })
         .limit(500);
@@ -25,6 +27,7 @@ export function useSmsThreads(workspaceId: string | undefined) {
 
       const threadMap = new Map<string, {
         to_number: string;
+        contact_id: string | null;
         last_message: string | null;
         last_message_at: string;
         count: number;
@@ -34,15 +37,32 @@ export function useSmsThreads(workspaceId: string | undefined) {
         if (!threadMap.has(msg.to_number)) {
           threadMap.set(msg.to_number, {
             to_number: msg.to_number,
+            contact_id: msg.contact_id ?? null,
             last_message: msg.message,
             last_message_at: msg.created_at,
             count: 0,
           });
+        } else if (!threadMap.get(msg.to_number)!.contact_id && msg.contact_id) {
+          threadMap.get(msg.to_number)!.contact_id = msg.contact_id;
         }
         threadMap.get(msg.to_number)!.count++;
       }
 
-      return Array.from(threadMap.values())
+      const threads = Array.from(threadMap.values());
+      const contactIds = threads.map(t => t.contact_id).filter(Boolean) as string[];
+      const contactMap = new Map<string, string>();
+      if (contactIds.length > 0) {
+        const { data: contacts } = await supabase
+          .from("contacts")
+          .select("id, full_name")
+          .in("id", contactIds);
+        for (const c of contacts || []) {
+          contactMap.set(c.id, c.full_name || "");
+        }
+      }
+
+      return threads
+        .map(t => ({ ...t, contact_name: t.contact_id ? contactMap.get(t.contact_id) || null : null }))
         .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()) as SmsThread[];
     },
   });

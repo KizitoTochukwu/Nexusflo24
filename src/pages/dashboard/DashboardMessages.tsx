@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AiReplyButton from "@/components/messages/AiReplyButton";
+import LinkContactDialog from "@/components/messages/LinkContactDialog";
 import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate, Sparkles, AlertTriangle } from "lucide-react";
 import { useWhatsAppSettings, useApprovedWhatsAppTemplates } from "@/hooks/useWhatsAppTemplates";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ interface UnifiedThread {
   lastMessage: string;
   lastMessageAt: string;
   badge?: number;
+  contactId?: string | null;
 }
 
 export default function DashboardMessages() {
@@ -44,6 +46,7 @@ export default function DashboardMessages() {
   const [templateMode, setTemplateMode] = useState(false);
   const [templateName, setTemplateName] = useState("hello_world");
   const [templateLang, setTemplateLang] = useState("en_US");
+  const [linkOpen, setLinkOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Data sources
@@ -71,11 +74,12 @@ export default function DashboardMessages() {
       id: `wa-${t.phone_number}`,
       channel: "whatsapp" as const,
       identifier: t.phone_number,
-      displayName: t.lead_name || t.phone_number,
+      displayName: t.contact_name || t.lead_name || t.phone_number,
       subtitle: t.phone_number,
       lastMessage: t.last_message || "...",
       lastMessageAt: t.last_message_at,
       badge: t.unread_count || undefined,
+      contactId: t.contact_id,
     })),
     ...emailThreads.map((t) => ({
       id: `email-${t.to_email}`,
@@ -90,10 +94,11 @@ export default function DashboardMessages() {
       id: `sms-${t.to_number}`,
       channel: "sms" as const,
       identifier: t.to_number,
-      displayName: t.to_number,
-      subtitle: `${t.count} messages`,
+      displayName: t.contact_name || t.to_number,
+      subtitle: t.contact_name ? `${t.to_number} · ${t.count} messages` : `${t.count} messages`,
       lastMessage: t.last_message || "...",
       lastMessageAt: t.last_message_at,
+      contactId: t.contact_id,
     })),
   ]
     .filter((t) => channel === "all" || t.channel === channel)
@@ -278,6 +283,9 @@ export default function DashboardMessages() {
                         {t.badge && t.badge > 0 && (
                           <Badge variant="default" className="h-5 min-w-[20px] text-[10px] bg-accent text-accent-foreground">{t.badge}</Badge>
                         )}
+                        {(t.channel === "whatsapp" || t.channel === "sms") && !t.contactId && (
+                          <Badge variant="outline" className="text-[9px] h-4 border-amber-300 text-amber-700">Unlinked</Badge>
+                        )}
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-1 pl-11">{t.lastMessage}</p>
@@ -308,6 +316,22 @@ export default function DashboardMessages() {
                     </p>
                   </div>
                   <AiReplyButton conversationContext={conversationContext} onSuggestion={(text) => setReply(text)} />
+                  {(selectedThread.channel === "whatsapp" || selectedThread.channel === "sms") && (
+                    selectedThread.contactId ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => window.open(`/dashboard/${workspaceId}/crm/contacts/${selectedThread.contactId}`, "_blank")}
+                      >
+                        <User className="h-3.5 w-3.5 mr-1" /> View contact
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" className="text-xs border-amber-300 text-amber-700" onClick={() => setLinkOpen(true)}>
+                        <User className="h-3.5 w-3.5 mr-1" /> Link to contact
+                      </Button>
+                    )
+                  )}
                 </div>
 
                 <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -440,6 +464,20 @@ export default function DashboardMessages() {
           </Card>
         </div>
       </div>
+
+      {selectedThread && (selectedThread.channel === "whatsapp" || selectedThread.channel === "sms") && workspaceId && (
+        <LinkContactDialog
+          open={linkOpen}
+          onOpenChange={setLinkOpen}
+          workspaceId={workspaceId}
+          channel={selectedThread.channel}
+          identifier={selectedThread.identifier}
+          onLinked={() => {
+            qc.invalidateQueries({ queryKey: ["whatsapp-threads", workspaceId] });
+            qc.invalidateQueries({ queryKey: ["sms-threads", workspaceId] });
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }
