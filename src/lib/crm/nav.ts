@@ -24,7 +24,9 @@ export const CRM_PRIMARY_NAV: CrmNavItem[] = [
 
 /** Secondary sections tucked into the "More" menu. */
 export const CRM_SECONDARY_NAV: CrmNavItem[] = [
+  { key: "journey", label: "Customer Journey", path: "crm/journey", icon: RouteIcon },
   { key: "import-export", label: "Import & Export", path: "crm/import-export", icon: FileText },
+
   { key: "fields", label: "Custom Fields", path: "crm/fields", icon: Settings2 },
   { key: "tags", label: "Tags", path: "crm/tags", icon: Tags },
   { key: "lead-scoring", label: "Lead Scoring Settings", path: "crm/lead-scoring", icon: Gauge },
