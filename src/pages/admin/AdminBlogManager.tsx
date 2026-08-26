@@ -97,7 +97,7 @@ const AdminBlogManager = () => {
     setUploading(false);
   };
 
-  const { data: posts = [], isLoading } = useQuery({
+  const { data: posts = [], isLoading, error: postsError, refetch: refetchPosts } = useQuery({
     queryKey: ["admin-blog-posts"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -344,10 +344,25 @@ const AdminBlogManager = () => {
           <CardContent className="p-0">
             {isLoading ? (
               <p className="p-6 text-center text-muted-foreground">Loading…</p>
+            ) : postsError ? (
+              <div className="p-12 text-center">
+                <FileText className="h-10 w-10 mx-auto text-destructive/50 mb-3" />
+                <p className="font-medium">Couldn't load blog posts</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {postsError instanceof Error ? postsError.message : "Unexpected error"}
+                </p>
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => refetchPosts()}>
+                  Try again
+                </Button>
+              </div>
             ) : filtered.length === 0 ? (
               <div className="p-12 text-center">
                 <FileText className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-muted-foreground">No posts yet. Create your first article!</p>
+                <p className="text-muted-foreground">
+                  {posts.length === 0
+                    ? "No posts yet. Create your first article!"
+                    : "No posts match your search."}
+                </p>
               </div>
             ) : (
               <Table>
