@@ -2,40 +2,30 @@
  * Client-side mirror of the database normalisation helpers
  * (crm_normalize_email / crm_normalize_phone). Used for grouping, display and
  * duplicate hints — the database functions remain the source of truth for
- * matching inside crm_upsert_contact.
+ * matching inside crm_upsert_contact. Keep these implementations byte-for-byte
+ * equivalent to the SQL in the Phase 1 migration.
  */
 
-/** Lowercases, trims, and removes Gmail-style +tag aliases and dot tricks. */
+/** Mirrors crm_normalize_email: trim + lowercase, null when empty. */
 export function normalizeEmail(email: string | null | undefined): string | null {
-  if (!email) return null;
-  const e = email.trim().toLowerCase();
-  if (!e || !e.includes("@")) return null;
-  const [local, domain] = e.split("@");
-  if (!local || !domain) return null;
-  // Strip +tags for everyone; strip dots for Gmail only.
-  const noTag = local.split("+")[0];
-  const normalizedLocal = domain === "gmail.com" || domain === "googlemail.com"
-    ? noTag.replace(/\./g, "")
-    : noTag;
-  if (!normalizedLocal) return null;
-  return `${normalizedLocal}@${domain}`;
+  const e = (email ?? "").trim().toLowerCase();
+  return e === "" ? null : e;
 }
 
 /**
- * Normalises a phone towards E.164: strips everything except digits and a
- * leading +, converts a leading 00 to +, and returns null when fewer than 7
- * digits remain. A leading 0 trunk prefix is dropped when a country code is
- * clearly present (e.g. 0044 7... → +447...).
+ * Mirrors crm_normalize_phone: strip non-digits; a leading "+" keeps the
+ * digits with a "+" prefix; a leading "00" becomes "+"; fewer than 7 digits
+ * is null; anything else is returned with a "+" prefix.
  */
 export function normalizePhone(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  let p = phone.trim();
-  if (!p) return null;
-  const hadPlus = p.startsWith("+") || p.startsWith("00");
-  p = p.replace(/[^\d]/g, "");
-  if (p.startsWith("00")) p = p.slice(2);
-  if (p.length < 7 || p.length > 15) return null;
-  return hadPlus ? `+${p}` : p;
+  const raw = (phone ?? "").trim();
+  if (raw === "") return null;
+  const digits = raw.replace(/[^0-9]/g, "");
+  if (digits === "") return null;
+  if (raw.startsWith("+")) return `+${digits}`;
+  if (digits.startsWith("00")) return `+${digits.slice(2)}`;
+  if (digits.length < 7) return null;
+  return `+${digits}`;
 }
 
 /**
