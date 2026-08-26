@@ -10568,6 +10568,20 @@ export type Database = {
         Args: { _end: string; _start: string; _team_id: string }
         Returns: string
       }
+      platform_overview_metrics: { Args: { _since?: string }; Returns: Json }
+      platform_users_list: {
+        Args: {
+          _limit?: number
+          _offset?: number
+          _search?: string
+          _status?: string
+        }
+        Returns: Json
+      }
+      platform_workspaces_list: {
+        Args: { _limit?: number; _offset?: number; _search?: string }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
