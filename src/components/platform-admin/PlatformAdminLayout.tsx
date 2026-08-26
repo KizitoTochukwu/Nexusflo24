@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePlatformAccess } from "@/hooks/usePlatformAdmin";
 import { Button } from "@/components/ui/button";
@@ -74,10 +74,7 @@ export default function PlatformAdminLayout() {
     );
   }
 
-  if (!user) {
-    navigate("/login", { replace: true });
-    return null;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
   if (!isStaff) {
     return (
