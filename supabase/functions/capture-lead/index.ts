@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sanitizeString, isValidEmail, sanitizeTags, safeErrorResponse } from "../_shared/validation.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
+import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -305,6 +307,47 @@ Deno.serve(async (req) => {
       }
     }
 
+    // --- Canonical CRM contact (one person per workspace) ---
+    let canonicalContactId: string | null = null;
+    try {
+      canonicalContactId = await upsertCanonicalContact(supabase, {
+        workspaceId,
+        email: normalizedEmail,
+        phone: phone || null,
+        fullName: full_name || null,
+        source: finalSource,
+        attribution: {
+          source: finalSource,
+          campaign: campaignName || null,
+          funnel: funnelName || null,
+          page: (meta as any)?.page ?? null,
+          referrer: (meta as any)?.referrer ?? null,
+          utm_source: (meta as any)?.utm_source ?? null,
+          utm_medium: (meta as any)?.utm_medium ?? null,
+          utm_campaign: (meta as any)?.utm_campaign ?? null,
+          utm_content: (meta as any)?.utm_content ?? null,
+          utm_term: (meta as any)?.utm_term ?? null,
+        },
+        sourceTable: "leads",
+        sourceRecordId: leadId,
+      });
+      if (canonicalContactId) {
+        await linkLeadToContact(supabase, leadId, canonicalContactId);
+        await recordContactTimeline(supabase, {
+          workspaceId,
+          contactId: canonicalContactId,
+          activityType: "lead_captured",
+          title: "Lead captured",
+          description: finalSource,
+          source: finalSource,
+          externalEventId: `lead:${leadId}`,
+          meta: { lead_id: leadId },
+        });
+      }
+    } catch (contactErr) {
+      console.error("[capture-lead] canonical contact failed:", String(contactErr));
+    }
+
     // Log activity
     await supabase.from("lead_activities").insert({
       lead_id: leadId,
@@ -313,6 +356,7 @@ Deno.serve(async (req) => {
       type: "form_submit",
       meta: meta,
     });
+
 
     // --- Auto-route to folders based on routing rules ---
     let routedToAnyFolder = false;
@@ -477,8 +521,12 @@ Deno.serve(async (req) => {
           form_id: formId,
           workspace_id: workspaceId,
           lead_id: leadId,
+          contact_id: canonicalContactId,
+          processing_status: canonicalContactId ? "completed" : "received",
+          processed_at: new Date().toISOString(),
           data: submissionData,
         });
+
         if (submissionErr) {
           console.error("[capture-lead] form_submissions insert failed:", submissionErr);
         }

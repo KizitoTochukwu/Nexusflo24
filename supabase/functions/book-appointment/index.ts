@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,6 +141,24 @@ Deno.serve(async (req) => {
       if (newLead) leadId = newLead.id;
     }
 
+    // Canonical CRM contact for this guest
+    let contactId: string | null = null;
+    try {
+      contactId = await upsertCanonicalContact(supabase, {
+        workspaceId: page.workspace_id,
+        email: guest_email,
+        phone: guest_phone || null,
+        fullName: guest_name,
+        source: "Booking",
+        attribution: { source: "Booking", booking_page: page.name },
+        sourceTable: "bookings",
+        sourceRecordId: booking_page_id,
+      });
+      if (contactId && leadId) await linkLeadToContact(supabase, leadId, contactId);
+    } catch (contactErr) {
+      console.error("[book-appointment] canonical contact failed:", String(contactErr));
+    }
+
     // Resolve meeting location for non-Google-Meet types up front
     let meetingUrl: string | null = null;
     let meetingLocation: string | null = null;
@@ -157,6 +177,7 @@ Deno.serve(async (req) => {
         booking_page_id,
         workspace_id: page.workspace_id,
         lead_id: leadId,
+        contact_id: contactId,
         guest_name,
         guest_email: guest_email.toLowerCase().trim(),
         guest_phone: guest_phone || null,
@@ -170,6 +191,7 @@ Deno.serve(async (req) => {
       })
       .select()
       .single();
+
 
     if (bookErr) throw bookErr;
 
@@ -250,6 +272,24 @@ Deno.serve(async (req) => {
         meta: { booking_id: booking.id, booking_page: page.name },
       });
     }
+    if (contactId) {
+      await recordContactTimeline(supabase, {
+        workspaceId: page.workspace_id,
+        contactId,
+        activityType: "booking_created",
+        title: "Appointment booked",
+        description: page.name,
+        source: "Booking",
+        externalEventId: `booking:${booking.id}`,
+        meta: { booking_id: booking.id, start_time: startDt.toISOString() },
+      });
+      await supabase
+        .from("contacts")
+        .update({ lifecycle_stage: "opportunity", last_activity_at: new Date().toISOString() })
+        .eq("id", contactId)
+        .in("lifecycle_stage", ["subscriber", "lead", "marketing_qualified"]);
+    }
+
 
     // Cancel pending automation jobs for any active automation in this workspace
     // whose exit_criteria contains { type: "appointment_booked" }. This stops the
