@@ -5,6 +5,8 @@ export interface WhatsAppThread {
   phone_number: string;
   lead_id: string | null;
   lead_name: string | null;
+  contact_id: string | null;
+  contact_name: string | null;
   last_message: string | null;
   last_message_at: string;
   unread_count: number;
@@ -19,7 +21,7 @@ export function useWhatsAppThreads(workspaceId: string | undefined) {
       // Get all messages grouped by phone_number
       const { data: messages, error } = await supabase
         .from("whatsapp_messages")
-        .select("phone_number, body, direction, created_at, lead_id, status")
+        .select("phone_number, body, direction, created_at, lead_id, contact_id, status")
         .eq("workspace_id", workspaceId!)
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -30,6 +32,7 @@ export function useWhatsAppThreads(workspaceId: string | undefined) {
       const threadMap = new Map<string, {
         phone_number: string;
         lead_id: string | null;
+        contact_id: string | null;
         last_message: string | null;
         last_message_at: string;
         unread_count: number;
@@ -40,10 +43,13 @@ export function useWhatsAppThreads(workspaceId: string | undefined) {
           threadMap.set(msg.phone_number, {
             phone_number: msg.phone_number,
             lead_id: msg.lead_id,
+            contact_id: msg.contact_id ?? null,
             last_message: msg.body,
             last_message_at: msg.created_at,
             unread_count: 0,
           });
+        } else if (!threadMap.get(msg.phone_number)!.contact_id && msg.contact_id) {
+          threadMap.get(msg.phone_number)!.contact_id = msg.contact_id;
         }
         if (msg.direction === "inbound" && msg.status === "received") {
           const t = threadMap.get(msg.phone_number)!;
@@ -66,10 +72,24 @@ export function useWhatsAppThreads(workspaceId: string | undefined) {
         }
       }
 
+      // Fetch linked contact names
+      const contactIds = threads.map(t => t.contact_id).filter(Boolean) as string[];
+      const contactMap = new Map<string, string>();
+      if (contactIds.length > 0) {
+        const { data: contacts } = await supabase
+          .from("contacts")
+          .select("id, full_name")
+          .in("id", contactIds);
+        for (const c of contacts || []) {
+          contactMap.set(c.id, c.full_name || "");
+        }
+      }
+
       return threads
         .map(t => ({
           ...t,
           lead_name: t.lead_id ? leadMap.get(t.lead_id) || null : null,
+          contact_name: t.contact_id ? contactMap.get(t.contact_id) || null : null,
         }))
         .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()) as WhatsAppThread[];
     },

@@ -45,8 +45,19 @@ async function workspaceOwnerId(admin: any, workspaceId: string): Promise<string
 /**
  * Upserts the buyer as a CRM contact (and a lead so automations can enrol them),
  * then back-links shop_customers / shop_orders to the contact.
+ *
+ * Contact resolution goes through the canonical `crm_upsert_contact` RPC
+ * (normalised email/phone matching, identity + attribution tracking) so a
+ * buyer lands on the SAME contact as their leads, bookings and form
+ * submissions. `markCustomer` (paid events only) promotes lifecycle to
+ * `customer` with an explainable conversion source — failed/abandoned
+ * checkouts never promote, and existing customers are never demoted.
  */
-export async function syncCommerceContact(admin: any, party: CommerceParty): Promise<SyncResult> {
+export async function syncCommerceContact(
+  admin: any,
+  party: CommerceParty,
+  opts: { markCustomer?: boolean } = {},
+): Promise<SyncResult> {
   const email = String(party.email || "").trim().toLowerCase();
   if (!email || !party.workspace_id) return { contact_id: null, lead_id: null };
 
@@ -55,41 +66,43 @@ export async function syncCommerceContact(admin: any, party: CommerceParty): Pro
   let leadId: string | null = null;
 
   try {
-    // ---- Contact ----
-    const { data: existingContact } = await admin
-      .from("contacts")
-      .select("id, full_name, phone, tags, lifecycle_stage")
-      .eq("workspace_id", party.workspace_id)
-      .ilike("email", email)
-      .limit(1)
-      .maybeSingle();
+    // ---- Canonical contact ----
+    const { data: upserted, error: upsertErr } = await admin.rpc("crm_upsert_contact", {
+      _workspace_id: party.workspace_id,
+      _email: email,
+      _phone: party.phone ?? null,
+      _full_name: party.full_name ?? null,
+      _external_source_id: null,
+      _source: party.source || "commerce",
+      _attribution: {},
+      _source_table: party.order_id ? "shop_orders" : "shop_customers",
+      _source_record_id: party.order_id ?? party.customer_id ?? null,
+    });
+    if (upsertErr) log("crm_upsert_contact failed", upsertErr.message);
+    contactId = (upserted as string) ?? null;
 
-    if (existingContact) {
-      contactId = existingContact.id;
-      const tags: string[] = Array.isArray(existingContact.tags) ? existingContact.tags : [];
-      const nextTags = tags.some((t) => String(t).toLowerCase() === "customer")
-        ? tags
-        : [...tags, "customer"];
-      await admin.from("contacts").update({
-        full_name: existingContact.full_name || party.full_name || null,
-        phone: existingContact.phone || party.phone || null,
-        lifecycle_stage: "customer",
-        tags: nextTags,
-        last_activity_at: now,
-      }).eq("id", contactId);
-    } else {
-      const { data: created, error } = await admin.from("contacts").insert({
-        workspace_id: party.workspace_id,
-        email,
-        full_name: party.full_name || null,
-        phone: party.phone || null,
-        lifecycle_stage: "customer",
-        source: party.source || "commerce",
-        tags: ["customer"],
-        last_activity_at: now,
-      }).select("id").maybeSingle();
-      if (error) log("contact insert failed", error.message);
-      contactId = created?.id ?? null;
+    if (contactId && opts.markCustomer) {
+      const { data: existing } = await admin
+        .from("contacts")
+        .select("id, tags, lifecycle_stage, converted_at")
+        .eq("id", contactId)
+        .maybeSingle();
+      if (existing && existing.lifecycle_stage !== "customer") {
+        const tags: string[] = Array.isArray(existing.tags) ? existing.tags : [];
+        const nextTags = tags.some((t) => String(t).toLowerCase() === "customer")
+          ? tags
+          : [...tags, "customer"];
+        await admin.from("contacts").update({
+          lifecycle_stage: "customer",
+          conversion_source: party.source || "storefront",
+          conversion_reason: existing.converted_at ? null : "paid_order",
+          converted_at: existing.converted_at ?? now,
+          tags: nextTags,
+          last_activity_at: now,
+        }).eq("id", contactId);
+      } else if (existing) {
+        await admin.from("contacts").update({ last_activity_at: now }).eq("id", contactId);
+      }
     }
 
     // ---- Lead (automation enrollment target) ----
@@ -104,14 +117,16 @@ export async function syncCommerceContact(admin: any, party: CommerceParty): Pro
     if (existingLead) {
       leadId = existingLead.id;
       const tags: string[] = Array.isArray(existingLead.tags) ? existingLead.tags : [];
-      const nextTags = tags.some((t) => String(t).toLowerCase() === "customer")
-        ? tags
-        : [...tags, "customer"];
+      const nextTags = opts.markCustomer && !tags.some((t) => String(t).toLowerCase() === "customer")
+        ? [...tags, "customer"]
+        : tags;
       await admin.from("leads").update({
         full_name: existingLead.full_name || party.full_name || null,
         phone: existingLead.phone || party.phone || null,
+        contact_id: contactId ?? undefined,
         tags: nextTags,
         last_activity_at: now,
+        ...(opts.markCustomer ? { status: "customer" } : {}),
       }).eq("id", leadId);
     } else {
       const ownerId = await workspaceOwnerId(admin, party.workspace_id);
@@ -123,8 +138,9 @@ export async function syncCommerceContact(admin: any, party: CommerceParty): Pro
           full_name: party.full_name || null,
           phone: party.phone || null,
           source: party.source || "commerce",
-          status: "customer",
-          tags: ["customer"],
+          status: opts.markCustomer ? "customer" : "new",
+          tags: opts.markCustomer ? ["customer"] : [],
+          contact_id: contactId,
           last_activity_at: now,
         }).select("id").maybeSingle();
         if (error) log("lead insert failed", error.message);
@@ -223,7 +239,9 @@ export async function handleCommerceEvent(admin: any, input: {
   external_event_id?: string | null;
   event_config?: Record<string, unknown>;
 }): Promise<SyncResult> {
-  const result = await syncCommerceContact(admin, input.party);
+  // Only verified revenue events promote a contact to lifecycle "customer".
+  const markCustomer = input.event_type === "order_paid" || input.event_type === "subscription_renewed";
+  const result = await syncCommerceContact(admin, input.party, { markCustomer });
   await logCommerceActivity(admin, {
     workspace_id: input.party.workspace_id,
     contact_id: result.contact_id,

@@ -8310,6 +8310,7 @@ export type Database = {
       }
       sms_logs: {
         Row: {
+          contact_id: string | null
           created_at: string
           direction: string
           error: string | null
@@ -8324,6 +8325,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          contact_id?: string | null
           created_at?: string
           direction?: string
           error?: string | null
@@ -8338,6 +8340,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          contact_id?: string | null
           created_at?: string
           direction?: string
           error?: string | null
@@ -8352,6 +8355,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sms_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sms_logs_sender_profile_id_fkey"
             columns: ["sender_profile_id"]
@@ -9534,6 +9544,7 @@ export type Database = {
           body: string | null
           campaign_id: string | null
           compliance_note: string | null
+          contact_id: string | null
           created_at: string
           delivered_at: string | null
           direction: string
@@ -9557,6 +9568,7 @@ export type Database = {
           body?: string | null
           campaign_id?: string | null
           compliance_note?: string | null
+          contact_id?: string | null
           created_at?: string
           delivered_at?: string | null
           direction?: string
@@ -9580,6 +9592,7 @@ export type Database = {
           body?: string | null
           campaign_id?: string | null
           compliance_note?: string | null
+          contact_id?: string | null
           created_at?: string
           delivered_at?: string | null
           direction?: string
@@ -9599,6 +9612,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_messages_lead_id_fkey"
             columns: ["lead_id"]
@@ -10649,12 +10669,29 @@ export type Database = {
         Args: { _pipeline_id: string }
         Returns: number
       }
+      crm_find_contact_by_phone: {
+        Args: { _phone: string; _workspace_id: string }
+        Returns: string
+      }
+      crm_link_conversation_contact: {
+        Args: {
+          _channel: string
+          _contact_id: string
+          _identifier: string
+          _workspace_id: string
+        }
+        Returns: number
+      }
       crm_metric_snapshot: {
         Args: { _from?: string; _to?: string; _workspace_id: string }
         Returns: Json
       }
       crm_normalize_email: { Args: { _email: string }; Returns: string }
       crm_normalize_phone: { Args: { _phone: string }; Returns: string }
+      crm_resolve_message_contacts: {
+        Args: { _workspace_id: string }
+        Returns: number
+      }
       crm_upsert_contact: {
         Args: {
           _attribution?: Json
