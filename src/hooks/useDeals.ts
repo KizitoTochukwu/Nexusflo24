@@ -93,17 +93,56 @@ export function usePipelineStages(pipelineId?: string) {
   return useQuery({
     queryKey: ["crm-pipeline-stages", pipelineId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("crm_pipeline_stages" as any)
-        .select("*")
-        .eq("pipeline_id", pipelineId!)
-        .order("position", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as unknown as PipelineStage[];
+      const load = async () => {
+        const { data, error } = await supabase
+          .from("crm_pipeline_stages" as any)
+          .select("*")
+          .eq("pipeline_id", pipelineId!)
+          .order("position", { ascending: true });
+        if (error) throw error;
+        return (data ?? []) as unknown as PipelineStage[];
+      };
+      let rows = await load();
+      if (!rows.length) {
+        // A pipeline with no stages can't hold deals — seed the standard set once.
+        const { error: rpcError } = await supabase.rpc("crm_ensure_pipeline_stages" as any, {
+          _pipeline_id: pipelineId!,
+        });
+        if (!rpcError) rows = await load();
+      }
+      return rows;
     },
     enabled: !!pipelineId,
   });
 }
+
+export type DealStageHistoryEntry = {
+  id: string;
+  deal_id: string;
+  from_stage_id: string | null;
+  to_stage_id: string | null;
+  entered_at: string;
+  exited_at: string | null;
+  change_source: string | null;
+};
+
+/** Stage-by-stage timeline for one deal, newest first. */
+export function useDealStageHistory(dealId?: string) {
+  return useQuery({
+    queryKey: ["crm-deal-stage-history", dealId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_deal_stage_history" as any)
+        .select("*")
+        .eq("deal_id", dealId!)
+        .order("entered_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as DealStageHistoryEntry[];
+    },
+    enabled: !!dealId,
+  });
+}
+
 
 export function useDeals(workspaceId: string, pipelineId?: string, filters: DealFilters = {}) {
   return useQuery({
@@ -153,7 +192,9 @@ export function useRelatedDeals(key: "contact_id" | "company_id", recordId?: str
 function invalidate(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["crm-deals"] });
   qc.invalidateQueries({ queryKey: ["crm-related-deals"] });
+  qc.invalidateQueries({ queryKey: ["crm-deal-stage-history"] });
 }
+
 
 export function useCreateDeal() {
   const qc = useQueryClient();

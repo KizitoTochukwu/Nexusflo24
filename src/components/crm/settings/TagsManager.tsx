@@ -108,8 +108,13 @@ const TagsManager = ({ workspaceId, canManage }: { workspaceId: string; canManag
                 </div>
                 {tag.description && <p className="text-xs text-muted-foreground">{tag.description}</p>}
                 <p className="text-xs text-muted-foreground">
-                  {usage[tag.name] ?? 0} contact{(usage[tag.name] ?? 0) === 1 ? "" : "s"}
+                  {(usage as any)?.__contacts?.[tag.name] ?? 0} contact
+                  {((usage as any)?.__contacts?.[tag.name] ?? 0) === 1 ? "" : "s"}
+                  {" · "}
+                  {(usage as any)?.__leads?.[tag.name] ?? 0} lead
+                  {((usage as any)?.__leads?.[tag.name] ?? 0) === 1 ? "" : "s"}
                 </p>
+
               </CardContent>
             </Card>
           ))}

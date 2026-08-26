@@ -10645,6 +10645,10 @@ export type Database = {
       claim_shop_entitlements: { Args: never; Returns: number }
       claim_shop_orders: { Args: never; Returns: number }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
+      crm_ensure_pipeline_stages: {
+        Args: { _pipeline_id: string }
+        Returns: number
+      }
       crm_normalize_email: { Args: { _email: string }; Returns: string }
       crm_normalize_phone: { Args: { _phone: string }; Returns: string }
       crm_upsert_contact: {
