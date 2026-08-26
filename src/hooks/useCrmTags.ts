@@ -28,26 +28,44 @@ export function useCrmTags(workspaceId: string) {
   });
 }
 
-/** Counts how many contacts carry each tag name (tags are stored as a text[] on contacts). */
+/**
+ * Counts how many records carry each tag name. Tags live on both contacts and
+ * leads (automations tag leads), so both are counted and reported separately.
+ */
 export function useTagUsage(workspaceId: string) {
   return useQuery({
     queryKey: ["crm-tag-usage", workspaceId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contacts")
-        .select("tags")
-        .eq("workspace_id", workspaceId)
-        .limit(5000);
-      if (error) throw error;
+      const [contactsRes, leadsRes] = await Promise.all([
+        supabase.from("contacts").select("tags").eq("workspace_id", workspaceId).limit(5000),
+        supabase.from("leads").select("tags").eq("workspace_id", workspaceId).limit(5000),
+      ]);
+      if (contactsRes.error) throw contactsRes.error;
+      if (leadsRes.error) throw leadsRes.error;
+
       const counts: Record<string, number> = {};
-      for (const row of data ?? []) {
-        for (const t of ((row as any).tags ?? []) as string[]) counts[t] = (counts[t] ?? 0) + 1;
-      }
-      return counts;
+      const contactCounts: Record<string, number> = {};
+      const leadCounts: Record<string, number> = {};
+      const tally = (rows: any[] | null, bucket: Record<string, number>) => {
+        for (const row of rows ?? []) {
+          for (const t of ((row as any).tags ?? []) as string[]) {
+            bucket[t] = (bucket[t] ?? 0) + 1;
+            counts[t] = (counts[t] ?? 0) + 1;
+          }
+        }
+      };
+      tally(contactsRes.data as any[], contactCounts);
+      tally(leadsRes.data as any[], leadCounts);
+
+      return Object.assign(counts, { __contacts: contactCounts, __leads: leadCounts } as any) as Record<
+        string,
+        number
+      > & { __contacts: Record<string, number>; __leads: Record<string, number> };
     },
     enabled: !!workspaceId,
   });
 }
+
 
 export function useUpsertCrmTag() {
   const qc = useQueryClient();
