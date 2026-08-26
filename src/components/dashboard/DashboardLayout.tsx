@@ -69,11 +69,8 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   ...(isAdmin ? [
     { icon: Zap, label: "Workflow Builder", to: `/dashboard/${workspaceId}/workflows` },
     { icon: ShoppingBag, label: "Store Fulfilment", to: `/dashboard/${workspaceId}/admin/store-orders` },
-    { icon: ShoppingBag, label: "Store Catalogue", to: `/dashboard/${workspaceId}/admin/store-catalogue` },
-    { icon: Shield, label: "Admin", to: `/dashboard/${workspaceId}/admin` },
-    { icon: Radio, label: "Communication", to: `/dashboard/${workspaceId}/admin/communication` },
-    { icon: Sparkles, label: "Smart Actions", to: `/dashboard/${workspaceId}/admin/smart-actions` },
     { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
+    { icon: Shield, label: "Platform Admin", to: `/platform-admin` },
   ] : [])];
 
 
