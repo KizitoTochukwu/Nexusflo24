@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import AiReplyButton from "@/components/messages/AiReplyButton";
+import LinkContactDialog from "@/components/messages/LinkContactDialog";
 import { Send, MessageCircle, Search, User, Phone, Loader2, Mail, Smartphone, Inbox, LayoutTemplate, Sparkles, AlertTriangle } from "lucide-react";
 import { useWhatsAppSettings, useApprovedWhatsAppTemplates } from "@/hooks/useWhatsAppTemplates";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ interface UnifiedThread {
   lastMessage: string;
   lastMessageAt: string;
   badge?: number;
+  contactId?: string | null;
 }
 
 export default function DashboardMessages() {
