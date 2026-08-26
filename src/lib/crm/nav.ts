@@ -1,7 +1,8 @@
 import {
   Building2, Contact2, Handshake, ListChecks, Users, GitBranch,
-  FileText, Settings2, Tags, PieChart, Gauge, type LucideIcon,
+  FileText, Settings2, Tags, PieChart, Gauge, Route as RouteIcon, type LucideIcon,
 } from "lucide-react";
+
 
 export type CrmNavItem = {
   key: string;
