@@ -464,6 +464,20 @@ export default function DashboardMessages() {
           </Card>
         </div>
       </div>
+
+      {selectedThread && (selectedThread.channel === "whatsapp" || selectedThread.channel === "sms") && workspaceId && (
+        <LinkContactDialog
+          open={linkOpen}
+          onOpenChange={setLinkOpen}
+          workspaceId={workspaceId}
+          channel={selectedThread.channel}
+          identifier={selectedThread.identifier}
+          onLinked={() => {
+            qc.invalidateQueries({ queryKey: ["whatsapp-threads", workspaceId] });
+            qc.invalidateQueries({ queryKey: ["sms-threads", workspaceId] });
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }
