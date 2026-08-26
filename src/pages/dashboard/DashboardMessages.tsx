@@ -46,6 +46,7 @@ export default function DashboardMessages() {
   const [templateMode, setTemplateMode] = useState(false);
   const [templateName, setTemplateName] = useState("hello_world");
   const [templateLang, setTemplateLang] = useState("en_US");
+  const [linkOpen, setLinkOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Data sources
@@ -73,11 +74,12 @@ export default function DashboardMessages() {
       id: `wa-${t.phone_number}`,
       channel: "whatsapp" as const,
       identifier: t.phone_number,
-      displayName: t.lead_name || t.phone_number,
+      displayName: t.contact_name || t.lead_name || t.phone_number,
       subtitle: t.phone_number,
       lastMessage: t.last_message || "...",
       lastMessageAt: t.last_message_at,
       badge: t.unread_count || undefined,
+      contactId: t.contact_id,
     })),
     ...emailThreads.map((t) => ({
       id: `email-${t.to_email}`,
@@ -92,10 +94,11 @@ export default function DashboardMessages() {
       id: `sms-${t.to_number}`,
       channel: "sms" as const,
       identifier: t.to_number,
-      displayName: t.to_number,
-      subtitle: `${t.count} messages`,
+      displayName: t.contact_name || t.to_number,
+      subtitle: t.contact_name ? `${t.to_number} · ${t.count} messages` : `${t.count} messages`,
       lastMessage: t.last_message || "...",
       lastMessageAt: t.last_message_at,
+      contactId: t.contact_id,
     })),
   ]
     .filter((t) => channel === "all" || t.channel === channel)
