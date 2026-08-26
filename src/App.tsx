@@ -118,6 +118,20 @@ import MyAutomations from "./pages/dashboard/store/MyAutomations";
 import StoreProjectDetail from "./pages/dashboard/store/StoreProjectDetail";
 import AdminStoreOrders from "./pages/admin/AdminStoreOrders";
 import AdminStoreCatalogue from "./pages/admin/AdminStoreCatalogue";
+import PlatformAdminLayout from "./components/platform-admin/PlatformAdminLayout";
+import PlatformOverview from "./pages/platform-admin/PlatformOverview";
+import PlatformUsers from "./pages/platform-admin/PlatformUsers";
+import PlatformWorkspaces from "./pages/platform-admin/PlatformWorkspaces";
+import PlatformStaff from "./pages/platform-admin/PlatformStaff";
+import PlatformPlans from "./pages/platform-admin/PlatformPlans";
+import PlatformSubscriptions from "./pages/platform-admin/PlatformSubscriptions";
+import PlatformCredits from "./pages/platform-admin/PlatformCredits";
+import PlatformAudit from "./pages/platform-admin/PlatformAudit";
+import PlatformSupport from "./pages/platform-admin/PlatformSupport";
+import {
+  PlatformCommunications, PlatformAutomations, PlatformIntegrations, PlatformFulfilment,
+  PlatformContent, PlatformAcademy, PlatformSecurity, PlatformHealth, PlatformSettings,
+} from "./pages/platform-admin/PlatformDeferred";
 import { CartProvider } from "./contexts/CartContext";
 import CartLauncher from "./components/store/CartLauncher";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
@@ -211,6 +225,29 @@ const App = () => (
               {/* Dashboard redirect (no workspaceId) */}
               <Route path="/dashboard" element={<DashboardRedirect />} />
               <Route path="/onboarding" element={<Onboarding />} />
+
+              {/* Platform Admin (control plane, not workspace-scoped) */}
+              <Route path="/platform-admin" element={<PlatformAdminLayout />}>
+                <Route index element={<PlatformOverview />} />
+                <Route path="users" element={<PlatformUsers />} />
+                <Route path="workspaces" element={<PlatformWorkspaces />} />
+                <Route path="staff" element={<PlatformStaff />} />
+                <Route path="plans" element={<PlatformPlans />} />
+                <Route path="subscriptions" element={<PlatformSubscriptions />} />
+                <Route path="credits" element={<PlatformCredits />} />
+                <Route path="communications" element={<PlatformCommunications />} />
+                <Route path="automations" element={<PlatformAutomations />} />
+                <Route path="integrations" element={<PlatformIntegrations />} />
+                <Route path="fulfilment" element={<PlatformFulfilment />} />
+                <Route path="content" element={<PlatformContent />} />
+                <Route path="academy" element={<PlatformAcademy />} />
+                <Route path="support" element={<PlatformSupport />} />
+                <Route path="audit" element={<PlatformAudit />} />
+                <Route path="security" element={<PlatformSecurity />} />
+                <Route path="health" element={<PlatformHealth />} />
+                <Route path="settings" element={<PlatformSettings />} />
+              </Route>
+
 
               {/* Workspace-scoped dashboard routes */}
               <Route path="/dashboard/:workspaceId" element={<WorkspaceGuard />}>
