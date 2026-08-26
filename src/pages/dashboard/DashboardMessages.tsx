@@ -283,6 +283,9 @@ export default function DashboardMessages() {
                         {t.badge && t.badge > 0 && (
                           <Badge variant="default" className="h-5 min-w-[20px] text-[10px] bg-accent text-accent-foreground">{t.badge}</Badge>
                         )}
+                        {(t.channel === "whatsapp" || t.channel === "sms") && !t.contactId && (
+                          <Badge variant="outline" className="text-[9px] h-4 border-amber-300 text-amber-700">Unlinked</Badge>
+                        )}
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-1 pl-11">{t.lastMessage}</p>
@@ -313,6 +316,22 @@ export default function DashboardMessages() {
                     </p>
                   </div>
                   <AiReplyButton conversationContext={conversationContext} onSuggestion={(text) => setReply(text)} />
+                  {(selectedThread.channel === "whatsapp" || selectedThread.channel === "sms") && (
+                    selectedThread.contactId ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => window.open(`/dashboard/${workspaceId}/crm/contacts/${selectedThread.contactId}`, "_blank")}
+                      >
+                        <User className="h-3.5 w-3.5 mr-1" /> View contact
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" className="text-xs border-amber-300 text-amber-700" onClick={() => setLinkOpen(true)}>
+                        <User className="h-3.5 w-3.5 mr-1" /> Link to contact
+                      </Button>
+                    )
+                  )}
                 </div>
 
                 <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
