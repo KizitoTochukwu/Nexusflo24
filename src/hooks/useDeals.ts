@@ -192,7 +192,9 @@ export function useRelatedDeals(key: "contact_id" | "company_id", recordId?: str
 function invalidate(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ["crm-deals"] });
   qc.invalidateQueries({ queryKey: ["crm-related-deals"] });
+  qc.invalidateQueries({ queryKey: ["crm-deal-stage-history"] });
 }
+
 
 export function useCreateDeal() {
   const qc = useQueryClient();
