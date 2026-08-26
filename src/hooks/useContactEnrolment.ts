@@ -32,11 +32,10 @@ export function useContactLinkedLead(workspaceId: string, contact: Contact | nul
   return useQuery({
     queryKey: ["contact-linked-lead", workspaceId, contact?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("leads")
+      const { data, error } = await (supabase.from("leads") as any)
         .select("id, email, phone, tags, status")
         .eq("workspace_id", workspaceId)
-        .eq("contact_id" as any, contact!.id)
+        .eq("contact_id", contact!.id)
         .limit(1)
         .maybeSingle();
       if (error) throw error;
@@ -154,18 +153,16 @@ export function useEnrolContact(workspaceId: string) {
     mutationFn: async ({ contact, automationId }: { contact: Contact; automationId: string }) => {
       let leadId: string | null = null;
 
-      const { data: existing } = await supabase
-        .from("leads")
+      const { data: existing } = await (supabase.from("leads") as any)
         .select("id")
         .eq("workspace_id", workspaceId)
-        .eq("contact_id" as any, contact.id)
+        .eq("contact_id", contact.id)
         .limit(1)
         .maybeSingle();
       leadId = (existing as any)?.id ?? contact.origin_lead_id ?? null;
 
       if (!leadId) {
-        const { data: created, error: createErr } = await supabase
-          .from("leads")
+        const { data: created, error: createErr } = await (supabase.from("leads") as any)
           .insert({
             workspace_id: workspaceId,
             contact_id: contact.id,
