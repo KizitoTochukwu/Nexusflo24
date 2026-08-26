@@ -2174,6 +2174,54 @@ export type Database = {
           },
         ]
       }
+      credit_adjustment_ledger: {
+        Row: {
+          actor_user_id: string | null
+          adjustment_type: string
+          category: string
+          correlation_id: string
+          created_at: string
+          id: string
+          new_balance: number | null
+          previous_balance: number | null
+          quantity: number
+          reason: string
+          related_transaction: string | null
+          source: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          adjustment_type: string
+          category: string
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          new_balance?: number | null
+          previous_balance?: number | null
+          quantity: number
+          reason: string
+          related_transaction?: string | null
+          source?: string
+          workspace_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          adjustment_type?: string
+          category?: string
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          new_balance?: number | null
+          previous_balance?: number | null
+          quantity?: number
+          reason?: string
+          related_transaction?: string | null
+          source?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       credit_packages: {
         Row: {
           channel: Database["public"]["Enums"]["sender_channel"]
@@ -4803,6 +4851,256 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_audit_logs: {
+        Row: {
+          action: string
+          actor_role: string | null
+          actor_user_id: string | null
+          after_summary: Json | null
+          before_summary: Json | null
+          correlation_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          reason: string | null
+          result: string
+          workspace_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          after_summary?: Json | null
+          before_summary?: Json | null
+          correlation_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          reason?: string | null
+          result?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          after_summary?: Json | null
+          before_summary?: Json | null
+          correlation_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          reason?: string | null
+          result?: string
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      platform_permissions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          key: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          key: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          key?: string
+        }
+        Relationships: []
+      }
+      platform_plan_versions: {
+        Row: {
+          annual_price: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          entitlements: Json
+          id: string
+          is_current: boolean
+          limits: Json
+          monthly_price: number
+          overage_policy: string | null
+          plan_id: string
+          trial_days: number
+          version: number
+        }
+        Insert: {
+          annual_price?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          entitlements?: Json
+          id?: string
+          is_current?: boolean
+          limits?: Json
+          monthly_price?: number
+          overage_policy?: string | null
+          plan_id: string
+          trial_days?: number
+          version?: number
+        }
+        Update: {
+          annual_price?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          entitlements?: Json
+          id?: string
+          is_current?: boolean
+          limits?: Json
+          monthly_price?: number
+          overage_policy?: string | null
+          plan_id?: string
+          trial_days?: number
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_versions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_plans: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          position: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          position?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          position?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_role_permissions: {
+        Row: {
+          permission_key: string
+          role: Database["public"]["Enums"]["platform_role"]
+        }
+        Insert: {
+          permission_key: string
+          role: Database["public"]["Enums"]["platform_role"]
+        }
+        Update: {
+          permission_key?: string
+          role?: Database["public"]["Enums"]["platform_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_role_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "platform_permissions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      platform_staff_assignments: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          is_active: boolean
+          reason: string | null
+          revoked_at: string | null
+          role: Database["public"]["Enums"]["platform_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          revoked_at?: string | null
+          role: Database["public"]["Enums"]["platform_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          revoked_at?: string | null
+          role?: Database["public"]["Enums"]["platform_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_support_access_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          expires_at: string
+          id: string
+          read_only: boolean
+          reason: string
+          staff_user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          expires_at: string
+          id?: string
+          read_only?: boolean
+          reason: string
+          staff_user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          read_only?: boolean
+          reason?: string
+          staff_user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       processed_automation_events: {
         Row: {
           event_key: string
@@ -4873,6 +5171,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
           avatar_url: string | null
           company: string | null
           created_at: string
@@ -4882,9 +5181,12 @@ export type Database = {
           last_route: Json | null
           phone: string | null
           preferred_currency: string
+          suspended_at: string | null
+          suspension_reason: string | null
           updated_at: string
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           avatar_url?: string | null
           company?: string | null
           created_at?: string
@@ -4894,9 +5196,12 @@ export type Database = {
           last_route?: Json | null
           phone?: string | null
           preferred_currency?: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           avatar_url?: string | null
           company?: string | null
           created_at?: string
@@ -4906,6 +5211,8 @@ export type Database = {
           last_route?: Json | null
           phone?: string | null
           preferred_currency?: string
+          suspended_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -8603,6 +8910,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_onboarding: {
+        Row: {
+          answers: Json
+          checklist_dismissed: boolean
+          checklist_minimized: boolean
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          id: string
+          skipped_steps: Json
+          tour_completed: boolean
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          answers?: Json
+          checklist_dismissed?: boolean
+          checklist_minimized?: boolean
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          skipped_steps?: Json
+          tour_completed?: boolean
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          answers?: Json
+          checklist_dismissed?: boolean
+          checklist_minimized?: boolean
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          skipped_steps?: Json
+          tour_completed?: boolean
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -10158,6 +10513,10 @@ export type Database = {
           meta_pixel_id: string
         }[]
       }
+      has_platform_permission: {
+        Args: { _key: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -10181,6 +10540,7 @@ export type Database = {
         Args: { _email: string }
         Returns: boolean
       }
+      is_platform_staff: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_admin: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -10197,6 +10557,12 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      my_platform_permissions: {
+        Args: never
+        Returns: {
+          permission_key: string
+        }[]
       }
       pick_booking_host: {
         Args: { _end: string; _start: string; _team_id: string }
@@ -10226,7 +10592,23 @@ export type Database = {
       }
     }
     Enums: {
+      account_status:
+        | "invited"
+        | "active"
+        | "suspended"
+        | "deactivated"
+        | "deletion_pending"
+        | "anonymised"
       app_role: "admin" | "user"
+      platform_role:
+        | "super_admin"
+        | "operations_admin"
+        | "billing_admin"
+        | "support_agent"
+        | "content_admin"
+        | "compliance_admin"
+        | "technical_admin"
+        | "analyst"
       sender_channel: "whatsapp" | "sms" | "email"
       sender_status: "pending" | "approved" | "rejected" | "suspended"
     }
@@ -10356,7 +10738,25 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: [
+        "invited",
+        "active",
+        "suspended",
+        "deactivated",
+        "deletion_pending",
+        "anonymised",
+      ],
       app_role: ["admin", "user"],
+      platform_role: [
+        "super_admin",
+        "operations_admin",
+        "billing_admin",
+        "support_agent",
+        "content_admin",
+        "compliance_admin",
+        "technical_admin",
+        "analyst",
+      ],
       sender_channel: ["whatsapp", "sms", "email"],
       sender_status: ["pending", "approved", "rejected", "suspended"],
     },
