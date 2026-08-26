@@ -25,6 +25,7 @@ import DashboardTasks from "./pages/dashboard/crm/DashboardTasks";
 import DashboardImportExport from "./pages/dashboard/crm/DashboardImportExport";
 import DashboardCrmSettings from "./pages/dashboard/crm/DashboardCrmSettings";
 import DashboardCrmInsights from "./pages/dashboard/crm/DashboardCrmInsights";
+import DashboardCustomerJourney from "./pages/dashboard/crm/DashboardCustomerJourney";
 import CompanyProfile from "./pages/dashboard/crm/CompanyProfile";
 import ContactProfile from "./pages/dashboard/crm/ContactProfile";
 import DashboardPipelines from "./pages/dashboard/crm/DashboardPipelines";
@@ -266,6 +267,7 @@ const App = () => (
                   <Route path="crm/fields" element={<DashboardCrmFields />} />
                   <Route path="crm/tags" element={<DashboardCrmTags />} />
                   <Route path="crm/lead-scoring" element={<DashboardLeadScoring />} />
+                  <Route path="crm/journey" element={<DashboardCustomerJourney />} />
                   <Route path="crm/insights" element={<DashboardCrmInsights />} />
                   <Route path="crm/settings" element={<DashboardCrmSettings />} />
                 </Route>
