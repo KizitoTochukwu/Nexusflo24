@@ -8,9 +8,8 @@ import {
   type ExitCriterion,
   getDefaultExitCriteria,
 } from "@/lib/automations/exitCriteria";
-import { AUTOMATION_TAG_OPTIONS } from "@/lib/automations/tagOptions";
-
-const PIPELINE_STAGES = ["New", "Contacted", "Engaged", "Qualified", "Warm", "Hot", "Won", "Customer", "Lost"];
+import { useAutomationTagOptions, useAutomationStageOptions, FALLBACK_PIPELINE_STAGES } from "@/hooks/useAutomationOptions";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 
 interface Props {
   value: ExitCriterion[];
@@ -19,6 +18,11 @@ interface Props {
 }
 
 export default function ExitCriteriaEditor({ value, onChange, triggerType }: Props) {
+  const workspaceId = useWorkspaceId();
+  const { data: tagOptionsData } = useAutomationTagOptions(workspaceId);
+  const { data: stageOptionsData } = useAutomationStageOptions(workspaceId);
+  const AUTOMATION_TAG_OPTIONS = tagOptionsData ?? [];
+  const PIPELINE_STAGES = stageOptionsData ?? FALLBACK_PIPELINE_STAGES;
   const defaults = getDefaultExitCriteria(triggerType);
   const hasDefaults = defaults.length > 0;
 

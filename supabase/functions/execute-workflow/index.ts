@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { deductCredit } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
+import { syncTagToContact } from "../_shared/crmTagSync.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -230,13 +231,31 @@ async function runAction(
         const tag = String(cfg.tag || "").trim();
         if (!tag) return { status: "skipped", details: { reason: "no_tag" } };
         const tags = Array.from(new Set([...(lead.tags || []), tag]));
-        if (!isTest) await supabase.from("leads").update({ tags }).eq("id", lead.id);
+        if (!isTest) {
+          await supabase.from("leads").update({ tags }).eq("id", lead.id);
+          await syncTagToContact(supabase, {
+            workspaceId: workflow.workspace_id,
+            leadId: lead.id,
+            contactId: (lead as any).contact_id ?? null,
+            tag,
+            mode: "add",
+          });
+        }
         return { status: "success", details: { tag } };
       }
       case "remove_tag": {
         const tag = String(cfg.tag || "").trim();
         const tags = (lead.tags || []).filter((t: string) => t !== tag);
-        if (!isTest) await supabase.from("leads").update({ tags }).eq("id", lead.id);
+        if (!isTest) {
+          await supabase.from("leads").update({ tags }).eq("id", lead.id);
+          await syncTagToContact(supabase, {
+            workspaceId: workflow.workspace_id,
+            leadId: lead.id,
+            contactId: (lead as any).contact_id ?? null,
+            tag,
+            mode: "remove",
+          });
+        }
         return { status: "success", details: { tag } };
       }
       case "update_status":

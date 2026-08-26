@@ -5,6 +5,7 @@ import { blocksToHtml, parseBlocksFromMessage, interpolateBlocks } from "../_sha
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
 import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
+import { syncTagToContact } from "../_shared/crmTagSync.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -616,6 +617,13 @@ Deno.serve(async (req) => {
                   .from("leads")
                   .update({ tags: [...(lead.tags || []).filter((t: string) => t !== tag), tag] })
                   .eq("id", lead_id);
+                await syncTagToContact(supabase, {
+                  workspaceId: automation.workspace_id,
+                  leadId: lead_id,
+                  contactId: (lead as any).contact_id ?? null,
+                  tag,
+                  mode: "add",
+                });
                 details = { tag, action: "added" };
               }
             } else if (actionType === "remove_tag") {
@@ -625,6 +633,13 @@ Deno.serve(async (req) => {
                   .from("leads")
                   .update({ tags: (lead.tags || []).filter((t: string) => t !== tag) })
                   .eq("id", lead_id);
+                await syncTagToContact(supabase, {
+                  workspaceId: automation.workspace_id,
+                  leadId: lead_id,
+                  contactId: (lead as any).contact_id ?? null,
+                  tag,
+                  mode: "remove",
+                });
                 details = { tag, action: "removed" };
               }
             } else if (actionType === "update_status") {
