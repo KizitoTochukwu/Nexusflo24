@@ -10649,6 +10649,10 @@ export type Database = {
         Args: { _pipeline_id: string }
         Returns: number
       }
+      crm_metric_snapshot: {
+        Args: { _from?: string; _to?: string; _workspace_id: string }
+        Returns: Json
+      }
       crm_normalize_email: { Args: { _email: string }; Returns: string }
       crm_normalize_phone: { Args: { _phone: string }; Returns: string }
       crm_upsert_contact: {

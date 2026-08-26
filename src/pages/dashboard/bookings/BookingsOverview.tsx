@@ -15,6 +15,7 @@ import {
   Layers, Activity, Clock,
 } from "lucide-react";
 import { statusMeta } from "@/lib/bookings/status";
+import { useCrmMetrics } from "@/hooks/useCrmMetrics";
 
 export default function BookingsOverview() {
   const workspaceId = useWorkspaceId();
@@ -23,6 +24,8 @@ export default function BookingsOverview() {
   const { data: types = [] } = useAppointmentTypes(workspaceId);
   const { data: hosts = [] } = useWorkspaceHosts(workspaceId);
   const { data: activity = [] } = useBookingActivity(workspaceId);
+  // Canonical definitions (show rate = completed / (completed + no-show)).
+  const { data: metrics } = useCrmMetrics(workspaceId, 365);
 
   const to = (p: string) => `/dashboard/${workspaceId}/${p}`;
 
@@ -43,9 +46,9 @@ export default function BookingsOverview() {
       cancelled: cancelled.length,
       noShow: noShow.length,
       total: bookings.length,
-      showRate: finished ? Math.round((completed.length / finished) * 100) : null,
+      showRate: metrics?.bookings_show_rate ?? (finished ? Math.round((completed.length / finished) * 100) : null),
     };
-  }, [bookings]);
+  }, [bookings, metrics]);
 
   const byType = useMemo(() => {
     const map = new Map<string, number>();

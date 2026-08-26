@@ -12,6 +12,7 @@ import { useWorkspaceMembers } from "@/hooks/useWorkspaceInvites";
 import { useCrmInsights, type InsightsRange } from "@/hooks/useCrmInsights";
 import { exportRowsToCsv } from "@/lib/crm/csv";
 import { BarList, CountRow, EmptyHint, InsightsCard, InsightsStat } from "@/components/crm/insights/InsightsCards";
+import JourneyMetricsStrip from "@/components/crm/JourneyMetricsStrip";
 
 const money = (n: number) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n || 0);
@@ -87,6 +88,8 @@ const DashboardCrmInsights = () => {
           </Button>
         </div>
       </div>
+
+      <JourneyMetricsStrip workspaceId={workspaceId} days={range} />
 
       {isError && (
         <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
