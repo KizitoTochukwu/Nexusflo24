@@ -175,27 +175,37 @@ Deno.serve(async (req) => {
       case "adjust_credits": {
         const workspaceId = String(payload.workspace_id ?? "");
         const quantity = Number(payload.quantity ?? 0);
-        const category = String(payload.category ?? "message_credits");
+        const category = String(payload.category ?? "email");
+        const columns: Record<string, string> = {
+          email: "email_balance",
+          sms: "sms_balance",
+          whatsapp: "whatsapp_balance",
+        };
+        const column = columns[category];
+        if (!column) return json({ error: "category must be email, sms or whatsapp" }, 400);
         if (!workspaceId || !Number.isFinite(quantity) || quantity === 0) {
           return json({ error: "workspace_id and a non-zero quantity are required" }, 400);
         }
 
         const { data: current } = await admin
           .from("message_credits")
-          .select("id, balance")
+          .select(`id, ${column}`)
           .eq("workspace_id", workspaceId)
           .maybeSingle();
 
-        const previous = Number(current?.balance ?? 0);
-        const next = previous + quantity;
+        const previous = Number((current as Record<string, unknown> | null)?.[column] ?? 0);
+        const next = Math.max(previous + quantity, 0);
 
         if (current?.id) {
-          const { error } = await admin.from("message_credits").update({ balance: next }).eq("id", current.id);
+          const { error } = await admin.from("message_credits").update({ [column]: next }).eq("id", current.id);
           if (error) throw error;
         } else {
-          const { error } = await admin.from("message_credits").insert({ workspace_id: workspaceId, balance: next });
+          const { error } = await admin
+            .from("message_credits")
+            .insert({ workspace_id: workspaceId, [column]: next });
           if (error) throw error;
         }
+
 
         const { error: ledgerErr } = await admin.from("credit_adjustment_ledger").insert({
           workspace_id: workspaceId,
