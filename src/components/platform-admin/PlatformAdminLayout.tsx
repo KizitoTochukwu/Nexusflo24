@@ -38,6 +38,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
       { label: "Communications", to: "/platform-admin/communications", icon: Radio, permission: "platform.communications.manage" },
       { label: "Automations", to: "/platform-admin/automations", icon: Workflow, permission: "platform.automations.retry" },
       { label: "Integrations", to: "/platform-admin/integrations", icon: Plug, permission: "platform.integrations.diagnose" },
+      { label: "WhatsApp delivery", to: "/platform-admin/whatsapp", icon: Plug, permission: "platform.integrations.diagnose" },
       { label: "Store Fulfilment", to: "/platform-admin/fulfilment", icon: ShoppingBag, permission: "platform.fulfilment.manage" },
     ],
   },
