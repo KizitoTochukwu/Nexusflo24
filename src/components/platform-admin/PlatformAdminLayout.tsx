@@ -35,17 +35,17 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Operations",
     items: [
-      { label: "Communications", to: "/platform-admin/communications", icon: Radio },
-      { label: "Automations", to: "/platform-admin/automations", icon: Workflow },
-      { label: "Integrations", to: "/platform-admin/integrations", icon: Plug },
-      { label: "Store Fulfilment", to: "/platform-admin/fulfilment", icon: ShoppingBag },
+      { label: "Communications", to: "/platform-admin/communications", icon: Radio, permission: "platform.communications.manage" },
+      { label: "Automations", to: "/platform-admin/automations", icon: Workflow, permission: "platform.automations.retry" },
+      { label: "Integrations", to: "/platform-admin/integrations", icon: Plug, permission: "platform.integrations.diagnose" },
+      { label: "Store Fulfilment", to: "/platform-admin/fulfilment", icon: ShoppingBag, permission: "platform.fulfilment.manage" },
     ],
   },
   {
     title: "Content",
     items: [
-      { label: "Blog & Pages", to: "/platform-admin/content", icon: FileText },
-      { label: "Academy & Community", to: "/platform-admin/academy", icon: GraduationCap },
+      { label: "Blog & Pages", to: "/platform-admin/content", icon: FileText, permission: "platform.content.manage" },
+      { label: "Academy & Community", to: "/platform-admin/academy", icon: GraduationCap, permission: "platform.community.moderate" },
     ],
   },
   {
@@ -53,9 +53,9 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { label: "Support Access", to: "/platform-admin/support", icon: LifeBuoy, permission: "platform.support.access" },
       { label: "Audit Log", to: "/platform-admin/audit", icon: ScrollText, permission: "platform.audit.read" },
-      { label: "Security", to: "/platform-admin/security", icon: Lock },
+      { label: "Security", to: "/platform-admin/security", icon: Lock, permission: "platform.security.manage" },
       { label: "Platform Health", to: "/platform-admin/health", icon: Activity },
-      { label: "Settings", to: "/platform-admin/settings", icon: Settings2 },
+      { label: "Settings", to: "/platform-admin/settings", icon: Settings2, permission: "platform.settings.manage" },
     ],
   },
 ];

@@ -129,10 +129,15 @@ import PlatformSubscriptions from "./pages/platform-admin/PlatformSubscriptions"
 import PlatformCredits from "./pages/platform-admin/PlatformCredits";
 import PlatformAudit from "./pages/platform-admin/PlatformAudit";
 import PlatformSupport from "./pages/platform-admin/PlatformSupport";
-import {
-  PlatformCommunications, PlatformAutomations, PlatformIntegrations, PlatformFulfilment,
-  PlatformContent, PlatformAcademy, PlatformSecurity, PlatformHealth, PlatformSettings,
-} from "./pages/platform-admin/PlatformDeferred";
+import PlatformCommunications from "./pages/platform-admin/PlatformCommunications";
+import PlatformAutomations from "./pages/platform-admin/PlatformAutomations";
+import PlatformIntegrations from "./pages/platform-admin/PlatformIntegrations";
+import PlatformFulfilment from "./pages/platform-admin/PlatformFulfilment";
+import PlatformContent from "./pages/platform-admin/PlatformContent";
+import PlatformAcademy from "./pages/platform-admin/PlatformAcademy";
+import PlatformSecurity from "./pages/platform-admin/PlatformSecurity";
+import PlatformHealth from "./pages/platform-admin/PlatformHealth";
+import PlatformSettings from "./pages/platform-admin/PlatformSettings";
 import { CartProvider } from "./contexts/CartContext";
 import CartLauncher from "./components/store/CartLauncher";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";

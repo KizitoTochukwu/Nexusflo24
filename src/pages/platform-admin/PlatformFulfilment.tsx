@@ -100,6 +100,3 @@ export default function PlatformFulfilment() {
     </div>
   );
 }
-
-// Re-export Badge import guard (Badge used implicitly by AdminStoreOrders only)
-export { Badge as _BadgeReexportGuard };
