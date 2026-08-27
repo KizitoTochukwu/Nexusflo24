@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import SidebarLogo from "@/components/brand/SidebarLogo";
 import { useRouteMemory } from "@/hooks/useRouteMemory";
 import SidebarCreditWidget from "@/components/dashboard/SidebarCreditWidget";
