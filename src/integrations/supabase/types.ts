@@ -9781,6 +9781,7 @@ export type Database = {
           last_delivered_callback_at: string | null
           last_error: string | null
           last_failed_callback_at: string | null
+          last_read_callback_at: string | null
           last_sent_callback_at: string | null
           last_template_sync_at: string | null
           last_webhook_at: string | null
@@ -9805,6 +9806,7 @@ export type Database = {
           last_delivered_callback_at?: string | null
           last_error?: string | null
           last_failed_callback_at?: string | null
+          last_read_callback_at?: string | null
           last_sent_callback_at?: string | null
           last_template_sync_at?: string | null
           last_webhook_at?: string | null
@@ -9829,6 +9831,7 @@ export type Database = {
           last_delivered_callback_at?: string | null
           last_error?: string | null
           last_failed_callback_at?: string | null
+          last_read_callback_at?: string | null
           last_sent_callback_at?: string | null
           last_template_sync_at?: string | null
           last_webhook_at?: string | null
@@ -10115,6 +10118,7 @@ export type Database = {
           message_count: number
           payload_redacted: Json | null
           phone_number_id: string | null
+          processed_at: string | null
           processing_error: string | null
           received_at: string
           signature_valid: boolean
@@ -10128,6 +10132,7 @@ export type Database = {
           message_count?: number
           payload_redacted?: Json | null
           phone_number_id?: string | null
+          processed_at?: string | null
           processing_error?: string | null
           received_at?: string
           signature_valid?: boolean
@@ -10141,6 +10146,7 @@ export type Database = {
           message_count?: number
           payload_redacted?: Json | null
           phone_number_id?: string | null
+          processed_at?: string | null
           processing_error?: string | null
           received_at?: string
           signature_valid?: boolean
