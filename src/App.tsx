@@ -129,6 +129,7 @@ import PlatformSupport from "./pages/platform-admin/PlatformSupport";
 import PlatformCommunications from "./pages/platform-admin/PlatformCommunications";
 import PlatformAutomations from "./pages/platform-admin/PlatformAutomations";
 import PlatformIntegrations from "./pages/platform-admin/PlatformIntegrations";
+import PlatformWhatsApp from "./pages/platform-admin/PlatformWhatsApp";
 import PlatformFulfilment from "./pages/platform-admin/PlatformFulfilment";
 import PlatformContent from "./pages/platform-admin/PlatformContent";
 import PlatformAcademy from "./pages/platform-admin/PlatformAcademy";
