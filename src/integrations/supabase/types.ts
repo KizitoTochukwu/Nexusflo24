@@ -9627,74 +9627,116 @@ export type Database = {
       whatsapp_messages: {
         Row: {
           auto_templated: boolean
+          automation_id: string | null
+          automation_run_id: string | null
           body: string | null
           campaign_id: string | null
           compliance_note: string | null
           contact_id: string | null
           created_at: string
+          credit_charged: boolean
           delivered_at: string | null
           direction: string
           error: string | null
+          error_code: number | null
+          error_details: string | null
+          error_title: string | null
           failed_at: string | null
+          fbtrace_id: string | null
           id: string
+          language_code: string | null
+          last_status_at: string | null
           lead_id: string | null
           message_type: string
           phone_number: string
           provider: string
           provider_message_id: string | null
           read_at: string | null
+          sender_ownership: string | null
+          sender_phone_number_id: string | null
           sender_profile_id: string | null
+          sent_at: string | null
           status: string
+          submitted_at: string | null
           template_name: string | null
           wa_message_id: string | null
+          waba_id: string | null
           workspace_id: string
         }
         Insert: {
           auto_templated?: boolean
+          automation_id?: string | null
+          automation_run_id?: string | null
           body?: string | null
           campaign_id?: string | null
           compliance_note?: string | null
           contact_id?: string | null
           created_at?: string
+          credit_charged?: boolean
           delivered_at?: string | null
           direction?: string
           error?: string | null
+          error_code?: number | null
+          error_details?: string | null
+          error_title?: string | null
           failed_at?: string | null
+          fbtrace_id?: string | null
           id?: string
+          language_code?: string | null
+          last_status_at?: string | null
           lead_id?: string | null
           message_type?: string
           phone_number: string
           provider?: string
           provider_message_id?: string | null
           read_at?: string | null
+          sender_ownership?: string | null
+          sender_phone_number_id?: string | null
           sender_profile_id?: string | null
+          sent_at?: string | null
           status?: string
+          submitted_at?: string | null
           template_name?: string | null
           wa_message_id?: string | null
+          waba_id?: string | null
           workspace_id: string
         }
         Update: {
           auto_templated?: boolean
+          automation_id?: string | null
+          automation_run_id?: string | null
           body?: string | null
           campaign_id?: string | null
           compliance_note?: string | null
           contact_id?: string | null
           created_at?: string
+          credit_charged?: boolean
           delivered_at?: string | null
           direction?: string
           error?: string | null
+          error_code?: number | null
+          error_details?: string | null
+          error_title?: string | null
           failed_at?: string | null
+          fbtrace_id?: string | null
           id?: string
+          language_code?: string | null
+          last_status_at?: string | null
           lead_id?: string | null
           message_type?: string
           phone_number?: string
           provider?: string
           provider_message_id?: string | null
           read_at?: string | null
+          sender_ownership?: string | null
+          sender_phone_number_id?: string | null
           sender_profile_id?: string | null
+          sent_at?: string | null
           status?: string
+          submitted_at?: string | null
           template_name?: string | null
           wa_message_id?: string | null
+          waba_id?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -9727,6 +9769,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_provider_health: {
+        Row: {
+          api_version: string | null
+          app_subscribed: boolean | null
+          callback_verified_at: string | null
+          created_at: string
+          display_phone_number: string | null
+          last_checked_at: string | null
+          last_delivered_callback_at: string | null
+          last_error: string | null
+          last_failed_callback_at: string | null
+          last_sent_callback_at: string | null
+          last_template_sync_at: string | null
+          last_webhook_at: string | null
+          messages_field_subscribed: boolean | null
+          phone_number_id: string | null
+          phone_registration_state: string | null
+          token_configured: boolean
+          token_expires_at: string | null
+          token_type: string | null
+          updated_at: string
+          verified_name: string | null
+          waba_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          api_version?: string | null
+          app_subscribed?: boolean | null
+          callback_verified_at?: string | null
+          created_at?: string
+          display_phone_number?: string | null
+          last_checked_at?: string | null
+          last_delivered_callback_at?: string | null
+          last_error?: string | null
+          last_failed_callback_at?: string | null
+          last_sent_callback_at?: string | null
+          last_template_sync_at?: string | null
+          last_webhook_at?: string | null
+          messages_field_subscribed?: boolean | null
+          phone_number_id?: string | null
+          phone_registration_state?: string | null
+          token_configured?: boolean
+          token_expires_at?: string | null
+          token_type?: string | null
+          updated_at?: string
+          verified_name?: string | null
+          waba_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          api_version?: string | null
+          app_subscribed?: boolean | null
+          callback_verified_at?: string | null
+          created_at?: string
+          display_phone_number?: string | null
+          last_checked_at?: string | null
+          last_delivered_callback_at?: string | null
+          last_error?: string | null
+          last_failed_callback_at?: string | null
+          last_sent_callback_at?: string | null
+          last_template_sync_at?: string | null
+          last_webhook_at?: string | null
+          messages_field_subscribed?: boolean | null
+          phone_number_id?: string | null
+          phone_registration_state?: string | null
+          token_configured?: boolean
+          token_expires_at?: string | null
+          token_type?: string | null
+          updated_at?: string
+          verified_name?: string | null
+          waba_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
       }
       whatsapp_senders: {
         Row: {
@@ -9862,6 +9979,71 @@ export type Database = {
           },
         ]
       }
+      whatsapp_status_events: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          error_code: number | null
+          error_details: string | null
+          error_message: string | null
+          error_title: string | null
+          fbtrace_id: string | null
+          id: string
+          message_id: string | null
+          meta_timestamp: string | null
+          pricing: Json | null
+          raw: Json | null
+          recipient_id: string | null
+          status: string
+          wamid: string
+          workspace_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          error_code?: number | null
+          error_details?: string | null
+          error_message?: string | null
+          error_title?: string | null
+          fbtrace_id?: string | null
+          id?: string
+          message_id?: string | null
+          meta_timestamp?: string | null
+          pricing?: Json | null
+          raw?: Json | null
+          recipient_id?: string | null
+          status: string
+          wamid: string
+          workspace_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          error_code?: number | null
+          error_details?: string | null
+          error_message?: string | null
+          error_title?: string | null
+          fbtrace_id?: string | null
+          id?: string
+          message_id?: string | null
+          meta_timestamp?: string | null
+          pricing?: Json | null
+          raw?: Json | null
+          recipient_id?: string | null
+          status?: string
+          wamid?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_status_events_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_templates: {
         Row: {
           body_preview: string
@@ -9922,6 +10104,48 @@ export type Database = {
           updated_at?: string
           variable_count?: number
           workspace_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_webhook_events: {
+        Row: {
+          event_key: string
+          event_type: string | null
+          id: string
+          message_count: number
+          payload_redacted: Json | null
+          phone_number_id: string | null
+          processing_error: string | null
+          received_at: string
+          signature_valid: boolean
+          status_count: number
+          workspace_id: string | null
+        }
+        Insert: {
+          event_key: string
+          event_type?: string | null
+          id?: string
+          message_count?: number
+          payload_redacted?: Json | null
+          phone_number_id?: string | null
+          processing_error?: string | null
+          received_at?: string
+          signature_valid?: boolean
+          status_count?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          event_key?: string
+          event_type?: string | null
+          id?: string
+          message_count?: number
+          payload_redacted?: Json | null
+          phone_number_id?: string | null
+          processing_error?: string | null
+          received_at?: string
+          signature_valid?: boolean
+          status_count?: number
+          workspace_id?: string | null
         }
         Relationships: []
       }
