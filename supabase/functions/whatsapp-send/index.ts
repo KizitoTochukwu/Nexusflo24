@@ -640,7 +640,86 @@ Deno.serve(async (req) => {
     });
 
     if (creds.source === "none" || !creds.config.access_token || !creds.config.phone_number_id) {
+      await releaseCreditHold("not_configured");
       return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Record which WABA/sender this message will actually use so the delivery
+    // log and the test timeline can show it before and after sending.
+    let resolvedWabaId: string | null = null;
+    {
+      const { data: wabaRows } = await adminClient
+        .from("whatsapp_settings")
+        .select("waba_id")
+        .eq("workspace_id", workspaceId)
+        .order("is_active", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      resolvedWabaId = wabaRows?.[0]?.waba_id || null;
+    }
+
+    // ── Pre-send template gate ───────────────────────────────────────────
+    // Block on templates that Meta will refuse, before spending a credit or
+    // calling the API: unknown, paused, rejected, disabled, or a language the
+    // approved template does not have.
+    if (template && !isPreview) {
+      const tplAny = template as any;
+      const { data: tplRow } = tplAny.id
+        ? await adminClient
+            .from("whatsapp_templates")
+            .select("name, language, status, variable_count")
+            .eq("workspace_id", workspaceId)
+            .eq("id", tplAny.id)
+            .maybeSingle()
+        : await adminClient
+            .from("whatsapp_templates")
+            .select("name, language, status, variable_count")
+            .eq("workspace_id", workspaceId)
+            .eq("name", tplAny.name)
+            .maybeSingle();
+
+      const tplStatus = String(tplRow?.status || "").toLowerCase();
+      let blockReason: string | null = null;
+      if (tplRow && tplStatus && tplStatus !== "approved") {
+        blockReason = `WhatsApp template "${tplRow.name}" is ${tplStatus} on Meta. Sync templates in Settings → Channels → WhatsApp and pick an approved template.`;
+      } else if (tplRow && tplAny.language && tplRow.language && tplAny.language !== tplRow.language) {
+        blockReason = `WhatsApp template "${tplRow.name}" is approved for language ${tplRow.language}, not ${tplAny.language}.`;
+      } else if (tplRow && typeof tplRow.variable_count === "number" && tplAny.contentVariables) {
+        const supplied = Object.keys(tplAny.contentVariables).filter((k) => /^\d+$/.test(k)).length;
+        if (supplied !== tplRow.variable_count) {
+          blockReason = `WhatsApp template "${tplRow.name}" expects ${tplRow.variable_count} variable(s) but ${supplied} were supplied.`;
+        }
+      }
+
+      if (blockReason) {
+        await releaseCreditHold("template_blocked");
+        await adminClient.from("whatsapp_messages").insert({
+          workspace_id: workspaceId,
+          direction: "outbound",
+          phone_number: normalizedTo,
+          message_type: "template",
+          body: msgBody || `[Template: ${tplAny.name || tplRow?.name}]`,
+          status: "failed",
+          error: blockReason,
+          error_title: "template_blocked",
+          failed_at: new Date().toISOString(),
+          last_status_at: new Date().toISOString(),
+          template_name: tplRow?.name || tplAny.name || null,
+          language_code: tplAny.language || tplRow?.language || null,
+          waba_id: resolvedWabaId,
+          sender_phone_number_id: creds.config.phone_number_id.trim(),
+          sender_ownership: creds.source,
+          credit_charged: false,
+          ...(automationId ? { automation_id: automationId } : {}),
+          ...(automationRunId ? { automation_run_id: automationRunId } : {}),
+          ...(leadId ? { lead_id: leadId } : {}),
+          ...(campaignId ? { campaign_id: campaignId } : {}),
+        });
+        return new Response(
+          JSON.stringify({ success: false, fallback: true, reason: "template_blocked", error: blockReason }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // Normalize a Meta-flavoured template payload: the picker sends
