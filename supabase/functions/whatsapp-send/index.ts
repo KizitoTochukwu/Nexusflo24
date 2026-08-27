@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { decryptWhatsApp, encryptChannelConfig } from "../_shared/whatsapp-crypto.ts";
-import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { deductCredit, isAdminUser, addCredits } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
@@ -607,12 +607,27 @@ Deno.serve(async (req) => {
     }
     const toCountry = countryFromE164(normalizedTo);
     const deductAmount = shouldDeductCredits ? await getDeductionAmount("whatsapp", toCountry) : 0;
+    let creditsHeld = false;
     if (shouldDeductCredits) {
       const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      creditsHeld = deductAmount > 0;
     }
+
+    // Credits are only *earned* by Meta once it accepts the message. Anything
+    // that fails before Meta accepts must release the hold so users are never
+    // charged for a message Meta never took.
+    const releaseCreditHold = async (reason: string) => {
+      if (!creditsHeld || deductAmount <= 0) return;
+      creditsHeld = false;
+      try {
+        await addCredits(workspaceId, "whatsapp", deductAmount, `refund:${reason}`);
+      } catch (err) {
+        console.error("whatsapp-send: failed to release credit hold", err);
+      }
+    };
 
     const platformAccessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")?.trim();
     const platformPhoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim();
