@@ -31,6 +31,7 @@ type BlogPost = {
   status: string;
   featured: boolean;
   published_at: string | null;
+  scheduled_for: string | null;
   created_at: string;
   updated_at: string;
   linkedin_shared_at: string | null;
@@ -55,6 +56,7 @@ const emptyPost = {
   read_time: "5 min",
   status: "draft" as string,
   featured: false,
+  scheduled_for: "" as string,
 };
 
 const categories = ["AI Sales Automation", "Lead Generation Systems", "Marketing Automation Tools", "Sales Funnels & Conversion", "WhatsApp & Email Automation"];
@@ -174,6 +176,10 @@ const AdminBlogManager = ({ bare = false }: { bare?: boolean }) => {
         status: post.status,
         featured: post.featured,
         published_at: post.status === "published" ? new Date().toISOString() : null,
+        scheduled_for:
+          post.status === "scheduled" && post.scheduled_for
+            ? new Date(post.scheduled_for).toISOString()
+            : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -224,6 +230,9 @@ const AdminBlogManager = ({ bare = false }: { bare?: boolean }) => {
       read_time: post.read_time,
       status: post.status,
       featured: post.featured,
+      scheduled_for: post.scheduled_for
+        ? format(new Date(post.scheduled_for), "yyyy-MM-dd'T'HH:mm")
+        : "",
     });
     setDialogOpen(true);
   };
@@ -320,14 +329,28 @@ const AdminBlogManager = ({ bare = false }: { bare?: boolean }) => {
                       <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
                         <SelectItem value="published">Published</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  {form.status === "scheduled" && (
+                    <div>
+                      <Label>Publish at</Label>
+                      <Input
+                        type="datetime-local"
+                        className="w-52"
+                        value={form.scheduled_for}
+                        min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                        onChange={(e) => setForm((f) => ({ ...f, scheduled_for: e.target.value }))}
+                      />
+                      <p className="mt-1 text-[11px] text-muted-foreground">Publishes automatically within the hour after this time.</p>
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" onClick={resetForm}>Cancel</Button>
-                  <Button onClick={() => saveMutation.mutate(form)} disabled={!form.title || !form.slug || saveMutation.isPending} className="bg-accent text-accent-foreground hover:bg-gold-dark">
+                  <Button onClick={() => saveMutation.mutate(form)} disabled={!form.title || !form.slug || (form.status === "scheduled" && !form.scheduled_for) || saveMutation.isPending} className="bg-accent text-accent-foreground hover:bg-gold-dark">
                     {saveMutation.isPending ? "Saving..." : editingId ? "Update" : "Create"}
                   </Button>
                 </div>
@@ -386,9 +409,12 @@ const AdminBlogManager = ({ bare = false }: { bare?: boolean }) => {
                       </TableCell>
                       <TableCell><Badge variant="secondary">{post.category}</Badge></TableCell>
                       <TableCell>
-                        <Badge className={post.status === "published" ? "bg-green-500/10 text-green-600 border-green-500/30" : "bg-muted text-muted-foreground"}>
+                        <Badge className={post.status === "published" ? "bg-green-500/10 text-green-600 border-green-500/30" : post.status === "scheduled" ? "bg-accent/10 text-accent border-accent/30" : "bg-muted text-muted-foreground"}>
                           {post.status}
                         </Badge>
+                        {post.status === "scheduled" && post.scheduled_for && (
+                          <p className="mt-1 text-[11px] text-muted-foreground">{format(new Date(post.scheduled_for), "MMM d, yyyy 'at' HH:mm")}</p>
+                        )}
                       </TableCell>
                       <TableCell>
                         <TooltipProvider>

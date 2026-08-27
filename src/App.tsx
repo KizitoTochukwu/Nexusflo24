@@ -62,7 +62,6 @@ import Disclaimer from "./pages/legal/Disclaimer";
 import AntiSpamPolicy from "./pages/legal/AntiSpamPolicy";
 import GdprRights from "./pages/legal/GdprRights";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminBlogManager from "./pages/admin/AdminBlogManager";
 import AdminSmartActions from "./pages/admin/AdminSmartActions";
 import AdminGuard from "./components/admin/AdminGuard";
 import AdminCommunicationOverview from "./pages/admin/communication/AdminCommunicationOverview";
@@ -117,8 +116,6 @@ import StoreCheckout from "./pages/store/StoreCheckout";
 import StoreSuccess from "./pages/store/StoreSuccess";
 import MyAutomations from "./pages/dashboard/store/MyAutomations";
 import StoreProjectDetail from "./pages/dashboard/store/StoreProjectDetail";
-import AdminStoreOrders from "./pages/admin/AdminStoreOrders";
-import AdminStoreCatalogue from "./pages/admin/AdminStoreCatalogue";
 import PlatformAdminLayout from "./components/platform-admin/PlatformAdminLayout";
 import PlatformOverview from "./pages/platform-admin/PlatformOverview";
 import PlatformUsers from "./pages/platform-admin/PlatformUsers";
@@ -320,11 +317,11 @@ const App = () => (
                   <Route path="workflows/new" element={<WorkflowEditor />} />
                   <Route path="workflows/:workflowId" element={<WorkflowEditor />} />
                   <Route path="admin" element={<AdminDashboard />} />
-                  <Route path="admin/blog" element={<AdminBlogManager />} />
+                  <Route path="admin/blog" element={<Navigate to="/platform-admin/content" replace />} />
                   <Route path="admin/smart-actions" element={<AdminSmartActions />} />
                   <Route path="admin/pricing" element={<AdminPricing />} />
-                  <Route path="admin/store-orders" element={<AdminStoreOrders />} />
-                  <Route path="admin/store-catalogue" element={<AdminStoreCatalogue />} />
+                  <Route path="admin/store-orders" element={<Navigate to="/platform-admin/fulfilment" replace />} />
+                  <Route path="admin/store-catalogue" element={<Navigate to="/platform-admin/fulfilment" replace />} />
                   <Route path="admin/communication" element={<AdminCommunicationOverview />} />
                   <Route path="admin/communication/organisations" element={<AdminOrganisations />} />
                   <Route path="admin/communication/organisations/:orgId" element={<AdminOrgDetail />} />

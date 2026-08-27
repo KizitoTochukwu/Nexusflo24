@@ -1102,6 +1102,7 @@ export type Database = {
           linkedin_shared_at: string | null
           published_at: string | null
           read_time: string
+          scheduled_for: string | null
           slug: string
           status: string
           title: string
@@ -1127,6 +1128,7 @@ export type Database = {
           linkedin_shared_at?: string | null
           published_at?: string | null
           read_time?: string
+          scheduled_for?: string | null
           slug: string
           status?: string
           title: string
@@ -1152,6 +1154,7 @@ export type Database = {
           linkedin_shared_at?: string | null
           published_at?: string | null
           read_time?: string
+          scheduled_for?: string | null
           slug?: string
           status?: string
           title?: string
@@ -11175,6 +11178,13 @@ export type Database = {
       platform_integration_health: { Args: never; Returns: Json }
       platform_overview_metrics: { Args: { _since?: string }; Returns: Json }
       platform_sender_queue: { Args: never; Returns: Json }
+      platform_staff_last_sign_in: {
+        Args: never
+        Returns: {
+          last_sign_in_at: string
+          user_id: string
+        }[]
+      }
       platform_users_list: {
         Args: {
           _limit?: number
@@ -11188,6 +11198,7 @@ export type Database = {
         Args: { _limit?: number; _offset?: number; _search?: string }
         Returns: Json
       }
+      publish_due_blog_posts: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
