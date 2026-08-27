@@ -305,3 +305,10 @@ export function usePlatformAccessReviews(limit = 50) {
     },
   });
 }
+
+export function usePlatformStaffLastSignIn() {
+  return usePlatformRpc<{ user_id: string; last_sign_in_at: string | null }[]>(
+    "platform-staff-last-sign-in",
+    "platform_staff_last_sign_in",
+  );
+}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
-  usePlatformAccessReviews, usePlatformAction, usePlatformStaffRoles, usePlatformUsers,
+  usePlatformAccessReviews, usePlatformAction, usePlatformStaffLastSignIn, usePlatformStaffRoles, usePlatformUsers,
 } from "@/hooks/usePlatformAdmin";
 import {
   PageHeader, LoadingBlock, ErrorBlock, EmptyBlock, HighRiskActionDialog,
@@ -16,12 +16,19 @@ export default function PlatformSecurity() {
   const staff = usePlatformStaffRoles();
   const reviews = usePlatformAccessReviews(50);
   const users = usePlatformUsers({ pageSize: 100 });
+  const signIns = usePlatformStaffLastSignIn();
   const action = usePlatformAction();
   const [review, setReview] = useState<any | null>(null);
   const [outcome, setOutcome] = useState("confirmed");
 
   const activeStaff = (staff.data ?? []).filter((a: any) => a.is_active);
   const emailById = new Map((users.data?.rows ?? []).map((u: any) => [u.id, u.email]));
+  const signInById = new Map((signIns.data ?? []).map((s: any) => [s.user_id, s.last_sign_in_at]));
+  const isStale = (userId: string) => {
+    const at = signInById.get(userId);
+    if (!at) return true; // never signed in
+    return Date.now() - new Date(at).getTime() > 90 * 24 * 60 * 60 * 1000;
+  };
 
   return (
     <div>
@@ -44,20 +51,34 @@ export default function PlatformSecurity() {
             <EmptyBlock title="No active platform staff" />
           ) : (
             <ul className="divide-y text-sm">
-              {activeStaff.map((a: any) => (
-                <li key={a.id} className="flex items-center justify-between gap-3 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{emailById.get(a.user_id) ?? a.user_id}</p>
-                    <p className="text-[11px] text-muted-foreground capitalize">
-                      {String(a.role).replace(/_/g, " ")} · granted {format(new Date(a.created_at), "MMM d, yyyy")}
-                      {a.reason ? ` · ${a.reason}` : ""}
-                    </p>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setReview(a)}>
-                    Mark reviewed
-                  </Button>
-                </li>
-              ))}
+              {activeStaff.map((a: any) => {
+                const lastSignIn = signInById.get(a.user_id);
+                const stale = isStale(a.user_id);
+                return (
+                  <li key={a.id} className="flex items-center justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {emailById.get(a.user_id) ?? a.user_id}
+                        {stale && (
+                          <Badge variant="outline" className="ml-2 border-amber-500/40 text-amber-600">
+                            Stale — recommend review
+                          </Badge>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground capitalize">
+                        {String(a.role).replace(/_/g, " ")} · granted {format(new Date(a.created_at), "MMM d, yyyy")}
+                        {a.reason ? ` · ${a.reason}` : ""}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Last sign-in: {lastSignIn ? format(new Date(lastSignIn), "MMM d, yyyy HH:mm") : signIns.isLoading ? "…" : "Never"}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setReview(a)}>
+                      Mark reviewed
+                    </Button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>
@@ -95,6 +116,22 @@ export default function PlatformSecurity() {
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Policies & access model</CardTitle>
+          <CardDescription>Checked-in documentation — a summary, not a live scan. Full version: docs/platform-security-notes.md</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+            <li>Platform access is granted via staff assignments with granular role permissions; only super-admins can change grants.</li>
+            <li>Every consequential platform action requires a typed reason and is appended to the immutable audit log before executing.</li>
+            <li>Workspace data is read cross-tenant only through staff-guarded, security-definer RPCs — never via direct table access.</li>
+            <li>Platform-internal tables are RLS-locked; the only public exception is the maintenance banner flag.</li>
+            <li>Access reviews are recorded here and grants inactive for 90+ days are flagged as stale above.</li>
+          </ul>
         </CardContent>
       </Card>
 
