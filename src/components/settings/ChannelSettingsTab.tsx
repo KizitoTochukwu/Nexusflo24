@@ -804,6 +804,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const handleTestWhatsApp = async () => {
     if (!waTestTo || !waTestMsg) { toast.error("Enter phone and message"); return; }
     setWaTestSending(true);
+    setWaTestSubmission(null);
     try {
       // Render any {{first_name}}, {{company}}, etc. with sample values so the
       // test recipient sees real text instead of literal placeholders.
