@@ -6979,6 +6979,27 @@ export type Database = {
           },
         ]
       }
+      prospecting_send_lease: {
+        Row: {
+          id: string
+          last_result: Json | null
+          locked_until: string | null
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          last_result?: Json | null
+          locked_until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          last_result?: Json | null
+          locked_until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       prospecting_sequence_steps: {
         Row: {
           ai_generated: boolean
