@@ -23,7 +23,6 @@ import { getDefaultExitCriteria } from "@/lib/automations/exitCriteria";
 import CreateAutomationDialog from "@/components/automations/CreateAutomationDialog";
 import AutomationDetailsDrawer from "@/components/automations/AutomationDetailsDrawer";
 import AiAutomationGeneratorDialog from "@/components/automations/AiAutomationGeneratorDialog";
-import AutomationHealthPanel from "@/components/automations/AutomationHealthPanel";
 import LockedFeature from "@/components/billing/LockedFeature";
 import { usePlanGating } from "@/hooks/usePlanGating";
 import { format } from "date-fns";
@@ -161,15 +160,6 @@ const DashboardAutomations = () => {
 
 
 
-      <AutomationHealthPanel
-        workspaceId={workspaceId}
-        automations={automations ?? []}
-        onOpen={(id) => {
-          const next = new URLSearchParams(searchParams);
-          next.set("edit", id);
-          setSearchParams(next, { replace: false });
-        }}
-      />
 
       {/* Backfill banner — surfaces legacy nurture automations missing exit criteria */}
       {!bannerDismissed && missingExitCount > 0 && (
