@@ -19,42 +19,22 @@ type Admin = ReturnType<typeof adminClient>;
 
 async function acquireLease(admin: Admin): Promise<boolean> {
   const now = new Date();
-  const { data: existing } = await admin
-    .from("prospecting_jobs")
-    .select("id, status, next_retry_at")
-    .eq("job_type", "send_lease")
-    .eq("idempotency_key", "global-send-lease")
-    .maybeSingle();
-
-  if (!existing) {
-    const { error } = await admin.from("prospecting_jobs").insert({
-      workspace_id: null,
-      job_type: "send_lease",
-      idempotency_key: "global-send-lease",
-      status: "running",
-      next_retry_at: new Date(now.getTime() + LEASE_MINUTES * 60_000).toISOString(),
-    });
-    return !error;
-  }
-
-  const leaseExpired = !existing.next_retry_at || new Date(existing.next_retry_at) < now;
-  if (existing.status === "running" && !leaseExpired) return false;
-
-  const { data: taken } = await admin
-    .from("prospecting_jobs")
-    .update({ status: "running", next_retry_at: new Date(now.getTime() + LEASE_MINUTES * 60_000).toISOString(), started_at: now.toISOString() })
-    .eq("id", existing.id)
-    .eq("status", existing.status)
+  const until = new Date(now.getTime() + LEASE_MINUTES * 60_000).toISOString();
+  // Only claim the lock when it is free or its previous lease has expired.
+  const { data } = await admin
+    .from("prospecting_send_lease")
+    .update({ locked_until: until, updated_at: now.toISOString() })
+    .eq("id", "global")
+    .or(`locked_until.is.null,locked_until.lt.${now.toISOString()}`)
     .select("id");
-  return (taken ?? []).length > 0;
+  return (data ?? []).length > 0;
 }
 
 async function releaseLease(admin: Admin, result: Record<string, unknown>) {
   await admin
-    .from("prospecting_jobs")
-    .update({ status: "idle", result, completed_at: new Date().toISOString(), next_retry_at: null })
-    .eq("job_type", "send_lease")
-    .eq("idempotency_key", "global-send-lease");
+    .from("prospecting_send_lease")
+    .update({ locked_until: null, last_result: result, updated_at: new Date().toISOString() })
+    .eq("id", "global");
 }
 
 serve(async (req) => {
