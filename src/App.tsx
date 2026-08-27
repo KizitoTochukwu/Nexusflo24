@@ -146,6 +146,8 @@ import CfOffers from "./pages/dashboard/client-finder/CfOffers";
 import CfIdealCustomers from "./pages/dashboard/client-finder/CfIdealCustomers";
 import CfProspects from "./pages/dashboard/client-finder/CfProspects";
 import CfSettings from "./pages/dashboard/client-finder/CfSettings";
+import CfOutreach from "./pages/dashboard/client-finder/CfOutreach";
+import CfCampaign from "./pages/dashboard/client-finder/CfCampaign";
 import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
 import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
