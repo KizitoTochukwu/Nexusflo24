@@ -351,11 +351,11 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Handle status updates (sent → delivered → read; or failed).
-          // Meta may deliver these out of order, so we always guard against
-          // regressing a "later" status back to an "earlier" one.
+          // Handle status updates (submitted → sent → delivered → read; or
+          // failed). Meta may deliver these out of order, so we always guard
+          // against regressing a "later" status back to an "earlier" one.
           const STATUS_RANK: Record<string, number> = {
-            sent: 1, delivered: 2, read: 3, failed: 99,
+            queued: 0.5, submitted: 0.8, sent: 1, delivered: 2, read: 3, failed: 99,
           };
           const statuses = value?.statuses || [];
           for (const st of statuses) {
@@ -364,12 +364,47 @@ Deno.serve(async (req) => {
             const incomingRank = STATUS_RANK[incoming] ?? 0;
             if (!incomingRank) continue;
 
+            const metaTs = st.timestamp
+              ? new Date(Number(st.timestamp) * 1000).toISOString()
+              : new Date().toISOString();
+            const err0 = st.errors?.[0] || null;
+
             // Load current row so we can decide idempotency + propagation.
             const { data: waMsg } = await adminClient
               .from("whatsapp_messages")
               .select("id, status, lead_id, workspace_id, campaign_id")
               .eq("wa_message_id", st.id)
               .maybeSingle();
+
+            // Append-only status event (unique on wamid+status+meta_timestamp,
+            // so replays are no-ops).
+            await adminClient.from("whatsapp_status_events").insert({
+              workspace_id: waMsg?.workspace_id || null,
+              message_id: waMsg?.id || null,
+              wamid: st.id,
+              status: incoming,
+              meta_timestamp: metaTs,
+              recipient_id: st.recipient_id || null,
+              error_code: err0?.code ?? null,
+              error_title: err0?.title || null,
+              error_details: err0?.error_data?.details || err0?.message || null,
+              fbtrace_id: st.errors?.[0]?.fbtrace_id || null,
+            });
+
+            // Provider health evidence — last callback timestamps per phone number.
+            const healthPatch: Record<string, any> = { last_webhook_at: metaTs, updated_at: new Date().toISOString() };
+            if (incoming === "sent") healthPatch.last_sent_callback_at = metaTs;
+            if (incoming === "delivered") healthPatch.last_delivered_callback_at = metaTs;
+            if (incoming === "read") healthPatch.last_read_callback_at = metaTs;
+            if (incoming === "failed") healthPatch.last_failed_callback_at = metaTs;
+            if (waMsg?.workspace_id) {
+              await adminClient.from("whatsapp_provider_health").upsert({
+                workspace_id: waMsg.workspace_id,
+                phone_number_id: phoneNumberId,
+                ...healthPatch,
+              }, { onConflict: "workspace_id,phone_number_id" });
+            }
+
             if (!waMsg) continue;
 
             const currentRank = STATUS_RANK[String(waMsg.status || "").toLowerCase()] ?? 0;
@@ -379,14 +414,22 @@ Deno.serve(async (req) => {
               incoming === "failed" ? waMsg.status !== "failed" : incomingRank > currentRank;
             if (!shouldAdvance) continue;
 
-            const errorTitle = st.errors?.[0]?.title || st.errors?.[0]?.error_data?.details || null;
-            const nowIso = new Date().toISOString();
-            const patch: Record<string, any> = { status: incoming };
-            if (incoming === "delivered") patch.delivered_at = nowIso;
-            if (incoming === "read") patch.read_at = nowIso;
+            const errorTitle = err0?.title || err0?.error_data?.details || null;
+            const patch: Record<string, any> = { status: incoming, last_status_at: metaTs };
+            if (incoming === "sent") patch.sent_at = metaTs;
+            if (incoming === "delivered") patch.delivered_at = metaTs;
+            if (incoming === "read") {
+              patch.read_at = metaTs;
+              // A read receipt proves delivery even without a delivered callback.
+              patch.delivered_at = metaTs;
+            }
             if (incoming === "failed") {
-              patch.failed_at = nowIso;
+              patch.failed_at = metaTs;
               if (errorTitle) patch.error = errorTitle;
+              patch.error_code = err0?.code ?? null;
+              patch.error_title = err0?.title || null;
+              patch.error_details = err0?.error_data?.details || err0?.message || null;
+              patch.fbtrace_id = err0?.fbtrace_id || null;
             }
 
             await adminClient
@@ -420,17 +463,34 @@ Deno.serve(async (req) => {
 
             // Only advance delivery_status forward for delivered/failed.
             if (incoming === "delivered") {
-              cmMatch.in("delivery_status", ["pending", "sent"]);
+              cmMatch.in("delivery_status", ["pending", "submitted", "sent"]);
             } else if (incoming === "failed") {
-              cmMatch.in("delivery_status", ["pending", "sent", "delivered"]);
+              cmMatch.in("delivery_status", ["pending", "submitted", "sent", "delivered"]);
             } else if (incoming === "read") {
               cmMatch.eq("opened", false);
+            } else if (incoming === "sent") {
+              cmMatch.in("delivery_status", ["pending", "submitted"]);
             }
 
             await cmMatch;
           }
         }
       }
+      };
+
+      // Return 200 fast; do the heavier work in the background.
+      const work = process()
+        .then(() =>
+          adminClient.from("whatsapp_webhook_events")
+            .update({ processed_at: new Date().toISOString() })
+            .eq("event_key", eventKey))
+        .catch((e) => {
+          console.error("whatsapp-webhook processing error:", e);
+          return adminClient.from("whatsapp_webhook_events")
+            .update({ processing_error: String(e?.message || e) })
+            .eq("event_key", eventKey);
+        });
+      try { (globalThis as any).EdgeRuntime?.waitUntil?.(work); } catch { /* noop */ }
 
       return new Response("OK", { status: 200 });
     } catch (err) {
