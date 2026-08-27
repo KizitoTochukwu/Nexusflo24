@@ -400,6 +400,7 @@ function IntegrationsTab() {
           <Button variant="outline" size="sm" onClick={handleTestWhatsApp} disabled={waTestSending}>
             {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <MessageCircle className="h-4 w-4 mr-1" />}Send Test
           </Button>
+          {waTestSubmission && <WhatsAppDeliveryTimeline submission={waTestSubmission} />}
         </CardContent>
       </Card>
 
