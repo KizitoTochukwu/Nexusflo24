@@ -402,7 +402,7 @@ Deno.serve(async (req) => {
                 workspace_id: waMsg.workspace_id,
                 phone_number_id: phoneNumberId,
                 ...healthPatch,
-              }, { onConflict: "workspace_id,phone_number_id" });
+              }, { onConflict: "workspace_id" });
             }
 
             if (!waMsg) continue;
