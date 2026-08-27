@@ -129,6 +129,7 @@ import PlatformSupport from "./pages/platform-admin/PlatformSupport";
 import PlatformCommunications from "./pages/platform-admin/PlatformCommunications";
 import PlatformAutomations from "./pages/platform-admin/PlatformAutomations";
 import PlatformIntegrations from "./pages/platform-admin/PlatformIntegrations";
+import PlatformWhatsApp from "./pages/platform-admin/PlatformWhatsApp";
 import PlatformFulfilment from "./pages/platform-admin/PlatformFulfilment";
 import PlatformContent from "./pages/platform-admin/PlatformContent";
 import PlatformAcademy from "./pages/platform-admin/PlatformAcademy";
@@ -241,6 +242,7 @@ const App = () => (
                 <Route path="communications" element={<PlatformCommunications />} />
                 <Route path="automations" element={<PlatformAutomations />} />
                 <Route path="integrations" element={<PlatformIntegrations />} />
+                <Route path="whatsapp" element={<PlatformWhatsApp />} />
                 <Route path="fulfilment" element={<PlatformFulfilment />} />
                 <Route path="content" element={<PlatformContent />} />
                 <Route path="academy" element={<PlatformAcademy />} />
