@@ -29,6 +29,31 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from
 "@/components/ui/dropdown-menu";
 
+/** Platform-wide maintenance banner, driven by platform_settings.maintenance. */
+const MaintenanceBanner = () => {
+  const { data } = useQuery({
+    queryKey: ["maintenance-banner"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "maintenance")
+        .maybeSingle();
+      return (data?.value ?? null) as { enabled?: boolean; message?: string } | null;
+    },
+  });
+  if (!data?.enabled) return null;
+  return (
+    <div
+      role="status"
+      className="mb-4 rounded-md border border-accent/40 bg-accent/10 px-4 py-2 text-sm"
+    >
+      {data.message || "Scheduled maintenance in progress. Some features may be temporarily unavailable."}
+    </div>
+  );
+};
+
 const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const isMobile = useIsMobile();
   // Desktop: sidebar expanded by default. Mobile: closed by default (off-canvas drawer).
@@ -284,6 +309,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
         </header>
 
         <div className="p-4 sm:p-6 lg:p-8">
+          <MaintenanceBanner />
           <BillingWarningBanner />
           <NexusAiPanel />
 
