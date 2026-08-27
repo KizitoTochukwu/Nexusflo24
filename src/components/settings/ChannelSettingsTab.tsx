@@ -15,6 +15,7 @@ import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApprovedWhatsAppTemplates, useWhatsAppSettings, useUpdateDefaultReengagementTemplate } from "@/hooks/useWhatsAppTemplates";
 import { WhatsAppConnectCard } from "@/components/settings/WhatsAppConnectCard";
+import { WhatsAppDeliveryTimeline, type WhatsAppTestSubmission } from "@/components/settings/WhatsAppDeliveryTimeline";
 import {
   Mail, Smartphone, MessageCircle, Loader2, Save, ChevronDown,
   CheckCircle2, XCircle, Unplug, Send, Globe, Copy, RefreshCw,
