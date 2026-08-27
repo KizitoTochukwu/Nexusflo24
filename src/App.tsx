@@ -140,6 +140,12 @@ import { CartProvider } from "./contexts/CartContext";
 import CartLauncher from "./components/store/CartLauncher";
 import DashboardRoiSubmissions from "./pages/dashboard/DashboardRoiSubmissions";
 import CommerceLayout from "./components/commerce/CommerceLayout";
+import ClientFinderLayout from "./components/client-finder/ClientFinderLayout";
+import CfOverview from "./pages/dashboard/client-finder/CfOverview";
+import CfOffers from "./pages/dashboard/client-finder/CfOffers";
+import CfIdealCustomers from "./pages/dashboard/client-finder/CfIdealCustomers";
+import CfProspects from "./pages/dashboard/client-finder/CfProspects";
+import CfSettings from "./pages/dashboard/client-finder/CfSettings";
 import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
 import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
@@ -298,6 +304,15 @@ const App = () => (
 
                 
                 <Route path="messages" element={<DashboardMessages />} />
+                <Route path="client-finder" element={<ClientFinderLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<CfOverview />} />
+                  <Route path="offers" element={<CfOffers />} />
+                  <Route path="ideal-customers" element={<CfIdealCustomers />} />
+                  <Route path="prospects" element={<CfProspects />} />
+                  <Route path="settings" element={<CfSettings />} />
+                  <Route path="*" element={<Navigate to="overview" replace />} />
+                </Route>
                 <Route path="commerce" element={<CommerceLayout />}>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<CommerceOverview />} />

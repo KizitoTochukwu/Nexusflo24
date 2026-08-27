@@ -3777,6 +3777,60 @@ export type Database = {
         }
         Relationships: []
       }
+      email_verifications: {
+        Row: {
+          checked_at: string
+          confidence: number | null
+          contact_id: string | null
+          created_at: string
+          email: string
+          id: string
+          provider: string
+          raw: Json | null
+          result: string
+          workspace_id: string
+        }
+        Insert: {
+          checked_at?: string
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          provider: string
+          raw?: Json | null
+          result: string
+          workspace_id: string
+        }
+        Update: {
+          checked_at?: string
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          provider?: string
+          raw?: Json | null
+          result?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_verifications_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_verifications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_submissions: {
         Row: {
           contact_id: string | null
@@ -4078,6 +4132,180 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "google_calendar_tokens_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      icp_versions: {
+        Row: {
+          change_source: string
+          created_at: string
+          created_by: string | null
+          icp_id: string
+          id: string
+          snapshot: Json
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          change_source?: string
+          created_at?: string
+          created_by?: string | null
+          icp_id: string
+          id?: string
+          snapshot: Json
+          version: number
+          workspace_id: string
+        }
+        Update: {
+          change_source?: string
+          created_at?: string
+          created_by?: string | null
+          icp_id?: string
+          id?: string
+          snapshot?: Json
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "icp_versions_icp_id_fkey"
+            columns: ["icp_id"]
+            isOneToOne: false
+            referencedRelation: "ideal_customer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "icp_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ideal_customer_profiles: {
+        Row: {
+          ai_rationale: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
+          business_types: string[]
+          buying_signals: string[]
+          company_sizes: string[]
+          countries: string[]
+          created_at: string
+          created_by: string | null
+          disqualifiers: string[]
+          excluded_companies: string[]
+          excluded_industries: string[]
+          growth_stages: string[]
+          id: string
+          industries: string[]
+          is_active: boolean
+          job_functions: string[]
+          job_titles: string[]
+          name: string
+          offer_id: string | null
+          optional_criteria: Json
+          pain_points: string[]
+          regions: string[]
+          required_criteria: Json
+          revenue_max: number | null
+          revenue_min: number | null
+          seniority_levels: string[]
+          sub_industries: string[]
+          technologies: string[]
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          ai_rationale?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          business_types?: string[]
+          buying_signals?: string[]
+          company_sizes?: string[]
+          countries?: string[]
+          created_at?: string
+          created_by?: string | null
+          disqualifiers?: string[]
+          excluded_companies?: string[]
+          excluded_industries?: string[]
+          growth_stages?: string[]
+          id?: string
+          industries?: string[]
+          is_active?: boolean
+          job_functions?: string[]
+          job_titles?: string[]
+          name: string
+          offer_id?: string | null
+          optional_criteria?: Json
+          pain_points?: string[]
+          regions?: string[]
+          required_criteria?: Json
+          revenue_max?: number | null
+          revenue_min?: number | null
+          seniority_levels?: string[]
+          sub_industries?: string[]
+          technologies?: string[]
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          ai_rationale?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          business_types?: string[]
+          buying_signals?: string[]
+          company_sizes?: string[]
+          countries?: string[]
+          created_at?: string
+          created_by?: string | null
+          disqualifiers?: string[]
+          excluded_companies?: string[]
+          excluded_industries?: string[]
+          growth_stages?: string[]
+          id?: string
+          industries?: string[]
+          is_active?: boolean
+          job_functions?: string[]
+          job_titles?: string[]
+          name?: string
+          offer_id?: string | null
+          optional_criteria?: Json
+          pain_points?: string[]
+          regions?: string[]
+          required_criteria?: Json
+          revenue_max?: number | null
+          revenue_min?: number | null
+          seniority_levels?: string[]
+          sub_industries?: string[]
+          technologies?: string[]
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideal_customer_profiles_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ideal_customer_profiles_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -5732,6 +5960,782 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      prospect_companies: {
+        Row: {
+          archived_at: string | null
+          city: string | null
+          company_type: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          crm_company_id: string | null
+          data_freshness_at: string | null
+          data_source: string
+          description: string | null
+          domain: string | null
+          employee_count: number | null
+          employee_range: string | null
+          excluded_reason: string | null
+          fit_breakdown: Json
+          fit_explanation: string | null
+          fit_score: number | null
+          icp_id: string | null
+          id: string
+          industry: string | null
+          list_id: string | null
+          name: string
+          region: string | null
+          reported_issue: string | null
+          revenue_estimate: number | null
+          signals: Json
+          source_reference: string | null
+          status: string
+          sub_industry: string | null
+          technologies: string[]
+          updated_at: string
+          website_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          city?: string | null
+          company_type?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          data_freshness_at?: string | null
+          data_source?: string
+          description?: string | null
+          domain?: string | null
+          employee_count?: number | null
+          employee_range?: string | null
+          excluded_reason?: string | null
+          fit_breakdown?: Json
+          fit_explanation?: string | null
+          fit_score?: number | null
+          icp_id?: string | null
+          id?: string
+          industry?: string | null
+          list_id?: string | null
+          name: string
+          region?: string | null
+          reported_issue?: string | null
+          revenue_estimate?: number | null
+          signals?: Json
+          source_reference?: string | null
+          status?: string
+          sub_industry?: string | null
+          technologies?: string[]
+          updated_at?: string
+          website_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          city?: string | null
+          company_type?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_company_id?: string | null
+          data_freshness_at?: string | null
+          data_source?: string
+          description?: string | null
+          domain?: string | null
+          employee_count?: number | null
+          employee_range?: string | null
+          excluded_reason?: string | null
+          fit_breakdown?: Json
+          fit_explanation?: string | null
+          fit_score?: number | null
+          icp_id?: string | null
+          id?: string
+          industry?: string | null
+          list_id?: string | null
+          name?: string
+          region?: string | null
+          reported_issue?: string | null
+          revenue_estimate?: number | null
+          signals?: Json
+          source_reference?: string | null
+          status?: string
+          sub_industry?: string | null
+          technologies?: string[]
+          updated_at?: string
+          website_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_companies_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_companies_icp_id_fkey"
+            columns: ["icp_id"]
+            isOneToOne: false
+            referencedRelation: "ideal_customer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_companies_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_companies_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_contacts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
+          company_id: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          crm_contact_id: string | null
+          data_freshness_at: string | null
+          data_source: string
+          department: string | null
+          do_not_contact: boolean
+          email: string | null
+          email_confidence: number | null
+          email_status: string
+          email_verified_at: string | null
+          first_name: string | null
+          full_name: string
+          id: string
+          job_title: string | null
+          last_name: string | null
+          linkedin_url: string | null
+          notes: string | null
+          phone: string | null
+          seniority: string | null
+          source_reference: string | null
+          status: string
+          tags: string[]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          company_id?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_contact_id?: string | null
+          data_freshness_at?: string | null
+          data_source?: string
+          department?: string | null
+          do_not_contact?: boolean
+          email?: string | null
+          email_confidence?: number | null
+          email_status?: string
+          email_verified_at?: string | null
+          first_name?: string | null
+          full_name: string
+          id?: string
+          job_title?: string | null
+          last_name?: string | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          seniority?: string | null
+          source_reference?: string | null
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          company_id?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_contact_id?: string | null
+          data_freshness_at?: string | null
+          data_source?: string
+          department?: string | null
+          do_not_contact?: boolean
+          email?: string | null
+          email_confidence?: number | null
+          email_status?: string
+          email_verified_at?: string | null
+          first_name?: string | null
+          full_name?: string
+          id?: string
+          job_title?: string | null
+          last_name?: string | null
+          linkedin_url?: string | null
+          notes?: string | null
+          phone?: string | null
+          seniority?: string | null
+          source_reference?: string | null
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_contacts_crm_contact_id_fkey"
+            columns: ["crm_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_lists: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          icp_id: string | null
+          id: string
+          name: string
+          offer_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icp_id?: string | null
+          id?: string
+          name: string
+          offer_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icp_id?: string | null
+          id?: string
+          name?: string
+          offer_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_lists_icp_id_fkey"
+            columns: ["icp_id"]
+            isOneToOne: false
+            referencedRelation: "ideal_customer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_lists_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_lists_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_research_findings: {
+        Row: {
+          company_id: string | null
+          confidence: number | null
+          contact_id: string | null
+          created_at: string
+          finding: string
+          id: string
+          offer_id: string | null
+          relevance: string | null
+          retrieved_at: string
+          source_title: string | null
+          source_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string
+          finding: string
+          id?: string
+          offer_id?: string | null
+          relevance?: string | null
+          retrieved_at?: string
+          source_title?: string | null
+          source_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string | null
+          confidence?: number | null
+          contact_id?: string | null
+          created_at?: string
+          finding?: string
+          id?: string
+          offer_id?: string | null
+          relevance?: string | null
+          retrieved_at?: string
+          source_title?: string | null
+          source_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_research_findings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_research_findings_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_research_findings_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_research_findings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_sources: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          id: string
+          provider: string
+          raw: Json | null
+          result_status: string
+          retrieved_at: string
+          source_title: string | null
+          source_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          provider: string
+          raw?: Json | null
+          result_status?: string
+          retrieved_at?: string
+          source_title?: string | null
+          source_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          provider?: string
+          raw?: Json | null
+          result_status?: string
+          retrieved_at?: string
+          source_title?: string | null
+          source_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_sources_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_sources_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_sources_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_audit_events: {
+        Row: {
+          action: string
+          created_at: string
+          detail: Json
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          detail?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          detail?: Json
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_audit_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          idempotency_key: string
+          job_type: string
+          last_error: string | null
+          next_retry_at: string | null
+          payload: Json
+          progress: number
+          result: Json | null
+          retry_count: number
+          started_at: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key: string
+          job_type: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          payload?: Json
+          progress?: number
+          result?: Json | null
+          retry_count?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string
+          job_type?: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          payload?: Json
+          progress?: number
+          result?: Json | null
+          retry_count?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_jobs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_offers: {
+        Row: {
+          archived_at: string | null
+          booking_url: string | null
+          call_to_action: string | null
+          competitors: string[]
+          countries_served: string[]
+          created_at: string
+          created_by: string | null
+          currency: string
+          customer_examples: string | null
+          customer_problem: string | null
+          id: string
+          key_benefits: string[]
+          name: string
+          notes: string | null
+          pricing_model: string | null
+          proof_points: string | null
+          short_description: string | null
+          status: string
+          typical_contract_value: number | null
+          updated_at: string
+          value_proposition: string | null
+          website_analysed_at: string | null
+          website_analysis_pages: Json
+          website_analysis_status: string
+          website_analysis_summary: string | null
+          website_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          booking_url?: string | null
+          call_to_action?: string | null
+          competitors?: string[]
+          countries_served?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_examples?: string | null
+          customer_problem?: string | null
+          id?: string
+          key_benefits?: string[]
+          name: string
+          notes?: string | null
+          pricing_model?: string | null
+          proof_points?: string | null
+          short_description?: string | null
+          status?: string
+          typical_contract_value?: number | null
+          updated_at?: string
+          value_proposition?: string | null
+          website_analysed_at?: string | null
+          website_analysis_pages?: Json
+          website_analysis_status?: string
+          website_analysis_summary?: string | null
+          website_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          booking_url?: string | null
+          call_to_action?: string | null
+          competitors?: string[]
+          countries_served?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_examples?: string | null
+          customer_problem?: string | null
+          id?: string
+          key_benefits?: string[]
+          name?: string
+          notes?: string | null
+          pricing_model?: string | null
+          proof_points?: string | null
+          short_description?: string | null
+          status?: string
+          typical_contract_value?: number | null
+          updated_at?: string
+          value_proposition?: string | null
+          website_analysed_at?: string | null
+          website_analysis_pages?: Json
+          website_analysis_status?: string
+          website_analysis_summary?: string | null
+          website_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_offers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_provider_connections: {
+        Row: {
+          capability: string
+          config: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          last_checked_at: string | null
+          last_error: string | null
+          provider: string
+          scope: string
+          secret_name: string | null
+          status: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          capability: string
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          provider: string
+          scope?: string
+          secret_name?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          capability?: string
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          provider?: string
+          scope?: string
+          secret_name?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_provider_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_usage_events: {
+        Row: {
+          created_at: string
+          error_category: string | null
+          id: string
+          model: string | null
+          operation: string
+          prompt_version: string | null
+          provider: string | null
+          related_id: string | null
+          related_table: string | null
+          status: string
+          tokens: number | null
+          units: number
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_category?: string | null
+          id?: string
+          model?: string | null
+          operation: string
+          prompt_version?: string | null
+          provider?: string | null
+          related_id?: string | null
+          related_table?: string | null
+          status?: string
+          tokens?: number | null
+          units?: number
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          error_category?: string | null
+          id?: string
+          model?: string | null
+          operation?: string
+          prompt_version?: string | null
+          provider?: string | null
+          related_id?: string | null
+          related_table?: string | null
+          status?: string
+          tokens?: number | null
+          units?: number
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_usage_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referrals: {
         Row: {
