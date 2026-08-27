@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -62,7 +62,8 @@ const categories = ["AI Sales Automation", "Lead Generation Systems", "Marketing
 const slugify = (text: string) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-const AdminBlogManager = () => {
+const AdminBlogManager = ({ bare = false }: { bare?: boolean }) => {
+  const Wrapper: any = bare ? Fragment : DashboardLayout;
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -242,7 +243,7 @@ const AdminBlogManager = () => {
   );
 
   return (
-    <DashboardLayout>
+    <Wrapper>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -482,7 +483,7 @@ const AdminBlogManager = () => {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </Wrapper>
   );
 };
 

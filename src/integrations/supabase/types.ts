@@ -5299,6 +5299,44 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_access_reviews: {
+        Row: {
+          assignment_id: string | null
+          created_at: string
+          id: string
+          note: string | null
+          outcome: string
+          reviewer_user_id: string
+          subject_user_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          outcome: string
+          reviewer_user_id: string
+          subject_user_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          outcome?: string
+          reviewer_user_id?: string
+          subject_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_access_reviews_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "platform_staff_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_audit_logs: {
         Row: {
           action: string
@@ -5479,6 +5517,33 @@ export type Database = {
             referencedColumns: ["key"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
       }
       platform_staff_assignments: {
         Row: {
@@ -6518,6 +6583,9 @@ export type Database = {
           created_at: string
           id: string
           post_id: string
+          removal_reason: string | null
+          removed_at: string | null
+          removed_by: string | null
           workspace_id: string
         }
         Insert: {
@@ -6528,6 +6596,9 @@ export type Database = {
           created_at?: string
           id?: string
           post_id: string
+          removal_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
           workspace_id: string
         }
         Update: {
@@ -6538,6 +6609,9 @@ export type Database = {
           created_at?: string
           id?: string
           post_id?: string
+          removal_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -6679,6 +6753,9 @@ export type Database = {
           is_pinned: boolean
           like_count: number
           media_url: string | null
+          removal_reason: string | null
+          removed_at: string | null
+          removed_by: string | null
           space_id: string | null
           title: string | null
           updated_at: string
@@ -6695,6 +6772,9 @@ export type Database = {
           is_pinned?: boolean
           like_count?: number
           media_url?: string | null
+          removal_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
           space_id?: string | null
           title?: string | null
           updated_at?: string
@@ -6711,6 +6791,9 @@ export type Database = {
           is_pinned?: boolean
           like_count?: number
           media_url?: string | null
+          removal_reason?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
           space_id?: string | null
           title?: string | null
           updated_at?: string
@@ -11077,7 +11160,21 @@ export type Database = {
         Args: { _end: string; _start: string; _team_id: string }
         Returns: string
       }
+      platform_automation_health: { Args: { _since: string }; Returns: Json }
+      platform_communications_metrics: {
+        Args: { _since: string }
+        Returns: Json
+      }
+      platform_community_moderation: {
+        Args: { _limit?: number }
+        Returns: Json
+      }
+      platform_failed_runs: { Args: { _limit?: number }; Returns: Json }
+      platform_fulfilment_overview: { Args: never; Returns: Json }
+      platform_health_jobs: { Args: never; Returns: Json }
+      platform_integration_health: { Args: never; Returns: Json }
       platform_overview_metrics: { Args: { _since?: string }; Returns: Json }
+      platform_sender_queue: { Args: never; Returns: Json }
       platform_users_list: {
         Args: {
           _limit?: number
