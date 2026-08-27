@@ -15,6 +15,7 @@ import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApprovedWhatsAppTemplates, useWhatsAppSettings, useUpdateDefaultReengagementTemplate } from "@/hooks/useWhatsAppTemplates";
 import { WhatsAppConnectCard } from "@/components/settings/WhatsAppConnectCard";
+import { WhatsAppDeliveryTimeline, type WhatsAppTestSubmission } from "@/components/settings/WhatsAppDeliveryTimeline";
 import {
   Mail, Smartphone, MessageCircle, Loader2, Save, ChevronDown,
   CheckCircle2, XCircle, Unplug, Send, Globe, Copy, RefreshCw,
@@ -599,6 +600,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [waTestTo, setWaTestTo] = useState("");
   const [waTestMsg, setWaTestMsg] = useState("");
   const [waTestSending, setWaTestSending] = useState(false);
+  const [waTestSubmission, setWaTestSubmission] = useState<WhatsAppTestSubmission | null>(null);
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
 
   // Live WhatsApp connection (Meta) status — used for the header pill row.
@@ -804,6 +806,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const handleTestWhatsApp = async () => {
     if (!waTestTo || !waTestMsg) { toast.error("Enter phone and message"); return; }
     setWaTestSending(true);
+    setWaTestSubmission(null);
     try {
       // Render any {{first_name}}, {{company}}, etc. with sample values so the
       // test recipient sees real text instead of literal placeholders.
@@ -824,7 +827,17 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         return;
       }
       if (data?.error) throw new Error(data.error);
-      toast.success(`Test WhatsApp sent! ${data?.credentialSource === "workspace" ? "(your credentials)" : "(platform credentials)"}`);
+      // HTTP 200 from Meta means *accepted*, not delivered. The timeline below
+      // only advances on genuine Meta status webhooks.
+      setWaTestSubmission({
+        waMessageId: data?.waMessageId ?? null,
+        wabaId: data?.wabaId ?? null,
+        phoneNumberId: data?.phoneNumberId ?? null,
+        senderOwnership: data?.senderOwnership ?? data?.credentialSource ?? null,
+        templateUsed: data?.templateUsed ?? null,
+        to: waTestTo,
+      });
+      toast.success("Submitted to Meta — awaiting delivery confirmation.");
     } catch (err: any) { toast.error(err.message || "Failed"); }
     finally { setWaTestSending(false); }
   };
@@ -1226,6 +1239,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                       <Button variant="outline" size="sm" className="mt-2" onClick={handleTestWhatsApp} disabled={waTestSending}>
                         {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
                       </Button>
+                      {waTestSubmission && <WhatsAppDeliveryTimeline submission={waTestSubmission} />}
                     </div>
 
                     <Separator />

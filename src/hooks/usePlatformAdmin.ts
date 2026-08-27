@@ -268,6 +268,12 @@ export function usePlatformIntegrationHealth() {
   return usePlatformRpc("platform-integration-health", "platform_integration_health");
 }
 
+export function usePlatformWhatsAppHealth() {
+  return usePlatformRpc("platform-whatsapp-health", "platform_whatsapp_health" as any);
+}
+
+
+
 export function usePlatformFulfilmentOverview() {
   return usePlatformRpc("platform-fulfilment", "platform_fulfilment_overview");
 }

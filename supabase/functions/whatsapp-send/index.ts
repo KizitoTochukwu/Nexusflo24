@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { decryptWhatsApp, encryptChannelConfig } from "../_shared/whatsapp-crypto.ts";
-import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { deductCredit, isAdminUser, addCredits } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
@@ -455,6 +455,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { workspaceId, to, type = "text", leadId, campaignId, template, skipCredits } = body;
+    const automationId: string | null = (body as any).automationId || (body as any).automation_id || null;
+    const automationRunId: string | null = (body as any).automationRunId || (body as any).automation_run_id || null;
     // Preview / test sends from the editor — skip credits + prefix [TEST].
     const isPreview = (body as any).preview === true;
     // WhatsApp text messages are plain-text — strip any HTML that may have
@@ -607,12 +609,27 @@ Deno.serve(async (req) => {
     }
     const toCountry = countryFromE164(normalizedTo);
     const deductAmount = shouldDeductCredits ? await getDeductionAmount("whatsapp", toCountry) : 0;
+    let creditsHeld = false;
     if (shouldDeductCredits) {
       const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      creditsHeld = deductAmount > 0;
     }
+
+    // Credits are only *earned* by Meta once it accepts the message. Anything
+    // that fails before Meta accepts must release the hold so users are never
+    // charged for a message Meta never took.
+    const releaseCreditHold = async (reason: string) => {
+      if (!creditsHeld || deductAmount <= 0) return;
+      creditsHeld = false;
+      try {
+        await addCredits(workspaceId, "whatsapp", deductAmount, `refund:${reason}`);
+      } catch (err) {
+        console.error("whatsapp-send: failed to release credit hold", err);
+      }
+    };
 
     const platformAccessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN")?.trim();
     const platformPhoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID")?.trim();
@@ -623,7 +640,86 @@ Deno.serve(async (req) => {
     });
 
     if (creds.source === "none" || !creds.config.access_token || !creds.config.phone_number_id) {
+      await releaseCreditHold("not_configured");
       return new Response(JSON.stringify({ error: "WhatsApp not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Record which WABA/sender this message will actually use so the delivery
+    // log and the test timeline can show it before and after sending.
+    let resolvedWabaId: string | null = null;
+    {
+      const { data: wabaRows } = await adminClient
+        .from("whatsapp_settings")
+        .select("waba_id")
+        .eq("workspace_id", workspaceId)
+        .order("is_active", { ascending: false })
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      resolvedWabaId = wabaRows?.[0]?.waba_id || null;
+    }
+
+    // ── Pre-send template gate ───────────────────────────────────────────
+    // Block on templates that Meta will refuse, before spending a credit or
+    // calling the API: unknown, paused, rejected, disabled, or a language the
+    // approved template does not have.
+    if (template && !isPreview) {
+      const tplAny = template as any;
+      const { data: tplRow } = tplAny.id
+        ? await adminClient
+            .from("whatsapp_templates")
+            .select("name, language, status, variable_count")
+            .eq("workspace_id", workspaceId)
+            .eq("id", tplAny.id)
+            .maybeSingle()
+        : await adminClient
+            .from("whatsapp_templates")
+            .select("name, language, status, variable_count")
+            .eq("workspace_id", workspaceId)
+            .eq("name", tplAny.name)
+            .maybeSingle();
+
+      const tplStatus = String(tplRow?.status || "").toLowerCase();
+      let blockReason: string | null = null;
+      if (tplRow && tplStatus && tplStatus !== "approved") {
+        blockReason = `WhatsApp template "${tplRow.name}" is ${tplStatus} on Meta. Sync templates in Settings → Channels → WhatsApp and pick an approved template.`;
+      } else if (tplRow && tplAny.language && tplRow.language && tplAny.language !== tplRow.language) {
+        blockReason = `WhatsApp template "${tplRow.name}" is approved for language ${tplRow.language}, not ${tplAny.language}.`;
+      } else if (tplRow && typeof tplRow.variable_count === "number" && tplAny.contentVariables) {
+        const supplied = Object.keys(tplAny.contentVariables).filter((k) => /^\d+$/.test(k)).length;
+        if (supplied !== tplRow.variable_count) {
+          blockReason = `WhatsApp template "${tplRow.name}" expects ${tplRow.variable_count} variable(s) but ${supplied} were supplied.`;
+        }
+      }
+
+      if (blockReason) {
+        await releaseCreditHold("template_blocked");
+        await adminClient.from("whatsapp_messages").insert({
+          workspace_id: workspaceId,
+          direction: "outbound",
+          phone_number: normalizedTo,
+          message_type: "template",
+          body: msgBody || `[Template: ${tplAny.name || tplRow?.name}]`,
+          status: "failed",
+          error: blockReason,
+          error_title: "template_blocked",
+          failed_at: new Date().toISOString(),
+          last_status_at: new Date().toISOString(),
+          template_name: tplRow?.name || tplAny.name || null,
+          language_code: tplAny.language || tplRow?.language || null,
+          waba_id: resolvedWabaId,
+          sender_phone_number_id: creds.config.phone_number_id.trim(),
+          sender_ownership: creds.source,
+          credit_charged: false,
+          ...(automationId ? { automation_id: automationId } : {}),
+          ...(automationRunId ? { automation_run_id: automationRunId } : {}),
+          ...(leadId ? { lead_id: leadId } : {}),
+          ...(campaignId ? { campaign_id: campaignId } : {}),
+        });
+        return new Response(
+          JSON.stringify({ success: false, fallback: true, reason: "template_blocked", error: blockReason }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     // Normalize a Meta-flavoured template payload: the picker sends
@@ -779,6 +875,7 @@ Deno.serve(async (req) => {
             ? "WhatsApp template no longer exists (or isn't approved) on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default re-engagement template."
             : "WhatsApp 24h window closed — recipient has not messaged you in 24h. Configure a default re-engagement template in Settings → Channels, or send an approved template manually.";
           console.warn("WA window closed (no live template)", { workspaceId, to: normalizedTo });
+          await releaseCreditHold("window_closed");
 
           await adminClient.from("whatsapp_messages").insert({
             workspace_id: workspaceId,
@@ -880,6 +977,7 @@ Deno.serve(async (req) => {
         const optedOut = tags.includes("unsubscribed") || tags.includes("wa_opted_out");
         if (optedOut) {
           const errMsg = "Recipient opted out of WhatsApp marketing.";
+          await releaseCreditHold("opted_out");
           await adminClient.from("whatsapp_messages").insert({
             workspace_id: workspaceId, direction: "outbound",
             phone_number: normalizedTo, message_type: "template",
@@ -918,6 +1016,7 @@ Deno.serve(async (req) => {
     const tier = await checkDailyTier(adminClient, workspaceId);
     if (!tier.ok) {
       const errMsg = `WhatsApp 24h tier limit reached (${tier.used}/${tier.limit}). Wait or request a higher tier from Meta.`;
+      await releaseCreditHold("tier_exceeded");
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId, direction: "outbound",
         phone_number: normalizedTo, message_type: effectiveTemplate ? "template" : type,
@@ -1009,6 +1108,10 @@ Deno.serve(async (req) => {
       const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
 
       const logBody = msgBody || `[Template: ${effectiveTemplate?.name}]`;
+      // Meta rejected the request — it never accepted the message, so the
+      // credit hold is released.
+      await releaseCreditHold("meta_rejected");
+      const metaErr = attempt.data?.error || {};
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
         direction: "outbound",
@@ -1017,6 +1120,20 @@ Deno.serve(async (req) => {
         body: logBody,
         status: "failed",
         error: errMsg,
+        error_code: Number.isFinite(graphCode) && graphCode ? graphCode : null,
+        error_title: metaErr?.error_user_title || metaErr?.type || null,
+        error_details: metaErr?.error_data?.details || metaErr?.message || null,
+        fbtrace_id: metaErr?.fbtrace_id || null,
+        failed_at: new Date().toISOString(),
+        last_status_at: new Date().toISOString(),
+        waba_id: resolvedWabaId,
+        sender_phone_number_id: creds.config.phone_number_id.trim(),
+        sender_ownership: creds.source,
+        language_code: effectiveTemplate?.language || null,
+        template_name: effectiveTemplate?.name || null,
+        credit_charged: false,
+        ...(automationId ? { automation_id: automationId } : {}),
+        ...(automationRunId ? { automation_run_id: automationRunId } : {}),
         ...(leadId ? { lead_id: leadId } : {}),
         ...(campaignId ? { campaign_id: campaignId } : {}),
         ...(complianceNote ? { compliance_note: complianceNote } : {}),
@@ -1043,34 +1160,63 @@ Deno.serve(async (req) => {
       ? `${msgBody} [auto-sent as template: ${effectiveTemplate?.name}]`
       : (msgBody || `[Template: ${effectiveTemplate?.name}]`);
 
-    await adminClient.from("whatsapp_messages").insert({
+    // Meta accepted the request. That is *submission*, not delivery — the
+    // status only advances when a genuine Meta status webhook arrives.
+    const submittedAt = new Date().toISOString();
+    const { data: insertedRows } = await adminClient.from("whatsapp_messages").insert({
       workspace_id: workspaceId,
       wa_message_id: waMessageId,
+      provider_message_id: waMessageId,
+      provider: "meta",
       direction: "outbound",
       phone_number: normalizedTo,
       message_type: effectiveTemplate ? "template" : type,
       body: sentLogBody,
-      status: "sent",
+      status: "submitted",
+      submitted_at: submittedAt,
+      last_status_at: submittedAt,
       auto_templated: autoTemplated,
       template_name: effectiveTemplate?.name || null,
+      language_code: effectiveTemplate?.language || null,
+      waba_id: resolvedWabaId,
+      sender_phone_number_id: creds.config.phone_number_id.trim(),
+      sender_ownership: creds.source,
+      credit_charged: creditsHeld,
       sender_profile_id: resolvedSender?.profile?.id || null,
+      ...(automationId ? { automation_id: automationId } : {}),
+      ...(automationRunId ? { automation_run_id: automationRunId } : {}),
       ...(leadId ? { lead_id: leadId } : {}),
       ...(campaignId ? { campaign_id: campaignId } : {}),
       ...(complianceNote ? { compliance_note: complianceNote } : {}),
-    });
+    }).select("id").limit(1);
+    const messageRowId = insertedRows?.[0]?.id || null;
+
+    if (waMessageId) {
+      await adminClient.from("whatsapp_status_events").insert({
+        workspace_id: workspaceId,
+        message_id: messageRowId,
+        wamid: waMessageId,
+        status: "submitted",
+        meta_timestamp: submittedAt,
+        recipient_id: normalizedTo,
+      });
+    }
+
     if (!isPreview) {
       await logCommunicationUsage({
         workspaceId, channel: "whatsapp",
         senderProfileId: resolvedSender?.profile?.id || null,
         messageId: waMessageId, country: toCountry,
-        creditsDeducted: deductAmount, status: "sent",
+        creditsDeducted: deductAmount, status: "submitted",
       });
     }
 
+    // Submission is NOT delivery — campaign rows stay pending until a Meta
+    // status callback moves them forward.
     if (campaignId && leadId && waMessageId) {
       await adminClient
         .from("campaign_messages")
-        .update({ delivery_status: "delivered" })
+        .update({ delivery_status: "submitted" })
         .eq("campaign_id", campaignId)
         .eq("lead_id", leadId)
         .eq("channel", "whatsapp")
@@ -1078,7 +1224,20 @@ Deno.serve(async (req) => {
     }
 
     const testMode = isPreview && effectiveTemplate?.name === "hello_world" ? "hello_world" : undefined;
-    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source, autoTemplated, templateUsed: effectiveTemplate?.name, testMode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({
+      success: true,
+      status: "submitted",
+      message: "Submitted to Meta — awaiting delivery confirmation.",
+      waMessageId,
+      messageId: messageRowId,
+      wabaId: resolvedWabaId,
+      phoneNumberId: creds.config.phone_number_id.trim(),
+      senderOwnership: creds.source,
+      credentialSource: attempt.source,
+      autoTemplated,
+      templateUsed: effectiveTemplate?.name,
+      testMode,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("whatsapp-send error:", err);
     return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send WhatsApp message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
