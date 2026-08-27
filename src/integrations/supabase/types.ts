@@ -6459,6 +6459,202 @@ export type Database = {
           },
         ]
       }
+      prospecting_campaigns: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          daily_limit: number
+          from_email: string | null
+          from_name: string | null
+          icp_id: string | null
+          id: string
+          launched_at: string | null
+          list_id: string | null
+          max_spacing_seconds: number
+          min_spacing_seconds: number
+          name: string
+          offer_id: string | null
+          paused_at: string | null
+          paused_reason: string | null
+          reply_to: string | null
+          send_days: number[]
+          send_window_end: number
+          send_window_start: number
+          status: string
+          timezone: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          from_email?: string | null
+          from_name?: string | null
+          icp_id?: string | null
+          id?: string
+          launched_at?: string | null
+          list_id?: string | null
+          max_spacing_seconds?: number
+          min_spacing_seconds?: number
+          name: string
+          offer_id?: string | null
+          paused_at?: string | null
+          paused_reason?: string | null
+          reply_to?: string | null
+          send_days?: number[]
+          send_window_end?: number
+          send_window_start?: number
+          status?: string
+          timezone?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          from_email?: string | null
+          from_name?: string | null
+          icp_id?: string | null
+          id?: string
+          launched_at?: string | null
+          list_id?: string | null
+          max_spacing_seconds?: number
+          min_spacing_seconds?: number
+          name?: string
+          offer_id?: string | null
+          paused_at?: string | null
+          paused_reason?: string | null
+          reply_to?: string | null
+          send_days?: number[]
+          send_window_end?: number
+          send_window_start?: number
+          status?: string
+          timezone?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_campaigns_icp_id_fkey"
+            columns: ["icp_id"]
+            isOneToOne: false
+            referencedRelation: "ideal_customer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_campaigns_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_campaigns_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_enrolments: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          campaign_id: string
+          company_id: string | null
+          contact_id: string
+          created_at: string
+          current_step: number
+          id: string
+          next_send_at: string | null
+          status: string
+          stop_reason: string | null
+          stopped_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_id: string
+          company_id?: string | null
+          contact_id: string
+          created_at?: string
+          current_step?: number
+          id?: string
+          next_send_at?: string | null
+          status?: string
+          stop_reason?: string | null
+          stopped_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_id?: string
+          company_id?: string | null
+          contact_id?: string
+          created_at?: string
+          current_step?: number
+          id?: string
+          next_send_at?: string | null
+          status?: string
+          stop_reason?: string | null
+          stopped_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_enrolments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_enrolments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_enrolments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_enrolments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospecting_jobs: {
         Row: {
           completed_at: string | null
@@ -6622,6 +6818,111 @@ export type Database = {
           },
         ]
       }
+      prospecting_outbound_emails: {
+        Row: {
+          attempts: number
+          body_html: string
+          campaign_id: string
+          contact_id: string | null
+          created_at: string
+          enrolment_id: string
+          error: string | null
+          evidence: Json
+          id: string
+          idempotency_key: string
+          provider_message_id: string | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          step_id: string | null
+          step_number: number
+          subject: string
+          to_email: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attempts?: number
+          body_html?: string
+          campaign_id: string
+          contact_id?: string | null
+          created_at?: string
+          enrolment_id: string
+          error?: string | null
+          evidence?: Json
+          id?: string
+          idempotency_key: string
+          provider_message_id?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id?: string | null
+          step_number?: number
+          subject?: string
+          to_email: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attempts?: number
+          body_html?: string
+          campaign_id?: string
+          contact_id?: string | null
+          created_at?: string
+          enrolment_id?: string
+          error?: string | null
+          evidence?: Json
+          id?: string
+          idempotency_key?: string
+          provider_message_id?: string | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id?: string | null
+          step_number?: number
+          subject?: string
+          to_email?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_outbound_emails_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_outbound_emails_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_outbound_emails_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_outbound_emails_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_sequence_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_outbound_emails_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospecting_provider_connections: {
         Row: {
           capability: string
@@ -6671,6 +6972,101 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "prospecting_provider_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_sequence_steps: {
+        Row: {
+          ai_generated: boolean
+          body_template: string
+          campaign_id: string
+          created_at: string
+          delay_days: number
+          evidence: Json
+          id: string
+          step_number: number
+          subject_template: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          body_template?: string
+          campaign_id: string
+          created_at?: string
+          delay_days?: number
+          evidence?: Json
+          id?: string
+          step_number: number
+          subject_template?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ai_generated?: boolean
+          body_template?: string
+          campaign_id?: string
+          created_at?: string
+          delay_days?: number
+          evidence?: Json
+          id?: string
+          step_number?: number
+          subject_template?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_sequence_steps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_sequence_steps_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_suppressions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          email: string | null
+          id: string
+          reason: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          email?: string | null
+          id?: string
+          reason?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          email?: string | null
+          id?: string
+          reason?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_suppressions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
