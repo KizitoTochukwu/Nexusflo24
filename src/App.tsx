@@ -310,6 +310,8 @@ const App = () => (
                   <Route path="offers" element={<CfOffers />} />
                   <Route path="ideal-customers" element={<CfIdealCustomers />} />
                   <Route path="prospects" element={<CfProspects />} />
+                  <Route path="outreach" element={<CfOutreach />} />
+                  <Route path="outreach/:campaignId" element={<CfCampaign />} />
                   <Route path="settings" element={<CfSettings />} />
                   <Route path="*" element={<Navigate to="overview" replace />} />
                 </Route>
