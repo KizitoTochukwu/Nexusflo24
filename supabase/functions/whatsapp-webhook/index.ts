@@ -149,6 +149,30 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
 
+      // Idempotent webhook log — the same callback re-delivered by Meta hits
+      // the unique event_key and is skipped.
+      const eventKey = await sha256Hex(rawBody);
+      const firstPhoneId = payload?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id || null;
+      const statusCount = (payload?.entry || []).reduce(
+        (n: number, e: any) => n + (e?.changes || []).reduce((m: number, c: any) => m + (c?.value?.statuses?.length || 0), 0), 0);
+      const messageCount = (payload?.entry || []).reduce(
+        (n: number, e: any) => n + (e?.changes || []).reduce((m: number, c: any) => m + (c?.value?.messages?.length || 0), 0), 0);
+
+      const { error: logErr } = await adminClient.from("whatsapp_webhook_events").insert({
+        event_key: eventKey,
+        phone_number_id: firstPhoneId,
+        signature_valid: true,
+        event_type: statusCount > 0 ? "statuses" : messageCount > 0 ? "messages" : "other",
+        status_count: statusCount,
+        message_count: messageCount,
+        payload_redacted: redactPayload(payload),
+      });
+      if (logErr && String(logErr.code) === "23505") {
+        console.log("whatsapp-webhook: duplicate callback ignored", { eventKey: eventKey.slice(0, 12) });
+        return new Response("OK", { status: 200 });
+      }
+
+      const process = async () => {
       const entries = payload?.entry || [];
       for (const entry of entries) {
         const changes = entry?.changes || [];
