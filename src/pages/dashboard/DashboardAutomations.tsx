@@ -161,15 +161,6 @@ const DashboardAutomations = () => {
 
 
 
-      <AutomationHealthPanel
-        workspaceId={workspaceId}
-        automations={automations ?? []}
-        onOpen={(id) => {
-          const next = new URLSearchParams(searchParams);
-          next.set("edit", id);
-          setSearchParams(next, { replace: false });
-        }}
-      />
 
       {/* Backfill banner — surfaces legacy nurture automations missing exit criteria */}
       {!bannerDismissed && missingExitCount > 0 && (
