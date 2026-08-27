@@ -472,6 +472,9 @@ export default function DashboardMessages() {
           workspaceId={workspaceId}
           channel={selectedThread.channel}
           identifier={selectedThread.identifier}
+          suggestedName={
+            selectedThread.displayName !== selectedThread.identifier ? selectedThread.displayName : undefined
+          }
           onLinked={() => {
             qc.invalidateQueries({ queryKey: ["whatsapp-threads", workspaceId] });
             qc.invalidateQueries({ queryKey: ["sms-threads", workspaceId] });
