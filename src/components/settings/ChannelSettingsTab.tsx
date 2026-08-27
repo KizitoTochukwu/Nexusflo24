@@ -825,7 +825,17 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
         return;
       }
       if (data?.error) throw new Error(data.error);
-      toast.success(`Test WhatsApp sent! ${data?.credentialSource === "workspace" ? "(your credentials)" : "(platform credentials)"}`);
+      // HTTP 200 from Meta means *accepted*, not delivered. The timeline below
+      // only advances on genuine Meta status webhooks.
+      setWaTestSubmission({
+        waMessageId: data?.waMessageId ?? null,
+        wabaId: data?.wabaId ?? null,
+        phoneNumberId: data?.phoneNumberId ?? null,
+        senderOwnership: data?.senderOwnership ?? data?.credentialSource ?? null,
+        templateUsed: data?.templateUsed ?? null,
+        to: waTestTo,
+      });
+      toast.success("Submitted to Meta — awaiting delivery confirmation.");
     } catch (err: any) { toast.error(err.message || "Failed"); }
     finally { setWaTestSending(false); }
   };
