@@ -296,13 +296,24 @@ function IntegrationsTab() {
     if (!waTestPhone) { toast.error("Enter a test phone number"); return; }
     if (!waTestMessage) { toast.error("Enter a test message"); return; }
     setWaTestSending(true);
+    setWaTestSubmission(null);
     try {
       const { data, error } = await supabase.functions.invoke("whatsapp-send", {
         body: { workspaceId, to: waTestPhone, type: "text", body: waTestMessage },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(`WhatsApp sent! ID: ${data.waMessageId || "—"}`);
+      if (data?.success === false) { toast.error(data.error || "WhatsApp send failed"); return; }
+      // Accepted by Meta ≠ delivered — the timeline tracks the real lifecycle.
+      setWaTestSubmission({
+        waMessageId: data?.waMessageId ?? null,
+        wabaId: data?.wabaId ?? null,
+        phoneNumberId: data?.phoneNumberId ?? null,
+        senderOwnership: data?.senderOwnership ?? null,
+        templateUsed: data?.templateUsed ?? null,
+        to: waTestPhone,
+      });
+      toast.success("Submitted to Meta — awaiting delivery confirmation.");
     } catch (err: any) {
       toast.error(err.message || "Failed to send WhatsApp message");
     } finally {
