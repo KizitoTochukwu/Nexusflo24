@@ -241,6 +241,7 @@ const App = () => (
                 <Route path="communications" element={<PlatformCommunications />} />
                 <Route path="automations" element={<PlatformAutomations />} />
                 <Route path="integrations" element={<PlatformIntegrations />} />
+                <Route path="whatsapp" element={<PlatformWhatsApp />} />
                 <Route path="fulfilment" element={<PlatformFulfilment />} />
                 <Route path="content" element={<PlatformContent />} />
                 <Route path="academy" element={<PlatformAcademy />} />
