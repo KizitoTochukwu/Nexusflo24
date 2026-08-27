@@ -248,6 +248,7 @@ function IntegrationsTab() {
   const [waTestPhone, setWaTestPhone] = useState("");
   const [waTestMessage, setWaTestMessage] = useState("");
   const [waTestSending, setWaTestSending] = useState(false);
+  const [waTestSubmission, setWaTestSubmission] = useState<WhatsAppTestSubmission | null>(null);
 
   useEffect(() => {
     (async () => {
