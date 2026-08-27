@@ -8,6 +8,52 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Stable fingerprint of the raw callback body — used as the idempotency key. */
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Strip phone numbers and message bodies before persisting a webhook payload. */
+function redactPayload(payload: any): any {
+  const mask = (v: any) => (typeof v === "string" && v.length > 4 ? `***${v.slice(-4)}` : "***");
+  try {
+    return {
+      object: payload?.object,
+      entry: (payload?.entry || []).map((e: any) => ({
+        id: e?.id,
+        changes: (e?.changes || []).map((c: any) => ({
+          field: c?.field,
+          value: {
+            messaging_product: c?.value?.messaging_product,
+            metadata: {
+              phone_number_id: c?.value?.metadata?.phone_number_id,
+              display_phone_number: mask(c?.value?.metadata?.display_phone_number),
+            },
+            statuses: (c?.value?.statuses || []).map((s: any) => ({
+              id: s?.id,
+              status: s?.status,
+              timestamp: s?.timestamp,
+              recipient_id: mask(s?.recipient_id),
+              conversation: s?.conversation?.origin ? { origin: s.conversation.origin } : undefined,
+              errors: s?.errors,
+            })),
+            messages: (c?.value?.messages || []).map((m: any) => ({
+              id: m?.id,
+              type: m?.type,
+              timestamp: m?.timestamp,
+              from: mask(m?.from),
+            })),
+          },
+        })),
+      })),
+    };
+  } catch {
+    return { redaction_failed: true };
+  }
+}
+
+
 async function deriveKey(secret: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(secret), "PBKDF2", false, ["deriveKey"]);
