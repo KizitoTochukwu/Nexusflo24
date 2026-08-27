@@ -1238,6 +1238,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
                       <Button variant="outline" size="sm" className="mt-2" onClick={handleTestWhatsApp} disabled={waTestSending}>
                         {waTestSending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}Test
                       </Button>
+                      {waTestSubmission && <WhatsAppDeliveryTimeline submission={waTestSubmission} />}
                     </div>
 
                     <Separator />
