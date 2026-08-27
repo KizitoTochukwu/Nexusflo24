@@ -146,6 +146,8 @@ import CfOffers from "./pages/dashboard/client-finder/CfOffers";
 import CfIdealCustomers from "./pages/dashboard/client-finder/CfIdealCustomers";
 import CfProspects from "./pages/dashboard/client-finder/CfProspects";
 import CfSettings from "./pages/dashboard/client-finder/CfSettings";
+import CfOutreach from "./pages/dashboard/client-finder/CfOutreach";
+import CfCampaign from "./pages/dashboard/client-finder/CfCampaign";
 import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
 import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
@@ -310,6 +312,8 @@ const App = () => (
                   <Route path="offers" element={<CfOffers />} />
                   <Route path="ideal-customers" element={<CfIdealCustomers />} />
                   <Route path="prospects" element={<CfProspects />} />
+                  <Route path="outreach" element={<CfOutreach />} />
+                  <Route path="outreach/:campaignId" element={<CfCampaign />} />
                   <Route path="settings" element={<CfSettings />} />
                   <Route path="*" element={<Navigate to="overview" replace />} />
                 </Route>

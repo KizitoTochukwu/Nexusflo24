@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useParams } from "react-router-dom";
-import { BarChart3, Building2, Package, Settings, Target } from "lucide-react";
+import { BarChart3, Building2, Package, Send, Settings, Target } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ const TABS = [
   { to: "offers", label: "Offers", icon: Package },
   { to: "ideal-customers", label: "Ideal customers", icon: Target },
   { to: "prospects", label: "Prospects", icon: Building2 },
+  { to: "outreach", label: "Outreach", icon: Send },
   { to: "settings", label: "Settings", icon: Settings },
 ];
 
