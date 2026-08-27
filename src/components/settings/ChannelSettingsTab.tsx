@@ -599,6 +599,7 @@ export default function ChannelSettingsTab({ workspaceId }: { workspaceId: strin
   const [waTestTo, setWaTestTo] = useState("");
   const [waTestMsg, setWaTestMsg] = useState("");
   const [waTestSending, setWaTestSending] = useState(false);
+  const [waTestSubmission, setWaTestSubmission] = useState<WhatsAppTestSubmission | null>(null);
   const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
 
   // Live WhatsApp connection (Meta) status — used for the header pill row.
