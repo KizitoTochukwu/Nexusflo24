@@ -304,6 +304,15 @@ const App = () => (
 
                 
                 <Route path="messages" element={<DashboardMessages />} />
+                <Route path="client-finder" element={<ClientFinderLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<CfOverview />} />
+                  <Route path="offers" element={<CfOffers />} />
+                  <Route path="ideal-customers" element={<CfIdealCustomers />} />
+                  <Route path="prospects" element={<CfProspects />} />
+                  <Route path="settings" element={<CfSettings />} />
+                  <Route path="*" element={<Navigate to="overview" replace />} />
+                </Route>
                 <Route path="commerce" element={<CommerceLayout />}>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<CommerceOverview />} />
