@@ -240,8 +240,13 @@ function usePlatformRpc<T = any>(key: string, fn: string, args: Record<string, u
   });
 }
 
+function useStableSince(days: number) {
+  const [since] = useState(() => new Date(Date.now() - days * 86_400_000).toISOString());
+  return since;
+}
+
 export function usePlatformCommunicationsMetrics(days = 30) {
-  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const since = useStableSince(days);
   return usePlatformRpc("platform-communications", "platform_communications_metrics", { _since: since });
 }
 
@@ -250,7 +255,7 @@ export function usePlatformSenderQueue() {
 }
 
 export function usePlatformAutomationHealth(days = 30) {
-  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const since = useStableSince(days);
   return usePlatformRpc("platform-automation-health", "platform_automation_health", { _since: since });
 }
 
