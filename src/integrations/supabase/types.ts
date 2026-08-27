@@ -10751,6 +10751,16 @@ export type Database = {
       claim_shop_entitlements: { Args: never; Returns: number }
       claim_shop_orders: { Args: never; Returns: number }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
+      crm_create_contact_from_conversation: {
+        Args: {
+          _channel: string
+          _email?: string
+          _full_name: string
+          _identifier: string
+          _workspace_id: string
+        }
+        Returns: Json
+      }
       crm_ensure_pipeline_stages: {
         Args: { _pipeline_id: string }
         Returns: number
