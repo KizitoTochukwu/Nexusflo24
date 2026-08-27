@@ -11434,6 +11434,7 @@ export type Database = {
         }
         Returns: Json
       }
+      platform_whatsapp_health: { Args: never; Returns: Json }
       platform_workspaces_list: {
         Args: { _limit?: number; _offset?: number; _search?: string }
         Returns: Json
