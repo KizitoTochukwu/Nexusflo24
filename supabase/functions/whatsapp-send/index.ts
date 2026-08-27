@@ -455,6 +455,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { workspaceId, to, type = "text", leadId, campaignId, template, skipCredits } = body;
+    const automationId: string | null = (body as any).automationId || (body as any).automation_id || null;
+    const automationRunId: string | null = (body as any).automationRunId || (body as any).automation_run_id || null;
     // Preview / test sends from the editor — skip credits + prefix [TEST].
     const isPreview = (body as any).preview === true;
     // WhatsApp text messages are plain-text — strip any HTML that may have
