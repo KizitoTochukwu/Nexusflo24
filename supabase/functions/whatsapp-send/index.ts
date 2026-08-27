@@ -794,6 +794,7 @@ Deno.serve(async (req) => {
             ? "WhatsApp template no longer exists (or isn't approved) on Meta. Sync templates in Settings → Channels → WhatsApp and pick a new default re-engagement template."
             : "WhatsApp 24h window closed — recipient has not messaged you in 24h. Configure a default re-engagement template in Settings → Channels, or send an approved template manually.";
           console.warn("WA window closed (no live template)", { workspaceId, to: normalizedTo });
+          await releaseCreditHold("window_closed");
 
           await adminClient.from("whatsapp_messages").insert({
             workspace_id: workspaceId,
@@ -895,6 +896,7 @@ Deno.serve(async (req) => {
         const optedOut = tags.includes("unsubscribed") || tags.includes("wa_opted_out");
         if (optedOut) {
           const errMsg = "Recipient opted out of WhatsApp marketing.";
+          await releaseCreditHold("opted_out");
           await adminClient.from("whatsapp_messages").insert({
             workspace_id: workspaceId, direction: "outbound",
             phone_number: normalizedTo, message_type: "template",
@@ -933,6 +935,7 @@ Deno.serve(async (req) => {
     const tier = await checkDailyTier(adminClient, workspaceId);
     if (!tier.ok) {
       const errMsg = `WhatsApp 24h tier limit reached (${tier.used}/${tier.limit}). Wait or request a higher tier from Meta.`;
+      await releaseCreditHold("tier_exceeded");
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId, direction: "outbound",
         phone_number: normalizedTo, message_type: effectiveTemplate ? "template" : type,
@@ -1024,6 +1027,10 @@ Deno.serve(async (req) => {
       const { errMsg, graphCode, graphSubcode } = buildWhatsAppError(new Response(null, { status: 400 }), attempt.data);
 
       const logBody = msgBody || `[Template: ${effectiveTemplate?.name}]`;
+      // Meta rejected the request — it never accepted the message, so the
+      // credit hold is released.
+      await releaseCreditHold("meta_rejected");
+      const metaErr = attempt.data?.error || {};
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
         direction: "outbound",
@@ -1032,6 +1039,20 @@ Deno.serve(async (req) => {
         body: logBody,
         status: "failed",
         error: errMsg,
+        error_code: Number.isFinite(graphCode) && graphCode ? graphCode : null,
+        error_title: metaErr?.error_user_title || metaErr?.type || null,
+        error_details: metaErr?.error_data?.details || metaErr?.message || null,
+        fbtrace_id: metaErr?.fbtrace_id || null,
+        failed_at: new Date().toISOString(),
+        last_status_at: new Date().toISOString(),
+        waba_id: resolvedWabaId,
+        sender_phone_number_id: creds.config.phone_number_id.trim(),
+        sender_ownership: creds.source,
+        language_code: effectiveTemplate?.language || null,
+        template_name: effectiveTemplate?.name || null,
+        credit_charged: false,
+        ...(automationId ? { automation_id: automationId } : {}),
+        ...(automationRunId ? { automation_run_id: automationRunId } : {}),
         ...(leadId ? { lead_id: leadId } : {}),
         ...(campaignId ? { campaign_id: campaignId } : {}),
         ...(complianceNote ? { compliance_note: complianceNote } : {}),
