@@ -38,6 +38,7 @@ import SenderProfilesTab from "@/components/settings/SenderProfilesTab";
 import BuyCreditsTab from "@/components/settings/BuyCreditsTab";
 import ApiKeysTab from "@/components/settings/ApiKeysTab";
 import OnboardingTab from "@/components/settings/OnboardingTab";
+import { WhatsAppDeliveryTimeline, type WhatsAppTestSubmission } from "@/components/settings/WhatsAppDeliveryTimeline";
 
 
 /* ── Profile Tab ─────────────────────────────────────────── */
