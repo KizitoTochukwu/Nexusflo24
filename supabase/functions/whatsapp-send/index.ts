@@ -1160,34 +1160,63 @@ Deno.serve(async (req) => {
       ? `${msgBody} [auto-sent as template: ${effectiveTemplate?.name}]`
       : (msgBody || `[Template: ${effectiveTemplate?.name}]`);
 
-    await adminClient.from("whatsapp_messages").insert({
+    // Meta accepted the request. That is *submission*, not delivery — the
+    // status only advances when a genuine Meta status webhook arrives.
+    const submittedAt = new Date().toISOString();
+    const { data: insertedRows } = await adminClient.from("whatsapp_messages").insert({
       workspace_id: workspaceId,
       wa_message_id: waMessageId,
+      provider_message_id: waMessageId,
+      provider: "meta",
       direction: "outbound",
       phone_number: normalizedTo,
       message_type: effectiveTemplate ? "template" : type,
       body: sentLogBody,
-      status: "sent",
+      status: "submitted",
+      submitted_at: submittedAt,
+      last_status_at: submittedAt,
       auto_templated: autoTemplated,
       template_name: effectiveTemplate?.name || null,
+      language_code: effectiveTemplate?.language || null,
+      waba_id: resolvedWabaId,
+      sender_phone_number_id: creds.config.phone_number_id.trim(),
+      sender_ownership: creds.source,
+      credit_charged: creditsHeld,
       sender_profile_id: resolvedSender?.profile?.id || null,
+      ...(automationId ? { automation_id: automationId } : {}),
+      ...(automationRunId ? { automation_run_id: automationRunId } : {}),
       ...(leadId ? { lead_id: leadId } : {}),
       ...(campaignId ? { campaign_id: campaignId } : {}),
       ...(complianceNote ? { compliance_note: complianceNote } : {}),
-    });
+    }).select("id").limit(1);
+    const messageRowId = insertedRows?.[0]?.id || null;
+
+    if (waMessageId) {
+      await adminClient.from("whatsapp_status_events").insert({
+        workspace_id: workspaceId,
+        message_id: messageRowId,
+        wamid: waMessageId,
+        status: "submitted",
+        meta_timestamp: submittedAt,
+        recipient_id: normalizedTo,
+      }).select("id").maybeSingle().catch?.(() => {});
+    }
+
     if (!isPreview) {
       await logCommunicationUsage({
         workspaceId, channel: "whatsapp",
         senderProfileId: resolvedSender?.profile?.id || null,
         messageId: waMessageId, country: toCountry,
-        creditsDeducted: deductAmount, status: "sent",
+        creditsDeducted: deductAmount, status: "submitted",
       });
     }
 
+    // Submission is NOT delivery — campaign rows stay pending until a Meta
+    // status callback moves them forward.
     if (campaignId && leadId && waMessageId) {
       await adminClient
         .from("campaign_messages")
-        .update({ delivery_status: "delivered" })
+        .update({ delivery_status: "submitted" })
         .eq("campaign_id", campaignId)
         .eq("lead_id", leadId)
         .eq("channel", "whatsapp")
@@ -1195,7 +1224,20 @@ Deno.serve(async (req) => {
     }
 
     const testMode = isPreview && effectiveTemplate?.name === "hello_world" ? "hello_world" : undefined;
-    return new Response(JSON.stringify({ success: true, waMessageId, credentialSource: attempt.source, autoTemplated, templateUsed: effectiveTemplate?.name, testMode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({
+      success: true,
+      status: "submitted",
+      message: "Submitted to Meta — awaiting delivery confirmation.",
+      waMessageId,
+      messageId: messageRowId,
+      wabaId: resolvedWabaId,
+      phoneNumberId: creds.config.phone_number_id.trim(),
+      senderOwnership: creds.source,
+      credentialSource: attempt.source,
+      autoTemplated,
+      templateUsed: effectiveTemplate?.name,
+      testMode,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("whatsapp-send error:", err);
     return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send WhatsApp message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
