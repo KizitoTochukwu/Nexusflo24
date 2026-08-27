@@ -75,6 +75,12 @@ Deno.serve(async (req) => {
       adjust_credits: "platform.credits.adjust",
       start_support_session: "platform.support.access",
       end_support_session: "platform.support.access",
+      set_sender_status: "platform.communications.manage",
+      retry_workflow_run: "platform.automations.retry",
+      moderate_community_content: "platform.community.moderate",
+      create_fulfilment_project: "platform.fulfilment.manage",
+      update_platform_settings: "platform.settings.manage",
+      record_access_review: "platform.security.manage",
     };
     const permission = requires[action];
     if (!permission) return json({ error: "Unknown action" }, 400);
@@ -269,6 +275,221 @@ Deno.serve(async (req) => {
           .eq("staff_user_id", actorId);
         if (error) throw error;
         await audit(ctx, { action, entity_type: "support_session", entity_id: sessionId });
+        return json({ success: true, correlation_id: correlationId });
+      }
+
+      case "set_sender_status": {
+        const senderProfileId = String(payload.sender_profile_id ?? "");
+        const status = String(payload.status ?? "");
+        if (!senderProfileId) return json({ error: "sender_profile_id required" }, 400);
+        if (!["approved", "rejected", "suspended", "pending"].includes(status)) {
+          return json({ error: "status must be approved, rejected, suspended or pending" }, 400);
+        }
+
+        const { data: before } = await admin
+          .from("sender_profiles").select("id, workspace_id, channel, label, status")
+          .eq("id", senderProfileId).maybeSingle();
+        if (!before) return json({ error: "Sender profile not found" }, 404);
+
+        const { error } = await admin
+          .from("sender_profiles")
+          .update({
+            status,
+            approved_by: status === "approved" ? actorId : null,
+            approved_at: status === "approved" ? new Date().toISOString() : null,
+            rejection_reason: status === "rejected" ? reason : null,
+          })
+          .eq("id", senderProfileId);
+        if (error) throw error;
+
+        await audit(ctx, {
+          action,
+          entity_type: "sender_profile",
+          entity_id: senderProfileId,
+          workspace_id: before.workspace_id,
+          before_summary: { status: before.status },
+          after_summary: { status },
+        });
+        return json({ success: true, correlation_id: correlationId });
+      }
+
+      case "retry_workflow_run": {
+        const runId = String(payload.run_id ?? "");
+        if (!runId) return json({ error: "run_id required" }, 400);
+
+        const { data: run } = await admin
+          .from("workflow_runs")
+          .select("id, enrollment_id, workflow_id, workspace_id, node_id, status")
+          .eq("id", runId)
+          .maybeSingle();
+        if (!run) return json({ error: "Workflow run not found" }, 404);
+        if (run.status !== "failed") return json({ error: "Only failed runs can be retried" }, 400);
+        if (!run.enrollment_id) return json({ error: "Run has no enrollment to retry" }, 400);
+
+        // Re-activate the enrollment so the engine picks it up again.
+        await admin
+          .from("workflow_enrollments")
+          .update({ status: "active" })
+          .eq("id", run.enrollment_id)
+          .eq("status", "failed");
+
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/execute-workflow`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SERVICE_KEY}`,
+          },
+          body: JSON.stringify({ enrollment_id: run.enrollment_id, start_from_node: run.node_id }),
+        });
+        const respBody = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          await audit(ctx, {
+            action,
+            entity_type: "workflow_run",
+            entity_id: runId,
+            workspace_id: run.workspace_id,
+            result: "failed",
+            after_summary: { status: resp.status, body: respBody },
+          });
+          return json({ error: `Retry failed: ${(respBody as any)?.error ?? resp.status}` }, 502);
+        }
+
+        await audit(ctx, {
+          action,
+          entity_type: "workflow_run",
+          entity_id: runId,
+          workspace_id: run.workspace_id,
+          after_summary: { retried_enrollment: run.enrollment_id, start_from_node: run.node_id },
+        });
+        return json({ success: true, correlation_id: correlationId });
+      }
+
+      case "moderate_community_content": {
+        const kind = String(payload.kind ?? "");
+        const id = String(payload.id ?? "");
+        const remove = payload.remove !== false;
+        const table = kind === "post"
+          ? "shop_community_posts"
+          : kind === "comment"
+            ? "shop_community_comments"
+            : null;
+        if (!table) return json({ error: "kind must be post or comment" }, 400);
+        if (!id) return json({ error: "id required" }, 400);
+
+        const { data: before } = await admin
+          .from(table).select("id, workspace_id, removed_at").eq("id", id).maybeSingle();
+        if (!before) return json({ error: "Content not found" }, 404);
+
+        const { error } = await admin
+          .from(table)
+          .update(
+            remove
+              ? { removed_at: new Date().toISOString(), removed_by: actorId, removal_reason: reason }
+              : { removed_at: null, removed_by: null, removal_reason: null },
+          )
+          .eq("id", id);
+        if (error) throw error;
+
+        await audit(ctx, {
+          action,
+          entity_type: kind === "post" ? "community_post" : "community_comment",
+          entity_id: id,
+          workspace_id: before.workspace_id,
+          before_summary: { removed_at: before.removed_at },
+          after_summary: { removed: remove },
+        });
+        return json({ success: true, correlation_id: correlationId });
+      }
+
+      case "create_fulfilment_project": {
+        const orderId = String(payload.order_id ?? "");
+        if (!orderId) return json({ error: "order_id required" }, 400);
+
+        const { data: order } = await admin
+          .from("store_orders")
+          .select("id, user_id, workspace_id, email, business_name, full_name, status")
+          .eq("id", orderId)
+          .maybeSingle();
+        if (!order) return json({ error: "Order not found" }, 404);
+        if (order.status !== "paid") return json({ error: "Projects can only be created for paid orders" }, 400);
+
+        // Idempotent: one project per order.
+        const { data: existing } = await admin
+          .from("store_projects").select("id").eq("order_id", orderId).maybeSingle();
+        if (existing) return json({ error: "A fulfilment project already exists for this order", project_id: existing.id }, 409);
+
+        const { data: project, error } = await admin
+          .from("store_projects")
+          .insert({
+            order_id: order.id,
+            user_id: order.user_id,
+            workspace_id: order.workspace_id,
+            name: order.business_name || order.full_name || order.email,
+            status: "onboarding",
+            progress: 0,
+          })
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+
+        await audit(ctx, {
+          action,
+          entity_type: "store_order",
+          entity_id: orderId,
+          after_summary: { project_id: project?.id },
+        });
+        return json({ success: true, project_id: project?.id, correlation_id: correlationId });
+      }
+
+      case "update_platform_settings": {
+        const key = String(payload.key ?? "");
+        const value = payload.value;
+        if (!key) return json({ error: "key required" }, 400);
+        if (value === undefined || typeof value !== "object" || value === null) {
+          return json({ error: "value must be a JSON object" }, 400);
+        }
+
+        const { data: before } = await admin
+          .from("platform_settings").select("value").eq("key", key).maybeSingle();
+
+        const { error } = await admin
+          .from("platform_settings")
+          .upsert({ key, value, updated_by: actorId }, { onConflict: "key" });
+        if (error) throw error;
+
+        await audit(ctx, {
+          action,
+          entity_type: "platform_setting",
+          entity_id: key,
+          before_summary: before?.value ?? null,
+          after_summary: value,
+        });
+        return json({ success: true, correlation_id: correlationId });
+      }
+
+      case "record_access_review": {
+        const assignmentId = String(payload.assignment_id ?? "");
+        const subjectUserId = String(payload.subject_user_id ?? "");
+        const outcome = String(payload.outcome ?? "");
+        const note = String(payload.note ?? "").trim() || null;
+        if (!assignmentId || !subjectUserId) return json({ error: "assignment_id and subject_user_id required" }, 400);
+        if (!["confirmed", "revoked"].includes(outcome)) return json({ error: "outcome must be confirmed or revoked" }, 400);
+
+        const { error } = await admin.from("platform_access_reviews").insert({
+          assignment_id: assignmentId,
+          subject_user_id: subjectUserId,
+          reviewer_user_id: actorId,
+          outcome,
+          note,
+        });
+        if (error) throw error;
+
+        await audit(ctx, {
+          action,
+          entity_type: "platform_role",
+          entity_id: subjectUserId,
+          after_summary: { outcome, assignment_id: assignmentId },
+        });
         return json({ success: true, correlation_id: correlationId });
       }
     }

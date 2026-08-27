@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -246,12 +246,13 @@ function ReviewsTab() {
   );
 }
 
-export default function AdminStoreOrders() {
+export default function AdminStoreOrders({ bare = false }: { bare?: boolean }) {
+  const Wrapper: any = bare ? Fragment : DashboardLayout;
   const { data: orders = [], isLoading } = useAdminStoreOrders();
   const { data: projects = [], isLoading: loadingProjects } = useAdminStoreProjects();
 
   return (
-    <DashboardLayout>
+    <Wrapper>
       <div className="mx-auto w-full max-w-[1200px] space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Automation Store fulfilment</h1>
@@ -332,6 +333,6 @@ export default function AdminStoreOrders() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    </Wrapper>
   );
 }

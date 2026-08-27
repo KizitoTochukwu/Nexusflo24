@@ -184,7 +184,13 @@ export type PlatformAction =
   | "revoke_platform_role"
   | "adjust_credits"
   | "start_support_session"
-  | "end_support_session";
+  | "end_support_session"
+  | "set_sender_status"
+  | "retry_workflow_run"
+  | "moderate_community_content"
+  | "create_fulfilment_project"
+  | "update_platform_settings"
+  | "record_access_review";
 
 /** Every consequential change goes through the audited edge function. */
 export function usePlatformAction() {
@@ -208,9 +214,88 @@ export function usePlatformAction() {
         "platform-credit-ledger",
         "platform-staff",
         "platform-support-sessions",
+        "platform-communications",
+        "platform-sender-queue",
+        "platform-automation-health",
+        "platform-failed-runs",
+        "platform-fulfilment",
+        "platform-community-moderation",
+        "platform-settings",
+        "platform-access-reviews",
       ]) {
         qc.invalidateQueries({ queryKey: [key] });
       }
+    },
+  });
+}
+
+function usePlatformRpc<T = any>(key: string, fn: string, args: Record<string, unknown> = {}) {
+  return useQuery({
+    queryKey: [key, args],
+    queryFn: async () => {
+      const { data, error } = await db.rpc(fn, args);
+      if (error) throw error;
+      return data as T;
+    },
+  });
+}
+
+export function usePlatformCommunicationsMetrics(days = 30) {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  return usePlatformRpc("platform-communications", "platform_communications_metrics", { _since: since });
+}
+
+export function usePlatformSenderQueue() {
+  return usePlatformRpc("platform-sender-queue", "platform_sender_queue");
+}
+
+export function usePlatformAutomationHealth(days = 30) {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  return usePlatformRpc("platform-automation-health", "platform_automation_health", { _since: since });
+}
+
+export function usePlatformFailedRuns(limit = 50) {
+  return usePlatformRpc("platform-failed-runs", "platform_failed_runs", { _limit: limit });
+}
+
+export function usePlatformIntegrationHealth() {
+  return usePlatformRpc("platform-integration-health", "platform_integration_health");
+}
+
+export function usePlatformFulfilmentOverview() {
+  return usePlatformRpc("platform-fulfilment", "platform_fulfilment_overview");
+}
+
+export function usePlatformHealthJobs() {
+  return usePlatformRpc("platform-health-jobs", "platform_health_jobs");
+}
+
+export function usePlatformCommunityModeration(limit = 50) {
+  return usePlatformRpc("platform-community-moderation", "platform_community_moderation", { _limit: limit });
+}
+
+export function usePlatformSettings() {
+  return useQuery({
+    queryKey: ["platform-settings"],
+    queryFn: async () => {
+      const { data, error } = await db.from("platform_settings").select("*").order("key");
+      if (error) throw error;
+      return (data ?? []) as { key: string; value: any; description: string | null }[];
+    },
+  });
+}
+
+export function usePlatformAccessReviews(limit = 50) {
+  return useQuery({
+    queryKey: ["platform-access-reviews", limit],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("platform_access_reviews")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as any[];
     },
   });
 }
