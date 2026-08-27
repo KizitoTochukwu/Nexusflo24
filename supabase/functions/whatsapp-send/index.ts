@@ -1199,7 +1199,7 @@ Deno.serve(async (req) => {
         status: "submitted",
         meta_timestamp: submittedAt,
         recipient_id: normalizedTo,
-      }).select("id").maybeSingle().catch?.(() => {});
+      });
     }
 
     if (!isPreview) {
