@@ -76,6 +76,9 @@ export default function CfSettings() {
                       <Badge variant={match?.status === "connected" ? "default" : "outline"}>
                         {match?.status?.replace("_", " ") ?? "not configured"}
                       </Badge>
+                      {match?.last_error && (
+                        <p className="mt-1 max-w-xs text-xs text-destructive">{match.last_error}</p>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {match?.last_checked_at
