@@ -335,21 +335,31 @@ export default function CfProspects() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">
             Decision-makers <span className="text-muted-foreground">({contacts.length})</span>
           </CardTitle>
+          {verificationReady && (
+            <Button size="sm" variant="outline" onClick={handleVerify} disabled={verifyEmails.isPending}>
+              {verifyEmails.isPending
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <MailCheck className="mr-2 h-4 w-4" />}
+              Verify emails ({selectedContactIds.length})
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {contacts.length === 0 ? (
             <p className="p-8 text-center text-sm text-muted-foreground">
-              No contacts yet. Include contact columns in your CSV import.
+              No contacts yet. Include contact columns in your CSV import{contactDiscoveryReady
+                ? ", or select companies above and find their decision-makers." : "."}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10" />
                     <TableHead>Name</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Email</TableHead>
@@ -360,17 +370,37 @@ export default function CfProspects() {
                 <TableBody>
                   {contacts.slice(0, 100).map((c) => (
                     <TableRow key={c.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={!!selectedContacts[c.id]}
+                          onCheckedChange={(v) => setSelectedContacts({ ...selectedContacts, [c.id]: !!v })}
+                          aria-label={`Select ${c.full_name}`}
+                          disabled={!c.email}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{c.full_name}</TableCell>
                       <TableCell className="text-sm">{c.job_title || "—"}</TableCell>
                       <TableCell className="text-sm">{c.email || "—"}</TableCell>
                       <TableCell>
-                        <Badge variant={c.email_status === "verified" ? "default" : "outline"}>
+                        <Badge
+                          variant={
+                            c.email_status === "deliverable" || c.email_status === "verified"
+                              ? "default"
+                              : c.email_status === "undeliverable"
+                                ? "destructive"
+                                : "outline"
+                          }
+                        >
                           {c.email_status.replace("_", " ")}
                         </Badge>
+                        {c.email_confidence != null && (
+                          <span className="ml-2 text-xs text-muted-foreground">{c.email_confidence}%</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {c.data_source.replace("_", " ")}
                       </TableCell>
+
                     </TableRow>
                   ))}
                 </TableBody>
