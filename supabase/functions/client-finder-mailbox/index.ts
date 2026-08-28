@@ -89,7 +89,8 @@ serve(async (req) => {
     const state = crypto.randomUUID();
     await admin.from("oauth_connection_states").insert({
       workspace_id: workspaceId, user_id: userId, state,
-      provider: `client_finder_${provider}`, redirect_uri: redirectUri,
+      provider: `client_finder_${provider}`, redirect_to: redirectUri,
+      expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
     });
 
     const url = provider === "google"
@@ -112,7 +113,8 @@ serve(async (req) => {
 
     const { data: stateRow } = await admin
       .from("oauth_connection_states").select("*")
-      .eq("state", state).eq("workspace_id", workspaceId).maybeSingle();
+      .eq("state", state).eq("workspace_id", workspaceId).is("used_at", null)
+      .gt("expires_at", new Date().toISOString()).maybeSingle();
     if (!stateRow) return cfJson({ error: "This connection request has expired. Start again." }, 400);
 
     const isGoogle = provider === "google";
@@ -128,7 +130,7 @@ serve(async (req) => {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code, client_id: clientId, client_secret: clientSecret,
-        redirect_uri: stateRow.redirect_uri, grant_type: "authorization_code",
+        redirect_uri: stateRow.redirect_to, grant_type: "authorization_code",
       }),
     });
     const tokens = await tokenRes.json().catch(() => ({}));
