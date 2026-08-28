@@ -282,7 +282,6 @@ export default function CfInbox() {
             </Button>
             <Button onClick={() => setDraft(null)}>Close</Button>
           </DialogFooter>
-        </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
