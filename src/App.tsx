@@ -314,7 +314,9 @@ const App = () => (
                   <Route path="prospects" element={<CfProspects />} />
                   <Route path="outreach" element={<CfOutreach />} />
                   <Route path="outreach/:campaignId" element={<CfCampaign />} />
+                  <Route path="inbox" element={<CfInbox />} />
                   <Route path="settings" element={<CfSettings />} />
+
                   <Route path="*" element={<Navigate to="overview" replace />} />
                 </Route>
                 <Route path="commerce" element={<CommerceLayout />}>
