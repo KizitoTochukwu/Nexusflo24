@@ -153,3 +153,34 @@ export async function apolloSearchContacts(q: ContactQuery): Promise<DiscoveredC
     };
   });
 }
+
+/**
+ * Search access probe. A valid key on Apollo's Free plan can authenticate but is
+ * refused the search endpoints, so a health check alone would overstate what works.
+ */
+export async function apolloSearchAccess(): Promise<{ ok: boolean; error?: string }> {
+  const key = Deno.env.get("APOLLO_API_KEY");
+  if (!key) return { ok: false, error: "No API key configured." };
+  try {
+    const res = await fetch(`${APOLLO_BASE}/mixed_companies/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json", "x-api-key": key },
+      body: JSON.stringify({ page: 1, per_page: 1 }),
+    });
+    if (res.ok) {
+      await res.text();
+      return { ok: true };
+    }
+    const text = await res.text();
+    if (res.status === 403 && /API_INACCESSIBLE|not included in your/i.test(text)) {
+      return {
+        ok: false,
+        error: "The Apollo key is valid, but this Apollo plan does not include API search access. " +
+          "A paid Apollo plan is required for company and contact discovery.",
+      };
+    }
+    return { ok: false, error: `Apollo search refused the request (${res.status}): ${text.slice(0, 200)}` };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}

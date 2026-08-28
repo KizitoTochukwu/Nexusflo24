@@ -6,7 +6,7 @@ import {
   adminClient, cfCors, cfJson, checkEntitlement, logUsage, requireMember,
 } from "../_shared/client-finder.ts";
 import {
-  apolloConfigured, apolloHealth, apolloSearchCompanies, apolloSearchContacts,
+  apolloConfigured, apolloHealth, apolloSearchAccess, apolloSearchCompanies, apolloSearchContacts,
 } from "../_shared/prospect-providers/apollo.ts";
 import { hunterConfigured, hunterHealth, hunterVerifyEmail } from "../_shared/prospect-providers/hunter.ts";
 
@@ -38,7 +38,9 @@ serve(async (req) => {
 
   /* ------------------------------ Live status ------------------------------ */
   if (action === "status") {
-    const apollo = apolloConfigured() ? await apolloHealth() : { ok: false, error: "No API key configured." };
+    let apollo = apolloConfigured() ? await apolloHealth() : { ok: false, error: "No API key configured." };
+    // A valid key is not enough — Apollo's Free plan blocks the search endpoints.
+    if (apollo.ok) apollo = await apolloSearchAccess();
     const hunter = hunterConfigured() ? await hunterHealth() : { ok: false, error: "No API key configured." };
     const now = new Date().toISOString();
 
