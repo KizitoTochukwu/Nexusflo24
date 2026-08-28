@@ -238,6 +238,19 @@ export default function CfProspects() {
               )}
               Score fit ({selectedIds.length})
             </Button>
+            {contactDiscoveryReady && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDiscoverContacts}
+                disabled={discoverContacts.isPending}
+              >
+                {discoverContacts.isPending
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <Users className="mr-2 h-4 w-4" />}
+                Find decision-makers ({selectedIds.length})
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={exportCsv} disabled={visible.length === 0}>
               <Download className="mr-2 h-4 w-4" /> Export
             </Button>
