@@ -14,12 +14,13 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Download, Loader2, Sparkles, Upload } from "lucide-react";
+import { Download, Loader2, MailCheck, Search, Sparkles, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
-  useIcps, useImportProspects, useProspectCompanies, useProspectContacts,
-  useScoreFit, useUpdateCompanyStatus, type ImportRow,
+  useDiscoverCompanies, useDiscoverContacts, useIcps, useImportProspects, useProspectCompanies,
+  useProspectContacts, useProviderConnections, useScoreFit, useUpdateCompanyStatus, useVerifyEmails,
+  type ImportRow,
 } from "@/hooks/useClientFinder";
 import { autoMapHeaders, IMPORT_FIELDS, parseCsv, SAMPLE_CSV, type ImportFieldKey } from "@/lib/clientFinder/csv";
 import { downloadCsv } from "@/lib/crm/csv";
@@ -29,15 +30,26 @@ export default function CfProspects() {
   const { data: companies = [], isLoading } = useProspectCompanies(workspaceId);
   const { data: contacts = [] } = useProspectContacts(workspaceId);
   const { data: icps = [] } = useIcps(workspaceId);
+  const { data: providers = [] } = useProviderConnections(workspaceId);
   const importProspects = useImportProspects(workspaceId);
   const scoreFit = useScoreFit(workspaceId);
   const updateStatus = useUpdateCompanyStatus();
+  const discoverCompanies = useDiscoverCompanies(workspaceId);
+  const discoverContacts = useDiscoverContacts(workspaceId);
+  const verifyEmails = useVerifyEmails(workspaceId);
+
+  const capabilityReady = (capability: string) =>
+    (providers as any[]).some((p) => p.capability === capability && p.status === "connected");
+  const companyDiscoveryReady = capabilityReady("Company discovery");
+  const contactDiscoveryReady = capabilityReady("Contact discovery");
+  const verificationReady = capabilityReady("Email verification");
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<Record<number, ImportFieldKey | "">>({});
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [selectedContacts, setSelectedContacts] = useState<Record<string, boolean>>({});
   const [icpId, setIcpId] = useState("");
   const [search, setSearch] = useState("");
 
@@ -102,6 +114,33 @@ export default function CfProspects() {
     setSelected({});
   };
 
+  const handleDiscoverCompanies = async () => {
+    if (!icpId) {
+      toast.error("Choose an approved ideal customer profile to search with");
+      return;
+    }
+    await discoverCompanies.mutateAsync({ icp_id: icpId, limit: 25 });
+  };
+
+  const handleDiscoverContacts = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("Select at least one company");
+      return;
+    }
+    await discoverContacts.mutateAsync({ company_ids: selectedIds.slice(0, 10), per_company: 3 });
+  };
+
+  const selectedContactIds = Object.keys(selectedContacts).filter((k) => selectedContacts[k]);
+
+  const handleVerify = async () => {
+    if (selectedContactIds.length === 0) {
+      toast.error("Select at least one contact");
+      return;
+    }
+    await verifyEmails.mutateAsync({ contact_ids: selectedContactIds.slice(0, 25) });
+    setSelectedContacts({});
+  };
+
   const exportCsv = () => {
     const header = "company_name,domain,industry,country,fit_score,fit_explanation,status\n";
     const body = visible
@@ -125,9 +164,9 @@ export default function CfProspects() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
-            No external prospect data provider is connected to this workspace yet, so automated company
-            discovery is unavailable. You can import your own list below — every record keeps its source
-            and the date it was added.
+            {companyDiscoveryReady
+              ? "Company discovery runs through Apollo using an approved ideal customer profile. Every record keeps its source and the date it was added, and nothing is invented."
+              : "Automated company discovery is not available yet — the Apollo connection has not passed a credential check. Import your own list below; every record keeps its source and the date it was added."}
           </p>
           <div className="flex flex-wrap gap-2">
             <input
@@ -141,7 +180,18 @@ export default function CfProspects() {
                 e.target.value = "";
               }}
             />
-            <Button onClick={() => fileRef.current?.click()}>
+            {companyDiscoveryReady && (
+              <Button onClick={handleDiscoverCompanies} disabled={discoverCompanies.isPending}>
+                {discoverCompanies.isPending
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <Search className="mr-2 h-4 w-4" />}
+                Find companies with Apollo
+              </Button>
+            )}
+            <Button
+              variant={companyDiscoveryReady ? "outline" : "default"}
+              onClick={() => fileRef.current?.click()}
+            >
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
             <Button variant="outline" onClick={() => downloadCsv("client-finder-template", SAMPLE_CSV)}>
@@ -150,6 +200,7 @@ export default function CfProspects() {
           </div>
         </CardContent>
       </Card>
+
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -187,6 +238,19 @@ export default function CfProspects() {
               )}
               Score fit ({selectedIds.length})
             </Button>
+            {contactDiscoveryReady && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDiscoverContacts}
+                disabled={discoverContacts.isPending}
+              >
+                {discoverContacts.isPending
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <Users className="mr-2 h-4 w-4" />}
+                Find decision-makers ({selectedIds.length})
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={exportCsv} disabled={visible.length === 0}>
               <Download className="mr-2 h-4 w-4" /> Export
             </Button>
@@ -271,21 +335,31 @@ export default function CfProspects() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base">
             Decision-makers <span className="text-muted-foreground">({contacts.length})</span>
           </CardTitle>
+          {verificationReady && (
+            <Button size="sm" variant="outline" onClick={handleVerify} disabled={verifyEmails.isPending}>
+              {verifyEmails.isPending
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <MailCheck className="mr-2 h-4 w-4" />}
+              Verify emails ({selectedContactIds.length})
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {contacts.length === 0 ? (
             <p className="p-8 text-center text-sm text-muted-foreground">
-              No contacts yet. Include contact columns in your CSV import.
+              No contacts yet. Include contact columns in your CSV import{contactDiscoveryReady
+                ? ", or select companies above and find their decision-makers." : "."}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10" />
                     <TableHead>Name</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Email</TableHead>
@@ -296,17 +370,37 @@ export default function CfProspects() {
                 <TableBody>
                   {contacts.slice(0, 100).map((c) => (
                     <TableRow key={c.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={!!selectedContacts[c.id]}
+                          onCheckedChange={(v) => setSelectedContacts({ ...selectedContacts, [c.id]: !!v })}
+                          aria-label={`Select ${c.full_name}`}
+                          disabled={!c.email}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{c.full_name}</TableCell>
                       <TableCell className="text-sm">{c.job_title || "—"}</TableCell>
                       <TableCell className="text-sm">{c.email || "—"}</TableCell>
                       <TableCell>
-                        <Badge variant={c.email_status === "verified" ? "default" : "outline"}>
+                        <Badge
+                          variant={
+                            c.email_status === "deliverable" || c.email_status === "verified"
+                              ? "default"
+                              : c.email_status === "undeliverable"
+                                ? "destructive"
+                                : "outline"
+                          }
+                        >
                           {c.email_status.replace("_", " ")}
                         </Badge>
+                        {c.email_confidence != null && (
+                          <span className="ml-2 text-xs text-muted-foreground">{c.email_confidence}%</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {c.data_source.replace("_", " ")}
                       </TableCell>
+
                     </TableRow>
                   ))}
                 </TableBody>
