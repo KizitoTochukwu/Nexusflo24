@@ -4,7 +4,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useProspectingUsage, useProviderConnections } from "@/hooks/useClientFinder";
+import { useCheckProviders, useProspectingUsage, useProviderConnections } from "@/hooks/useClientFinder";
+import { Button } from "@/components/ui/button";
+import { Loader2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import MailboxCard from "@/components/client-finder/MailboxCard";
 import EntitlementPanel from "@/components/client-finder/EntitlementPanel";
@@ -20,6 +22,7 @@ export default function CfSettings() {
   const workspaceId = useWorkspaceId();
   const { data: providers = [] } = useProviderConnections(workspaceId);
   const { data: usage = [] } = useProspectingUsage(workspaceId);
+  const checkProviders = useCheckProviders(workspaceId);
 
   return (
     <div className="space-y-4">
@@ -28,13 +31,25 @@ export default function CfSettings() {
       <MailboxCard />
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Data providers</CardTitle>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => checkProviders.mutate()}
+            disabled={checkProviders.isPending}
+          >
+            {checkProviders.isPending
+              ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              : <RefreshCw className="mr-2 h-4 w-4" />}
+            Check now
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Nothing here is simulated. Where no provider is connected, the capability is genuinely
-            unavailable and CSV import is used instead.
+            Apollo powers company and decision-maker discovery, Hunter checks whether a work email is
+            deliverable. Status below comes from a real credential check, not an assumption — where a
+            provider is not connected the capability is genuinely unavailable and CSV import is used instead.
           </p>
           <Table>
             <TableHeader>
