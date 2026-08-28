@@ -104,7 +104,8 @@ serve(async (req) => {
       if (!keywords.length) {
         keywords = [
           ...(Array.isArray(icp.industries) ? icp.industries : []),
-          ...(Array.isArray(icp.keywords) ? icp.keywords : []),
+          ...(Array.isArray(icp.sub_industries) ? icp.sub_industries : []),
+          ...(Array.isArray(icp.technologies) ? icp.technologies : []),
         ].filter(Boolean).slice(0, 10);
       }
       if (!locations.length && Array.isArray(icp.countries)) locations = icp.countries.filter(Boolean).slice(0, 10);
