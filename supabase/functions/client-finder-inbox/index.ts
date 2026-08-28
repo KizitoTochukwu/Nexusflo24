@@ -301,7 +301,30 @@ serve(async (req) => {
     const cls = reply.corrected_classification || reply.classification || "";
     let dealId: string | null = null;
     if (DEAL_CLASSES.has(cls)) {
-      const { data: pipelineId } = await admin.rpc("ensure_default_pipeline", { _workspace_id: workspaceId });
+      // The RPC is caller-scoped, so resolve/create the pipeline with the service client.
+      let pipelineId: string | null = null;
+      const { data: existingPipeline } = await admin
+        .from("crm_pipelines").select("id")
+        .eq("workspace_id", workspaceId)
+        .order("is_default", { ascending: false }).order("position").limit(1).maybeSingle();
+      if (existingPipeline) pipelineId = existingPipeline.id;
+      else {
+        const { data: newPipeline } = await admin.from("crm_pipelines").insert({
+          workspace_id: workspaceId, name: "Sales Pipeline",
+          description: "Default sales pipeline", is_default: true, created_by: userId,
+        }).select("id").maybeSingle();
+        pipelineId = newPipeline?.id ?? null;
+        if (pipelineId) {
+          await admin.from("crm_pipeline_stages").insert([
+            { workspace_id: workspaceId, pipeline_id: pipelineId, name: "New", position: 0, probability: 10, stage_type: "open", color: "#64748B" },
+            { workspace_id: workspaceId, pipeline_id: pipelineId, name: "Qualified", position: 1, probability: 25, stage_type: "open", color: "#3B82F6" },
+            { workspace_id: workspaceId, pipeline_id: pipelineId, name: "Proposal", position: 2, probability: 50, stage_type: "open", color: "#6366F1" },
+            { workspace_id: workspaceId, pipeline_id: pipelineId, name: "Negotiation", position: 3, probability: 75, stage_type: "open", color: "#C9A227" },
+            { workspace_id: workspaceId, pipeline_id: pipelineId, name: "Won", position: 4, probability: 100, stage_type: "won", color: "#10B981" },
+            { workspace_id: workspaceId, pipeline_id: pipelineId, name: "Lost", position: 5, probability: 0, stage_type: "lost", color: "#EF4444" },
+          ]);
+        }
+      }
       const { data: campaign } = reply.campaign_id
         ? await admin.from("prospecting_campaigns").select("crm_pipeline_id, crm_stage_id, name").eq("id", reply.campaign_id).maybeSingle()
         : { data: null as any };
