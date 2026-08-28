@@ -5,10 +5,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useClientFinderEntitlements } from "@/hooks/useClientFinderReports";
 
-const ROWS: { key: keyof ReturnType<typeof rowsShape>; label: string; usage: string; limit: string }[] = [] as any;
-function rowsShape() {
-  return {} as Record<string, never>;
-}
 
 const ALLOWANCES = [
   { label: "Emails this month", usage: "emails", limit: "monthly_emails" },
