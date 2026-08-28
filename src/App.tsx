@@ -11,6 +11,7 @@ import RedirectIfAuth from "@/components/auth/RedirectIfAuth";
 import WorkspaceGuard from "@/components/auth/WorkspaceGuard";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
+import AiClientFinder from "./pages/AiClientFinder";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -196,6 +197,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/features" element={<Features />} />
+              <Route path="/ai-client-finder" element={<AiClientFinder />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/automations" element={<StoreIndex />} />
               <Route path="/automations/all" element={<StoreCatalogue />} />
