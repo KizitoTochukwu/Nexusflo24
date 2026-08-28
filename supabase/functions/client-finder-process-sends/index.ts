@@ -11,6 +11,7 @@ import {
   sendIdempotencyKey,
   withinSendingWindow,
 } from "../_shared/client-finder-send.ts";
+import { sendViaGmail } from "../_shared/gmailSend.ts";
 
 const MAX_ENROLMENTS_PER_RUN = 40;
 const LEASE_MINUTES = 5;
@@ -103,6 +104,21 @@ serve(async (req) => {
       );
       if (remaining === 0) continue;
 
+
+      // Prefer the campaign's own connected Gmail mailbox; otherwise the
+      // verified workspace sender is used and that is shown in the UI.
+      let gmailBox: { email: string; created_by: string } | null = null;
+      if (campaign.mailbox_id) {
+        const { data: box } = await admin
+          .from("prospecting_mailboxes")
+          .select("email, created_by, provider, status")
+          .eq("id", campaign.mailbox_id)
+          .eq("workspace_id", campaign.workspace_id)
+          .maybeSingle();
+        if (box && box.provider === "google" && box.status === "connected") {
+          gmailBox = { email: box.email, created_by: box.created_by };
+        }
+      }
 
       const { data: steps } = await admin
         .from("prospecting_sequence_steps")
@@ -209,6 +225,18 @@ serve(async (req) => {
         let errText: string | null = null;
         let providerId: string | null = null;
         try {
+          if (gmailBox) {
+            const gmail = await sendViaGmail({
+              ownerUserId: gmailBox.created_by,
+              fromEmail: gmailBox.email,
+              to: email,
+              subject: subj.text,
+              html: bodyToHtml(bd.text),
+            });
+            ok = gmail.ok;
+            providerId = gmail.providerMessageId;
+            errText = gmail.error;
+          } else {
           const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/email-send`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
@@ -221,6 +249,7 @@ serve(async (req) => {
           ok = res.ok && data?.success !== false;
           providerId = data?.messageId ?? data?.provider_message_id ?? null;
           if (!ok) errText = data?.error || `Email service returned ${res.status}`;
+          }
         } catch (e) {
           errText = (e as Error).message;
         }
