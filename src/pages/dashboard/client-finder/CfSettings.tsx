@@ -6,6 +6,7 @@ import {
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useProspectingUsage, useProviderConnections } from "@/hooks/useClientFinder";
 import { format } from "date-fns";
+import MailboxCard from "@/components/client-finder/MailboxCard";
 
 const CAPABILITIES = [
   { capability: "Company discovery", note: "Finds companies matching an approved profile." },
@@ -21,6 +22,8 @@ export default function CfSettings() {
 
   return (
     <div className="space-y-4">
+      <MailboxCard />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Data providers</CardTitle>
