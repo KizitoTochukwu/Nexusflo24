@@ -88,6 +88,8 @@ export interface ProspectContact {
   department: string | null;
   email: string | null;
   email_status: string;
+  email_confidence: number | null;
+  email_verified_at: string | null;
   linkedin_url: string | null;
   data_source: string;
   status: string;
