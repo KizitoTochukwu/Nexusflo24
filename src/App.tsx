@@ -148,6 +148,7 @@ import CfProspects from "./pages/dashboard/client-finder/CfProspects";
 import CfSettings from "./pages/dashboard/client-finder/CfSettings";
 import CfOutreach from "./pages/dashboard/client-finder/CfOutreach";
 import CfCampaign from "./pages/dashboard/client-finder/CfCampaign";
+import CfInbox from "./pages/dashboard/client-finder/CfInbox";
 import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
 import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
