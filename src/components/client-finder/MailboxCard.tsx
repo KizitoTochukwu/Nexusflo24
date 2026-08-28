@@ -8,11 +8,14 @@ import { Info, Loader2, Mail, Plug } from "lucide-react";
 import { format } from "date-fns";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useCfMailboxActions, useCfMailboxStatus } from "@/hooks/useClientFinderInbox";
+import { useCfGmailActions, useCfGmailStatus } from "@/hooks/useClientFinderGmail";
 
 export default function MailboxCard() {
   const workspaceId = useWorkspaceId();
   const { data, isLoading } = useCfMailboxStatus(workspaceId);
   const { startOauth, completeOauth, disconnect } = useCfMailboxActions(workspaceId);
+  const { data: gmail } = useCfGmailStatus(workspaceId);
+  const gmailActions = useCfGmailActions(workspaceId);
   const [params, setParams] = useSearchParams();
   const handled = useRef(false);
 
@@ -81,8 +84,11 @@ export default function MailboxCard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => disconnect.mutate(m.id)}
-                        disabled={disconnect.isPending}
+                        onClick={() =>
+                          m.provider === "google" && gmail?.configured
+                            ? gmailActions.disconnect.mutate(m.id)
+                            : disconnect.mutate(m.id)}
+                        disabled={disconnect.isPending || gmailActions.disconnect.isPending}
                       >
                         Disconnect
                       </Button>
@@ -95,12 +101,16 @@ export default function MailboxCard() {
             <div className="grid gap-2 sm:grid-cols-2">
               {(["google", "microsoft"] as const).map((key) => {
                 const p = providers[key];
-                const configured = !!p?.configured;
+                // Gmail connects through Lovable's App User Connector, so it is
+                // available whenever that connector client is set up.
+                const viaConnector = key === "google" && !!gmail?.configured;
+                const configured = viaConnector || !!p?.configured;
+                const label = key === "google" ? "Gmail / Google Workspace" : p?.label ?? key;
                 return (
                   <div key={key} className="rounded-lg border p-3">
                     <div className="mb-2 flex items-center gap-2">
                       <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{p?.label ?? key}</span>
+                      <span className="text-sm font-medium">{label}</span>
                     </div>
                     <p className="mb-3 text-xs text-muted-foreground">
                       {configured
@@ -110,8 +120,8 @@ export default function MailboxCard() {
                     <Button
                       size="sm"
                       variant={configured ? "default" : "outline"}
-                      disabled={!configured || startOauth.isPending}
-                      onClick={() => startOauth.mutate(key)}
+                      disabled={!configured || startOauth.isPending || gmailActions.connect.isPending}
+                      onClick={() => (viaConnector ? gmailActions.connect.mutate() : startOauth.mutate(key))}
                     >
                       <Plug className="mr-2 h-4 w-4" />
                       {configured ? "Connect" : "Not configured"}
