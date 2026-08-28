@@ -79,14 +79,17 @@ async function applyOutcome(admin: Admin, reply: any, classification: string) {
   }
 
   if (SUPPRESS_CLASSES.has(classification) && isValidEmail(reply.from_email)) {
-    await admin.from("prospecting_suppressions").upsert(
-      {
+    const suppressEmail = String(reply.from_email).toLowerCase();
+    const { data: alreadySuppressed } = await admin
+      .from("prospecting_suppressions").select("id")
+      .eq("workspace_id", reply.workspace_id).ilike("email", suppressEmail).maybeSingle();
+    if (!alreadySuppressed) {
+      await admin.from("prospecting_suppressions").insert({
         workspace_id: reply.workspace_id,
-        email: String(reply.from_email).toLowerCase(),
+        email: suppressEmail,
         reason: `reply classified as ${classification.replace(/_/g, " ")}`,
-      },
-      { onConflict: "workspace_id,email", ignoreDuplicates: true },
-    );
+      });
+    }
     if (reply.contact_id) {
       await admin.from("prospect_contacts")
         .update({ do_not_contact: true }).eq("id", reply.contact_id);
