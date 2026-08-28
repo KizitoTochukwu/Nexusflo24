@@ -6,6 +6,7 @@ import { callNexusModel } from "../_shared/nexus-ai-core.ts";
 import {
   adminClient,
   cfCors,
+  checkEntitlement,
   cfJson,
   logUsage,
   parseModelJson,
@@ -164,6 +165,11 @@ serve(async (req) => {
   }
 
   /* -------------------------------- Classify -------------------------------- */
+  if (action === "classify" || action === "draft_reply") {
+    const allowance = await checkEntitlement(admin, workspaceId, "ai_ops");
+    if (allowance) return allowance;
+  }
+
   if (action === "classify") {
     if (!apiKey) return cfJson({ error: "AI is not configured for this project." }, 500);
     const reply = await loadReply(admin, workspaceId, body.reply_id ?? "");

@@ -3,6 +3,7 @@ import { callNexusModel } from "../_shared/nexus-ai-core.ts";
 import {
   adminClient,
   cfCors,
+  checkEntitlement,
   cfJson,
   logUsage,
   parseModelJson,

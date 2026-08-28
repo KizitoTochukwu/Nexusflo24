@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { adminClient, cfCors, cfJson, requireMember } from "../_shared/client-finder.ts";
+import { adminClient, cfCors, cfJson, checkEntitlement, requireMember } from "../_shared/client-finder.ts";
 import {
   bodyToHtml,
   emailDomain,
@@ -276,6 +276,9 @@ serve(async (req) => {
 
   /* ------------------------------- Test send ------------------------------- */
   if (action === "test_send") {
+    const allowance = await checkEntitlement(admin, workspaceId, "emails");
+    if (allowance) return allowance;
+
     if (!campaign) return cfJson({ error: "campaign_id is required" }, 400);
     const to = String(body.to ?? "").trim();
     if (!isValidEmail(to)) return cfJson({ error: "Enter a valid email address for the test." }, 400);
@@ -313,6 +316,9 @@ serve(async (req) => {
 
   /* --------------------------------- Launch -------------------------------- */
   if (action === "launch") {
+    const allowance = await checkEntitlement(admin, workspaceId, "emails");
+    if (allowance) return allowance;
+
     if (!campaign) return cfJson({ error: "campaign_id is required" }, 400);
     if (body.confirm !== true) return cfJson({ error: "Launch must be explicitly confirmed." }, 400);
 
