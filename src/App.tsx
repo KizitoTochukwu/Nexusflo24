@@ -11,6 +11,7 @@ import RedirectIfAuth from "@/components/auth/RedirectIfAuth";
 import WorkspaceGuard from "@/components/auth/WorkspaceGuard";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
+import AiClientFinder from "./pages/AiClientFinder";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -130,6 +131,7 @@ import PlatformCommunications from "./pages/platform-admin/PlatformCommunication
 import PlatformAutomations from "./pages/platform-admin/PlatformAutomations";
 import PlatformIntegrations from "./pages/platform-admin/PlatformIntegrations";
 import PlatformWhatsApp from "./pages/platform-admin/PlatformWhatsApp";
+import PlatformClientFinder from "./pages/platform-admin/PlatformClientFinder";
 import PlatformFulfilment from "./pages/platform-admin/PlatformFulfilment";
 import PlatformContent from "./pages/platform-admin/PlatformContent";
 import PlatformAcademy from "./pages/platform-admin/PlatformAcademy";
@@ -149,6 +151,7 @@ import CfSettings from "./pages/dashboard/client-finder/CfSettings";
 import CfOutreach from "./pages/dashboard/client-finder/CfOutreach";
 import CfCampaign from "./pages/dashboard/client-finder/CfCampaign";
 import CfInbox from "./pages/dashboard/client-finder/CfInbox";
+import CfReports from "./pages/dashboard/client-finder/CfReports";
 import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
 import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
@@ -194,6 +197,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/features" element={<Features />} />
+              <Route path="/ai-client-finder" element={<AiClientFinder />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/automations" element={<StoreIndex />} />
               <Route path="/automations/all" element={<StoreCatalogue />} />
@@ -252,6 +256,7 @@ const App = () => (
                 <Route path="automations" element={<PlatformAutomations />} />
                 <Route path="integrations" element={<PlatformIntegrations />} />
                 <Route path="whatsapp" element={<PlatformWhatsApp />} />
+                <Route path="client-finder" element={<PlatformClientFinder />} />
                 <Route path="fulfilment" element={<PlatformFulfilment />} />
                 <Route path="content" element={<PlatformContent />} />
                 <Route path="academy" element={<PlatformAcademy />} />
@@ -316,7 +321,9 @@ const App = () => (
                   <Route path="outreach" element={<CfOutreach />} />
                   <Route path="outreach/:campaignId" element={<CfCampaign />} />
                   <Route path="inbox" element={<CfInbox />} />
+                  <Route path="reports" element={<CfReports />} />
                   <Route path="settings" element={<CfSettings />} />
+
 
                   <Route path="*" element={<Navigate to="overview" replace />} />
                 </Route>

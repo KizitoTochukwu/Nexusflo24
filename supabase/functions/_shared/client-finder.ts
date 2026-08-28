@@ -127,3 +127,79 @@ export async function logUsage(
     console.error("usage log failed", (e as Error).message);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Entitlements (server-enforced). Limits live in the database so platform staff
+// can change them without a code change.
+// ---------------------------------------------------------------------------
+
+export type CfEntitlements = {
+  plan: string;
+  enabled: boolean;
+  suspended: boolean;
+  suspension_reason: string | null;
+  limits: Record<string, number | boolean>;
+  usage: Record<string, number>;
+};
+
+const LIMIT_FOR: Record<string, string> = {
+  emails: "monthly_emails",
+  ai_ops: "monthly_ai_ops",
+  verifications: "monthly_verifications",
+  discoveries: "monthly_discoveries",
+  campaigns: "max_campaigns",
+  mailboxes: "max_mailboxes",
+};
+
+export async function loadEntitlements(
+  admin: ReturnType<typeof adminClient>,
+  workspaceId: string,
+): Promise<CfEntitlements | null> {
+  const { data, error } = await admin.rpc("client_finder_entitlements", {
+    _workspace_id: workspaceId,
+  });
+  if (error || !data) {
+    console.error("entitlements lookup failed", error?.message);
+    return null;
+  }
+  return data as CfEntitlements;
+}
+
+/**
+ * Returns a Response when the workspace may not perform `usageKey` right now,
+ * otherwise null. Fails closed only on explicit suspension; a lookup failure is
+ * reported honestly rather than silently allowing unlimited use.
+ */
+export async function checkEntitlement(
+  admin: ReturnType<typeof adminClient>,
+  workspaceId: string,
+  usageKey: keyof typeof LIMIT_FOR,
+  needed = 1,
+): Promise<Response | null> {
+  const ent = await loadEntitlements(admin, workspaceId);
+  if (!ent) return cfJson({ error: "Could not check your plan allowance. Please try again." }, 503);
+
+  if (ent.suspended) {
+    return cfJson({
+      error: "AI Client Finder is suspended for this workspace.",
+      reason: ent.suspension_reason ?? null,
+      code: "suspended",
+    }, 403);
+  }
+  if (ent.enabled === false) {
+    return cfJson({ error: "AI Client Finder is not enabled for this workspace.", code: "disabled" }, 403);
+  }
+
+  const limitKey = LIMIT_FOR[usageKey];
+  const limit = Number(ent.limits?.[limitKey] ?? 0);
+  const used = Number(ent.usage?.[usageKey] ?? 0);
+  if (used + needed > limit) {
+    return cfJson({
+      error: `Your ${ent.plan} plan allows ${limit} ${usageKey.replace("_", " ")} — you have used ${used}.`,
+      code: "limit_reached",
+      limit,
+      used,
+    }, 402);
+  }
+  return null;
+}

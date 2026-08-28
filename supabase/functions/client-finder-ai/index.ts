@@ -7,6 +7,7 @@ import {
   logUsage,
   parseModelJson,
   requireMember,
+  checkEntitlement,
 } from "../_shared/client-finder.ts";
 
 const ICP_SYSTEM = `You are a B2B go-to-market analyst. From the supplied offer description you propose ONE ideal customer profile.
@@ -46,6 +47,9 @@ serve(async (req) => {
   if (!apiKey) return cfJson({ error: "AI is not configured for this project." }, 500);
 
   const mode: string = body.mode ?? "";
+
+  const allowance = await checkEntitlement(admin, workspaceId, "ai_ops");
+  if (allowance) return allowance;
 
   if (mode === "generate_icp") {
     const { data: offer } = await admin

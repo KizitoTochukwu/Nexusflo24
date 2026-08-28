@@ -1,7 +1,7 @@
 // Background worker for AI Client Finder outbound sending.
 // Invoked by pg_cron. Bounded batch, single-flight lease, idempotent per step.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { adminClient, cfCors, cfJson } from "../_shared/client-finder.ts";
+import { adminClient, cfCors, cfJson, loadEntitlements } from "../_shared/client-finder.ts";
 import {
   bodyToHtml,
   emailDomain,
@@ -60,10 +60,34 @@ serve(async (req) => {
       .is("archived_at", null)
       .limit(50);
 
+    const entCache = new Map<string, Awaited<ReturnType<typeof loadEntitlements>>>();
+
     for (const campaign of campaigns ?? []) {
       if (!withinSendingWindow(now, campaign.timezone, campaign.send_days, campaign.send_window_start, campaign.send_window_end)) {
         continue;
       }
+
+      // Plan allowance and platform controls are enforced server-side, per workspace.
+      if (!entCache.has(campaign.workspace_id)) {
+        entCache.set(campaign.workspace_id, await loadEntitlements(admin, campaign.workspace_id));
+      }
+      const ent = entCache.get(campaign.workspace_id);
+      if (!ent) { summary.skipped++; continue; }
+      if (ent.suspended || ent.enabled === false) {
+        await admin.from("prospecting_campaigns").update({
+          status: "paused",
+          paused_at: new Date().toISOString(),
+          paused_reason: ent.suspended
+            ? `Suspended by platform: ${ent.suspension_reason ?? "no reason recorded"}`
+            : "AI Client Finder is not enabled for this workspace",
+        }).eq("id", campaign.id);
+        summary.skipped++;
+        continue;
+      }
+      const monthlyLimit = Number(ent.limits?.monthly_emails ?? 0);
+      const monthlyUsed = Number(ent.usage?.emails ?? 0);
+      const monthlyRemaining = Math.max(0, monthlyLimit - monthlyUsed);
+      if (monthlyRemaining === 0) { summary.skipped++; continue; }
 
       // Daily limit is enforced from persisted rows, not memory.
       const dayStart = new Date(now); dayStart.setUTCHours(0, 0, 0, 0);
@@ -73,8 +97,12 @@ serve(async (req) => {
         .eq("campaign_id", campaign.id)
         .in("status", ["submitted", "sent"])
         .gte("sent_at", dayStart.toISOString());
-      let remaining = Math.max(0, (campaign.daily_limit || 50) - (sentToday ?? 0));
+      let remaining = Math.min(
+        monthlyRemaining,
+        Math.max(0, (campaign.daily_limit || 50) - (sentToday ?? 0)),
+      );
       if (remaining === 0) continue;
+
 
       const { data: steps } = await admin
         .from("prospecting_sequence_steps")

@@ -2,7 +2,7 @@
 // Google/Microsoft OAuth is only offered when the platform has credentials for it.
 // Until a mailbox is connected, sending falls back to the verified workspace sender.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { adminClient, cfCors, cfJson, requireMember } from "../_shared/client-finder.ts";
+import { adminClient, cfCors, cfJson, checkEntitlement, requireMember } from "../_shared/client-finder.ts";
 import { isValidEmail } from "../_shared/client-finder-send.ts";
 
 const GOOGLE_SCOPES = [
@@ -69,6 +69,9 @@ serve(async (req) => {
 
   /* --------------------------- Start an OAuth flow -------------------------- */
   if (action === "start_oauth") {
+    const allowance = await checkEntitlement(admin, workspaceId, "mailboxes");
+    if (allowance) return allowance;
+
     const provider = String(body.provider ?? "");
     if (provider !== "google" && provider !== "microsoft") {
       return cfJson({ error: "Choose Google or Microsoft." }, 400);

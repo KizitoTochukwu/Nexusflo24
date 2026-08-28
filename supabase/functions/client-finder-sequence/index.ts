@@ -3,6 +3,7 @@ import { callNexusModel } from "../_shared/nexus-ai-core.ts";
 import {
   adminClient,
   cfCors,
+  checkEntitlement,
   cfJson,
   logUsage,
   parseModelJson,
@@ -38,6 +39,9 @@ serve(async (req) => {
   const workspaceId: string = body.workspace_id ?? "";
   const gate = await requireMember(req, admin, workspaceId);
   if (gate instanceof Response) return gate;
+
+  const allowance = await checkEntitlement(admin, workspaceId, "ai_ops");
+  if (allowance) return allowance;
   const { userId } = gate;
 
   const apiKey = Deno.env.get("LOVABLE_API_KEY");

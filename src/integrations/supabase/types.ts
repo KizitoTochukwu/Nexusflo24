@@ -7023,6 +7023,48 @@ export type Database = {
           },
         ]
       }
+      prospecting_plan_limits: {
+        Row: {
+          created_at: string
+          exports_enabled: boolean
+          max_campaigns: number
+          max_mailboxes: number
+          monthly_ai_ops: number
+          monthly_discoveries: number
+          monthly_emails: number
+          monthly_verifications: number
+          plan: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          exports_enabled?: boolean
+          max_campaigns?: number
+          max_mailboxes?: number
+          monthly_ai_ops?: number
+          monthly_discoveries?: number
+          monthly_emails?: number
+          monthly_verifications?: number
+          plan: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          exports_enabled?: boolean
+          max_campaigns?: number
+          max_mailboxes?: number
+          monthly_ai_ops?: number
+          monthly_discoveries?: number
+          monthly_emails?: number
+          monthly_verifications?: number
+          plan?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       prospecting_provider_connections: {
         Row: {
           capability: string
@@ -7369,6 +7411,47 @@ export type Database = {
             foreignKeyName: "prospecting_usage_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_workspace_controls: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          limit_overrides: Json
+          suspended: boolean
+          suspension_reason: string | null
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          limit_overrides?: Json
+          suspended?: boolean
+          suspension_reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          limit_overrides?: Json
+          suspended?: boolean
+          suspension_reason?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_workspace_controls_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -12621,6 +12704,14 @@ export type Database = {
       claim_community_memberships: { Args: never; Returns: number }
       claim_shop_entitlements: { Args: never; Returns: number }
       claim_shop_orders: { Args: never; Returns: number }
+      client_finder_entitlements: {
+        Args: { _workspace_id: string }
+        Returns: Json
+      }
+      client_finder_report: {
+        Args: { _from: string; _to: string; _workspace_id: string }
+        Returns: Json
+      }
       convert_lead_to_contact: { Args: { _lead_id: string }; Returns: string }
       crm_create_contact_from_conversation: {
         Args: {
@@ -13045,6 +13136,7 @@ export type Database = {
         Returns: string
       }
       platform_automation_health: { Args: { _since: string }; Returns: Json }
+      platform_client_finder_health: { Args: never; Returns: Json }
       platform_communications_metrics: {
         Args: { _since: string }
         Returns: Json

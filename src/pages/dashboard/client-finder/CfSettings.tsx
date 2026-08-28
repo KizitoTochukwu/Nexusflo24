@@ -7,6 +7,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useProspectingUsage, useProviderConnections } from "@/hooks/useClientFinder";
 import { format } from "date-fns";
 import MailboxCard from "@/components/client-finder/MailboxCard";
+import EntitlementPanel from "@/components/client-finder/EntitlementPanel";
 
 const CAPABILITIES = [
   { capability: "Company discovery", note: "Finds companies matching an approved profile." },
@@ -22,6 +23,8 @@ export default function CfSettings() {
 
   return (
     <div className="space-y-4">
+      <EntitlementPanel workspaceId={workspaceId} />
+
       <MailboxCard />
 
       <Card>
