@@ -14,12 +14,13 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Download, Loader2, Sparkles, Upload } from "lucide-react";
+import { Download, Loader2, MailCheck, Search, Sparkles, Upload, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
-  useIcps, useImportProspects, useProspectCompanies, useProspectContacts,
-  useScoreFit, useUpdateCompanyStatus, type ImportRow,
+  useDiscoverCompanies, useDiscoverContacts, useIcps, useImportProspects, useProspectCompanies,
+  useProspectContacts, useProviderConnections, useScoreFit, useUpdateCompanyStatus, useVerifyEmails,
+  type ImportRow,
 } from "@/hooks/useClientFinder";
 import { autoMapHeaders, IMPORT_FIELDS, parseCsv, SAMPLE_CSV, type ImportFieldKey } from "@/lib/clientFinder/csv";
 import { downloadCsv } from "@/lib/crm/csv";
@@ -29,15 +30,26 @@ export default function CfProspects() {
   const { data: companies = [], isLoading } = useProspectCompanies(workspaceId);
   const { data: contacts = [] } = useProspectContacts(workspaceId);
   const { data: icps = [] } = useIcps(workspaceId);
+  const { data: providers = [] } = useProviderConnections(workspaceId);
   const importProspects = useImportProspects(workspaceId);
   const scoreFit = useScoreFit(workspaceId);
   const updateStatus = useUpdateCompanyStatus();
+  const discoverCompanies = useDiscoverCompanies(workspaceId);
+  const discoverContacts = useDiscoverContacts(workspaceId);
+  const verifyEmails = useVerifyEmails(workspaceId);
+
+  const capabilityReady = (capability: string) =>
+    (providers as any[]).some((p) => p.capability === capability && p.status === "connected");
+  const companyDiscoveryReady = capabilityReady("Company discovery");
+  const contactDiscoveryReady = capabilityReady("Contact discovery");
+  const verificationReady = capabilityReady("Email verification");
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<Record<number, ImportFieldKey | "">>({});
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [selectedContacts, setSelectedContacts] = useState<Record<string, boolean>>({});
   const [icpId, setIcpId] = useState("");
   const [search, setSearch] = useState("");
 
