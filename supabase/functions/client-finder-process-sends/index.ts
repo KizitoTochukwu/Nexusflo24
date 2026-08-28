@@ -1,7 +1,7 @@
 // Background worker for AI Client Finder outbound sending.
 // Invoked by pg_cron. Bounded batch, single-flight lease, idempotent per step.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { adminClient, cfCors, cfJson } from "../_shared/client-finder.ts";
+import { adminClient, cfCors, cfJson, loadEntitlements } from "../_shared/client-finder.ts";
 import {
   bodyToHtml,
   emailDomain,
