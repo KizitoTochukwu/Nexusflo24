@@ -114,6 +114,33 @@ export default function CfProspects() {
     setSelected({});
   };
 
+  const handleDiscoverCompanies = async () => {
+    if (!icpId) {
+      toast.error("Choose an approved ideal customer profile to search with");
+      return;
+    }
+    await discoverCompanies.mutateAsync({ icp_id: icpId, limit: 25 });
+  };
+
+  const handleDiscoverContacts = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("Select at least one company");
+      return;
+    }
+    await discoverContacts.mutateAsync({ company_ids: selectedIds.slice(0, 10), per_company: 3 });
+  };
+
+  const selectedContactIds = Object.keys(selectedContacts).filter((k) => selectedContacts[k]);
+
+  const handleVerify = async () => {
+    if (selectedContactIds.length === 0) {
+      toast.error("Select at least one contact");
+      return;
+    }
+    await verifyEmails.mutateAsync({ contact_ids: selectedContactIds.slice(0, 25) });
+    setSelectedContacts({});
+  };
+
   const exportCsv = () => {
     const header = "company_name,domain,industry,country,fit_score,fit_explanation,status\n";
     const body = visible
@@ -137,9 +164,9 @@ export default function CfProspects() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
-            No external prospect data provider is connected to this workspace yet, so automated company
-            discovery is unavailable. You can import your own list below — every record keeps its source
-            and the date it was added.
+            {companyDiscoveryReady
+              ? "Company discovery runs through Apollo using an approved ideal customer profile. Every record keeps its source and the date it was added, and nothing is invented."
+              : "Automated company discovery is not available yet — the Apollo connection has not passed a credential check. Import your own list below; every record keeps its source and the date it was added."}
           </p>
           <div className="flex flex-wrap gap-2">
             <input
@@ -153,7 +180,18 @@ export default function CfProspects() {
                 e.target.value = "";
               }}
             />
-            <Button onClick={() => fileRef.current?.click()}>
+            {companyDiscoveryReady && (
+              <Button onClick={handleDiscoverCompanies} disabled={discoverCompanies.isPending}>
+                {discoverCompanies.isPending
+                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  : <Search className="mr-2 h-4 w-4" />}
+                Find companies with Apollo
+              </Button>
+            )}
+            <Button
+              variant={companyDiscoveryReady ? "outline" : "default"}
+              onClick={() => fileRef.current?.click()}
+            >
               <Upload className="mr-2 h-4 w-4" /> Import CSV
             </Button>
             <Button variant="outline" onClick={() => downloadCsv("client-finder-template", SAMPLE_CSV)}>
@@ -162,6 +200,7 @@ export default function CfProspects() {
           </div>
         </CardContent>
       </Card>
+
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
