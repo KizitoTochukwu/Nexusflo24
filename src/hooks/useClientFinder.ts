@@ -477,3 +477,81 @@ export function useProspectingUsage(workspaceId: string) {
     enabled: !!workspaceId,
   });
 }
+
+/* ------------------------ Apollo / Hunter data providers -------------------- */
+
+async function callProviders(workspaceId: string, payload: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("client-finder-providers", {
+    body: { workspace_id: workspaceId, ...payload },
+  });
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+/** Runs a real credential check against each provider and stores the result. */
+export function useCheckProviders(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => callProviders(workspaceId, { action: "status" }),
+    onSuccess: () => {
+      invalidate(qc, ["cf-providers"]);
+      toast.success("Provider status checked");
+    },
+    onError: (e: any) => toast.error(e.message || "Could not check the providers"),
+  });
+}
+
+export function useDiscoverCompanies(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { icp_id?: string; limit?: number }) =>
+      callProviders(workspaceId, { action: "discover_companies", ...params }) as Promise<{
+        returned: number; created: number; duplicates: number;
+      }>,
+    onSuccess: (r) => {
+      invalidate(qc, ["cf-companies", "cf-usage"]);
+      toast.success(
+        `Apollo returned ${r.returned} companies — ${r.created} added, ${r.duplicates} already on your list`,
+      );
+    },
+    onError: (e: any) => toast.error(e.message || "Company discovery failed"),
+  });
+}
+
+export function useDiscoverContacts(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { company_ids: string[]; per_company?: number; seniorities?: string[] }) =>
+      callProviders(workspaceId, { action: "discover_contacts", ...params }) as Promise<{
+        returned: number; created: number; duplicates: number; without_email: number;
+      }>,
+    onSuccess: (r) => {
+      invalidate(qc, ["cf-contacts", "cf-usage"]);
+      toast.success(
+        `${r.created} decision-makers added` +
+          (r.without_email ? ` — ${r.without_email} without an email address` : ""),
+      );
+    },
+    onError: (e: any) => toast.error(e.message || "Contact discovery failed"),
+  });
+}
+
+export function useVerifyEmails(workspaceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { contact_ids: string[] }) =>
+      callProviders(workspaceId, { action: "verify_emails", ...params }) as Promise<{
+        checked: number; failed: number; results: Record<string, number>;
+      }>,
+    onSuccess: (r) => {
+      invalidate(qc, ["cf-contacts", "cf-usage"]);
+      const parts = Object.entries(r.results)
+        .filter(([, n]) => n > 0)
+        .map(([k, n]) => `${n} ${k}`)
+        .join(", ");
+      toast.success(`Checked ${r.checked} addresses${parts ? `: ${parts}` : ""}`);
+    },
+    onError: (e: any) => toast.error(e.message || "Email verification failed"),
+  });
+}
