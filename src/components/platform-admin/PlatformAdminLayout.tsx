@@ -39,6 +39,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
       { label: "Automations", to: "/platform-admin/automations", icon: Workflow, permission: "platform.automations.retry" },
       { label: "Integrations", to: "/platform-admin/integrations", icon: Plug, permission: "platform.integrations.diagnose" },
       { label: "WhatsApp delivery", to: "/platform-admin/whatsapp", icon: Plug, permission: "platform.integrations.diagnose" },
+      { label: "AI Client Finder", to: "/platform-admin/client-finder", icon: Radio, permission: "platform.clientfinder.manage" },
       { label: "Store Fulfilment", to: "/platform-admin/fulfilment", icon: ShoppingBag, permission: "platform.fulfilment.manage" },
     ],
   },

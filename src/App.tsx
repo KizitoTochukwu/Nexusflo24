@@ -130,6 +130,7 @@ import PlatformCommunications from "./pages/platform-admin/PlatformCommunication
 import PlatformAutomations from "./pages/platform-admin/PlatformAutomations";
 import PlatformIntegrations from "./pages/platform-admin/PlatformIntegrations";
 import PlatformWhatsApp from "./pages/platform-admin/PlatformWhatsApp";
+import PlatformClientFinder from "./pages/platform-admin/PlatformClientFinder";
 import PlatformFulfilment from "./pages/platform-admin/PlatformFulfilment";
 import PlatformContent from "./pages/platform-admin/PlatformContent";
 import PlatformAcademy from "./pages/platform-admin/PlatformAcademy";
@@ -149,6 +150,7 @@ import CfSettings from "./pages/dashboard/client-finder/CfSettings";
 import CfOutreach from "./pages/dashboard/client-finder/CfOutreach";
 import CfCampaign from "./pages/dashboard/client-finder/CfCampaign";
 import CfInbox from "./pages/dashboard/client-finder/CfInbox";
+import CfReports from "./pages/dashboard/client-finder/CfReports";
 import CommerceOverview from "./pages/dashboard/commerce/CommerceOverview";
 import CommerceProducts from "./pages/dashboard/commerce/CommerceProducts";
 import CommerceOrders from "./pages/dashboard/commerce/CommerceOrders";
@@ -252,6 +254,7 @@ const App = () => (
                 <Route path="automations" element={<PlatformAutomations />} />
                 <Route path="integrations" element={<PlatformIntegrations />} />
                 <Route path="whatsapp" element={<PlatformWhatsApp />} />
+                <Route path="client-finder" element={<PlatformClientFinder />} />
                 <Route path="fulfilment" element={<PlatformFulfilment />} />
                 <Route path="content" element={<PlatformContent />} />
                 <Route path="academy" element={<PlatformAcademy />} />

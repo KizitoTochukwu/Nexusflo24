@@ -1,5 +1,5 @@
 import { useState } from "react";
-import PlatformAdminLayout from "@/components/platform-admin/PlatformAdminLayout";
+import { PageHeader } from "@/components/platform-admin/PlatformPrimitives";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,11 @@ export default function PlatformClientFinder() {
     draft[plan.plan]?.[key] ?? plan[key];
 
   return (
-    <PlatformAdminLayout title="AI Client Finder" description="Plan allowances, workspace access and module health.">
+    <>
+      <PageHeader
+        title="AI Client Finder"
+        description="Plan allowances, workspace access and module health."
+      />
       {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
       {error && (
         <Card>
@@ -227,6 +231,6 @@ export default function PlatformClientFinder() {
           </Card>
         </div>
       )}
-    </PlatformAdminLayout>
+    </>
   );
 }
