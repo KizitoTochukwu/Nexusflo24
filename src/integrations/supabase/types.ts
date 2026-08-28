@@ -6464,8 +6464,12 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           archived_at: string | null
+          booking_url: string | null
+          create_crm_lead: boolean
           created_at: string
           created_by: string | null
+          crm_pipeline_id: string | null
+          crm_stage_id: string | null
           daily_limit: number
           from_email: string | null
           from_name: string | null
@@ -6473,6 +6477,7 @@ export type Database = {
           id: string
           launched_at: string | null
           list_id: string | null
+          mailbox_id: string | null
           max_spacing_seconds: number
           min_spacing_seconds: number
           name: string
@@ -6492,8 +6497,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          booking_url?: string | null
+          create_crm_lead?: boolean
           created_at?: string
           created_by?: string | null
+          crm_pipeline_id?: string | null
+          crm_stage_id?: string | null
           daily_limit?: number
           from_email?: string | null
           from_name?: string | null
@@ -6501,6 +6510,7 @@ export type Database = {
           id?: string
           launched_at?: string | null
           list_id?: string | null
+          mailbox_id?: string | null
           max_spacing_seconds?: number
           min_spacing_seconds?: number
           name: string
@@ -6520,8 +6530,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           archived_at?: string | null
+          booking_url?: string | null
+          create_crm_lead?: boolean
           created_at?: string
           created_by?: string | null
+          crm_pipeline_id?: string | null
+          crm_stage_id?: string | null
           daily_limit?: number
           from_email?: string | null
           from_name?: string | null
@@ -6529,6 +6543,7 @@ export type Database = {
           id?: string
           launched_at?: string | null
           list_id?: string | null
+          mailbox_id?: string | null
           max_spacing_seconds?: number
           min_spacing_seconds?: number
           name?: string
@@ -6560,6 +6575,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "prospecting_campaigns_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_mailboxes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "prospecting_campaigns_offer_id_fkey"
             columns: ["offer_id"]
             isOneToOne: false
@@ -6583,9 +6605,14 @@ export type Database = {
           company_id: string | null
           contact_id: string
           created_at: string
+          crm_company_id: string | null
+          crm_contact_id: string | null
+          crm_deal_id: string | null
           current_step: number
           id: string
           next_send_at: string | null
+          replied_at: string | null
+          reply_classification: string | null
           status: string
           stop_reason: string | null
           stopped_at: string | null
@@ -6599,9 +6626,14 @@ export type Database = {
           company_id?: string | null
           contact_id: string
           created_at?: string
+          crm_company_id?: string | null
+          crm_contact_id?: string | null
+          crm_deal_id?: string | null
           current_step?: number
           id?: string
           next_send_at?: string | null
+          replied_at?: string | null
+          reply_classification?: string | null
           status?: string
           stop_reason?: string | null
           stopped_at?: string | null
@@ -6615,9 +6647,14 @@ export type Database = {
           company_id?: string | null
           contact_id?: string
           created_at?: string
+          crm_company_id?: string | null
+          crm_contact_id?: string | null
+          crm_deal_id?: string | null
           current_step?: number
           id?: string
           next_send_at?: string | null
+          replied_at?: string | null
+          reply_classification?: string | null
           status?: string
           stop_reason?: string | null
           stopped_at?: string | null
@@ -6719,6 +6756,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      prospecting_mailboxes: {
+        Row: {
+          access_token: string | null
+          archived_at: string | null
+          connected_at: string
+          created_at: string
+          created_by: string | null
+          daily_limit: number
+          display_name: string | null
+          email: string
+          id: string
+          last_checked_at: string | null
+          last_error: string | null
+          provider: string
+          refresh_token: string | null
+          scopes: string[]
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          archived_at?: string | null
+          connected_at?: string
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          display_name?: string | null
+          email: string
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          provider: string
+          refresh_token?: string | null
+          scopes?: string[]
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string | null
+          archived_at?: string | null
+          connected_at?: string
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          display_name?: string | null
+          email?: string
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          provider?: string
+          refresh_token?: string | null
+          scopes?: string[]
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
       }
       prospecting_offers: {
         Row: {
@@ -6975,6 +7075,126 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_replies: {
+        Row: {
+          body_text: string
+          campaign_id: string | null
+          classification: string | null
+          classification_confidence: number | null
+          classification_reason: string | null
+          contact_id: string | null
+          corrected_at: string | null
+          corrected_by: string | null
+          corrected_classification: string | null
+          created_at: string
+          created_by: string | null
+          crm_contact_id: string | null
+          crm_deal_id: string | null
+          crm_synced_at: string | null
+          enrolment_id: string | null
+          from_email: string
+          handled: boolean
+          id: string
+          mailbox_id: string | null
+          outbound_email_id: string | null
+          received_at: string
+          source: string
+          subject: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          body_text?: string
+          campaign_id?: string | null
+          classification?: string | null
+          classification_confidence?: number | null
+          classification_reason?: string | null
+          contact_id?: string | null
+          corrected_at?: string | null
+          corrected_by?: string | null
+          corrected_classification?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_contact_id?: string | null
+          crm_deal_id?: string | null
+          crm_synced_at?: string | null
+          enrolment_id?: string | null
+          from_email: string
+          handled?: boolean
+          id?: string
+          mailbox_id?: string | null
+          outbound_email_id?: string | null
+          received_at?: string
+          source?: string
+          subject?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          body_text?: string
+          campaign_id?: string | null
+          classification?: string | null
+          classification_confidence?: number | null
+          classification_reason?: string | null
+          contact_id?: string | null
+          corrected_at?: string | null
+          corrected_by?: string | null
+          corrected_classification?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_contact_id?: string | null
+          crm_deal_id?: string | null
+          crm_synced_at?: string | null
+          enrolment_id?: string | null
+          from_email?: string
+          handled?: boolean
+          id?: string
+          mailbox_id?: string | null
+          outbound_email_id?: string | null
+          received_at?: string
+          source?: string
+          subject?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_replies_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_replies_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_replies_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_replies_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_mailboxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospecting_replies_outbound_email_id_fkey"
+            columns: ["outbound_email_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_outbound_emails"
             referencedColumns: ["id"]
           },
         ]
