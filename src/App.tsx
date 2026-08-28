@@ -73,6 +73,7 @@ import AdminUsage from "./pages/admin/communication/AdminUsage";
 import AdminCreditPackages from "./pages/admin/communication/AdminCreditPackages";
 import AdminMessagesInbox from "./pages/admin/communication/AdminMessagesInbox";
 import AuthCallback from "./pages/AuthCallback";
+import GmailReturn from "./pages/oauth/GmailReturn";
 import OAuthConsent from "./pages/OAuthConsent";
 import PublicFunnel from "./pages/PublicFunnel";
 import BookingsWorkspaceLayout from "./components/bookings/BookingsWorkspaceLayout";
@@ -219,6 +220,7 @@ const App = () => (
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
               <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/oauth/gmail/return" element={<GmailReturn />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />

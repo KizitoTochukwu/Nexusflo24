@@ -65,6 +65,7 @@ export function useCfGmailActions(workspaceId?: string) {
     mutationFn: async () => {
       const popup = window.open("", "nexusflo-gmail", "width=600,height=720");
       if (!popup) throw new Error("Your browser blocked the Gmail window. Allow pop-ups and try again.");
+      window.localStorage.setItem("cf_gmail_workspace_id", workspaceId!);
       try {
         const res = await callGmail(workspaceId!, { action: "start", origin: window.location.origin });
         const completion = waitForOAuthCompletion(popup);
