@@ -6,7 +6,7 @@ import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useStoreOrder } from "@/hooks/useStoreOrders";
-import { useStorePrice } from "@/lib/store/price";
+import { formatMoney } from "@/lib/store/price";
 import { DELIVERY_STEPS } from "@/lib/store/constants";
 
 export default function StoreSuccess() {
