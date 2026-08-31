@@ -13,7 +13,8 @@ export default function StoreSuccess() {
   const [params] = useSearchParams();
   const orderId = params.get("order") ?? undefined;
   const { clear } = useCart();
-  const { format } = useStorePrice();
+  // Order amounts are stored in the currency the customer was actually charged in.
+  const format = (minor: number) => formatMoney(minor, data?.order?.currency || "GBP");
   const { data, isLoading } = useStoreOrder(orderId);
 
   useEffect(() => {
