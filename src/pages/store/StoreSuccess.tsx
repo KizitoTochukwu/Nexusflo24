@@ -6,14 +6,15 @@ import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { useStoreOrder } from "@/hooks/useStoreOrders";
-import { useStorePrice } from "@/lib/store/price";
+import { formatMoney } from "@/lib/store/price";
 import { DELIVERY_STEPS } from "@/lib/store/constants";
 
 export default function StoreSuccess() {
   const [params] = useSearchParams();
   const orderId = params.get("order") ?? undefined;
   const { clear } = useCart();
-  const { format } = useStorePrice();
+  // Order amounts are stored in the currency the customer was actually charged in.
+  const format = (minor: number) => formatMoney(minor, data?.order?.currency || "GBP");
   const { data, isLoading } = useStoreOrder(orderId);
 
   useEffect(() => {

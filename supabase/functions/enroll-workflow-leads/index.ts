@@ -42,9 +42,11 @@ function triggerMatches(wf: any, triggerNode: any, eventType: string, eventConfi
   if (!isAny(cfg.store_id) && eventConfig.store_id) {
     if (String(cfg.store_id) !== String(eventConfig.store_id)) return false;
   }
-  if (!isAny(cfg.shop_product_id)) {
+  if (!isAny(cfg.shop_product_id) && "product_ids" in eventConfig) {
+    // A product-scoped trigger must never fire for an order we could not read
+    // the line items of, so an empty list is treated as "no match".
     const ids: string[] = Array.isArray(eventConfig.product_ids) ? eventConfig.product_ids.map(String) : [];
-    if (ids.length && !ids.includes(String(cfg.shop_product_id))) return false;
+    if (!ids.includes(String(cfg.shop_product_id))) return false;
   }
   return true;
 }

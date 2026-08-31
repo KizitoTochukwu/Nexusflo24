@@ -18,7 +18,7 @@ import {
 } from "@/hooks/useStoreOrders";
 import { useStoreAnalytics } from "@/hooks/useStoreAdmin";
 import { useAdminReviews, useDeleteReview, useModerateReview } from "@/hooks/useStoreReviews";
-import { formatGbp } from "@/lib/store/price";
+import { formatGbp, formatMoney } from "@/lib/store/price";
 
 function ProjectRow({ project }: { project: StoreProject }) {
   const update = useUpdateStoreProject();
@@ -317,9 +317,9 @@ export default function AdminStoreOrders({ bare = false }: { bare?: boolean }) {
                         <td className="p-3">
                           <Badge variant={o.status === "pending" ? "secondary" : "default"}>{orderStatusLabel(o.status)}</Badge>
                         </td>
-                        <td className="p-3">{formatGbp(o.total_pence)}</td>
+                        <td className="p-3">{formatMoney(o.total_pence, o.currency || "GBP")}</td>
                         <td className="p-3">
-                          {o.monthly_total_pence ? `${formatGbp(o.monthly_total_pence)}/mo` : "—"}
+                          {o.monthly_total_pence ? `${formatMoney(o.monthly_total_pence, o.currency || "GBP")}/mo` : "—"}
                         </td>
                         <td className="p-3 text-xs text-muted-foreground">
                           {new Date(o.created_at).toLocaleDateString()}
