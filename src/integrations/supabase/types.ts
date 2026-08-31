@@ -13143,6 +13143,10 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      log_automation_events: {
+        Args: { _entries: Json; _workspace_id: string }
+        Returns: number
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
