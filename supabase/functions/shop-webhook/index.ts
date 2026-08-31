@@ -186,7 +186,7 @@ serve(async (req) => {
         {
           const { data: fullItems } = await admin
             .from("shop_order_items")
-            .select("product_id, title, quantity, total_amount")
+            .select("product_id, name, quantity, total_amount")
             .eq("order_id", orderId);
           const productIds = (fullItems ?? []).map((i: any) => i.product_id).filter(Boolean);
           const isSubscription = Boolean(subscriptionId);
@@ -210,7 +210,7 @@ serve(async (req) => {
             },
             event_type: "order_paid",
             title: `Order ${order.order_number} paid`,
-            description: (fullItems ?? []).map((i: any) => `${i.quantity} × ${i.title}`).join(", ") || null,
+            description: (fullItems ?? []).map((i: any) => `${i.quantity} × ${i.name}`).join(", ") || null,
             status: "paid",
             external_event_id: `order_paid:${orderId}`,
             meta: {
