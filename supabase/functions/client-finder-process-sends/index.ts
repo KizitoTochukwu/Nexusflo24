@@ -254,9 +254,9 @@ serve(async (req) => {
             body: JSON.stringify({
               workspaceId: campaign.workspace_id, to: email,
               subject: subj.text, html: bodyToHtml(bd.text),
-              fromEmail: campaign.from_email || undefined,
-              fromName: campaign.from_name || undefined,
-              replyTo: campaign.reply_to_email || campaign.from_email || undefined,
+              // The workspace's verified sender is used for the From address;
+              // replies still come back to the campaign address.
+              replyTo: campaign.from_email || undefined,
             }),
           });
           const data = await res.json().catch(() => ({}));
