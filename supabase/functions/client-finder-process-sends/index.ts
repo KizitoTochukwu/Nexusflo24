@@ -108,16 +108,27 @@ serve(async (req) => {
       // Prefer the campaign's own connected Gmail mailbox; otherwise the
       // verified workspace sender is used and that is shown in the UI.
       let gmailBox: { email: string; created_by: string } | null = null;
-      if (campaign.mailbox_id) {
-        const { data: box } = await admin
+      {
+        // Prefer the campaign's chosen mailbox; otherwise fall back to the
+        // workspace's connected Gmail mailbox, which is what the UI promises.
+        let query = admin
           .from("prospecting_mailboxes")
-          .select("email, created_by, provider, status")
-          .eq("id", campaign.mailbox_id)
+          .select("id, email, created_by, provider, status")
           .eq("workspace_id", campaign.workspace_id)
-          .maybeSingle();
-        if (box && box.provider === "google" && box.status === "connected") {
-          gmailBox = { email: box.email, created_by: box.created_by };
-        }
+          .eq("provider", "google")
+          .eq("status", "connected");
+        if (campaign.mailbox_id) query = query.eq("id", campaign.mailbox_id);
+        const { data: boxes } = await query.order("created_at", { ascending: true }).limit(1);
+        const box = (boxes ?? [])[0];
+        if (box) gmailBox = { email: box.email, created_by: box.created_by };
+      }
+
+      // The offer's booking link backs the {{booking_url}} merge variable.
+      let bookingUrl = "";
+      if (campaign.offer_id) {
+        const { data: offer } = await admin
+          .from("prospecting_offers").select("booking_url").eq("id", campaign.offer_id).maybeSingle();
+        bookingUrl = String(offer?.booking_url ?? "").trim();
       }
 
       const { data: steps } = await admin
@@ -189,7 +200,7 @@ serve(async (req) => {
           city: company?.city || "",
           country: company?.country || contact.country || "",
           sender_name: campaign.from_name || "",
-          booking_url: "",
+          booking_url: bookingUrl,
         };
         const subj = renderTemplate(step.subject_template, vars);
         const bd = renderTemplate(step.body_template, vars);
@@ -243,6 +254,9 @@ serve(async (req) => {
             body: JSON.stringify({
               workspaceId: campaign.workspace_id, to: email,
               subject: subj.text, html: bodyToHtml(bd.text),
+              // The workspace's verified sender is used for the From address;
+              // replies still come back to the campaign address.
+              replyTo: campaign.from_email || undefined,
             }),
           });
           const data = await res.json().catch(() => ({}));

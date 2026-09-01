@@ -682,16 +682,23 @@ export function useSimulateAutomation() {
         .eq("automation_id", automationId)
         .order("step_order", { ascending: true });
 
-      // Simulate executing each step and log
-      for (const step of (steps ?? [])) {
+      // Simulate executing each step and log through the guarded RPC — direct
+      // inserts into automation_logs are reserved for the service role.
+      const entries = (steps ?? []).map((step) => {
         const s = step as AutomationStep;
-        await supabase.from("automation_logs").insert({
+        return {
           automation_id: automationId,
-          workspace_id: workspaceId,
           event_type: `${s.step_type}:${(s.config as any)?.action || (s.config as any)?.condition || s.step_type}`,
           status: "success",
           details: { step_order: s.step_order, config: s.config, simulated: true },
-        } as any);
+        };
+      });
+      if (entries.length) {
+        const { error: logErr } = await supabase.rpc("log_automation_events" as any, {
+          _workspace_id: workspaceId,
+          _entries: entries as any,
+        });
+        if (logErr) console.error("[useSimulateAutomation] log error:", logErr);
       }
 
       // Update run count and last_run_at

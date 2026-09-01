@@ -50,6 +50,13 @@ function contactVars(contact: any, company: any, senderName: string, bookingUrl:
 }
 
 /** Everything that must be true before a campaign may be launched. */
+async function offerBookingUrl(admin: Admin, campaign: any): Promise<string> {
+  if (!campaign?.offer_id) return "";
+  const { data } = await admin
+    .from("prospecting_offers").select("booking_url").eq("id", campaign.offer_id).maybeSingle();
+  return String(data?.booking_url ?? "").trim();
+}
+
 async function readiness(admin: Admin, workspaceId: string, campaign: any) {
   const checks: Array<{ key: string; label: string; ok: boolean; detail?: string }> = [];
 
@@ -104,6 +111,7 @@ async function readiness(admin: Admin, workspaceId: string, campaign: any) {
   checks.push({ key: "offer", label: "An offer is attached", ok: offerOk });
 
   // Merge variables must all resolve for every approved enrolment.
+  const bookingUrl = await offerBookingUrl(admin, campaign);
   let unresolved = 0;
   if (stepsOk && (approvedCount ?? 0) > 0) {
     const { data: enrolments } = await admin
@@ -124,7 +132,7 @@ async function readiness(admin: Admin, workspaceId: string, campaign: any) {
     const companyById = new Map((companies ?? []).map((c: any) => [c.id, c]));
 
     for (const c of contacts ?? []) {
-      const vars = contactVars(c, companyById.get(c.company_id), campaign.from_name || "", "");
+      const vars = contactVars(c, companyById.get(c.company_id), campaign.from_name || "", bookingUrl);
       for (const s of steps ?? []) {
         const a = renderTemplate(s.subject_template, vars);
         const b = renderTemplate(s.body_template, vars);
@@ -251,7 +259,7 @@ serve(async (req) => {
       ? await admin.from("prospect_companies").select("*").eq("id", contact.company_id).maybeSingle()
       : { data: null as any };
 
-    const vars = contactVars(contact, company, campaign?.from_name || "", "");
+    const vars = contactVars(contact, company, campaign?.from_name || "", await offerBookingUrl(admin, campaign));
     const rendered = (steps ?? []).map((s: any) => {
       const subj = renderTemplate(s.subject_template, vars);
       const bd = renderTemplate(s.body_template, vars);
@@ -292,7 +300,7 @@ serve(async (req) => {
       first_name: "Sam", full_name: "Sam Example", company: "Example Ltd",
       job_title: "Operations Director", industry: "Professional services",
       city: "London", country: "United Kingdom",
-      sender_name: campaign.from_name || "", booking_url: "",
+      sender_name: campaign.from_name || "", booking_url: await offerBookingUrl(admin, campaign),
     };
     const subj = renderTemplate(step.subject_template, vars);
     const bd = renderTemplate(step.body_template, vars);

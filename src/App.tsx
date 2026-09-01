@@ -134,6 +134,7 @@ import PlatformIntegrations from "./pages/platform-admin/PlatformIntegrations";
 import PlatformWhatsApp from "./pages/platform-admin/PlatformWhatsApp";
 import PlatformClientFinder from "./pages/platform-admin/PlatformClientFinder";
 import PlatformFulfilment from "./pages/platform-admin/PlatformFulfilment";
+import PlatformCatalogue from "./pages/platform-admin/PlatformCatalogue";
 import PlatformContent from "./pages/platform-admin/PlatformContent";
 import PlatformAcademy from "./pages/platform-admin/PlatformAcademy";
 import PlatformSecurity from "./pages/platform-admin/PlatformSecurity";
@@ -260,6 +261,7 @@ const App = () => (
                 <Route path="whatsapp" element={<PlatformWhatsApp />} />
                 <Route path="client-finder" element={<PlatformClientFinder />} />
                 <Route path="fulfilment" element={<PlatformFulfilment />} />
+                <Route path="catalogue" element={<PlatformCatalogue />} />
                 <Route path="content" element={<PlatformContent />} />
                 <Route path="academy" element={<PlatformAcademy />} />
                 <Route path="support" element={<PlatformSupport />} />
@@ -354,7 +356,7 @@ const App = () => (
                   <Route path="admin/smart-actions" element={<AdminSmartActions />} />
                   <Route path="admin/pricing" element={<AdminPricing />} />
                   <Route path="admin/store-orders" element={<Navigate to="/platform-admin/fulfilment" replace />} />
-                  <Route path="admin/store-catalogue" element={<Navigate to="/platform-admin/fulfilment" replace />} />
+                  <Route path="admin/store-catalogue" element={<Navigate to="/platform-admin/catalogue" replace />} />
                   <Route path="admin/communication" element={<AdminCommunicationOverview />} />
                   <Route path="admin/communication/organisations" element={<AdminOrganisations />} />
                   <Route path="admin/communication/organisations/:orgId" element={<AdminOrgDetail />} />

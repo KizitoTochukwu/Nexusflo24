@@ -189,17 +189,19 @@ async function cancelMatchingScheduledJobs(params: {
     console.log(
       `[exit-criteria] Cancelled ${cancelled.length} pending jobs across ${automationIds.length} automations for event=${event.type}`
     );
-    // Best-effort: log the exit in automation_logs for visibility
+    // Best-effort: log the exit in automation_logs for visibility. Direct
+    // inserts are service-role only, so this goes through the guarded RPC.
     const logs = cancelled.map((c) => ({
       automation_id: c.automation_id as string,
-      workspace_id: workspaceId,
       lead_id: c.lead_id as string,
       event_type: `exit_criteria:${event.type}`,
       status: "cancelled",
-      details: { reason: "Exit criteria matched", event } as any,
+      details: { reason: "Exit criteria matched", event },
     }));
-    supabase.from("automation_logs").insert(logs as any).then(({ error: logErr }) => {
-      if (logErr) console.error("[cancelMatchingScheduledJobs] log error:", logErr);
-    });
+    supabase
+      .rpc("log_automation_events" as any, { _workspace_id: workspaceId, _entries: logs as any })
+      .then(({ error: logErr }) => {
+        if (logErr) console.error("[cancelMatchingScheduledJobs] log error:", logErr);
+      });
   }
 }
