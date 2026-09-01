@@ -131,7 +131,10 @@ export function useStoreAnalytics() {
 
   const data = useMemo<StoreAnalytics>(() => {
     const all = orders.data ?? [];
-    const paid = all.filter((o) => o.status === "paid");
+    // An order counts as paid once Stripe confirms it; the workflow status then
+    // moves on to awaiting_onboarding and beyond, so match on payment instead.
+    const UNPAID = new Set(["pending", "cancelled", "failed", "expired"]);
+    const paid = all.filter((o) => !!o.paid_at || !UNPAID.has(o.status));
     const paidIds = new Set(paid.map((o) => o.id));
     const setupRevenuePence = paid.reduce((sum, o) => sum + (o.total_pence ?? 0), 0);
     const monthlyRevenuePence = paid.reduce((sum, o) => sum + (o.monthly_total_pence ?? 0), 0);
