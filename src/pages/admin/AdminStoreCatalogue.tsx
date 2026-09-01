@@ -338,30 +338,34 @@ function CatalogueTab({ table }: { table: CatalogueTable }) {
   );
 }
 
-export default function AdminStoreCatalogue() {
-  return (
-    <DashboardLayout>
-      <div className="mx-auto w-full max-w-[1200px] space-y-6">
+/** `bare` renders without the dashboard shell so Platform Admin can embed it. */
+export default function AdminStoreCatalogue({ bare = false }: { bare?: boolean }) {
+  const body = (
+    <div className="mx-auto w-full max-w-[1200px] space-y-6">
+      {!bare && (
         <div>
           <h1 className="text-2xl font-bold">Automation Store catalogue</h1>
           <p className="text-sm text-muted-foreground">
             Add, edit, price and publish everything shoppers see in the store — no developer needed.
           </p>
         </div>
+      )}
 
-        <Tabs defaultValue="store_products">
-          <TabsList className="flex-wrap">
-            {TABLES.map((table) => (
-              <TabsTrigger key={table} value={table}>{SCHEMAS[table].label}</TabsTrigger>
-            ))}
-          </TabsList>
+      <Tabs defaultValue="store_products">
+        <TabsList className="flex-wrap">
           {TABLES.map((table) => (
-            <TabsContent key={table} value={table} className="mt-4">
-              <CatalogueTab table={table} />
-            </TabsContent>
+            <TabsTrigger key={table} value={table}>{SCHEMAS[table].label}</TabsTrigger>
           ))}
-        </Tabs>
-      </div>
-    </DashboardLayout>
+        </TabsList>
+        {TABLES.map((table) => (
+          <TabsContent key={table} value={table} className="mt-4">
+            <CatalogueTab table={table} />
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
   );
+
+  if (bare) return body;
+  return <DashboardLayout>{body}</DashboardLayout>;
 }
