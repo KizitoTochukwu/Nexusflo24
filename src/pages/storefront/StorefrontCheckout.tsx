@@ -75,7 +75,8 @@ export default function StorefrontCheckout() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data?.url) throw new Error("Checkout could not be started.");
-      basket.clear();
+      // Keep the basket until the order is confirmed paid, so a cancelled or
+      // abandoned Stripe session returns the shopper to a full basket.
       window.location.href = data.url;
     } catch (err: any) {
       toast.error(err?.message ?? "We could not start checkout. Please try again.");
