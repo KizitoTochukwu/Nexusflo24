@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import StorefrontShell from "@/components/commerce/StorefrontShell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { money, orderStatusLabel, usePublicOrder, usePublicStore } from "@/hooks/useStorefront";
+import { money, orderStatusLabel, useBasket, usePublicOrder, usePublicStore } from "@/hooks/useStorefront";
 
 const emailKey = (orderId: string) => `nf24-shop-order-email:${orderId}`;
 
@@ -40,6 +40,15 @@ export default function StorefrontOrder() {
     email,
     !!email || !!user,
   );
+
+  // The basket is only cleared once payment is confirmed, so a cancelled
+  // checkout leaves the shopper's items intact.
+  const basket = useBasket(storeSlug);
+  const orderPaid = order?.status === "paid" || order?.status === "partially_refunded";
+  useEffect(() => {
+    if (orderPaid) basket.clear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderPaid]);
 
   const download = async (fileId: string) => {
     setBusy(fileId);
