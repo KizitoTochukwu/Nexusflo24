@@ -16,7 +16,7 @@ export type CrmNavItem = {
 export const CRM_PRIMARY_NAV: CrmNavItem[] = [
   { key: "contacts", label: "Contacts", path: "crm/contacts", icon: Contact2 },
   { key: "companies", label: "Companies", path: "crm/companies", icon: Building2 },
-  { key: "leads", label: "Leads", path: "leads", icon: Users },
+  { key: "leads", label: "Leads / Pipelines Stages", path: "leads", icon: Users },
   { key: "deals", label: "Deals", path: "crm/deals", icon: Handshake },
   { key: "tasks", label: "Tasks", path: "crm/tasks", icon: ListChecks },
   { key: "pipelines", label: "Pipelines", path: "crm/pipelines", icon: GitBranch },
