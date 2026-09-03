@@ -1,18 +1,30 @@
 import { useState } from "react";
-import { GitBranch, Plus, Settings2 } from "lucide-react";
+import { GitBranch, Plus, Settings2, Trash2 } from "lucide-react";
 import Seo from "@/components/seo/Seo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
-import { usePipelines, usePipelineStages, useSavePipeline, type Pipeline } from "@/hooks/useDeals";
+import { usePipelines, usePipelineStages, useSavePipeline, useDeletePipeline, type Pipeline } from "@/hooks/useDeals";
 import PipelineManagerDialog from "@/components/crm/PipelineManagerDialog";
 
 const PipelineCard = ({ pipeline, canManage }: { pipeline: Pipeline; canManage: boolean }) => {
   const workspaceId = useWorkspaceId();
   const { data: stages = [] } = usePipelineStages(pipeline.id);
+  const deletePipeline = useDeletePipeline();
   const [open, setOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <Card className="rounded-xl">
@@ -23,9 +35,21 @@ const PipelineCard = ({ pipeline, canManage }: { pipeline: Pipeline; canManage: 
             <p className="text-sm text-muted-foreground">{stages.length} stages</p>
           </div>
           {canManage && (
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
-              <Settings2 className="h-4 w-4" /> Manage
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+                <Settings2 className="h-4 w-4" /> Manage
+              </Button>
+              {!pipeline.is_default && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -49,6 +73,28 @@ const PipelineCard = ({ pipeline, canManage }: { pipeline: Pipeline; canManage: 
           stages={stages}
         />
       )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{pipeline.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the pipeline and its stages. This action can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletePipeline.isPending}
+              onClick={() => {
+                deletePipeline.mutate(pipeline, { onSettled: () => setConfirmDelete(false) });
+              }}
+            >
+              Delete pipeline
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

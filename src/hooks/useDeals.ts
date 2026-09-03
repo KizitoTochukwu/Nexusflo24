@@ -319,6 +319,35 @@ export function useSavePipeline() {
   });
 }
 
+export function useDeletePipeline() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (pipeline: Pipeline) => {
+      if (pipeline.is_default) throw new Error("The default pipeline can't be deleted");
+      const { count, error: countError } = await supabase
+        .from("crm_deals" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("pipeline_id", pipeline.id);
+      if (countError) throw countError;
+      if ((count ?? 0) > 0) throw new Error("Move or delete this pipeline's deals first");
+      const { error: stagesError } = await supabase
+        .from("crm_pipeline_stages" as any)
+        .delete()
+        .eq("pipeline_id", pipeline.id);
+      if (stagesError) throw stagesError;
+      const { error } = await supabase.from("crm_pipelines" as any).delete().eq("id", pipeline.id);
+      if (error) throw error;
+      return pipeline.id;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-pipelines"] });
+      qc.invalidateQueries({ queryKey: ["crm-pipeline-stages"] });
+      toast.success("Pipeline deleted");
+    },
+    onError: (e: any) => toast.error(e.message || "Couldn't delete the pipeline"),
+  });
+}
+
 export function useSaveStage() {
   const qc = useQueryClient();
   return useMutation({
