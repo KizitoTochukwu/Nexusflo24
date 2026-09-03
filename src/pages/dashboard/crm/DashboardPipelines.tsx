@@ -73,6 +73,28 @@ const PipelineCard = ({ pipeline, canManage }: { pipeline: Pipeline; canManage: 
           stages={stages}
         />
       )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{pipeline.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the pipeline and its stages. This action can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletePipeline.isPending}
+              onClick={() => {
+                deletePipeline.mutate(pipeline, { onSettled: () => setConfirmDelete(false) });
+              }}
+            >
+              Delete pipeline
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
