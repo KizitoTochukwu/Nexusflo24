@@ -81,8 +81,12 @@ const ContactBulkBar = ({ selectedCount, members, canManage, busy, onAssignOwner
         </Button>
       </div>
 
-      <Button size="sm" variant="destructive" disabled={busy || !canManage} onClick={() => setConfirmArchive(true)}>
+      <Button size="sm" variant="outline" disabled={busy || !canManage} onClick={() => setConfirmArchive(true)}>
         <Archive className="mr-2 h-3.5 w-3.5" /> Archive
+      </Button>
+
+      <Button size="sm" variant="destructive" disabled={busy || !canManage} onClick={() => setConfirmDelete(true)}>
+        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
       </Button>
 
       <Button size="sm" variant="ghost" onClick={onClear}>
@@ -101,6 +105,22 @@ const ContactBulkBar = ({ selectedCount, members, canManage, busy, onAssignOwner
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={onArchive}>Archive</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedCount} contact{selectedCount === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the selected contact{selectedCount === 1 ? "" : "s"} and their details.
+              This cannot be undone — unlike Archive, deleted contacts cannot be restored.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onDelete}>Delete permanently</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -164,6 +164,7 @@ const DashboardContacts = () => {
         onSetStage={(stage) => bulk.mutate({ ids: selected, workspaceId, patch: { lifecycle_stage: stage } })}
         onAddTag={(tag) => bulk.mutate({ ids: selected, workspaceId, addTags: [tag] })}
         onArchive={() => bulk.mutate({ ids: selected, workspaceId, archive: true }, { onSuccess: () => setSelected([]) })}
+        onDelete={() => deleteContacts.mutate({ ids: selected, workspaceId }, { onSuccess: () => setSelected([]) })}
       />
 
       {isError ? (
