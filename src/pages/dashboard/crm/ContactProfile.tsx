@@ -8,12 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Archive, ArchiveRestore, Building2, Mail, Phone, Save } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Archive, ArchiveRestore, Building2, Mail, Phone, Save, Trash2 } from "lucide-react";
 import Seo from "@/components/seo/Seo";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceInvites";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
-import { useContact, useUpdateContact } from "@/hooks/useContacts";
+import { useContact, useUpdateContact, useDeleteContacts } from "@/hooks/useContacts";
 import { LIFECYCLE_STAGES, CONSENT_STATUSES, lifecycleMeta, consentMeta, scoreBand } from "@/lib/crm/constants";
 import ContactQuickActions from "@/components/crm/ContactQuickActions";
 import CrmTimeline from "@/components/crm/CrmTimeline";
@@ -37,7 +41,9 @@ const ContactProfile = () => {
   const { data: contact, isLoading, isError, error } = useContact(contactId);
   const { data: members = [] } = useWorkspaceMembers(workspaceId);
   const update = useUpdateContact();
+  const deleteContacts = useDeleteContacts();
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   if (isLoading) {
     return (
@@ -122,12 +128,17 @@ const ContactProfile = () => {
             </div>
 
             {canManage && (
-              <Button
-                variant="outline"
-                onClick={() => update.mutate({ id: contact.id, prev: contact, archived_at: contact.archived_at ? null : new Date().toISOString() } as any)}
-              >
-                {contact.archived_at ? <><ArchiveRestore className="mr-2 h-4 w-4" /> Restore</> : <><Archive className="mr-2 h-4 w-4" /> Archive</>}
-              </Button>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => update.mutate({ id: contact.id, prev: contact, archived_at: contact.archived_at ? null : new Date().toISOString() } as any)}
+                >
+                  {contact.archived_at ? <><ArchiveRestore className="mr-2 h-4 w-4" /> Restore</> : <><Archive className="mr-2 h-4 w-4" /> Archive</>}
+                </Button>
+                <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              </div>
             )}
           </div>
 

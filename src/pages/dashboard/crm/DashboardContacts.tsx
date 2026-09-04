@@ -9,7 +9,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceInvites";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import {
-  useContacts, useContactStats, useBulkUpdateContacts, useUpdateContact,
+  useContacts, useContactStats, useBulkUpdateContacts, useUpdateContact, useDeleteContacts,
   fetchAllContacts, type Contact, type ContactFilters,
 } from "@/hooks/useContacts";
 import {
@@ -42,6 +42,7 @@ const DashboardContacts = () => {
   const { data: stats } = useContactStats(workspaceId);
   const { data: members = [] } = useWorkspaceMembers(workspaceId);
   const bulk = useBulkUpdateContacts();
+  const deleteContacts = useDeleteContacts();
   const updateContact = useUpdateContact();
 
   const rows = data?.rows ?? [];
