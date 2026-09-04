@@ -9,7 +9,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceInvites";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import {
-  useContacts, useContactStats, useBulkUpdateContacts, useUpdateContact,
+  useContacts, useContactStats, useBulkUpdateContacts, useUpdateContact, useDeleteContacts,
   fetchAllContacts, type Contact, type ContactFilters,
 } from "@/hooks/useContacts";
 import {
@@ -42,6 +42,7 @@ const DashboardContacts = () => {
   const { data: stats } = useContactStats(workspaceId);
   const { data: members = [] } = useWorkspaceMembers(workspaceId);
   const bulk = useBulkUpdateContacts();
+  const deleteContacts = useDeleteContacts();
   const updateContact = useUpdateContact();
 
   const rows = data?.rows ?? [];
@@ -164,6 +165,7 @@ const DashboardContacts = () => {
         onSetStage={(stage) => bulk.mutate({ ids: selected, workspaceId, patch: { lifecycle_stage: stage } })}
         onAddTag={(tag) => bulk.mutate({ ids: selected, workspaceId, addTags: [tag] })}
         onArchive={() => bulk.mutate({ ids: selected, workspaceId, archive: true }, { onSuccess: () => setSelected([]) })}
+        onDelete={() => deleteContacts.mutate({ ids: selected, workspaceId }, { onSuccess: () => setSelected([]) })}
       />
 
       {isError ? (

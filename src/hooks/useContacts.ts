@@ -374,3 +374,36 @@ export function useBulkUpdateContacts() {
     onError: (e: any) => toast.error(e.message || "Bulk update failed"),
   });
 }
+
+export function useDeleteContacts() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ ids, workspaceId }: { ids: string[]; workspaceId: string }) => {
+      if (!ids.length) return 0;
+
+      await logCrmAudit({
+        workspaceId,
+        recordType: "contact",
+        action: ids.length > 1 ? "bulk_contact_deleted" : "contact_deleted",
+        actorUserId: user?.id,
+        actorLabel: user?.email ?? undefined,
+        after: { ids },
+      });
+
+      const { error } = await supabase
+        .from("contacts" as any)
+        .delete()
+        .in("id", ids)
+        .eq("workspace_id", workspaceId);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      invalidate(qc);
+      if (n) toast.success(`${n} contact${n === 1 ? "" : "s"} permanently deleted`);
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to delete contact"),
+  });
+}
