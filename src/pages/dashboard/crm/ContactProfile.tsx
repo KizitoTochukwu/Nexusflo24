@@ -257,6 +257,31 @@ const ContactProfile = () => {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {title}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes this contact and their details. This cannot be undone — unlike Archive,
+              deleted contacts cannot be restored.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                deleteContacts.mutate(
+                  { ids: [contact.id], workspaceId },
+                  { onSuccess: () => navigate(`/dashboard/${workspaceId}/crm/contacts`) }
+                )
+              }
+            >
+              {deleteContacts.isPending ? "Deleting…" : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
