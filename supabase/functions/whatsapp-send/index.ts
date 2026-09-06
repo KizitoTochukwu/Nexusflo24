@@ -967,7 +967,9 @@ Deno.serve(async (req) => {
             liveForCaller.components,
             effectiveTemplate.components as any[] | undefined,
             msgBody || "",
+            headerMediaUrl,
           );
+
           effectiveTemplate = {
             name: liveForCaller.name,
             language: liveForCaller.language,
