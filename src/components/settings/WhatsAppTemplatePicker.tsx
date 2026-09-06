@@ -211,7 +211,26 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
         </div>
       )}
 
+      {selected && mediaFormat && (
+        <div className="space-y-1.5 pt-1 border-t border-border">
+          <Label className="text-[11px] font-medium text-muted-foreground">
+            Header {mediaFormat} link (required by this template)
+          </Label>
+          <Input
+            value={value?.headerMediaUrl ?? ""}
+            onChange={(e) => value && onChange({ ...value, headerMediaUrl: e.target.value })}
+            onBlur={persistHeaderMedia}
+            placeholder="https://…"
+            className="h-8 text-sm"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            {savingMedia ? "Saving…" : `This template starts with a ${mediaFormat}. WhatsApp rejects the send if no ${mediaFormat} link is provided.`}
+          </p>
+        </div>
+      )}
+
       {selected && selected.variable_count > 0 && (
+
         <div className="space-y-2 pt-1 border-t border-border">
           <p className="text-[11px] font-medium text-muted-foreground">Variable mapping</p>
           {Array.from({ length: selected.variable_count }).map((_, i) => {
