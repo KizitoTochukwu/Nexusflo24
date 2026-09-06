@@ -137,10 +137,18 @@ function buildWhatsAppError(waRes: Response, waData: any) {
   // template's {{n}} placeholders.
   const isParamMismatch = graphCode === 131008;
 
+  // 132012 = the parameter FORMAT doesn't match the approved template —
+  // almost always a missing/incorrect media header (image, video, document)
+  // or a value sent as the wrong type.
+  const isFormatMismatch = graphCode === 132012;
+
   const errMsg = isParamMismatch
     ? `WhatsApp template parameters don't match the approved template [131008]: ${graphMessage}. Re-sync templates in Settings → Channels → WhatsApp so NexusFlo24 has the current variable list, then resend.`
+    : isFormatMismatch
+    ? `WhatsApp rejected the template values [132012]: ${graphMessage}. This template has a media header (image/video/document) — add a public header image link on the template in Settings → Channels → WhatsApp, or check that each text value is filled in.`
     : isTemplateError
     ? `WhatsApp template error [${graphCode}]: ${graphMessage}. Open Settings → Channels → WhatsApp and click "Sync templates from Meta", then pick an APPROVED template (matching name + language) as your default re-engagement template.`
+
 
     : isCredentialMismatch
     ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Reconnect WhatsApp in Settings → Channels."
