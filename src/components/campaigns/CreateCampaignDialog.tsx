@@ -15,8 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  useCreateCampaign, useGenerateCampaignCopy,
+  useCreateCampaign, useUpdateCampaign, useGenerateCampaignCopy,
   CAMPAIGN_TYPES, CAMPAIGN_OBJECTIVES, CAMPAIGN_MODES, TRIGGER_TYPES, TONE_OPTIONS,
+  type Campaign,
 } from "@/hooks/useCampaigns";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,16 +41,32 @@ const modeIcons: Record<string, React.ReactNode> = {
 
 const TOTAL_STEPS = 5;
 
-export default function CreateCampaignDialog() {
+export default function CreateCampaignDialog({
+  editCampaign,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  editCampaign?: Campaign | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
+  const isControlled = controlledOpen !== undefined;
+  const isEditing = !!editCampaign;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (isControlled) onOpenChange?.(v);
+    else setInternalOpen(v);
+  };
   const goToLeads = (params?: string) => {
     setOpen(false);
     navigate(`/dashboard/${workspaceId}/leads${params ?? ""}`);
   };
   const createCampaign = useCreateCampaign();
+  const updateCampaign = useUpdateCampaign();
   const generateCopy = useGenerateCampaignCopy();
-  const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
 
   // Step 1
@@ -242,6 +259,55 @@ export default function CreateCampaignDialog() {
     }
   };
 
+  // Pre-fill the editor when opening an existing campaign for editing
+  useEffect(() => {
+    if (!open || !editCampaign) return;
+    const c = editCampaign;
+    const content = (c.message_content ?? {}) as any;
+    const trigger = (c.trigger_config ?? {}) as any;
+    const fallback = (c.fallback_settings ?? {}) as any;
+    const audience = (c.audience_filter ?? {}) as any;
+
+    setStep(1);
+    setName(c.name ?? "");
+    setType(c.type ?? "email");
+    setObjective(c.objective ?? "broadcast");
+    setCampaignMode((c as any).campaign_mode ?? "broadcast");
+    setTriggerType(trigger.type ?? "new_lead");
+    setTriggerValue(trigger.value ?? "");
+    setTriggerActions(Array.isArray(trigger.actions) && trigger.actions.length ? trigger.actions : ["send_message"]);
+    setSubject(content.subject ?? "");
+    setBody(content.body ?? "");
+    if (content.templateSettings) setTemplateSettings({ ...DEFAULT_TEMPLATE_SETTINGS, ...content.templateSettings });
+    if (content.whatsappTemplate) {
+      setWaTemplateSelection(content.whatsappTemplate as WhatsAppTemplateSelection);
+      setWaTemplateId(content.whatsappTemplate.id ?? "none");
+    }
+    setSenderProfileEmail(content.sender_profile_id_email ?? null);
+    setSenderProfileWa(content.sender_profile_id_whatsapp ?? null);
+    setSenderProfileSms(content.sender_profile_id_sms ?? null);
+    setFallbackEnabled(!!fallback.enabled);
+    setFallbackChannel(fallback.channel ?? "sms");
+    setFallbackDelay(String(fallback.delay_minutes ?? 30));
+    setFallbackCondition(fallback.condition ?? "unread");
+    setScheduleNow(!c.scheduled_at);
+    setScheduledAt(c.scheduled_at ? String(c.scheduled_at).slice(0, 16) : "");
+    if (audience.folder_id) {
+      setAudienceMode("folder");
+      setSelectedFolderId(audience.folder_id);
+    } else if (Array.isArray(audience.lead_ids) && audience.lead_ids.length > 0) {
+      setAudienceMode("picker");
+      setSelectedLeadIds(audience.lead_ids);
+    } else {
+      setAudienceMode("filter");
+    }
+    setAudienceStatuses(Array.isArray(audience.statuses) ? audience.statuses : []);
+    setAudienceTags(Array.isArray(audience.tags) ? audience.tags.join(", ") : "");
+    setAudienceMinScore(audience.min_score != null ? String(audience.min_score) : "");
+    setAudienceMaxScore(audience.max_score != null ? String(audience.max_score) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editCampaign?.id]);
+
   const handleGenerateAI = async () => {
     try {
       const result = await generateCopy.mutateAsync({
@@ -277,6 +343,74 @@ export default function CreateCampaignDialog() {
     const finalSubject = ((type === "email" || type === "multi-channel") && !subject.trim())
       ? (name || "Message from NexusFlo24")
       : subject;
+
+    const messageContent = {
+      subject: finalSubject,
+      body,
+      templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
+      whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && (waTemplateSelection?.contentSid || waTemplateSelection?.id || waTemplateId !== "none")
+        ? (() => {
+            // Prefer new picker selection (has contentSid + variables).
+            if (waTemplateSelection?.id || waTemplateSelection?.contentSid) {
+              return {
+                id: waTemplateSelection.id,
+                name: waTemplateSelection.name,
+                language: waTemplateSelection.language,
+                contentSid: waTemplateSelection.contentSid,
+                contentVariables: waTemplateSelection.contentVariables,
+                headerMediaUrl: waTemplateSelection.headerMediaUrl,
+              };
+            }
+            const t = waTemplates.find((x: any) => x.id === waTemplateId);
+            return t ? { id: t.id, name: t.name, language: t.language } : undefined;
+          })()
+        : undefined,
+      sender_profile_id_email: senderProfileEmail || undefined,
+      sender_profile_id_whatsapp: senderProfileWa || undefined,
+      sender_profile_id_sms: senderProfileSms || undefined,
+    } as any;
+
+    // Edit mode: update the existing campaign in place — never resend or duplicate.
+    if (isEditing && editCampaign) {
+      try {
+        await updateCampaign.mutateAsync({
+          id: editCampaign.id,
+          name,
+          type,
+          objective,
+          campaign_mode: campaignMode,
+          message_content: messageContent,
+          scheduled_at: campaignMode === "broadcast" ? (scheduleNow ? null : scheduledAt || null) : editCampaign.scheduled_at,
+          trigger_config: campaignMode === "triggered" ? {
+            type: triggerType, value: triggerValue, actions: triggerActions,
+          } as any : {} as any,
+          fallback_settings: fallbackEnabled ? {
+            enabled: true, channel: fallbackChannel,
+            delay_minutes: parseInt(fallbackDelay), condition: fallbackCondition,
+          } as any : {} as any,
+          audience_filter: {
+            ...(audienceMode === "picker" && selectedLeadIds.length > 0
+              ? { lead_ids: selectedLeadIds }
+              : {}),
+            ...(audienceMode === "folder" && selectedFolderId && folderLeadIds.length > 0
+              ? { folder_id: selectedFolderId, lead_ids: folderLeadIds }
+              : {}),
+            ...(audienceMode === "filter" && audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
+            ...(audienceMode === "filter" && audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
+            ...(audienceMode === "filter" && audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
+            ...(audienceMode === "filter" && audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
+          } as any,
+        } as any);
+        toast.success("Campaign updated");
+      } catch (e: any) {
+        toast.error(e?.message || "Failed to update campaign");
+        return;
+      }
+      setOpen(false);
+      reset({ keepAudience: false });
+      return;
+    }
+
     const campaign = await createCampaign.mutateAsync({
       workspace_id: workspaceId,
       name,
@@ -398,11 +532,13 @@ export default function CreateCampaignDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" /> Create Campaign
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" /> Create Campaign
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-none w-screen h-screen sm:max-w-none rounded-none p-0 gap-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border bg-background shrink-0">
           <DialogTitle className="flex items-center gap-2">
@@ -960,12 +1096,14 @@ export default function CreateCampaignDialog() {
               <Button
                 onClick={handleCreate}
                 disabled={
-                  createCampaign.isPending ||
+                  createCampaign.isPending || updateCampaign.isPending ||
                   (campaignMode === "broadcast" && audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))
                 }
                 className="flex-1"
               >
-                {createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
+                {isEditing
+                  ? (updateCampaign.isPending ? "Saving..." : "Save Changes")
+                  : createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
               </Button>
             </div>
           </div>

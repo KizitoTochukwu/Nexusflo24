@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useCampaignById, useCampaignMessages, TRIGGER_TYPES } from "@/hooks/useCampaigns";
 import MessageContentPreview from "@/components/campaigns/MessageContentPreview";
@@ -10,7 +9,7 @@ import { computeCampaignMetrics, resolveCampaignMetrics, formatRate } from "@/li
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket } from "lucide-react";
+import { Mail, MessageSquare, Phone, Layers, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket, Pencil } from "lucide-react";
 import { format } from "date-fns";
 
 
@@ -185,9 +184,9 @@ function SequenceTimeline({
 }
 
 export default function CampaignDetailsDrawer({
-  campaignId, open, onClose,
+  campaignId, open, onClose, onEdit,
 }: {
-  campaignId: string | null; open: boolean; onClose: () => void;
+  campaignId: string | null; open: boolean; onClose: () => void; onEdit?: () => void;
 }) {
   const { data: campaign } = useCampaignById(campaignId);
   const { data: messages } = useCampaignMessages(campaignId);
@@ -261,6 +260,13 @@ export default function CampaignDetailsDrawer({
               {campaign.campaign_mode || "broadcast"}
             </Badge>
           </div>
+
+          {/* Edit Campaign Button */}
+          {onEdit && ["draft", "scheduled", "active", "paused"].includes(campaign.status) && (
+            <Button variant="outline" onClick={onEdit} className="w-full gap-2">
+              <Pencil className="h-4 w-4" /> Edit Campaign
+            </Button>
+          )}
 
           {/* Send Campaign Button */}
           {campaign.campaign_mode !== "triggered" && ["draft", "active", "scheduled"].includes(campaign.status) && (
@@ -353,47 +359,11 @@ export default function CampaignDetailsDrawer({
           {/* Message preview */}
           <div className="min-w-0">
             <h3 className="mb-2 text-sm font-semibold text-foreground">Message Content</h3>
-            <Tabs defaultValue="preview">
-              <TabsList className="mb-2">
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-                <TabsTrigger value="source">Source</TabsTrigger>
-              </TabsList>
-              <TabsContent value="preview">
-                <div className="max-h-[420px] overflow-y-auto overflow-x-hidden rounded-lg border bg-muted/30 p-4">
-                  <MessageContentPreview content={content} channel={campaign.type} />
-                </div>
-              </TabsContent>
-              <TabsContent value="source">
-                <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-4 text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
-                  {JSON.stringify(content ?? {}, null, 2)}
-                </pre>
-              </TabsContent>
-            </Tabs>
+            <div className="max-h-[420px] overflow-y-auto overflow-x-hidden rounded-lg border bg-muted/30 p-4">
+              <MessageContentPreview content={content} channel={campaign.type} />
+            </div>
           </div>
 
-
-          {/* Message log */}
-          {messages && messages.length > 0 && (
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">
-                <BarChart3 className="mr-1 inline h-4 w-4" /> Delivery Log ({messages.length})
-              </h3>
-              <div className="max-h-48 space-y-1 overflow-y-auto">
-                {messages.slice(0, 20).map((m) => (
-                  <div key={m.id} className="rounded border px-3 py-1.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="capitalize text-muted-foreground">{m.channel}</span>
-                      <Badge variant="outline" className="text-xs capitalize">{m.delivery_status}</Badge>
-                      <span className="text-muted-foreground">{format(new Date(m.created_at), "MMM d, HH:mm")}</span>
-                    </div>
-                    {m.delivery_status === "failed" && m.error && (
-                      <p className="mt-1 break-words text-[11px] text-red-600">⚠ {m.error}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Dates */}
           <div className="space-y-1 text-xs text-muted-foreground">
