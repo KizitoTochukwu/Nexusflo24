@@ -2,6 +2,8 @@ import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, type Campaign } from "@/hooks/useCampaigns";
+import { useWorkspaceCampaignMetrics } from "@/hooks/useCampaignMetrics";
+import { resolveCampaignMetrics, formatRate } from "@/lib/campaigns/metrics";
 import CreateCampaignDialog from "@/components/campaigns/CreateCampaignDialog";
 import CampaignDetailsDrawer from "@/components/campaigns/CampaignDetailsDrawer";
 import CampaignAnalytics from "@/components/campaigns/CampaignAnalytics";
