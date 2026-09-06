@@ -752,18 +752,21 @@ Deno.serve(async (req) => {
     // convert `contentVariables` ({"1":"Hi John",…}) into Meta's body
     // parameter array. Twilio-flavoured payloads (contentSid) are already
     // routed to the Twilio branch above.
+    let headerMediaUrl: string | null = null;
     if (template) {
       const tplAny = template as any;
-      if ((!tplAny.name || !tplAny.language) && tplAny.id) {
-        const { data: row } = await adminClient
+      headerMediaUrl = tplAny.headerMediaUrl || tplAny.header_media_url || null;
+      if (tplAny.id || tplAny.name) {
+        let q = adminClient
           .from("whatsapp_templates")
-          .select("name, language, variable_count, components, status")
-          .eq("workspace_id", workspaceId)
-          .eq("id", tplAny.id)
-          .maybeSingle();
+          .select("name, language, variable_count, components, status, header_media_url")
+          .eq("workspace_id", workspaceId);
+        q = tplAny.id ? q.eq("id", tplAny.id) : q.eq("name", tplAny.name);
+        const { data: row } = await q.limit(1).maybeSingle();
         if (row) {
           tplAny.name = tplAny.name || row.name;
           tplAny.language = tplAny.language || row.language;
+          headerMediaUrl = headerMediaUrl || row.header_media_url || null;
         }
       }
       if (!tplAny.components && tplAny.contentVariables && typeof tplAny.contentVariables === "object") {
@@ -777,6 +780,7 @@ Deno.serve(async (req) => {
         }
       }
     }
+
 
 
     // 24h re-engagement window check.
