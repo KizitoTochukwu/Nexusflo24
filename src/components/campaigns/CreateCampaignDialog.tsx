@@ -41,16 +41,32 @@ const modeIcons: Record<string, React.ReactNode> = {
 
 const TOTAL_STEPS = 5;
 
-export default function CreateCampaignDialog() {
+export default function CreateCampaignDialog({
+  editCampaign,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  editCampaign?: Campaign | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
+  const isControlled = controlledOpen !== undefined;
+  const isEditing = !!editCampaign;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (isControlled) onOpenChange?.(v);
+    else setInternalOpen(v);
+  };
   const goToLeads = (params?: string) => {
     setOpen(false);
     navigate(`/dashboard/${workspaceId}/leads${params ?? ""}`);
   };
   const createCampaign = useCreateCampaign();
+  const updateCampaign = useUpdateCampaign();
   const generateCopy = useGenerateCampaignCopy();
-  const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
 
   // Step 1
