@@ -259,6 +259,55 @@ export default function CreateCampaignDialog({
     }
   };
 
+  // Pre-fill the editor when opening an existing campaign for editing
+  useEffect(() => {
+    if (!open || !editCampaign) return;
+    const c = editCampaign;
+    const content = (c.message_content ?? {}) as any;
+    const trigger = (c.trigger_config ?? {}) as any;
+    const fallback = (c.fallback_settings ?? {}) as any;
+    const audience = (c.audience_filter ?? {}) as any;
+
+    setStep(1);
+    setName(c.name ?? "");
+    setType(c.type ?? "email");
+    setObjective(c.objective ?? "broadcast");
+    setCampaignMode((c as any).campaign_mode ?? "broadcast");
+    setTriggerType(trigger.type ?? "new_lead");
+    setTriggerValue(trigger.value ?? "");
+    setTriggerActions(Array.isArray(trigger.actions) && trigger.actions.length ? trigger.actions : ["send_message"]);
+    setSubject(content.subject ?? "");
+    setBody(content.body ?? "");
+    if (content.templateSettings) setTemplateSettings({ ...DEFAULT_TEMPLATE_SETTINGS, ...content.templateSettings });
+    if (content.whatsappTemplate) {
+      setWaTemplateSelection(content.whatsappTemplate as WhatsAppTemplateSelection);
+      setWaTemplateId(content.whatsappTemplate.id ?? "none");
+    }
+    setSenderProfileEmail(content.sender_profile_id_email ?? null);
+    setSenderProfileWa(content.sender_profile_id_whatsapp ?? null);
+    setSenderProfileSms(content.sender_profile_id_sms ?? null);
+    setFallbackEnabled(!!fallback.enabled);
+    setFallbackChannel(fallback.channel ?? "sms");
+    setFallbackDelay(String(fallback.delay_minutes ?? 30));
+    setFallbackCondition(fallback.condition ?? "unread");
+    setScheduleNow(!c.scheduled_at);
+    setScheduledAt(c.scheduled_at ? String(c.scheduled_at).slice(0, 16) : "");
+    if (audience.folder_id) {
+      setAudienceMode("folder");
+      setSelectedFolderId(audience.folder_id);
+    } else if (Array.isArray(audience.lead_ids) && audience.lead_ids.length > 0) {
+      setAudienceMode("picker");
+      setSelectedLeadIds(audience.lead_ids);
+    } else {
+      setAudienceMode("filter");
+    }
+    setAudienceStatuses(Array.isArray(audience.statuses) ? audience.statuses : []);
+    setAudienceTags(Array.isArray(audience.tags) ? audience.tags.join(", ") : "");
+    setAudienceMinScore(audience.min_score != null ? String(audience.min_score) : "");
+    setAudienceMaxScore(audience.max_score != null ? String(audience.max_score) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editCampaign?.id]);
+
   const handleGenerateAI = async () => {
     try {
       const result = await generateCopy.mutateAsync({
