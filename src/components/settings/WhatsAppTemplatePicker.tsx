@@ -4,7 +4,7 @@
 // Twilio is active. Selecting a template exposes N variable rows; values may
 // be static text or contain {{lead_variable}} tokens (interpolated per lead
 // server-side).
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +22,8 @@ export type WhatsAppTemplateSelection = {
   contentSid?: string;
   /** Variable map ({"1": "{{first_name}}", …}). Used by both providers. */
   contentVariables?: Record<string, string>;
+  /** Public link used for an image/video/document header (Meta only). */
+  headerMediaUrl?: string;
 };
 
 type Row = {
@@ -35,7 +37,27 @@ type Row = {
   twilio_content_sid: string | null;
   twilio_variable_sample: Record<string, string> | null;
   status: string;
+  components: any[] | null;
+  header_media_url: string | null;
 };
+
+/** Meta media headers (IMAGE/VIDEO/DOCUMENT) require a media parameter. */
+function mediaHeaderFormat(components: any[] | null): "image" | "video" | "document" | null {
+  const header = (components || []).find(
+    (c: any) => String(c?.type || "").toUpperCase() === "HEADER",
+  );
+  const fmt = String(header?.format || "TEXT").toUpperCase();
+  return fmt === "IMAGE" || fmt === "VIDEO" || fmt === "DOCUMENT"
+    ? (fmt.toLowerCase() as "image" | "video" | "document")
+    : null;
+}
+
+function headerExampleLink(components: any[] | null): string {
+  const header = (components || []).find(
+    (c: any) => String(c?.type || "").toUpperCase() === "HEADER",
+  );
+  return header?.example?.header_handle?.[0] || header?.example?.header_url?.[0] || "";
+}
 
 const TOKEN_HINTS = [
   "{{first_name}}", "{{full_name}}", "{{last_name}}",
@@ -60,7 +82,7 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
     queryFn: async () => {
       const { data, error } = await supabase
         .from("whatsapp_templates")
-        .select("id, name, language, category, body_preview, variable_count, provider, twilio_content_sid, twilio_variable_sample, status")
+        .select("id, name, language, category, body_preview, variable_count, provider, twilio_content_sid, twilio_variable_sample, status, components, header_media_url")
         .eq("workspace_id", workspaceId!)
         .eq("status", "approved")
         .order("name", { ascending: true });
