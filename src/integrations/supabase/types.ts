@@ -11805,6 +11805,7 @@ export type Database = {
           components: Json | null
           created_at: string
           created_by: string | null
+          header_media_url: string | null
           id: string
           language: string
           last_synced_at: string | null
@@ -11825,6 +11826,7 @@ export type Database = {
           components?: Json | null
           created_at?: string
           created_by?: string | null
+          header_media_url?: string | null
           id?: string
           language?: string
           last_synced_at?: string | null
@@ -11845,6 +11847,7 @@ export type Database = {
           components?: Json | null
           created_at?: string
           created_by?: string | null
+          header_media_url?: string | null
           id?: string
           language?: string
           last_synced_at?: string | null
