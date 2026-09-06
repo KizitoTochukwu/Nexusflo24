@@ -234,30 +234,17 @@ export default function CampaignDetailsDrawer({
 
   if (!campaign) return null;
 
-  const content = campaign.message_content as { subject?: string; body?: string } | null;
+  const content = campaign.message_content as Record<string, unknown> | null;
   const triggerConfig = campaign.trigger_config as { type?: string; value?: string; actions?: string[] } | null;
   const fallback = campaign.fallback_settings as { enabled?: boolean; channel?: string; delay_minutes?: number; condition?: string } | null;
-  const deliveredCount = messages?.filter((m) => m.delivery_status === "delivered").length ?? 0;
-  const openedCount = messages?.filter((m) => m.opened).length ?? 0;
-  const clickedCount = messages?.filter((m) => m.clicked).length ?? 0;
-  const repliedCount = messages?.filter((m) => m.replied).length ?? 0;
-
-  // Per-channel breakdown
-  const channelBreakdown = messages?.reduce((acc, m) => {
-    if (!acc[m.channel]) acc[m.channel] = { sent: 0, delivered: 0, opened: 0, clicked: 0, replied: 0 };
-    acc[m.channel].sent++;
-    if (m.delivery_status === "delivered") acc[m.channel].delivered++;
-    if (m.opened) acc[m.channel].opened++;
-    if (m.clicked) acc[m.channel].clicked++;
-    if (m.replied) acc[m.channel].replied++;
-    return acc;
-  }, {} as Record<string, { sent: number; delivered: number; opened: number; clicked: number; replied: number }>);
+  const metrics = resolveCampaignMetrics(campaign, computeCampaignMetrics(messages));
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent className="w-full max-w-full overflow-x-hidden overflow-y-auto sm:max-w-lg lg:max-w-2xl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
+
             {channelIcons[campaign.type]}
             {campaign.name}
           </SheetTitle>
