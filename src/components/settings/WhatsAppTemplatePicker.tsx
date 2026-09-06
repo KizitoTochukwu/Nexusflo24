@@ -107,6 +107,18 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
     [eligible, value?.id],
   );
 
+  const mediaFormat = mediaHeaderFormat(selected?.components ?? null);
+  const [savingMedia, setSavingMedia] = useState(false);
+
+  // Pre-fill the header media link from the saved value or Meta's sample image.
+  useEffect(() => {
+    if (!selected || !mediaFormat || !value) return;
+    if (value.headerMediaUrl) return;
+    const prefill = selected.header_media_url || headerExampleLink(selected.components);
+    if (prefill) onChange({ ...value, headerMediaUrl: prefill });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id, mediaFormat]);
+
   const setTemplate = (id: string) => {
     if (id === "none") { onChange(null); return; }
     const t = eligible.find((x) => x.id === id);
@@ -116,12 +128,16 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
       const key = String(i);
       defaults[key] = t.twilio_variable_sample?.[key] ?? (i === 1 ? "{{first_name}}" : "");
     }
+    const media = mediaHeaderFormat(t.components)
+      ? t.header_media_url || headerExampleLink(t.components) || undefined
+      : undefined;
     onChange({
       id: t.id,
       name: t.name,
       language: t.language,
       contentSid: activeProvider === "twilio" ? t.twilio_content_sid || undefined : undefined,
       contentVariables: defaults,
+      ...(media ? { headerMediaUrl: media } : {}),
     });
   };
 
@@ -129,6 +145,19 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
     if (!value) return;
     onChange({ ...value, contentVariables: { ...(value.contentVariables || {}), [key]: val } });
   };
+
+  // Remember the header media link on the template so every send reuses it.
+  const persistHeaderMedia = async () => {
+    if (!selected || !value?.headerMediaUrl) return;
+    if (selected.header_media_url === value.headerMediaUrl) return;
+    setSavingMedia(true);
+    await supabase
+      .from("whatsapp_templates")
+      .update({ header_media_url: value.headerMediaUrl } as any)
+      .eq("id", selected.id);
+    setSavingMedia(false);
+  };
+
 
   const providerLabel = activeProvider === "twilio" ? "Twilio" : "Meta Cloud API";
 
