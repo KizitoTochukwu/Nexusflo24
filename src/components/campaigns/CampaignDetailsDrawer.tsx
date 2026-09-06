@@ -365,29 +365,6 @@ export default function CampaignDetailsDrawer({
           </div>
 
 
-          {/* Message log */}
-          {messages && messages.length > 0 && (
-            <div>
-              <h3 className="mb-2 text-sm font-semibold text-foreground">
-                <BarChart3 className="mr-1 inline h-4 w-4" /> Delivery Log ({messages.length})
-              </h3>
-              <div className="max-h-48 space-y-1 overflow-y-auto">
-                {messages.slice(0, 20).map((m) => (
-                  <div key={m.id} className="rounded border px-3 py-1.5 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="capitalize text-muted-foreground">{m.channel}</span>
-                      <Badge variant="outline" className="text-xs capitalize">{m.delivery_status}</Badge>
-                      <span className="text-muted-foreground">{format(new Date(m.created_at), "MMM d, HH:mm")}</span>
-                    </div>
-                    {m.delivery_status === "failed" && m.error && (
-                      <p className="mt-1 break-words text-[11px] text-red-600">⚠ {m.error}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Dates */}
           <div className="space-y-1 text-xs text-muted-foreground">
             <p>Created: {format(new Date(campaign.created_at), "MMM d, yyyy 'at' HH:mm")}</p>
