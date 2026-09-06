@@ -343,6 +343,74 @@ export default function CreateCampaignDialog({
     const finalSubject = ((type === "email" || type === "multi-channel") && !subject.trim())
       ? (name || "Message from NexusFlo24")
       : subject;
+
+    const messageContent = {
+      subject: finalSubject,
+      body,
+      templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
+      whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && (waTemplateSelection?.contentSid || waTemplateSelection?.id || waTemplateId !== "none")
+        ? (() => {
+            // Prefer new picker selection (has contentSid + variables).
+            if (waTemplateSelection?.id || waTemplateSelection?.contentSid) {
+              return {
+                id: waTemplateSelection.id,
+                name: waTemplateSelection.name,
+                language: waTemplateSelection.language,
+                contentSid: waTemplateSelection.contentSid,
+                contentVariables: waTemplateSelection.contentVariables,
+                headerMediaUrl: waTemplateSelection.headerMediaUrl,
+              };
+            }
+            const t = waTemplates.find((x: any) => x.id === waTemplateId);
+            return t ? { id: t.id, name: t.name, language: t.language } : undefined;
+          })()
+        : undefined,
+      sender_profile_id_email: senderProfileEmail || undefined,
+      sender_profile_id_whatsapp: senderProfileWa || undefined,
+      sender_profile_id_sms: senderProfileSms || undefined,
+    } as any;
+
+    // Edit mode: update the existing campaign in place — never resend or duplicate.
+    if (isEditing && editCampaign) {
+      try {
+        await updateCampaign.mutateAsync({
+          id: editCampaign.id,
+          name,
+          type,
+          objective,
+          campaign_mode: campaignMode,
+          message_content: messageContent,
+          scheduled_at: campaignMode === "broadcast" ? (scheduleNow ? null : scheduledAt || null) : editCampaign.scheduled_at,
+          trigger_config: campaignMode === "triggered" ? {
+            type: triggerType, value: triggerValue, actions: triggerActions,
+          } as any : {} as any,
+          fallback_settings: fallbackEnabled ? {
+            enabled: true, channel: fallbackChannel,
+            delay_minutes: parseInt(fallbackDelay), condition: fallbackCondition,
+          } as any : {} as any,
+          audience_filter: {
+            ...(audienceMode === "picker" && selectedLeadIds.length > 0
+              ? { lead_ids: selectedLeadIds }
+              : {}),
+            ...(audienceMode === "folder" && selectedFolderId && folderLeadIds.length > 0
+              ? { folder_id: selectedFolderId, lead_ids: folderLeadIds }
+              : {}),
+            ...(audienceMode === "filter" && audienceStatuses.length > 0 ? { statuses: audienceStatuses } : {}),
+            ...(audienceMode === "filter" && audienceTags.trim() ? { tags: audienceTags.split(",").map(t => t.trim()).filter(Boolean) } : {}),
+            ...(audienceMode === "filter" && audienceMinScore ? { min_score: parseInt(audienceMinScore) } : {}),
+            ...(audienceMode === "filter" && audienceMaxScore ? { max_score: parseInt(audienceMaxScore) } : {}),
+          } as any,
+        } as any);
+        toast.success("Campaign updated");
+      } catch (e: any) {
+        toast.error(e?.message || "Failed to update campaign");
+        return;
+      }
+      setOpen(false);
+      reset({ keepAudience: false });
+      return;
+    }
+
     const campaign = await createCampaign.mutateAsync({
       workspace_id: workspaceId,
       name,
