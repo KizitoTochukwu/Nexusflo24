@@ -344,20 +344,33 @@ export default function CampaignDetailsDrawer({
 
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-3">
-            <StatCard icon={<Send className="h-4 w-4" />} label="Sent" value={campaign.sent_count} />
-            <StatCard icon={<Eye className="h-4 w-4" />} label="Open Rate" value={`${(campaign.open_rate * 100).toFixed(1)}%`} />
-            <StatCard icon={<MousePointerClick className="h-4 w-4" />} label="Click Rate" value={`${(campaign.click_rate * 100).toFixed(1)}%`} />
+            <StatCard icon={<Send className="h-4 w-4" />} label="Sent" value={metrics.sent} />
+            <StatCard icon={<Eye className="h-4 w-4" />} label="Open Rate" value={formatRate(metrics.openRate)} />
+            <StatCard icon={<MousePointerClick className="h-4 w-4" />} label="Click Rate" value={formatRate(metrics.clickRate)} />
             <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Conversion" value={`${(campaign.conversion_rate * 100).toFixed(1)}%`} />
           </div>
 
           {/* Message preview */}
-          <div>
+          <div className="min-w-0">
             <h3 className="mb-2 text-sm font-semibold text-foreground">Message Content</h3>
-            <div className="rounded-lg border bg-muted/30 p-4">
-              {content?.subject && <p className="mb-1 text-sm font-medium text-foreground">{content.subject}</p>}
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">{content?.body || "No content"}</p>
-            </div>
+            <Tabs defaultValue="preview">
+              <TabsList className="mb-2">
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsTrigger value="source">Source</TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview">
+                <div className="max-h-[420px] overflow-y-auto overflow-x-hidden rounded-lg border bg-muted/30 p-4">
+                  <MessageContentPreview content={content} channel={campaign.type} />
+                </div>
+              </TabsContent>
+              <TabsContent value="source">
+                <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-4 text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
+                  {JSON.stringify(content ?? {}, null, 2)}
+                </pre>
+              </TabsContent>
+            </Tabs>
           </div>
+
 
           {/* Message log */}
           {messages && messages.length > 0 && (
