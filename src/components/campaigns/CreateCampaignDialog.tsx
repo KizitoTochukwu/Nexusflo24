@@ -15,8 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  useCreateCampaign, useGenerateCampaignCopy,
+  useCreateCampaign, useUpdateCampaign, useGenerateCampaignCopy,
   CAMPAIGN_TYPES, CAMPAIGN_OBJECTIVES, CAMPAIGN_MODES, TRIGGER_TYPES, TONE_OPTIONS,
+  type Campaign,
 } from "@/hooks/useCampaigns";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { supabase } from "@/integrations/supabase/client";
