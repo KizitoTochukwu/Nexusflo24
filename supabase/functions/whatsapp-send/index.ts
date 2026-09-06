@@ -329,7 +329,10 @@ function findComponent(components: any[] | null | undefined, type: string): any 
  * missing parameters are padded with the supplied fallback text, extras are
  * dropped, and components the template doesn't declare are removed.
  */
+const BRAND_HEADER_IMAGE_URL = "https://nexusflo24.com/apple-touch-icon.png";
+
 function reconcileTemplateComponents(
+
   liveComponents: any[] | null,
   suppliedComponents: any[] | null | undefined,
   fallbackText: string,
@@ -364,9 +367,13 @@ function reconcileTemplateComponents(
     const suppliedLink =
       givenParam?.[kind]?.link || givenParam?.image?.link || givenParam?.video?.link ||
       givenParam?.document?.link || null;
+    // Meta's own example `header_handle` URLs are signed CDN links that the
+    // Cloud API cannot re-download (HTTP 403), so they are only a last resort
+    // behind a always-public brand image.
     const exampleLink =
       liveHeader?.example?.header_handle?.[0] || liveHeader?.example?.header_url?.[0] || null;
-    const link = suppliedLink || headerMediaUrl || exampleLink;
+    const link = suppliedLink || headerMediaUrl || (kind === "image" ? BRAND_HEADER_IMAGE_URL : null) || exampleLink;
+
     if (link) {
       out.push({
         type: "header",
