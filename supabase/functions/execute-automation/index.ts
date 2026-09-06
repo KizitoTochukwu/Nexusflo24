@@ -510,7 +510,7 @@ Deno.serve(async (req) => {
               // Interpolate WhatsApp template variables per-lead so
               // "{{first_name}}" in variable mapping renders as "John".
               const waTpl = (config as any).whatsapp_template as
-                | { id?: string; name?: string; language?: string; contentSid?: string; contentVariables?: Record<string, string> }
+                | { id?: string; name?: string; language?: string; contentSid?: string; contentVariables?: Record<string, string>; headerMediaUrl?: string }
                 | undefined;
               const templatePayload = waTpl && (waTpl.contentSid || waTpl.id)
                 ? {
@@ -521,6 +521,7 @@ Deno.serve(async (req) => {
                     contentVariables: Object.fromEntries(
                       Object.entries(waTpl.contentVariables || {}).map(([k, v]) => [k, interpolate(String(v ?? ""), lead)]),
                     ),
+                    ...(waTpl.headerMediaUrl ? { headerMediaUrl: waTpl.headerMediaUrl } : {}),
                   }
                 : undefined;
               let waRes: Response;

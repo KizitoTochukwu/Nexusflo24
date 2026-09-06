@@ -4,7 +4,7 @@
 // Twilio is active. Selecting a template exposes N variable rows; values may
 // be static text or contain {{lead_variable}} tokens (interpolated per lead
 // server-side).
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +22,8 @@ export type WhatsAppTemplateSelection = {
   contentSid?: string;
   /** Variable map ({"1": "{{first_name}}", …}). Used by both providers. */
   contentVariables?: Record<string, string>;
+  /** Public link used for an image/video/document header (Meta only). */
+  headerMediaUrl?: string;
 };
 
 type Row = {
@@ -35,7 +37,27 @@ type Row = {
   twilio_content_sid: string | null;
   twilio_variable_sample: Record<string, string> | null;
   status: string;
+  components: any[] | null;
+  header_media_url: string | null;
 };
+
+/** Meta media headers (IMAGE/VIDEO/DOCUMENT) require a media parameter. */
+function mediaHeaderFormat(components: any[] | null): "image" | "video" | "document" | null {
+  const header = (components || []).find(
+    (c: any) => String(c?.type || "").toUpperCase() === "HEADER",
+  );
+  const fmt = String(header?.format || "TEXT").toUpperCase();
+  return fmt === "IMAGE" || fmt === "VIDEO" || fmt === "DOCUMENT"
+    ? (fmt.toLowerCase() as "image" | "video" | "document")
+    : null;
+}
+
+function headerExampleLink(components: any[] | null): string {
+  const header = (components || []).find(
+    (c: any) => String(c?.type || "").toUpperCase() === "HEADER",
+  );
+  return header?.example?.header_handle?.[0] || header?.example?.header_url?.[0] || "";
+}
 
 const TOKEN_HINTS = [
   "{{first_name}}", "{{full_name}}", "{{last_name}}",
@@ -60,7 +82,7 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
     queryFn: async () => {
       const { data, error } = await supabase
         .from("whatsapp_templates")
-        .select("id, name, language, category, body_preview, variable_count, provider, twilio_content_sid, twilio_variable_sample, status")
+        .select("id, name, language, category, body_preview, variable_count, provider, twilio_content_sid, twilio_variable_sample, status, components, header_media_url")
         .eq("workspace_id", workspaceId!)
         .eq("status", "approved")
         .order("name", { ascending: true });
@@ -85,6 +107,18 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
     [eligible, value?.id],
   );
 
+  const mediaFormat = mediaHeaderFormat(selected?.components ?? null);
+  const [savingMedia, setSavingMedia] = useState(false);
+
+  // Pre-fill the header media link from the saved value or Meta's sample image.
+  useEffect(() => {
+    if (!selected || !mediaFormat || !value) return;
+    if (value.headerMediaUrl) return;
+    const prefill = selected.header_media_url || headerExampleLink(selected.components);
+    if (prefill) onChange({ ...value, headerMediaUrl: prefill });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id, mediaFormat]);
+
   const setTemplate = (id: string) => {
     if (id === "none") { onChange(null); return; }
     const t = eligible.find((x) => x.id === id);
@@ -94,12 +128,16 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
       const key = String(i);
       defaults[key] = t.twilio_variable_sample?.[key] ?? (i === 1 ? "{{first_name}}" : "");
     }
+    const media = mediaHeaderFormat(t.components)
+      ? t.header_media_url || headerExampleLink(t.components) || undefined
+      : undefined;
     onChange({
       id: t.id,
       name: t.name,
       language: t.language,
       contentSid: activeProvider === "twilio" ? t.twilio_content_sid || undefined : undefined,
       contentVariables: defaults,
+      ...(media ? { headerMediaUrl: media } : {}),
     });
   };
 
@@ -107,6 +145,19 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
     if (!value) return;
     onChange({ ...value, contentVariables: { ...(value.contentVariables || {}), [key]: val } });
   };
+
+  // Remember the header media link on the template so every send reuses it.
+  const persistHeaderMedia = async () => {
+    if (!selected || !value?.headerMediaUrl) return;
+    if (selected.header_media_url === value.headerMediaUrl) return;
+    setSavingMedia(true);
+    await supabase
+      .from("whatsapp_templates")
+      .update({ header_media_url: value.headerMediaUrl } as any)
+      .eq("id", selected.id);
+    setSavingMedia(false);
+  };
+
 
   const providerLabel = activeProvider === "twilio" ? "Twilio" : "Meta Cloud API";
 
@@ -160,7 +211,26 @@ export default function WhatsAppTemplatePicker({ workspaceId, value, onChange, p
         </div>
       )}
 
+      {selected && mediaFormat && (
+        <div className="space-y-1.5 pt-1 border-t border-border">
+          <Label className="text-[11px] font-medium text-muted-foreground">
+            Header {mediaFormat} link (required by this template)
+          </Label>
+          <Input
+            value={value?.headerMediaUrl ?? ""}
+            onChange={(e) => value && onChange({ ...value, headerMediaUrl: e.target.value })}
+            onBlur={persistHeaderMedia}
+            placeholder="https://…"
+            className="h-8 text-sm"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            {savingMedia ? "Saving…" : `This template starts with a ${mediaFormat}. WhatsApp rejects the send if no ${mediaFormat} link is provided.`}
+          </p>
+        </div>
+      )}
+
       {selected && selected.variable_count > 0 && (
+
         <div className="space-y-2 pt-1 border-t border-border">
           <p className="text-[11px] font-medium text-muted-foreground">Variable mapping</p>
           {Array.from({ length: selected.variable_count }).map((_, i) => {

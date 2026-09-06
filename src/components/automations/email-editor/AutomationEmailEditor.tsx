@@ -30,6 +30,7 @@ export type WhatsAppTemplateOverride = {
   language?: string;
   contentSid?: string;
   contentVariables?: Record<string, string>;
+  headerMediaUrl?: string;
 };
 
 interface AutomationEmailEditorProps {
@@ -245,6 +246,7 @@ export default function AutomationEmailEditor({
             language: whatsappTemplate.language,
             contentSid: whatsappTemplate.contentSid,
             contentVariables: interpolatedVars,
+            ...(whatsappTemplate.headerMediaUrl ? { headerMediaUrl: whatsappTemplate.headerMediaUrl } : {}),
           };
         } else {
           payload.body = renderedMessage;

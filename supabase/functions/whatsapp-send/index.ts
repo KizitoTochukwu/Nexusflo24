@@ -137,10 +137,18 @@ function buildWhatsAppError(waRes: Response, waData: any) {
   // template's {{n}} placeholders.
   const isParamMismatch = graphCode === 131008;
 
+  // 132012 = the parameter FORMAT doesn't match the approved template —
+  // almost always a missing/incorrect media header (image, video, document)
+  // or a value sent as the wrong type.
+  const isFormatMismatch = graphCode === 132012;
+
   const errMsg = isParamMismatch
     ? `WhatsApp template parameters don't match the approved template [131008]: ${graphMessage}. Re-sync templates in Settings → Channels → WhatsApp so NexusFlo24 has the current variable list, then resend.`
+    : isFormatMismatch
+    ? `WhatsApp rejected the template values [132012]: ${graphMessage}. This template has a media header (image/video/document) — add a public header image link on the template in Settings → Channels → WhatsApp, or check that each text value is filled in.`
     : isTemplateError
     ? `WhatsApp template error [${graphCode}]: ${graphMessage}. Open Settings → Channels → WhatsApp and click "Sync templates from Meta", then pick an APPROVED template (matching name + language) as your default re-engagement template.`
+
 
     : isCredentialMismatch
     ? "WhatsApp credentials mismatch: the Phone Number ID and Access Token are not linked. Reconnect WhatsApp in Settings → Channels."
@@ -325,6 +333,7 @@ function reconcileTemplateComponents(
   liveComponents: any[] | null,
   suppliedComponents: any[] | null | undefined,
   fallbackText: string,
+  headerMediaUrl?: string | null,
 ): any[] {
   const safeFallback = (fallbackText || " ").replace(/[\r\n\t]+/g, " ").slice(0, 1024) || " ";
   const out: any[] = [];
@@ -333,9 +342,12 @@ function reconcileTemplateComponents(
   const suppliedFor = (type: string) =>
     supplied.find((c: any) => String(c?.type || "").toUpperCase() === type.toUpperCase());
 
-  // HEADER — only text headers can carry {{n}} variables.
+  // HEADER — text headers carry {{n}} variables; IMAGE/VIDEO/DOCUMENT headers
+  // REQUIRE a media parameter, otherwise Meta rejects with 132012
+  // ("parameter format does not match format in the created template").
   const liveHeader = findComponent(liveComponents, "HEADER");
-  if (liveHeader && String(liveHeader.format || "TEXT").toUpperCase() === "TEXT") {
+  const headerFormat = String(liveHeader?.format || "TEXT").toUpperCase();
+  if (liveHeader && headerFormat === "TEXT") {
     const need = countPlaceholders(liveHeader.text);
     if (need > 0) {
       const given = (suppliedFor("header")?.parameters as any[]) || [];
@@ -346,7 +358,27 @@ function reconcileTemplateComponents(
       }
       out.push({ type: "header", parameters: params });
     }
+  } else if (liveHeader && ["IMAGE", "VIDEO", "DOCUMENT"].includes(headerFormat)) {
+    const kind = headerFormat.toLowerCase() as "image" | "video" | "document";
+    const givenParam = (suppliedFor("header")?.parameters as any[])?.[0];
+    const suppliedLink =
+      givenParam?.[kind]?.link || givenParam?.image?.link || givenParam?.video?.link ||
+      givenParam?.document?.link || null;
+    const exampleLink =
+      liveHeader?.example?.header_handle?.[0] || liveHeader?.example?.header_url?.[0] || null;
+    const link = suppliedLink || headerMediaUrl || exampleLink;
+    if (link) {
+      out.push({
+        type: "header",
+        parameters: [{ type: kind, [kind]: { link: String(link) } }],
+      });
+    } else {
+      console.warn("WA template has a media header but no media link available", {
+        format: headerFormat,
+      });
+    }
   }
+
 
   // BODY
   const liveBody = findComponent(liveComponents, "BODY");
@@ -728,18 +760,21 @@ Deno.serve(async (req) => {
     // convert `contentVariables` ({"1":"Hi John",…}) into Meta's body
     // parameter array. Twilio-flavoured payloads (contentSid) are already
     // routed to the Twilio branch above.
+    let headerMediaUrl: string | null = null;
     if (template) {
       const tplAny = template as any;
-      if ((!tplAny.name || !tplAny.language) && tplAny.id) {
-        const { data: row } = await adminClient
+      headerMediaUrl = tplAny.headerMediaUrl || tplAny.header_media_url || null;
+      if (tplAny.id || tplAny.name) {
+        let q = adminClient
           .from("whatsapp_templates")
-          .select("name, language, variable_count, components, status")
-          .eq("workspace_id", workspaceId)
-          .eq("id", tplAny.id)
-          .maybeSingle();
+          .select("name, language, variable_count, components, status, header_media_url")
+          .eq("workspace_id", workspaceId);
+        q = tplAny.id ? q.eq("id", tplAny.id) : q.eq("name", tplAny.name);
+        const { data: row } = await q.limit(1).maybeSingle();
         if (row) {
           tplAny.name = tplAny.name || row.name;
           tplAny.language = tplAny.language || row.language;
+          headerMediaUrl = headerMediaUrl || row.header_media_url || null;
         }
       }
       if (!tplAny.components && tplAny.contentVariables && typeof tplAny.contentVariables === "object") {
@@ -753,6 +788,7 @@ Deno.serve(async (req) => {
         }
       }
     }
+
 
 
     // 24h re-engagement window check.
@@ -797,7 +833,7 @@ Deno.serve(async (req) => {
         if (defaultTplId) {
           const { data: tpl } = await adminClient
             .from("whatsapp_templates")
-            .select("name, language, variable_count, status, components")
+            .select("name, language, variable_count, status, components, header_media_url")
             .eq("id", defaultTplId)
             .eq("workspace_id", workspaceId)
             .maybeSingle();
@@ -851,7 +887,13 @@ Deno.serve(async (req) => {
             .slice(0, 1024);
           // Build the parameter set from the LIVE definition so the count
           // always matches the approved template (avoids Meta 131008).
-          const components = reconcileTemplateComponents(live.components, null, safeBody);
+          const components = reconcileTemplateComponents(
+            live.components,
+            null,
+            safeBody,
+            (defaultTpl as any)?.header_media_url || headerMediaUrl,
+          );
+
           effectiveTemplate = {
             name: live.name,
             language: live.language,
@@ -933,7 +975,9 @@ Deno.serve(async (req) => {
             liveForCaller.components,
             effectiveTemplate.components as any[] | undefined,
             msgBody || "",
+            headerMediaUrl,
           );
+
           effectiveTemplate = {
             name: liveForCaller.name,
             language: liveForCaller.language,

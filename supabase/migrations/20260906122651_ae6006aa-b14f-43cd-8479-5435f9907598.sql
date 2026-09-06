@@ -1,0 +1,1 @@
+ALTER TABLE public.whatsapp_templates ADD COLUMN IF NOT EXISTS header_media_url text;
