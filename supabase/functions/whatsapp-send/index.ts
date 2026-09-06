@@ -329,7 +329,10 @@ function findComponent(components: any[] | null | undefined, type: string): any 
  * missing parameters are padded with the supplied fallback text, extras are
  * dropped, and components the template doesn't declare are removed.
  */
+const BRAND_HEADER_IMAGE_URL = "https://nexusflo24.com/apple-touch-icon.png";
+
 function reconcileTemplateComponents(
+
   liveComponents: any[] | null,
   suppliedComponents: any[] | null | undefined,
   fallbackText: string,
