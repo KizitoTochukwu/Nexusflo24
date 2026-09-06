@@ -2,13 +2,17 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useCampaignById, useCampaignMessages, TRIGGER_TYPES } from "@/hooks/useCampaigns";
+import MessageContentPreview from "@/components/campaigns/MessageContentPreview";
+import { computeCampaignMetrics, resolveCampaignMetrics, formatRate } from "@/lib/campaigns/metrics";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket } from "lucide-react";
 import { format } from "date-fns";
+
 
 const channelIcons: Record<string, React.ReactNode> = {
   email: <Mail className="h-4 w-4" />,
@@ -84,10 +88,11 @@ function SequenceTimeline({
     <div className="space-y-0">
       {orderedChannels.map((channel, idx) => {
         const group = channelGroups[channel];
-        const totalSent = group.length;
-        const delivered = group.filter((m) => m.delivery_status === "delivered").length;
-        const opened = group.filter((m) => m.opened).length;
-        const clicked = group.filter((m) => m.clicked).length;
+        const groupMetrics = computeCampaignMetrics(group);
+        const totalSent = groupMetrics.sent;
+        const delivered = groupMetrics.delivered;
+        const opened = groupMetrics.opened;
+        const clicked = groupMetrics.clicked;
         const failed = group.filter((m) => m.delivery_status === "failed" || m.delivery_status === "bounced").length;
         const pending = group.filter((m) => m.delivery_status === "pending").length;
         const firstSent = group.reduce((min, m) => (m.created_at < min ? m.created_at : min), group[0].created_at);
@@ -229,30 +234,17 @@ export default function CampaignDetailsDrawer({
 
   if (!campaign) return null;
 
-  const content = campaign.message_content as { subject?: string; body?: string } | null;
+  const content = campaign.message_content as Record<string, unknown> | null;
   const triggerConfig = campaign.trigger_config as { type?: string; value?: string; actions?: string[] } | null;
   const fallback = campaign.fallback_settings as { enabled?: boolean; channel?: string; delay_minutes?: number; condition?: string } | null;
-  const deliveredCount = messages?.filter((m) => m.delivery_status === "delivered").length ?? 0;
-  const openedCount = messages?.filter((m) => m.opened).length ?? 0;
-  const clickedCount = messages?.filter((m) => m.clicked).length ?? 0;
-  const repliedCount = messages?.filter((m) => m.replied).length ?? 0;
-
-  // Per-channel breakdown
-  const channelBreakdown = messages?.reduce((acc, m) => {
-    if (!acc[m.channel]) acc[m.channel] = { sent: 0, delivered: 0, opened: 0, clicked: 0, replied: 0 };
-    acc[m.channel].sent++;
-    if (m.delivery_status === "delivered") acc[m.channel].delivered++;
-    if (m.opened) acc[m.channel].opened++;
-    if (m.clicked) acc[m.channel].clicked++;
-    if (m.replied) acc[m.channel].replied++;
-    return acc;
-  }, {} as Record<string, { sent: number; delivered: number; opened: number; clicked: number; replied: number }>);
+  const metrics = resolveCampaignMetrics(campaign, computeCampaignMetrics(messages));
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent className="w-full max-w-full overflow-x-hidden overflow-y-auto sm:max-w-lg lg:max-w-2xl">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
+
             {channelIcons[campaign.type]}
             {campaign.name}
           </SheetTitle>
@@ -352,20 +344,33 @@ export default function CampaignDetailsDrawer({
 
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-3">
-            <StatCard icon={<Send className="h-4 w-4" />} label="Sent" value={campaign.sent_count} />
-            <StatCard icon={<Eye className="h-4 w-4" />} label="Open Rate" value={`${(campaign.open_rate * 100).toFixed(1)}%`} />
-            <StatCard icon={<MousePointerClick className="h-4 w-4" />} label="Click Rate" value={`${(campaign.click_rate * 100).toFixed(1)}%`} />
+            <StatCard icon={<Send className="h-4 w-4" />} label="Sent" value={metrics.sent} />
+            <StatCard icon={<Eye className="h-4 w-4" />} label="Open Rate" value={formatRate(metrics.openRate)} />
+            <StatCard icon={<MousePointerClick className="h-4 w-4" />} label="Click Rate" value={formatRate(metrics.clickRate)} />
             <StatCard icon={<TrendingUp className="h-4 w-4" />} label="Conversion" value={`${(campaign.conversion_rate * 100).toFixed(1)}%`} />
           </div>
 
           {/* Message preview */}
-          <div>
+          <div className="min-w-0">
             <h3 className="mb-2 text-sm font-semibold text-foreground">Message Content</h3>
-            <div className="rounded-lg border bg-muted/30 p-4">
-              {content?.subject && <p className="mb-1 text-sm font-medium text-foreground">{content.subject}</p>}
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">{content?.body || "No content"}</p>
-            </div>
+            <Tabs defaultValue="preview">
+              <TabsList className="mb-2">
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsTrigger value="source">Source</TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview">
+                <div className="max-h-[420px] overflow-y-auto overflow-x-hidden rounded-lg border bg-muted/30 p-4">
+                  <MessageContentPreview content={content} channel={campaign.type} />
+                </div>
+              </TabsContent>
+              <TabsContent value="source">
+                <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-4 text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
+                  {JSON.stringify(content ?? {}, null, 2)}
+                </pre>
+              </TabsContent>
+            </Tabs>
           </div>
+
 
           {/* Message log */}
           {messages && messages.length > 0 && (

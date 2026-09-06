@@ -2,6 +2,8 @@ import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, type Campaign } from "@/hooks/useCampaigns";
+import { useWorkspaceCampaignMetrics } from "@/hooks/useCampaignMetrics";
+import { resolveCampaignMetrics, formatRate } from "@/lib/campaigns/metrics";
 import CreateCampaignDialog from "@/components/campaigns/CreateCampaignDialog";
 import CampaignDetailsDrawer from "@/components/campaigns/CampaignDetailsDrawer";
 import CampaignAnalytics from "@/components/campaigns/CampaignAnalytics";
@@ -41,6 +43,8 @@ const channelIcons: Record<string, React.ReactNode> = {
 const DashboardCampaigns = () => {
   const workspaceId = useWorkspaceId();
   const { data: campaigns, isLoading } = useCampaigns(workspaceId);
+  const { data: metricsMap } = useWorkspaceCampaignMetrics(workspaceId);
+  const rowMetrics = (c: Campaign) => resolveCampaignMetrics(c, metricsMap?.[c.id]);
   const updateCampaign = useUpdateCampaign();
   const deleteCampaign = useDeleteCampaign();
   const createCampaign = useCreateCampaign();
@@ -127,9 +131,9 @@ const DashboardCampaigns = () => {
                       <TableCell>
                         <Badge className={`${statusColors[c.status] || ""} capitalize`}>{c.status}</Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{c.sent_count}</TableCell>
-                      <TableCell className="hidden md:table-cell">{(c.open_rate * 100).toFixed(1)}%</TableCell>
-                      <TableCell className="hidden lg:table-cell">{(c.click_rate * 100).toFixed(1)}%</TableCell>
+                      <TableCell className="hidden md:table-cell">{rowMetrics(c).sent}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatRate(rowMetrics(c).openRate)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{formatRate(rowMetrics(c).clickRate)}</TableCell>
                       <TableCell className="hidden lg:table-cell text-muted-foreground">
                         {format(new Date(c.created_at), "MMM d, yyyy")}
                       </TableCell>
