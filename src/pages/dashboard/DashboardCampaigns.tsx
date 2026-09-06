@@ -41,6 +41,8 @@ const channelIcons: Record<string, React.ReactNode> = {
 const DashboardCampaigns = () => {
   const workspaceId = useWorkspaceId();
   const { data: campaigns, isLoading } = useCampaigns(workspaceId);
+  const { data: metricsMap } = useWorkspaceCampaignMetrics(workspaceId);
+  const rowMetrics = (c: Campaign) => resolveCampaignMetrics(c, metricsMap?.[c.id]);
   const updateCampaign = useUpdateCampaign();
   const deleteCampaign = useDeleteCampaign();
   const createCampaign = useCreateCampaign();
