@@ -825,7 +825,7 @@ Deno.serve(async (req) => {
         if (defaultTplId) {
           const { data: tpl } = await adminClient
             .from("whatsapp_templates")
-            .select("name, language, variable_count, status, components")
+            .select("name, language, variable_count, status, components, header_media_url")
             .eq("id", defaultTplId)
             .eq("workspace_id", workspaceId)
             .maybeSingle();
