@@ -325,6 +325,7 @@ function reconcileTemplateComponents(
   liveComponents: any[] | null,
   suppliedComponents: any[] | null | undefined,
   fallbackText: string,
+  headerMediaUrl?: string | null,
 ): any[] {
   const safeFallback = (fallbackText || " ").replace(/[\r\n\t]+/g, " ").slice(0, 1024) || " ";
   const out: any[] = [];
@@ -333,9 +334,12 @@ function reconcileTemplateComponents(
   const suppliedFor = (type: string) =>
     supplied.find((c: any) => String(c?.type || "").toUpperCase() === type.toUpperCase());
 
-  // HEADER — only text headers can carry {{n}} variables.
+  // HEADER — text headers carry {{n}} variables; IMAGE/VIDEO/DOCUMENT headers
+  // REQUIRE a media parameter, otherwise Meta rejects with 132012
+  // ("parameter format does not match format in the created template").
   const liveHeader = findComponent(liveComponents, "HEADER");
-  if (liveHeader && String(liveHeader.format || "TEXT").toUpperCase() === "TEXT") {
+  const headerFormat = String(liveHeader?.format || "TEXT").toUpperCase();
+  if (liveHeader && headerFormat === "TEXT") {
     const need = countPlaceholders(liveHeader.text);
     if (need > 0) {
       const given = (suppliedFor("header")?.parameters as any[]) || [];
@@ -346,7 +350,27 @@ function reconcileTemplateComponents(
       }
       out.push({ type: "header", parameters: params });
     }
+  } else if (liveHeader && ["IMAGE", "VIDEO", "DOCUMENT"].includes(headerFormat)) {
+    const kind = headerFormat.toLowerCase() as "image" | "video" | "document";
+    const givenParam = (suppliedFor("header")?.parameters as any[])?.[0];
+    const suppliedLink =
+      givenParam?.[kind]?.link || givenParam?.image?.link || givenParam?.video?.link ||
+      givenParam?.document?.link || null;
+    const exampleLink =
+      liveHeader?.example?.header_handle?.[0] || liveHeader?.example?.header_url?.[0] || null;
+    const link = suppliedLink || headerMediaUrl || exampleLink;
+    if (link) {
+      out.push({
+        type: "header",
+        parameters: [{ type: kind, [kind]: { link: String(link) } }],
+      });
+    } else {
+      console.warn("WA template has a media header but no media link available", {
+        format: headerFormat,
+      });
+    }
   }
+
 
   // BODY
   const liveBody = findComponent(liveComponents, "BODY");
