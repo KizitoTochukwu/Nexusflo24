@@ -27,11 +27,13 @@ function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: stri
 export default function CampaignAnalytics() {
   const workspaceId = useWorkspaceId();
   const { data: campaigns } = useCampaigns(workspaceId);
+  const { data: metricsMap } = useWorkspaceCampaignMetrics(workspaceId);
 
   const all = campaigns ?? [];
-  const totalSent = all.reduce((s, c) => s + c.sent_count, 0);
-  const avgOpenRate = all.length ? all.reduce((s, c) => s + c.open_rate, 0) / all.length : 0;
-  const avgClickRate = all.length ? all.reduce((s, c) => s + c.click_rate, 0) / all.length : 0;
+  const metricsFor = (c: Campaign) => resolveCampaignMetrics(c, metricsMap?.[c.id]);
+  const totalSent = all.reduce((s, c) => s + metricsFor(c).sent, 0);
+  const avgOpenRate = all.length ? all.reduce((s, c) => s + metricsFor(c).openRate, 0) / all.length : 0;
+  const avgClickRate = all.length ? all.reduce((s, c) => s + metricsFor(c).clickRate, 0) / all.length : 0;
   const avgConversion = all.length ? all.reduce((s, c) => s + c.conversion_rate, 0) / all.length : 0;
   const broadcastCount = all.filter(c => (c.campaign_mode || "broadcast") === "broadcast").length;
   const triggeredCount = all.filter(c => c.campaign_mode === "triggered").length;
@@ -44,10 +46,11 @@ export default function CampaignAnalytics() {
   // Per-channel performance
   const channelPerf: Record<string, { sent: number; opens: number; clicks: number; count: number }> = {};
   all.forEach((c) => {
+    const m = metricsFor(c);
     if (!channelPerf[c.type]) channelPerf[c.type] = { sent: 0, opens: 0, clicks: 0, count: 0 };
-    channelPerf[c.type].sent += c.sent_count;
-    channelPerf[c.type].opens += c.open_rate;
-    channelPerf[c.type].clicks += c.click_rate;
+    channelPerf[c.type].sent += m.sent;
+    channelPerf[c.type].opens += m.openRate;
+    channelPerf[c.type].clicks += m.clickRate;
     channelPerf[c.type].count++;
   });
   const channelPerfData = Object.entries(channelPerf).map(([channel, d]) => ({
@@ -58,12 +61,16 @@ export default function CampaignAnalytics() {
   }));
 
   // Recent campaigns for bar chart (last 8)
-  const recentBar = all.slice(0, 8).reverse().map((c) => ({
-    name: c.name.length > 12 ? c.name.slice(0, 12) + "…" : c.name,
-    sent: c.sent_count,
-    openRate: +(c.open_rate * 100).toFixed(1),
-    clickRate: +(c.click_rate * 100).toFixed(1),
-  }));
+  const recentBar = all.slice(0, 8).reverse().map((c) => {
+    const m = metricsFor(c);
+    return {
+      name: c.name.length > 12 ? c.name.slice(0, 12) + "…" : c.name,
+      sent: m.sent,
+      openRate: +(m.openRate * 100).toFixed(1),
+      clickRate: +(m.clickRate * 100).toFixed(1),
+    };
+  });
+
 
   if (all.length === 0) {
     return (
