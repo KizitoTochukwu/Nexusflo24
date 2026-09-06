@@ -364,9 +364,13 @@ function reconcileTemplateComponents(
     const suppliedLink =
       givenParam?.[kind]?.link || givenParam?.image?.link || givenParam?.video?.link ||
       givenParam?.document?.link || null;
+    // Meta's own example `header_handle` URLs are signed CDN links that the
+    // Cloud API cannot re-download (HTTP 403), so they are only a last resort
+    // behind a always-public brand image.
     const exampleLink =
       liveHeader?.example?.header_handle?.[0] || liveHeader?.example?.header_url?.[0] || null;
-    const link = suppliedLink || headerMediaUrl || exampleLink;
+    const link = suppliedLink || headerMediaUrl || BRAND_HEADER_IMAGE_URL || exampleLink;
+
     if (link) {
       out.push({
         type: "header",
