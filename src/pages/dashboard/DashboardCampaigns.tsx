@@ -127,9 +127,9 @@ const DashboardCampaigns = () => {
                       <TableCell>
                         <Badge className={`${statusColors[c.status] || ""} capitalize`}>{c.status}</Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{c.sent_count}</TableCell>
-                      <TableCell className="hidden md:table-cell">{(c.open_rate * 100).toFixed(1)}%</TableCell>
-                      <TableCell className="hidden lg:table-cell">{(c.click_rate * 100).toFixed(1)}%</TableCell>
+                      <TableCell className="hidden md:table-cell">{rowMetrics(c).sent}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatRate(rowMetrics(c).openRate)}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{formatRate(rowMetrics(c).clickRate)}</TableCell>
                       <TableCell className="hidden lg:table-cell text-muted-foreground">
                         {format(new Date(c.created_at), "MMM d, yyyy")}
                       </TableCell>
