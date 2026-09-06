@@ -879,7 +879,13 @@ Deno.serve(async (req) => {
             .slice(0, 1024);
           // Build the parameter set from the LIVE definition so the count
           // always matches the approved template (avoids Meta 131008).
-          const components = reconcileTemplateComponents(live.components, null, safeBody);
+          const components = reconcileTemplateComponents(
+            live.components,
+            null,
+            safeBody,
+            (defaultTpl as any)?.header_media_url || headerMediaUrl,
+          );
+
           effectiveTemplate = {
             name: live.name,
             language: live.language,
