@@ -88,10 +88,11 @@ function SequenceTimeline({
     <div className="space-y-0">
       {orderedChannels.map((channel, idx) => {
         const group = channelGroups[channel];
-        const totalSent = group.length;
-        const delivered = group.filter((m) => m.delivery_status === "delivered").length;
-        const opened = group.filter((m) => m.opened).length;
-        const clicked = group.filter((m) => m.clicked).length;
+        const groupMetrics = computeCampaignMetrics(group);
+        const totalSent = groupMetrics.sent;
+        const delivered = groupMetrics.delivered;
+        const opened = groupMetrics.opened;
+        const clicked = groupMetrics.clicked;
         const failed = group.filter((m) => m.delivery_status === "failed" || m.delivery_status === "bounced").length;
         const pending = group.filter((m) => m.delivery_status === "pending").length;
         const firstSent = group.reduce((min, m) => (m.created_at < min ? m.created_at : min), group[0].created_at);
