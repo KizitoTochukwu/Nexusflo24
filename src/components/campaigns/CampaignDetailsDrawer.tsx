@@ -10,7 +10,7 @@ import { computeCampaignMetrics, resolveCampaignMetrics, formatRate } from "@/li
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, MessageSquare, Phone, Layers, BarChart3, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket } from "lucide-react";
+import { Mail, MessageSquare, Phone, Layers, Send, Eye, MousePointerClick, TrendingUp, Zap, AlertTriangle, Radio, CheckCircle2, XCircle, Clock, ArrowDown, Loader2, Rocket, Pencil } from "lucide-react";
 import { format } from "date-fns";
 
 
@@ -185,9 +185,9 @@ function SequenceTimeline({
 }
 
 export default function CampaignDetailsDrawer({
-  campaignId, open, onClose,
+  campaignId, open, onClose, onEdit,
 }: {
-  campaignId: string | null; open: boolean; onClose: () => void;
+  campaignId: string | null; open: boolean; onClose: () => void; onEdit?: () => void;
 }) {
   const { data: campaign } = useCampaignById(campaignId);
   const { data: messages } = useCampaignMessages(campaignId);
