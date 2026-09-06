@@ -261,6 +261,13 @@ export default function CampaignDetailsDrawer({
             </Badge>
           </div>
 
+          {/* Edit Campaign Button */}
+          {onEdit && ["draft", "scheduled", "active", "paused"].includes(campaign.status) && (
+            <Button variant="outline" onClick={onEdit} className="w-full gap-2">
+              <Pencil className="h-4 w-4" /> Edit Campaign
+            </Button>
+          )}
+
           {/* Send Campaign Button */}
           {campaign.campaign_mode !== "triggered" && ["draft", "active", "scheduled"].includes(campaign.status) && (
             <>
@@ -352,22 +359,9 @@ export default function CampaignDetailsDrawer({
           {/* Message preview */}
           <div className="min-w-0">
             <h3 className="mb-2 text-sm font-semibold text-foreground">Message Content</h3>
-            <Tabs defaultValue="preview">
-              <TabsList className="mb-2">
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-                <TabsTrigger value="source">Source</TabsTrigger>
-              </TabsList>
-              <TabsContent value="preview">
-                <div className="max-h-[420px] overflow-y-auto overflow-x-hidden rounded-lg border bg-muted/30 p-4">
-                  <MessageContentPreview content={content} channel={campaign.type} />
-                </div>
-              </TabsContent>
-              <TabsContent value="source">
-                <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-lg border bg-muted/30 p-4 text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
-                  {JSON.stringify(content ?? {}, null, 2)}
-                </pre>
-              </TabsContent>
-            </Tabs>
+            <div className="max-h-[420px] overflow-y-auto overflow-x-hidden rounded-lg border bg-muted/30 p-4">
+              <MessageContentPreview content={content} channel={campaign.type} />
+            </div>
           </div>
 
 
