@@ -21,7 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Eye, Copy, Pause, Play, Trash2, Mail, MessageSquare, Phone, Layers, Zap, Radio } from "lucide-react";
+import { MoreHorizontal, Eye, Copy, Pause, Play, Trash2, Pencil, Mail, MessageSquare, Phone, Layers, Zap, Radio } from "lucide-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -50,6 +50,14 @@ const DashboardCampaigns = () => {
   const createCampaign = useCreateCampaign();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+
+  const handleEdit = (c: Campaign) => {
+    setEditingCampaign(c);
+    setDrawerOpen(false);
+    setEditorOpen(true);
+  };
 
   const handleDuplicate = (c: Campaign) => {
     createCampaign.mutate({
@@ -148,6 +156,11 @@ const DashboardCampaigns = () => {
                             <DropdownMenuItem onClick={() => { setSelectedId(c.id); setDrawerOpen(true); }}>
                               <Eye className="mr-2 h-4 w-4" /> View Details
                             </DropdownMenuItem>
+                            {["draft", "scheduled", "active", "paused"].includes(c.status) && (
+                              <DropdownMenuItem onClick={() => handleEdit(c)}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => handleDuplicate(c)}>
                               <Copy className="mr-2 h-4 w-4" /> Duplicate
                             </DropdownMenuItem>
@@ -194,7 +207,23 @@ const DashboardCampaigns = () => {
         </TabsContent>
       </Tabs>
 
-      <CampaignDetailsDrawer campaignId={selectedId} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <CampaignDetailsDrawer
+        campaignId={selectedId}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onEdit={() => {
+          const c = campaigns?.find((x) => x.id === selectedId);
+          if (c) handleEdit(c);
+        }}
+      />
+      <CreateCampaignDialog
+        editCampaign={editingCampaign}
+        open={editorOpen}
+        onOpenChange={(v) => {
+          setEditorOpen(v);
+          if (!v) setEditingCampaign(null);
+        }}
+      />
     </DashboardLayout>
   );
 };
