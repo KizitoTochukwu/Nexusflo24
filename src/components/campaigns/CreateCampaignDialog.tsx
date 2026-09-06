@@ -532,11 +532,13 @@ export default function CreateCampaignDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" /> Create Campaign
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" /> Create Campaign
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-none w-screen h-screen sm:max-w-none rounded-none p-0 gap-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border bg-background shrink-0">
           <DialogTitle className="flex items-center gap-2">
@@ -1094,12 +1096,14 @@ export default function CreateCampaignDialog({
               <Button
                 onClick={handleCreate}
                 disabled={
-                  createCampaign.isPending ||
+                  createCampaign.isPending || updateCampaign.isPending ||
                   (campaignMode === "broadcast" && audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))
                 }
                 className="flex-1"
               >
-                {createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
+                {isEditing
+                  ? (updateCampaign.isPending ? "Saving..." : "Save Changes")
+                  : createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
               </Button>
             </div>
           </div>
