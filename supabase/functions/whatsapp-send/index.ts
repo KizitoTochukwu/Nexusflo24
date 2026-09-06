@@ -369,7 +369,7 @@ function reconcileTemplateComponents(
     // behind a always-public brand image.
     const exampleLink =
       liveHeader?.example?.header_handle?.[0] || liveHeader?.example?.header_url?.[0] || null;
-    const link = suppliedLink || headerMediaUrl || BRAND_HEADER_IMAGE_URL || exampleLink;
+    const link = suppliedLink || headerMediaUrl || (kind === "image" ? BRAND_HEADER_IMAGE_URL : null) || exampleLink;
 
     if (link) {
       out.push({
