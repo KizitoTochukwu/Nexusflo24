@@ -1,4 +1,6 @@
 import { useCampaigns, useCampaignMessages, type Campaign } from "@/hooks/useCampaigns";
+import { useWorkspaceCampaignMetrics } from "@/hooks/useCampaignMetrics";
+import { resolveCampaignMetrics } from "@/lib/campaigns/metrics";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from "recharts";
 import { Send, Eye, MousePointerClick, TrendingUp, Mail, MessageSquare, Phone, Zap, Radio } from "lucide-react";
