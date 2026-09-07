@@ -421,31 +421,9 @@ export default function CreateCampaignDialog({
       type,
       objective,
       campaign_mode: campaignMode,
-      status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: {
-        subject: finalSubject,
-        body,
-        templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
-        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && (waTemplateSelection?.contentSid || waTemplateSelection?.id || waTemplateId !== "none")
-          ? (() => {
-              // Prefer new picker selection (has contentSid + variables).
-              if (waTemplateSelection?.id || waTemplateSelection?.contentSid) {
-                return {
-                  id: waTemplateSelection.id,
-                  name: waTemplateSelection.name,
-                  language: waTemplateSelection.language,
-                  contentSid: waTemplateSelection.contentSid,
-                  contentVariables: waTemplateSelection.contentVariables,
-                };
-              }
-              const t = waTemplates.find((x: any) => x.id === waTemplateId);
-              return t ? { id: t.id, name: t.name, language: t.language } : undefined;
-            })()
-          : undefined,
-        sender_profile_id_email: senderProfileEmail || undefined,
-        sender_profile_id_whatsapp: senderProfileWa || undefined,
-        sender_profile_id_sms: senderProfileSms || undefined,
-      } as any,
+      // Template copies are always saved as drafts — nothing is sent automatically.
+      status: isTemplate ? "draft" : campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
+      message_content: messageContent,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
