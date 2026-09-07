@@ -482,6 +482,10 @@ export default function CreateCampaignDialog({
 
     }
 
+    if (isTemplate) {
+      toast.success("Campaign copy saved as draft — launch it from the campaigns list when you're ready.");
+    }
+
     setOpen(false);
     reset({ keepAudience: false });
   };
