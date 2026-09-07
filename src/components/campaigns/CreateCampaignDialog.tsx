@@ -273,7 +273,7 @@ export default function CreateCampaignDialog({
     const audience = (c.audience_filter ?? {}) as any;
 
     setStep(1);
-    setName(c.name ?? "");
+    setName(isTemplate ? `${c.name ?? ""} (Copy)` : (c.name ?? ""));
     setType(c.type ?? "email");
     setObjective(c.objective ?? "broadcast");
     setCampaignMode((c as any).campaign_mode ?? "broadcast");
