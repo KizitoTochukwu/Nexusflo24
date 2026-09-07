@@ -43,10 +43,12 @@ const TOTAL_STEPS = 5;
 
 export default function CreateCampaignDialog({
   editCampaign,
+  templateCampaign,
   open: controlledOpen,
   onOpenChange,
 }: {
   editCampaign?: Campaign | null;
+  templateCampaign?: Campaign | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 } = {}) {
@@ -54,6 +56,8 @@ export default function CreateCampaignDialog({
   const navigate = useNavigate();
   const isControlled = controlledOpen !== undefined;
   const isEditing = !!editCampaign;
+  const isTemplate = !isEditing && !!templateCampaign;
+  const sourceCampaign = editCampaign ?? templateCampaign ?? null;
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -259,17 +263,17 @@ export default function CreateCampaignDialog({
     }
   };
 
-  // Pre-fill the editor when opening an existing campaign for editing
+  // Pre-fill the editor when opening an existing campaign (edit or use-as-template)
   useEffect(() => {
-    if (!open || !editCampaign) return;
-    const c = editCampaign;
+    if (!open || !sourceCampaign) return;
+    const c = sourceCampaign;
     const content = (c.message_content ?? {}) as any;
     const trigger = (c.trigger_config ?? {}) as any;
     const fallback = (c.fallback_settings ?? {}) as any;
     const audience = (c.audience_filter ?? {}) as any;
 
     setStep(1);
-    setName(c.name ?? "");
+    setName(isTemplate ? `${c.name ?? ""} (Copy)` : (c.name ?? ""));
     setType(c.type ?? "email");
     setObjective(c.objective ?? "broadcast");
     setCampaignMode((c as any).campaign_mode ?? "broadcast");
@@ -306,7 +310,7 @@ export default function CreateCampaignDialog({
     setAudienceMinScore(audience.min_score != null ? String(audience.min_score) : "");
     setAudienceMaxScore(audience.max_score != null ? String(audience.max_score) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editCampaign?.id]);
+  }, [open, sourceCampaign?.id]);
 
   const handleGenerateAI = async () => {
     try {
@@ -417,31 +421,9 @@ export default function CreateCampaignDialog({
       type,
       objective,
       campaign_mode: campaignMode,
-      status: campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
-      message_content: {
-        subject: finalSubject,
-        body,
-        templateSettings: (type === "email" || type === "multi-channel") ? templateSettings : undefined,
-        whatsappTemplate: (type === "whatsapp" || type === "multi-channel") && (waTemplateSelection?.contentSid || waTemplateSelection?.id || waTemplateId !== "none")
-          ? (() => {
-              // Prefer new picker selection (has contentSid + variables).
-              if (waTemplateSelection?.id || waTemplateSelection?.contentSid) {
-                return {
-                  id: waTemplateSelection.id,
-                  name: waTemplateSelection.name,
-                  language: waTemplateSelection.language,
-                  contentSid: waTemplateSelection.contentSid,
-                  contentVariables: waTemplateSelection.contentVariables,
-                };
-              }
-              const t = waTemplates.find((x: any) => x.id === waTemplateId);
-              return t ? { id: t.id, name: t.name, language: t.language } : undefined;
-            })()
-          : undefined,
-        sender_profile_id_email: senderProfileEmail || undefined,
-        sender_profile_id_whatsapp: senderProfileWa || undefined,
-        sender_profile_id_sms: senderProfileSms || undefined,
-      } as any,
+      // Template copies are always saved as drafts — nothing is sent automatically.
+      status: isTemplate ? "draft" : campaignMode === "triggered" ? "active" : scheduleNow ? "active" : "scheduled",
+      message_content: messageContent,
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
@@ -464,8 +446,8 @@ export default function CreateCampaignDialog({
       } as any,
     });
 
-    // Auto-fire broadcast "Send Now" campaigns immediately
-    if (campaignMode === "broadcast" && scheduleNow && campaign?.id) {
+    // Auto-fire broadcast "Send Now" campaigns immediately (never for template copies)
+    if (!isTemplate && campaignMode === "broadcast" && scheduleNow && campaign?.id) {
       try {
         const { data, error } = await supabase.functions.invoke("execute-campaign", {
           body: { campaign_id: campaign.id },
@@ -498,6 +480,10 @@ export default function CreateCampaignDialog({
         toast.error("Campaign created but failed to send. You can retry from the campaign details.");
       }
 
+    }
+
+    if (isTemplate) {
+      toast.success("Campaign copy saved as draft — launch it from the campaigns list when you're ready.");
     }
 
     setOpen(false);
@@ -1091,6 +1077,15 @@ export default function CreateCampaignDialog({
               </div>
             </div>
 
+            {isTemplate && (
+              <div className="flex items-start gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-xs text-foreground">
+                <Copy className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  This is a copy of an existing campaign. It will be saved as a <strong>draft</strong> — nothing is sent until you launch it yourself, even if "Send immediately" is selected.
+                </span>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
               <Button
@@ -1103,7 +1098,9 @@ export default function CreateCampaignDialog({
               >
                 {isEditing
                   ? (updateCampaign.isPending ? "Saving..." : "Save Changes")
-                  : createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
+                  : isTemplate
+                    ? (createCampaign.isPending ? "Saving..." : "Save Draft Copy")
+                    : createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
               </Button>
             </div>
           </div>

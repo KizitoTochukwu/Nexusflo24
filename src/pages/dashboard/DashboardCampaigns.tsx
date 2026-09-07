@@ -1,7 +1,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, type Campaign } from "@/hooks/useCampaigns";
+import { useCampaigns, useUpdateCampaign, useDeleteCampaign, type Campaign } from "@/hooks/useCampaigns";
 import { useWorkspaceCampaignMetrics } from "@/hooks/useCampaignMetrics";
 import { resolveCampaignMetrics, formatRate } from "@/lib/campaigns/metrics";
 import CreateCampaignDialog from "@/components/campaigns/CreateCampaignDialog";
@@ -47,28 +47,26 @@ const DashboardCampaigns = () => {
   const rowMetrics = (c: Campaign) => resolveCampaignMetrics(c, metricsMap?.[c.id]);
   const updateCampaign = useUpdateCampaign();
   const deleteCampaign = useDeleteCampaign();
-  const createCampaign = useCreateCampaign();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [templateCampaign, setTemplateCampaign] = useState<Campaign | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
   const handleEdit = (c: Campaign) => {
     setEditingCampaign(c);
+    setTemplateCampaign(null);
     setDrawerOpen(false);
     setEditorOpen(true);
   };
 
+  // Duplicate = open the editor fully prefilled from this campaign.
+  // The copy is only created (as a draft) when the user saves — nothing is sent.
   const handleDuplicate = (c: Campaign) => {
-    createCampaign.mutate({
-      workspace_id: c.workspace_id,
-      name: `${c.name} (Copy)`,
-      type: c.type,
-      objective: c.objective,
-      status: "draft",
-      audience_filter: c.audience_filter as any,
-      message_content: c.message_content as any,
-    });
+    setTemplateCampaign(c);
+    setEditingCampaign(null);
+    setDrawerOpen(false);
+    setEditorOpen(true);
   };
 
   const handleTogglePause = (c: Campaign) => {
@@ -162,7 +160,7 @@ const DashboardCampaigns = () => {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => handleDuplicate(c)}>
-                              <Copy className="mr-2 h-4 w-4" /> Duplicate
+                              <Copy className="mr-2 h-4 w-4" /> Duplicate / Use as Template
                             </DropdownMenuItem>
                             {(c.status === "active" || c.status === "paused") && (
                               <DropdownMenuItem onClick={() => handleTogglePause(c)}>
@@ -218,10 +216,11 @@ const DashboardCampaigns = () => {
       />
       <CreateCampaignDialog
         editCampaign={editingCampaign}
+        templateCampaign={templateCampaign}
         open={editorOpen}
         onOpenChange={(v) => {
           setEditorOpen(v);
-          if (!v) setEditingCampaign(null);
+          if (!v) { setEditingCampaign(null); setTemplateCampaign(null); }
         }}
       />
     </DashboardLayout>
