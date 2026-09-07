@@ -310,7 +310,7 @@ export default function CreateCampaignDialog({
     setAudienceMinScore(audience.min_score != null ? String(audience.min_score) : "");
     setAudienceMaxScore(audience.max_score != null ? String(audience.max_score) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editCampaign?.id]);
+  }, [open, sourceCampaign?.id]);
 
   const handleGenerateAI = async () => {
     try {
