@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-// TEMPLATE_MODE_NOTE
 import { useQuery } from "@tanstack/react-query";
 import LeadPicker from "@/components/campaigns/LeadPicker";
 import { useLeadFolders, useFolderLeadIds } from "@/hooks/useLeadFolders";
