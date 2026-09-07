@@ -263,10 +263,10 @@ export default function CreateCampaignDialog({
     }
   };
 
-  // Pre-fill the editor when opening an existing campaign for editing
+  // Pre-fill the editor when opening an existing campaign (edit or use-as-template)
   useEffect(() => {
-    if (!open || !editCampaign) return;
-    const c = editCampaign;
+    if (!open || !sourceCampaign) return;
+    const c = sourceCampaign;
     const content = (c.message_content ?? {}) as any;
     const trigger = (c.trigger_config ?? {}) as any;
     const fallback = (c.fallback_settings ?? {}) as any;
