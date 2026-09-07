@@ -1077,6 +1077,15 @@ export default function CreateCampaignDialog({
               </div>
             </div>
 
+            {isTemplate && (
+              <div className="flex items-start gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-xs text-foreground">
+                <Copy className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  This is a copy of an existing campaign. It will be saved as a <strong>draft</strong> — nothing is sent until you launch it yourself, even if "Send immediately" is selected.
+                </span>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
               <Button
@@ -1089,7 +1098,9 @@ export default function CreateCampaignDialog({
               >
                 {isEditing
                   ? (updateCampaign.isPending ? "Saving..." : "Save Changes")
-                  : createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
+                  : isTemplate
+                    ? (createCampaign.isPending ? "Saving..." : "Save Draft Copy")
+                    : createCampaign.isPending ? "Creating..." : campaignMode === "triggered" ? "Activate Automation" : scheduleNow ? "Launch Campaign" : "Schedule Campaign"}
               </Button>
             </div>
           </div>
