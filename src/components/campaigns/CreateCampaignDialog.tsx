@@ -43,10 +43,12 @@ const TOTAL_STEPS = 5;
 
 export default function CreateCampaignDialog({
   editCampaign,
+  templateCampaign,
   open: controlledOpen,
   onOpenChange,
 }: {
   editCampaign?: Campaign | null;
+  templateCampaign?: Campaign | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 } = {}) {
@@ -54,6 +56,8 @@ export default function CreateCampaignDialog({
   const navigate = useNavigate();
   const isControlled = controlledOpen !== undefined;
   const isEditing = !!editCampaign;
+  const isTemplate = !isEditing && !!templateCampaign;
+  const sourceCampaign = editCampaign ?? templateCampaign ?? null;
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = (v: boolean) => {
