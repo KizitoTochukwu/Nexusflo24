@@ -446,8 +446,8 @@ export default function CreateCampaignDialog({
       } as any,
     });
 
-    // Auto-fire broadcast "Send Now" campaigns immediately
-    if (campaignMode === "broadcast" && scheduleNow && campaign?.id) {
+    // Auto-fire broadcast "Send Now" campaigns immediately (never for template copies)
+    if (!isTemplate && campaignMode === "broadcast" && scheduleNow && campaign?.id) {
       try {
         const { data, error } = await supabase.functions.invoke("execute-campaign", {
           body: { campaign_id: campaign.id },
