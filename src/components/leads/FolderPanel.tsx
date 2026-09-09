@@ -23,6 +23,7 @@ type Props = {
   onSelectFolder: (id: string | null) => void;
   workspaceId: string;
   totalLeadCount: number;
+  unfiledCount?: number;
 };
 
 const isUncategorized = (name: string) => name.trim().toLowerCase() === "uncategorized";
