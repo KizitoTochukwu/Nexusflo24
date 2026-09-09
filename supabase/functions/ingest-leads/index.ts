@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
           email: trimmedEmail || null,
           phone: trimmedPhone || null,
           source: source || "Make.com",
-          status: status || "New",
+          status: normaliseStatus(status),
           score: score ?? 10,
           tags: tags.length ? tags : ["make-ingest"],
           notes: notes || null,

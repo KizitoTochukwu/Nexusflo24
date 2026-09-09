@@ -101,7 +101,7 @@ const DashboardLeads = () => {
   }, [unfilteredLeads, filedLeadIds]);
 
   const hiddenCount = Math.max(unfilteredLeads.length - leads.length, 0);
-  const filtersActive = status !== "All" || source !== "All" || pipelineStage !== "All" || aiVerdict !== "All" || !!search;
+  
 
   const clearFilters = useCallback(() => {
     setSearch("");
