@@ -12,7 +12,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Route, Lock } from "lucide-react";
+import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Route, Lock, Inbox } from "lucide-react";
 import { type LeadFolder, useCreateFolder, useRenameFolder, useDeleteFolder } from "@/hooks/useLeadFolders";
 import { useRoutingRules, useCreateRoutingRule, useDeleteRoutingRule, type LeadRoutingRule } from "@/hooks/useLeadRouting";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ const MATCH_FIELDS = [
   { value: "tag", label: "Tag" },
 ];
 
-const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, totalLeadCount }: Props) => {
+const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, totalLeadCount, unfiledCount = 0 }: Props) => {
   const createFolder = useCreateFolder();
   const renameFolder = useRenameFolder();
   const deleteFolder = useDeleteFolder();
@@ -95,6 +95,24 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>
+
+      <button
+        onClick={() => onSelectFolder("all")}
+        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${activeFolderId === "all" || !activeFolderId ? "bg-accent/10 text-accent font-medium" : "hover:bg-muted"}`}
+      >
+        <Inbox className="h-4 w-4 shrink-0" />
+        <span className="flex-1 text-left">All leads</span>
+        <span className="text-xs text-muted-foreground">{totalLeadCount}</span>
+      </button>
+
+      <button
+        onClick={() => onSelectFolder("unfiled")}
+        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${activeFolderId === "unfiled" ? "bg-accent/10 text-accent font-medium" : "hover:bg-muted"}`}
+      >
+        <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="flex-1 text-left">Unfiled</span>
+        <span className="text-xs text-muted-foreground">{unfiledCount}</span>
+      </button>
 
       {folders.map((f) => {
         const protectedFolder = isUncategorized(f.name);
