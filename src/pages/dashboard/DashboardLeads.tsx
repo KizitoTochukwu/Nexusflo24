@@ -435,9 +435,16 @@ const DashboardLeads = () => {
                     <TableRow>
                       <TableHead className="w-10">
                         <Checkbox
-                          checked={leads.length > 0 && selectedIds.size === leads.length}
-                          onCheckedChange={toggleAll}
-                          aria-label="Select all"
+                          checked={pagedLeads.length > 0 && pagedLeads.every((l) => selectedIds.has(l.id))}
+                          onCheckedChange={() => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              const allSelected = pagedLeads.every((l) => next.has(l.id));
+                              pagedLeads.forEach((l) => allSelected ? next.delete(l.id) : next.add(l.id));
+                              return next;
+                            });
+                          }}
+                          aria-label="Select all on this page"
                         />
                       </TableHead>
                       <TableHead>Name</TableHead>
