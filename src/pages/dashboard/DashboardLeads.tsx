@@ -394,8 +394,17 @@ const DashboardLeads = () => {
                 <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
                   <p className="font-medium">No leads found</p>
                   <p className="mt-1 text-sm">
-                    {activeFolder ? `No leads in "${activeFolder.name}". Move leads here using bulk actions.` : "Add your first lead or import from CSV."}
+                    {hiddenCount > 0
+                      ? `${hiddenCount} lead${hiddenCount !== 1 ? "s are" : " is"} hidden by the current folder or filters.`
+                      : activeFolder
+                        ? `No leads in "${activeFolder.name}". Move leads here using bulk actions.`
+                        : "Add your first lead or import from CSV."}
                   </p>
+                  {hiddenCount > 0 && (
+                    <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
+                      Show all leads
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
