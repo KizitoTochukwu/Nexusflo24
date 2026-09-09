@@ -98,6 +98,16 @@ const DashboardLeads = () => {
     return filtered;
   }, [allLeads, folderFilter, activeFolderId, folderLeadIds, filedLeadIds, aiVerdict]);
 
+  // Reset to first page whenever the result set changes
+  useEffect(() => { setPage(1); }, [leads.length, folderFilter, search, status, source, pipelineStage, aiVerdict, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(leads.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedLeads = useMemo(
+    () => leads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [leads, currentPage]
+  );
+
   const unfiledCount = useMemo(() => {
     const filed = new Set(filedLeadIds ?? []);
     return unfilteredLeads.filter((l) => !filed.has(l.id)).length;
