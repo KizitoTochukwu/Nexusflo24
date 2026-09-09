@@ -1,37 +1,25 @@
-# Fix: leads missing from the CRM leads list
+# Why today's leads only showed on Contacts
 
-## What I found (verified against the live data)
+They were saved in both places. Every capture writes the Leads record first, then creates a matching Contact a fraction of a second later — I confirmed today's records exist as leads (Webinar — WhatsApp Sales source). The Leads page just hid them.
 
-The leads are not lost — the list is hiding them because their status labels don't match.
+Two reasons they were hidden:
 
-In this workspace there are **670 leads**, stored under five different status labels:
+1. **Folders**: the Leads page always shows one folder at a time and auto-picks a folder on load. Today's leads were not put in any folder, so no folder view contains them — there is no "All leads" view to fall back on.
+2. **Status wording**: the incoming leads were saved with the status written as "new" (lowercase), while the status filter looks for an exact "New". Anyone filtering by New would also miss them.
 
-| Status stored | Leads |
-| --- | --- |
-| `new lead` | 604 |
-| `New` | 49 |
-| `Warm` | 13 |
-| `Hot` | 3 |
-| `new` | 1 |
+## Fix
 
-The status box at the top of the Leads page only offers `New`, `Warm`, `Hot`, `Won`, `Lost`, and it matches the wording exactly. So when "New" is chosen, the 605 leads saved as `new lead` / `new` vanish.
-
-That explains both screenshots:
-- "Facebook Lead Ads" folder says 15 but the table lists 10 — the other 5 are saved as `new lead` (1) and `Warm` (4).
-- "Webinar – AI Sales System Masterclass" says 1 but shows "No leads found" — its single lead is `Warm`.
-
-Folder counts themselves are correct: every folder join points at a lead that still exists.
-
-## The fix
-
-1. **Tidy the stored statuses.** Update the leads whose status is `new lead` or `new` to `New`, so every lead uses one of the five standard labels. This changes only the label; no lead is deleted or moved.
-2. **Make the status filter forgiving.** Match statuses case-insensitively and treat `new lead` as `New`, so any leads that arrive later with odd wording still show up.
-3. **Make the folder count and the table agree.** When a folder's count is higher than the number of rows on screen, show a small line under the title: "5 leads in this folder are hidden by your current filters — Clear filters", with a one-click reset.
-4. **Remove the silent row cap.** The list currently fetches without an explicit limit, which tops out at 1,000 rows; this workspace is at 670. Raise the fetch limit and load in pages so growth doesn't start hiding leads again.
+- Add an **All leads** option at the top of the folder list (and the mobile folder dropdown), selected by default, so nothing is ever invisible. Folder views keep working as they do now.
+- Add an **Unfiled** view that shows leads not yet in any folder, with a count badge.
+- Make the status filter match regardless of capitalisation, so "new" and "New" are treated as the same status.
+- Save newly captured leads with consistent capitalisation going forward, and tidy the existing mixed-case values so counts and filters agree.
+- When a filter or folder is hiding results, show a short line such as "5 leads hidden by the current filter" with a one-click way to clear it, instead of a bare "No leads found".
 
 ## Technical notes
 
-- Data change through the run-SQL tool: `UPDATE leads SET status = 'New' WHERE lower(status) IN ('new lead','new')`. No schema migration needed.
-- `src/hooks/useLeads.ts`: replace the exact `.eq("status", ...)` with a case-insensitive/alias-aware match, and add an explicit range so more than 1,000 leads can load.
-- `src/pages/dashboard/DashboardLeads.tsx`: add the "hidden by filters" hint plus a Clear filters action; also normalise the status shown in the table badge.
-- Lead ingestion (`supabase/functions/ingest-leads`) will be checked so newly captured leads are written with the standard `New` label.
+- `src/pages/dashboard/DashboardLeads.tsx`: folder state gains `"all"` and `"unfiled"` sentinels; auto-select becomes `"all"`; the folder filter in the `leads` memo skips filtering for `"all"` and inverts for `"unfiled"`.
+- `src/hooks/useLeads.ts`: status filter switches from `.eq("status", value)` to a case-insensitive match (`.ilike`), plus alias handling for "new lead" vs "New".
+- Capture paths (`capture-lead`, `ingest-leads`) normalise status casing on insert; a one-off data update aligns existing `new` / `new lead` values.
+- Empty-state component in the leads table gains a hidden-by-filter message driven by `allLeads.length` vs `leads.length`.
+
+No lead or contact records are deleted, and no captures are re-run.
