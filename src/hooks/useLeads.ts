@@ -127,10 +127,14 @@ export function useLeadStats(workspaceId: string) {
       if (error) throw error;
       const leads = data ?? [];
       const total = leads.length;
-      const newCount = leads.filter((l: any) => l.status === "New").length;
-      const warm = leads.filter((l: any) => l.status === "Warm").length;
-      const hot = leads.filter((l: any) => l.status === "Hot").length;
-      const won = leads.filter((l: any) => l.status === "Won").length;
+      const matches = (l: any, key: string) => {
+        const value = String(l.status ?? "").trim().toLowerCase();
+        return (STATUS_ALIASES[key] ?? [key]).some((a) => a.toLowerCase() === value);
+      };
+      const newCount = leads.filter((l: any) => matches(l, "new")).length;
+      const warm = leads.filter((l: any) => matches(l, "warm")).length;
+      const hot = leads.filter((l: any) => matches(l, "hot")).length;
+      const won = leads.filter((l: any) => matches(l, "won")).length;
       return { total, newCount, warm, hot, won, leads };
     },
     enabled: !!user && !!workspaceId,
