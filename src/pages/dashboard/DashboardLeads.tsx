@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
 import { Plus, Upload, Search, Pencil, Trash2, Eye, MoreVertical, Sparkles, LayoutGrid, List } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, PIPELINE_STAGES, type Lead, type LeadFilters, type PipelineStage } from "@/hooks/useLeads";
 import { useQualifyLead } from "@/hooks/useQualifyLead";
-import { useLeadFolders, useFolderLeadIds, useAssignLeadsToFolder, useRemoveLeadsFromFolder, useMoveLeadsBetweenFolders, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
+import { useLeadFolders, useFolderLeadIds, useFiledLeadIds, useAssignLeadsToFolder, useRemoveLeadsFromFolder, useMoveLeadsBetweenFolders, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
 import AddLeadDialog from "@/components/leads/AddLeadDialog";
 import LeadDetailsDrawer from "@/components/leads/LeadDetailsDrawer";
 import CsvImportDialog from "@/components/leads/CsvImportDialog";
