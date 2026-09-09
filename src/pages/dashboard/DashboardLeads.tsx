@@ -60,9 +60,11 @@ const DashboardLeads = () => {
   const [aiVerdict, setAiVerdict] = useState(initialAiVerdict);
   const [pipelineStage, setPipelineStage] = useState<string>("All");
   const [sort, setSort] = useState<LeadFilters["sort"]>("newest");
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [folderFilter, setFolderFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table" | "pipeline">("table");
+
+  const activeFolderId = folderFilter === "all" || folderFilter === "unfiled" ? null : folderFilter;
 
   const filters: LeadFilters = useMemo(() => ({
     search: search || undefined,
@@ -73,20 +75,17 @@ const DashboardLeads = () => {
   }), [search, status, source, pipelineStage, sort]);
 
   const { data: allLeads = [], isLoading } = useLeads(workspaceId, filters);
+  const { data: unfilteredLeads = [] } = useLeads(workspaceId, {});
   const { data: folders = [] } = useLeadFolders(workspaceId);
   const { data: folderLeadIds } = useFolderLeadIds(activeFolderId, workspaceId);
-
-  // Auto-select first folder (preferring "Uncategorized") once folders load
-  useEffect(() => {
-    if (!activeFolderId && folders.length > 0) {
-      const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
-      setActiveFolderId((uncategorized || folders[0]).id);
-    }
-  }, [folders, activeFolderId]);
+  const { data: filedLeadIds } = useFiledLeadIds(workspaceId);
 
   const leads = useMemo(() => {
     let filtered = allLeads;
-    if (activeFolderId && folderLeadIds) {
+    if (folderFilter === "unfiled") {
+      const filed = new Set(filedLeadIds ?? []);
+      filtered = filtered.filter((l) => !filed.has(l.id));
+    } else if (activeFolderId && folderLeadIds) {
       const idSet = new Set(folderLeadIds);
       filtered = filtered.filter((l) => idSet.has(l.id));
     }
@@ -94,7 +93,25 @@ const DashboardLeads = () => {
       filtered = filtered.filter((l) => (l as any).ai_qualification?.verdict === aiVerdict);
     }
     return filtered;
-  }, [allLeads, activeFolderId, folderLeadIds, aiVerdict]);
+  }, [allLeads, folderFilter, activeFolderId, folderLeadIds, filedLeadIds, aiVerdict]);
+
+  const unfiledCount = useMemo(() => {
+    const filed = new Set(filedLeadIds ?? []);
+    return unfilteredLeads.filter((l) => !filed.has(l.id)).length;
+  }, [unfilteredLeads, filedLeadIds]);
+
+  const hiddenCount = Math.max(unfilteredLeads.length - leads.length, 0);
+  const filtersActive = status !== "All" || source !== "All" || pipelineStage !== "All" || aiVerdict !== "All" || !!search;
+
+  const clearFilters = useCallback(() => {
+    setSearch("");
+    setStatus("All");
+    setSource("All");
+    setPipelineStage("All");
+    setAiVerdict("All");
+    setFolderFilter("all");
+  }, []);
+
 
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
