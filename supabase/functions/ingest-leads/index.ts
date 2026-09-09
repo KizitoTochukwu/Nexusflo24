@@ -20,6 +20,25 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Keep lead status wording consistent so CRM filters and counts agree.
+const STATUS_CANONICAL: Record<string, string> = {
+  "new": "New",
+  "new lead": "New",
+  "lead": "New",
+  "warm": "Warm",
+  "hot": "Hot",
+  "won": "Won",
+  "customer": "Won",
+  "lost": "Lost",
+  "unqualified": "Lost",
+};
+
+function normaliseStatus(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return "New";
+  return STATUS_CANONICAL[raw.toLowerCase()] ?? raw;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -251,7 +270,7 @@ Deno.serve(async (req) => {
           email: trimmedEmail || null,
           phone: trimmedPhone || null,
           source: source || "Make.com",
-          status: status || "New",
+          status: normaliseStatus(status),
           score: score ?? 10,
           tags: tags.length ? tags : ["make-ingest"],
           notes: notes || null,

@@ -288,3 +288,20 @@ export function useFolderLeadIds(folderId: string | null, workspaceId: string) {
     enabled: !!folderId && !!workspaceId,
   });
 }
+
+// All lead ids that belong to at least one folder in the workspace.
+// Used to render the "Unfiled" view on the Leads page.
+export function useFiledLeadIds(workspaceId: string) {
+  return useQuery({
+    queryKey: ["filed-lead-ids", workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_folder_leads")
+        .select("lead_id")
+        .eq("workspace_id", workspaceId);
+      if (error) throw error;
+      return (data ?? []).map((d: any) => d.lead_id as string);
+    },
+    enabled: !!workspaceId,
+  });
+}

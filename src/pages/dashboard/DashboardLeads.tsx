@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
 import { Plus, Upload, Search, Pencil, Trash2, Eye, MoreVertical, Sparkles, LayoutGrid, List } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead, PIPELINE_STAGES, type Lead, type LeadFilters, type PipelineStage } from "@/hooks/useLeads";
 import { useQualifyLead } from "@/hooks/useQualifyLead";
-import { useLeadFolders, useFolderLeadIds, useAssignLeadsToFolder, useRemoveLeadsFromFolder, useMoveLeadsBetweenFolders, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
+import { useLeadFolders, useFolderLeadIds, useFiledLeadIds, useAssignLeadsToFolder, useRemoveLeadsFromFolder, useMoveLeadsBetweenFolders, useBulkDeleteLeads, useDeleteAllLeads } from "@/hooks/useLeadFolders";
 import AddLeadDialog from "@/components/leads/AddLeadDialog";
 import LeadDetailsDrawer from "@/components/leads/LeadDetailsDrawer";
 import CsvImportDialog from "@/components/leads/CsvImportDialog";
@@ -60,9 +60,11 @@ const DashboardLeads = () => {
   const [aiVerdict, setAiVerdict] = useState(initialAiVerdict);
   const [pipelineStage, setPipelineStage] = useState<string>("All");
   const [sort, setSort] = useState<LeadFilters["sort"]>("newest");
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [folderFilter, setFolderFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table" | "pipeline">("table");
+
+  const activeFolderId = folderFilter === "all" || folderFilter === "unfiled" ? null : folderFilter;
 
   const filters: LeadFilters = useMemo(() => ({
     search: search || undefined,
@@ -73,20 +75,17 @@ const DashboardLeads = () => {
   }), [search, status, source, pipelineStage, sort]);
 
   const { data: allLeads = [], isLoading } = useLeads(workspaceId, filters);
+  const { data: unfilteredLeads = [] } = useLeads(workspaceId, {});
   const { data: folders = [] } = useLeadFolders(workspaceId);
   const { data: folderLeadIds } = useFolderLeadIds(activeFolderId, workspaceId);
-
-  // Auto-select first folder (preferring "Uncategorized") once folders load
-  useEffect(() => {
-    if (!activeFolderId && folders.length > 0) {
-      const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
-      setActiveFolderId((uncategorized || folders[0]).id);
-    }
-  }, [folders, activeFolderId]);
+  const { data: filedLeadIds } = useFiledLeadIds(workspaceId);
 
   const leads = useMemo(() => {
     let filtered = allLeads;
-    if (activeFolderId && folderLeadIds) {
+    if (folderFilter === "unfiled") {
+      const filed = new Set(filedLeadIds ?? []);
+      filtered = filtered.filter((l) => !filed.has(l.id));
+    } else if (activeFolderId && folderLeadIds) {
       const idSet = new Set(folderLeadIds);
       filtered = filtered.filter((l) => idSet.has(l.id));
     }
@@ -94,7 +93,25 @@ const DashboardLeads = () => {
       filtered = filtered.filter((l) => (l as any).ai_qualification?.verdict === aiVerdict);
     }
     return filtered;
-  }, [allLeads, activeFolderId, folderLeadIds, aiVerdict]);
+  }, [allLeads, folderFilter, activeFolderId, folderLeadIds, filedLeadIds, aiVerdict]);
+
+  const unfiledCount = useMemo(() => {
+    const filed = new Set(filedLeadIds ?? []);
+    return unfilteredLeads.filter((l) => !filed.has(l.id)).length;
+  }, [unfilteredLeads, filedLeadIds]);
+
+  const hiddenCount = Math.max(unfilteredLeads.length - leads.length, 0);
+  
+
+  const clearFilters = useCallback(() => {
+    setSearch("");
+    setStatus("All");
+    setSource("All");
+    setPipelineStage("All");
+    setAiVerdict("All");
+    setFolderFilter("all");
+  }, []);
+
 
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
@@ -224,10 +241,11 @@ const DashboardLeads = () => {
         <div className="hidden lg:block w-56 shrink-0 space-y-4">
           <FolderPanel
             folders={folders}
-            activeFolderId={activeFolderId}
-            onSelectFolder={(id) => { setActiveFolderId(id); clearSelection(); }}
+            activeFolderId={folderFilter}
+            onSelectFolder={(id) => { setFolderFilter(id || "all"); clearSelection(); }}
             workspaceId={workspaceId}
-            totalLeadCount={allLeads.length}
+            totalLeadCount={unfilteredLeads.length}
+            unfiledCount={unfiledCount}
           />
           <SmartListPanel
             workspaceId={workspaceId}
@@ -246,10 +264,20 @@ const DashboardLeads = () => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold">
-                {activeFolder ? activeFolder.name : "Leads"}
+                {activeFolder ? activeFolder.name : folderFilter === "unfiled" ? "Unfiled leads" : "All leads"}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {leads.length} lead{leads.length !== 1 ? "s" : ""}{activeFolder ? ` in ${activeFolder.name}` : ""}
+                {leads.length > 0 && hiddenCount > 0 && (
+                  <>
+                    {" · "}
+                    <span>{hiddenCount} hidden by the current folder or filters</span>
+                    {" "}
+                    <button type="button" className="underline hover:text-foreground" onClick={clearFilters}>
+                      Show all
+                    </button>
+                  </>
+                )}
               </p>
             </div>
             <div className="flex gap-2">
@@ -274,9 +302,11 @@ const DashboardLeads = () => {
               </div>
 
               <div className="lg:hidden">
-                <Select value={activeFolderId || ""} onValueChange={(v) => { setActiveFolderId(v); clearSelection(); }}>
+                <Select value={folderFilter} onValueChange={(v) => { setFolderFilter(v); clearSelection(); }}>
                   <SelectTrigger className="w-36"><SelectValue placeholder="Folder" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">All leads</SelectItem>
+                    <SelectItem value="unfiled">Unfiled</SelectItem>
                     {folders.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -374,8 +404,17 @@ const DashboardLeads = () => {
                 <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
                   <p className="font-medium">No leads found</p>
                   <p className="mt-1 text-sm">
-                    {activeFolder ? `No leads in "${activeFolder.name}". Move leads here using bulk actions.` : "Add your first lead or import from CSV."}
+                    {hiddenCount > 0
+                      ? `${hiddenCount} lead${hiddenCount !== 1 ? "s are" : " is"} hidden by the current folder or filters.`
+                      : activeFolder
+                        ? `No leads in "${activeFolder.name}". Move leads here using bulk actions.`
+                        : "Add your first lead or import from CSV."}
                   </p>
+                  {hiddenCount > 0 && (
+                    <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
+                      Show all leads
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>

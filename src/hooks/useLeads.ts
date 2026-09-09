@@ -61,6 +61,17 @@ export type LeadFilters = {
   sort?: "newest" | "oldest" | "highest_score";
 };
 
+// Historic records were saved with inconsistent wording/casing.
+const STATUS_ALIASES: Record<string, string[]> = {
+  new: ["New", "new lead", "lead"],
+  warm: ["Warm"],
+  hot: ["Hot"],
+  won: ["Won", "customer"],
+  lost: ["Lost", "unqualified"],
+};
+
+
+
 export function useLeads(workspaceId: string, filters: LeadFilters = {}) {
   const { user } = useAuth();
 
@@ -75,7 +86,10 @@ export function useLeads(workspaceId: string, filters: LeadFilters = {}) {
         );
       }
       if (filters.status && filters.status !== "All") {
-        query = query.eq("status", filters.status);
+        // Match status regardless of capitalisation, and treat known aliases
+        // (e.g. "new lead") as the same status.
+        const aliases = STATUS_ALIASES[filters.status.trim().toLowerCase()] ?? [filters.status];
+        query = query.or(aliases.map((a) => `status.ilike.${a}`).join(","));
       }
       if (filters.source && filters.source !== "All") {
         query = query.eq("source", filters.source);
@@ -113,10 +127,14 @@ export function useLeadStats(workspaceId: string) {
       if (error) throw error;
       const leads = data ?? [];
       const total = leads.length;
-      const newCount = leads.filter((l: any) => l.status === "New").length;
-      const warm = leads.filter((l: any) => l.status === "Warm").length;
-      const hot = leads.filter((l: any) => l.status === "Hot").length;
-      const won = leads.filter((l: any) => l.status === "Won").length;
+      const matches = (l: any, key: string) => {
+        const value = String(l.status ?? "").trim().toLowerCase();
+        return (STATUS_ALIASES[key] ?? [key]).some((a) => a.toLowerCase() === value);
+      };
+      const newCount = leads.filter((l: any) => matches(l, "new")).length;
+      const warm = leads.filter((l: any) => matches(l, "warm")).length;
+      const hot = leads.filter((l: any) => matches(l, "hot")).length;
+      const won = leads.filter((l: any) => matches(l, "won")).length;
       return { total, newCount, warm, hot, won, leads };
     },
     enabled: !!user && !!workspaceId,
