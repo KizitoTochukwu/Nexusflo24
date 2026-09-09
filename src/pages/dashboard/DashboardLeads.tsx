@@ -178,14 +178,6 @@ const DashboardLeads = () => {
     });
   }, []);
 
-  const toggleAll = useCallback(() => {
-    if (selectedIds.size === leads.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(leads.map((l) => l.id)));
-    }
-  }, [leads, selectedIds.size]);
-
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const handleBulkDelete = () => {
