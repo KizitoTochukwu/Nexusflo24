@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -452,7 +452,7 @@ const DashboardLeads = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {leads.map((lead) => (
+                    {pagedLeads.map((lead) => (
                       <TableRow key={lead.id} className="cursor-pointer" data-state={selectedIds.has(lead.id) ? "selected" : undefined}>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
