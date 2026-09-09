@@ -14,12 +14,12 @@ export type CrmNavItem = {
 
 /** Primary sections shown as tabs on desktop. */
 export const CRM_PRIMARY_NAV: CrmNavItem[] = [
+  { key: "leads", label: "Leads", path: "leads", icon: Users },
   { key: "contacts", label: "Contacts", path: "crm/contacts", icon: Contact2 },
   { key: "companies", label: "Companies", path: "crm/companies", icon: Building2 },
-  { key: "leads", label: "Leads", path: "leads", icon: Users },
   { key: "deals", label: "Deals", path: "crm/deals", icon: Handshake },
-  { key: "tasks", label: "Tasks", path: "crm/tasks", icon: ListChecks },
   { key: "pipelines", label: "Pipelines", path: "crm/pipelines", icon: GitBranch },
+  { key: "tasks", label: "Tasks", path: "crm/tasks", icon: ListChecks },
 ];
 
 /** Secondary sections tucked into the "More" menu. */

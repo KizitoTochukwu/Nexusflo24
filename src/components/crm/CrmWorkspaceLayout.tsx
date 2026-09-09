@@ -86,7 +86,7 @@ const CrmWorkspaceLayout = () => {
             aria-label="CRM sections"
             className="flex w-full items-center gap-1 rounded-full border border-border/60 bg-gradient-to-b from-card to-muted/40 p-1 shadow-[0_1px_2px_hsl(var(--foreground)/0.06),0_8px_24px_-16px_hsl(var(--foreground)/0.35)]"
           >
-            <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {CRM_PRIMARY_NAV.map((item) => {
                 const isActive = active?.key === item.key;
                 return (
@@ -94,7 +94,7 @@ const CrmWorkspaceLayout = () => {
                     key={item.key}
                     to={to(item.path)}
                     aria-current={isActive ? "page" : undefined}
-                    className={`group relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium tracking-tight transition-all duration-200 ${
+                    className={`group relative flex flex-1 justify-center items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium tracking-tight transition-all duration-200 ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-sm"
