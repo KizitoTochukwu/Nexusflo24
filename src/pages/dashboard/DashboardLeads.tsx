@@ -241,10 +241,11 @@ const DashboardLeads = () => {
         <div className="hidden lg:block w-56 shrink-0 space-y-4">
           <FolderPanel
             folders={folders}
-            activeFolderId={activeFolderId}
-            onSelectFolder={(id) => { setActiveFolderId(id); clearSelection(); }}
+            activeFolderId={folderFilter}
+            onSelectFolder={(id) => { setFolderFilter(id || "all"); clearSelection(); }}
             workspaceId={workspaceId}
-            totalLeadCount={allLeads.length}
+            totalLeadCount={unfilteredLeads.length}
+            unfiledCount={unfiledCount}
           />
           <SmartListPanel
             workspaceId={workspaceId}
@@ -263,7 +264,7 @@ const DashboardLeads = () => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold">
-                {activeFolder ? activeFolder.name : "Leads"}
+                {activeFolder ? activeFolder.name : folderFilter === "unfiled" ? "Unfiled leads" : "All leads"}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {leads.length} lead{leads.length !== 1 ? "s" : ""}{activeFolder ? ` in ${activeFolder.name}` : ""}
@@ -291,9 +292,11 @@ const DashboardLeads = () => {
               </div>
 
               <div className="lg:hidden">
-                <Select value={activeFolderId || ""} onValueChange={(v) => { setActiveFolderId(v); clearSelection(); }}>
+                <Select value={folderFilter} onValueChange={(v) => { setFolderFilter(v); clearSelection(); }}>
                   <SelectTrigger className="w-36"><SelectValue placeholder="Folder" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">All leads</SelectItem>
+                    <SelectItem value="unfiled">Unfiled</SelectItem>
                     {folders.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
