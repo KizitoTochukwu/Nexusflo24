@@ -504,8 +504,34 @@ const DashboardLeads = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                   </TableBody>
+                 </Table>
+               )}
+              {viewMode === "table" && leads.length > 0 && (
+                <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+                  <span className="text-xs text-muted-foreground">
+                    Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, leads.length)} of {leads.length} leads
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           )}
