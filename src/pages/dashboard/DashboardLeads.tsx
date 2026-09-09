@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,9 @@ const DashboardLeads = () => {
   const [folderFilter, setFolderFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table" | "pipeline">("table");
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 10;
 
   const activeFolderId = folderFilter === "all" || folderFilter === "unfiled" ? null : folderFilter;
 
@@ -94,6 +97,16 @@ const DashboardLeads = () => {
     }
     return filtered;
   }, [allLeads, folderFilter, activeFolderId, folderLeadIds, filedLeadIds, aiVerdict]);
+
+  // Reset to first page whenever the result set changes
+  useEffect(() => { setPage(1); }, [leads.length, folderFilter, search, status, source, pipelineStage, aiVerdict, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(leads.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedLeads = useMemo(
+    () => leads.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [leads, currentPage]
+  );
 
   const unfiledCount = useMemo(() => {
     const filed = new Set(filedLeadIds ?? []);
@@ -164,14 +177,6 @@ const DashboardLeads = () => {
       return next;
     });
   }, []);
-
-  const toggleAll = useCallback(() => {
-    if (selectedIds.size === leads.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(leads.map((l) => l.id)));
-    }
-  }, [leads, selectedIds.size]);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
@@ -422,9 +427,16 @@ const DashboardLeads = () => {
                     <TableRow>
                       <TableHead className="w-10">
                         <Checkbox
-                          checked={leads.length > 0 && selectedIds.size === leads.length}
-                          onCheckedChange={toggleAll}
-                          aria-label="Select all"
+                          checked={pagedLeads.length > 0 && pagedLeads.every((l) => selectedIds.has(l.id))}
+                          onCheckedChange={() => {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              const allSelected = pagedLeads.every((l) => next.has(l.id));
+                              pagedLeads.forEach((l) => allSelected ? next.delete(l.id) : next.add(l.id));
+                              return next;
+                            });
+                          }}
+                          aria-label="Select all on this page"
                         />
                       </TableHead>
                       <TableHead>Name</TableHead>
@@ -439,7 +451,7 @@ const DashboardLeads = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {leads.map((lead) => (
+                    {pagedLeads.map((lead) => (
                       <TableRow key={lead.id} className="cursor-pointer" data-state={selectedIds.has(lead.id) ? "selected" : undefined}>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
@@ -484,8 +496,34 @@ const DashboardLeads = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                   </TableBody>
+                 </Table>
+               )}
+              {viewMode === "table" && leads.length > 0 && (
+                <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+                  <span className="text-xs text-muted-foreground">
+                    Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, leads.length)} of {leads.length} leads
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-xs text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           )}
