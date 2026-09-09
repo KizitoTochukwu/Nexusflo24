@@ -6,8 +6,19 @@ import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-workspace-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-workspace-id, x-crm-webhook-secret",
 };
+
+// Constant-time string comparison (avoids leaking secret via timing)
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,15 +32,27 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Bearer token auth
-  const authHeader = req.headers.get("Authorization");
-  const expectedToken = Deno.env.get("LEADS_INGEST_TOKEN");
-  if (!expectedToken || !authHeader || authHeader !== `Bearer ${expectedToken}`) {
+  // Auth: either the legacy ingest bearer token, or the shared CRM webhook secret.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const providedSecret = req.headers.get("x-crm-webhook-secret") ?? "";
+
+  const expectedToken = Deno.env.get("LEADS_INGEST_TOKEN") ?? "";
+  const webhookSecret = Deno.env.get("CRM_WEBHOOK_SECRET") ?? "";
+
+  const authorized =
+    (!!expectedToken && !!bearer && timingSafeEqual(bearer, expectedToken)) ||
+    (!!webhookSecret && !!providedSecret && timingSafeEqual(providedSecret, webhookSecret)) ||
+    (!!webhookSecret && !!bearer && timingSafeEqual(bearer, webhookSecret));
+
+  if (!authorized) {
+    console.warn("[ingest-leads] rejected unauthenticated webhook call");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
 
   try {
     const supabase = createClient(
