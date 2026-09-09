@@ -63,6 +63,9 @@ const DashboardLeads = () => {
   const [folderFilter, setFolderFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table" | "pipeline">("table");
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 10;
 
   const activeFolderId = folderFilter === "all" || folderFilter === "unfiled" ? null : folderFilter;
 
