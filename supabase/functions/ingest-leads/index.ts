@@ -100,45 +100,95 @@ Deno.serve(async (req) => {
       });
     }
 
-    const ownerId = Deno.env.get("OWNER_USER_ID");
-    if (!ownerId) {
-      return new Response(JSON.stringify({ error: "Owner not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const fallbackOwnerId = Deno.env.get("OWNER_USER_ID") ?? null;
+
+    // Workspace resolution: header first, then body workspace_id, then the
+    // configured owner's first workspace.
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const headerWs = req.headers.get("X-Workspace-Id");
+    const bodyWs = typeof body.workspace_id === "string" ? body.workspace_id.trim() : "";
+    let workspaceId: string | null = (headerWs || bodyWs || "").trim() || null;
+
+    if (workspaceId && !uuidRe.test(workspaceId)) {
+      return new Response(
+        JSON.stringify({ error: "invalid_workspace_id", message: "workspace_id must be a UUID." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    // Workspace-aware: prefer X-Workspace-Id header, fallback to owner's first workspace
-    let workspaceId = req.headers.get("X-Workspace-Id");
-
     if (workspaceId) {
-      const { data: ws } = await supabase
+      const { data: ws, error: wsErr } = await supabase
         .from("workspaces")
-        .select("id")
+        .select("id, owner_user_id")
         .eq("id", workspaceId)
         .maybeSingle();
+      if (wsErr) throw wsErr;
       if (!ws) {
-        return new Response(JSON.stringify({ error: "Invalid workspace_id" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "unknown_workspace",
+            message: `No workspace found with id ${workspaceId}.`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
     } else {
-      console.warn("[ingest-leads] No X-Workspace-Id header provided, falling back to owner's first workspace");
+      if (!fallbackOwnerId) {
+        return new Response(
+          JSON.stringify({
+            error: "workspace_required",
+            message:
+              "No workspace was supplied. Send X-Workspace-Id header or workspace_id in the body.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      console.warn("[ingest-leads] No workspace supplied, falling back to owner's first workspace");
       const { data: membership } = await supabase
         .from("workspace_members")
         .select("workspace_id")
-        .eq("user_id", ownerId)
+        .eq("user_id", fallbackOwnerId)
         .order("created_at", { ascending: true })
         .limit(1)
         .maybeSingle();
       if (!membership) {
-        return new Response(JSON.stringify({ error: "No workspace found for owner" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "workspace_required",
+            message:
+              "No workspace was supplied and the configured owner has no workspace. Send X-Workspace-Id or workspace_id.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
       workspaceId = membership.workspace_id;
+    }
+
+    // Resolve the user the lead is written as: prefer an actual member of the
+    // target workspace (owner first), fall back to the configured owner secret.
+    let ownerId: string | null = null;
+    {
+      const { data: members } = await supabase
+        .from("workspace_members")
+        .select("user_id, role, created_at")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: true });
+      const list = members ?? [];
+      ownerId =
+        list.find((m: any) => m.role === "owner")?.user_id ??
+        list.find((m: any) => m.role === "admin")?.user_id ??
+        list[0]?.user_id ??
+        fallbackOwnerId;
+    }
+
+    if (!ownerId) {
+      return new Response(
+        JSON.stringify({
+          error: "owner_unresolved",
+          message: "Could not resolve a user to attribute this lead to for the target workspace.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const now = new Date().toISOString();
