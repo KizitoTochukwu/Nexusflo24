@@ -268,6 +268,16 @@ const DashboardLeads = () => {
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {leads.length} lead{leads.length !== 1 ? "s" : ""}{activeFolder ? ` in ${activeFolder.name}` : ""}
+                {leads.length > 0 && hiddenCount > 0 && (
+                  <>
+                    {" · "}
+                    <span>{hiddenCount} hidden by the current folder or filters</span>
+                    {" "}
+                    <button type="button" className="underline hover:text-foreground" onClick={clearFilters}>
+                      Show all
+                    </button>
+                  </>
+                )}
               </p>
             </div>
             <div className="flex gap-2">
