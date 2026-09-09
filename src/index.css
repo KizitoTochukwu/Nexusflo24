@@ -53,6 +53,10 @@
     --shadow-card-hover: 0 12px 40px -8px hsl(213 70% 14% / 0.15);
     --shadow-gold: 0 4px 20px -4px hsl(46 67% 52% / 0.4);
 
+    --gradient-crm-rail: linear-gradient(180deg, hsl(213 70% 16%) 0%, hsl(213 72% 11%) 100%);
+    --shadow-crm-rail: inset 0 1px 0 hsl(0 0% 100% / 0.08), 0 10px 30px -14px hsl(213 70% 14% / 0.65);
+    --shadow-crm-pill: 0 1px 0 hsl(0 0% 100% / 0.12) inset, 0 6px 18px -8px hsl(46 67% 52% / 0.55);
+
     --sidebar-background: 213 70% 14%;
     --sidebar-foreground: 210 20% 90%;
     --sidebar-primary: 46 67% 52%;
