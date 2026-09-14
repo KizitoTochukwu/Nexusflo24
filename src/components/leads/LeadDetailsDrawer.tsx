@@ -381,9 +381,27 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
 
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground flex items-center gap-1"><Plus className="h-3 w-3" /> Log Activity</p>
+            <Select value={activityType} onValueChange={setActivityType}>
+              <SelectTrigger className="mb-2 h-8 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent className="z-[70]">
+                <SelectItem value="manual_note">Note (no score change)</SelectItem>
+                {scoringOptions.map((o) => (
+                  <SelectItem key={o.key} value={o.key}>
+                    {o.label} ({o.points > 0 ? `+${o.points}` : o.points})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex gap-2">
-              <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a note…" rows={2} className="flex-1" />
-              <Button size="sm" onClick={handleLogNote} disabled={!noteText.trim()} className="bg-accent text-accent-foreground self-end">Add</Button>
+              <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder={activityType === "manual_note" ? "Add a note…" : "Optional note…"} rows={2} className="flex-1" />
+              <Button
+                size="sm"
+                onClick={handleLogNote}
+                disabled={activityType === "manual_note" && !noteText.trim()}
+                className="bg-accent text-accent-foreground self-end"
+              >
+                Add
+              </Button>
             </div>
           </div>
 
