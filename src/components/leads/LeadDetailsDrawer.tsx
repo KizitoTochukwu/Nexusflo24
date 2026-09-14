@@ -103,6 +103,8 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
   const toggleTask = useToggleLeadTask();
   const deleteTask = useDeleteLeadTask();
   const [noteText, setNoteText] = useState("");
+  const [activityType, setActivityType] = useState("manual_note");
+  const { data: scoringConfig } = useLeadScoringSettings(workspaceId);
   const [editingScore, setEditingScore] = useState(false);
   const [scoreVal, setScoreVal] = useState(0);
   const [newTaskTitle, setNewTaskTitle] = useState("");
