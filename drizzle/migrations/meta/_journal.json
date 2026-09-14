@@ -43,6 +43,13 @@
       "when": 1789412030366,
       "tag": "0005_fix_user_onboarding_upsert_constraint",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789412043284,
+      "tag": "0006_ensure_onboarding_pipeline",
+      "breakpoints": true
     }
   ]
 }
