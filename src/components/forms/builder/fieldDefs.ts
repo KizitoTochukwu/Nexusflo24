@@ -1,7 +1,7 @@
 import type { FormFieldType, FormField } from "@/hooks/useForms";
 import {
   Type, AlignLeft, Mail, Phone, Hash, ChevronDown, CheckSquare,
-  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow, Image as ImageIcon, Stamp,
+  Circle, ShieldCheck, EyeOff, Calendar, Minus, Heading1, Pilcrow, Image as ImageIcon, Stamp, Paperclip,
 } from "lucide-react";
 
 export const FIELD_DEFS: {
@@ -85,11 +85,25 @@ export const FIELD_DEFS: {
     defaults: () => ({ type: "date", label: "Date", name: "date" }),
   },
   {
+    type: "file",
+    label: "File upload",
+    icon: Paperclip,
+    defaults: () => ({
+      type: "file",
+      label: "Upload a file",
+      name: "file",
+      accept: "",
+      max_size_mb: 10,
+      multiple: false,
+    }),
+  },
+  {
     type: "hidden",
     label: "Hidden",
     icon: EyeOff,
     defaults: () => ({ type: "hidden", label: "Hidden", name: "hidden", default_value: "" }),
   },
+
   {
     type: "heading",
     label: "Heading",

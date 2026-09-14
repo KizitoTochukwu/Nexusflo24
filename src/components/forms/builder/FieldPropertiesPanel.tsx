@@ -11,19 +11,25 @@ import { useState } from "react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import ConditionalLogicEditor from "@/components/forms/builder/ConditionalLogicEditor";
+
 
 interface Props {
   field: FormField;
   onChange: (next: FormField) => void;
+  otherFields?: { name: string; label: string }[];
 }
+
 
 const HAS_OPTIONS = new Set(["select", "radio", "checkbox_group"]);
 const HAS_PLACEHOLDER = new Set(["short_text", "long_text", "email", "phone", "number", "select"]);
 const HAS_EDITOR_STYLING = new Set(["short_text", "long_text"]);
 const HAS_HEADING_STYLING = new Set(["heading", "paragraph"]);
 
-export default function FieldPropertiesPanel({ field, onChange }: Props) {
+export default function FieldPropertiesPanel({ field, onChange, otherFields = [] }: Props) {
+
   const [uploading, setUploading] = useState(false);
+
   const update = <K extends keyof FormField>(k: K, v: FormField[K]) =>
     onChange({ ...field, [k]: v });
 
@@ -658,7 +664,48 @@ export default function FieldPropertiesPanel({ field, onChange }: Props) {
           </div>
         </div>
       )}
+
+      {field.type === "file" && (
+        <div className="space-y-3 rounded-lg border p-3">
+          <Label className="text-xs font-semibold">File upload options</Label>
+          <div>
+            <Label className="text-xs">Accepted types</Label>
+            <Input
+              value={field.accept ?? ""}
+              placeholder=".pdf,.png,image/*"
+              onChange={(e) => update("accept", e.target.value)}
+            />
+            <p className="mt-1 text-[11px] text-muted-foreground">Leave empty to allow any file type.</p>
+          </div>
+          <div>
+            <Label className="text-xs">Max size (MB)</Label>
+            <Input
+              type="number"
+              min={1}
+              max={50}
+              value={field.max_size_mb ?? 10}
+              onChange={(e) => update("max_size_mb", Number(e.target.value) || 10)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Allow multiple files</Label>
+            <Switch
+              checked={Boolean(field.multiple)}
+              onCheckedChange={(v) => update("multiple", v)}
+            />
+          </div>
+        </div>
+      )}
+
+      {!isDisplayOnly && (
+        <ConditionalLogicEditor
+          field={field}
+          otherFields={otherFields}
+          onChange={(rule) => onChange({ ...field, visible_when: rule })}
+        />
+      )}
     </div>
+
   );
 }
 

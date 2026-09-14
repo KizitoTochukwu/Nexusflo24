@@ -62,6 +62,85 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
+    // ---------------------------------------------------------------
+    // Spam protection for public form submissions (honeypot, timing,
+    // per-IP rate limit, disposable email blocking). Only applies when
+    // the submission comes from a stored form (body.form_id present).
+    // ---------------------------------------------------------------
+    const spamFormId = typeof body.form_id === "string" ? body.form_id : null;
+    if (spamFormId) {
+      const { data: spamForm } = await supabase
+        .from("forms")
+        .select("settings")
+        .eq("id", spamFormId)
+        .maybeSingle();
+
+      const spam = (spamForm?.settings as any)?.spam ?? {};
+      const honeypotOn = spam.honeypot !== false;
+      const minSeconds = Number(spam.min_seconds ?? 2);
+      const rateLimit = Number(spam.rate_limit_per_hour ?? 20);
+      const blockDisposable = spam.block_disposable_email === true;
+
+      const rejected = (reason: string) => {
+        console.warn("[capture-lead] spam rejected:", reason, spamFormId);
+        return new Response(JSON.stringify({ error: "Submission rejected" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      };
+
+      if (honeypotOn && typeof body.hp_field === "string" && body.hp_field.trim() !== "") {
+        return rejected("honeypot");
+      }
+
+      const elapsed = Number(body.elapsed_ms);
+      if (minSeconds > 0 && Number.isFinite(elapsed) && elapsed < minSeconds * 1000) {
+        return rejected("too_fast");
+      }
+
+      if (blockDisposable) {
+        const domain = String(body.email ?? "").split("@")[1]?.toLowerCase() ?? "";
+        const disposable = [
+          "mailinator.com", "guerrillamail.com", "10minutemail.com", "tempmail.com",
+          "temp-mail.org", "yopmail.com", "trashmail.com", "sharklasers.com",
+          "getnada.com", "dispostable.com", "fakeinbox.com", "throwawaymail.com",
+        ];
+        if (domain && disposable.includes(domain)) return rejected("disposable_email");
+      }
+
+      if (rateLimit > 0) {
+        const ip =
+          req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+          req.headers.get("cf-connecting-ip") ||
+          "unknown";
+        const digest = await crypto.subtle.digest(
+          "SHA-256",
+          new TextEncoder().encode(`${spamFormId}:${ip}`),
+        );
+        const ipHash = Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        const since = new Date(Date.now() - 3600_000).toISOString();
+
+        const { count } = await supabase
+          .from("form_rate_limit")
+          .select("id", { count: "exact", head: true })
+          .eq("form_id", spamFormId)
+          .eq("ip_hash", ipHash)
+          .gte("created_at", since);
+
+        if ((count ?? 0) >= rateLimit) {
+          return new Response(
+            JSON.stringify({ error: "Too many submissions. Please try again later." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
+        await supabase.from("form_rate_limit").insert({ form_id: spamFormId, ip_hash: ipHash });
+      }
+    }
+
+
     const email = sanitizeString(body.email, 255);
     if (!email || !isValidEmail(email)) {
       return new Response(JSON.stringify({ error: "Valid email is required" }), {

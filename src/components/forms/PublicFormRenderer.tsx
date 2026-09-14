@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { FormRecord, FormField } from "@/hooks/useForms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import { fbqTrack } from "@/lib/analytics/metaPixel";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
 import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
 import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
+import { isFieldVisible } from "@/lib/forms/conditions";
+
 
 /**
  * Normalize a user-provided redirect URL so we never accidentally navigate
@@ -51,6 +53,8 @@ export default function PublicFormRenderer({ form, preview }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const startedAt = useRef<number>(Date.now());
 
   const allFieldsFlat = steps.flatMap((s) => s.fields);
   const hasPhoneField = allFieldsFlat.some(
@@ -59,14 +63,21 @@ export default function PublicFormRenderer({ form, preview }: Props) {
   const currentStep = steps[stepIdx];
   const isLast = stepIdx === steps.length - 1;
 
+  const visibleCurrentFields = useMemo(
+    () => (currentStep?.fields ?? []).filter((f) => isFieldVisible(f, values)),
+    [currentStep, values],
+  );
+
   const setVal = (name: string, v: any) => setValues((s) => ({ ...s, [name]: v }));
 
   const validateCurrent = () => {
-    for (const f of currentStep?.fields ?? []) {
+    for (const f of visibleCurrentFields) {
       if (!f.required) continue;
       const v = values[f.name];
       if (f.type === "consent" || f.type === "checkbox") {
         if (!v) return `Please confirm: ${f.label}`;
+      } else if (f.type === "file") {
+        if (!Array.isArray(v) || v.length === 0) return `${f.label} is required`;
       } else if (v === undefined || v === null || v === "") {
         return `${f.label} is required`;
       }
@@ -93,12 +104,16 @@ export default function PublicFormRenderer({ form, preview }: Props) {
 
     setSubmitting(true);
     try {
-      // Build lead payload from field map_to
-      const allFields = steps.flatMap((s) => s.fields);
+      // Build lead payload from field map_to — hidden (conditional) fields are excluded
+      const allFields = steps
+        .flatMap((s) => s.fields)
+        .filter((f) => isFieldVisible(f, values));
+      const submittedValues: Record<string, any> = {};
       const lead: Record<string, any> = { meta: {} as Record<string, any> };
       for (const f of allFields) {
         const v = values[f.name];
         if (v === undefined) continue;
+        submittedValues[f.name] = v;
         if (f.map_to && f.map_to !== "meta") {
           lead[f.map_to] = v;
         } else {
@@ -115,7 +130,9 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           source: settings.source,
           tags: settings.tags,
           form_id: form.id,
-          form_data: values,
+          form_data: submittedValues,
+          hp_field: honeypot,
+          elapsed_ms: Date.now() - startedAt.current,
           sms_consent: hasPhoneField ? smsConsent : undefined,
           sms_consent_text: hasPhoneField && smsConsent ? SMS_CONSENT_TEXT : undefined,
           sms_consent_timestamp: hasPhoneField && smsConsent ? new Date().toISOString() : undefined,
@@ -130,6 +147,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       });
       if (error) throw error;
 
+
       // Note: form_submissions insert + submission_count increment are now handled
       // server-side inside capture-lead (via DB trigger). Client no longer inserts
       // here to avoid double-counting.
@@ -140,7 +158,8 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           body: {
             form_id: form.id,
             workspace_id: form.workspace_id,
-            values,
+            values: submittedValues,
+
             lead_email: lead.email ?? null,
             lead_name: lead.full_name ?? null,
           },
@@ -180,7 +199,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-5 rounded-xl border p-6 shadow-sm"
+      className="relative space-y-5 rounded-xl border p-6 shadow-sm"
       style={{
         background: theme.bg_color,
         color: theme.text_color,
@@ -215,14 +234,37 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       )}
 
       <div className="space-y-4">
-        {(currentStep?.fields ?? []).map((f) => (
-          <FieldRenderer key={f.id} field={f} value={values[f.name]} onChange={(v) => setVal(f.name, v)} accent={theme.accent_color} />
+        {visibleCurrentFields.map((f) => (
+          <FieldRenderer
+            key={f.id}
+            field={f}
+            value={values[f.name]}
+            onChange={(v) => setVal(f.name, v)}
+            accent={theme.accent_color}
+            formId={form.id}
+            preview={preview}
+          />
         ))}
       </div>
 
       {hasPhoneField && isLast && (
         <SmsConsentCheckbox checked={smsConsent} onCheckedChange={setSmsConsent} />
       )}
+
+      {/* Honeypot — hidden from humans, tempting to bots */}
+      <div aria-hidden="true" className="absolute h-0 w-0 overflow-hidden opacity-0">
+        <label htmlFor={`hp-${form.id}`}>Leave this field empty</label>
+        <input
+          id={`hp-${form.id}`}
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+        />
+      </div>
+
+
 
 
 
@@ -245,13 +287,16 @@ export default function PublicFormRenderer({ form, preview }: Props) {
 }
 
 function FieldRenderer({
-  field, value, onChange, accent,
+  field, value, onChange, accent, formId, preview,
 }: {
   field: FormField;
   value: any;
   onChange: (v: any) => void;
   accent: string;
+  formId?: string;
+  preview?: boolean;
 }) {
+
   const styledLabel = (extra?: React.CSSProperties) => (
     <Label
       className="mb-1.5 block font-medium"
@@ -453,7 +498,19 @@ function FieldRenderer({
           </Label>
         </div>
       );
+    case "file":
+      return (
+        <FileFieldRenderer
+          field={field}
+          value={value}
+          onChange={onChange}
+          labelEl={labelEl}
+          formId={formId}
+          preview={preview}
+        />
+      );
     case "date":
+
       return (
         <div>
           {labelEl}
@@ -504,3 +561,86 @@ function FieldRenderer({
     }
   }
 }
+
+function FileFieldRenderer({
+  field, value, onChange, labelEl, formId, preview,
+}: {
+  field: FormField;
+  value: any;
+  onChange: (v: any) => void;
+  labelEl: React.ReactNode;
+  formId?: string;
+  preview?: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const files: { path: string; name: string; size: number }[] = Array.isArray(value) ? value : [];
+  const maxMb = field.max_size_mb ?? 10;
+
+  const handleFiles = async (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    if (preview) {
+      toast.info("File uploads are disabled in preview.");
+      return;
+    }
+    if (!formId) return;
+    setBusy(true);
+    try {
+      const uploaded = [...files];
+      for (const file of Array.from(list)) {
+        if (file.size > maxMb * 1024 * 1024) {
+          toast.error(`${file.name} is larger than ${maxMb}MB`);
+          continue;
+        }
+        const { data, error } = await supabase.functions.invoke("form-upload-url", {
+          body: { form_id: formId, field: field.name, file_name: file.name, size: file.size },
+        });
+        if (error || !data?.path) throw new Error(data?.error || "Upload failed");
+        const { error: upErr } = await supabase.storage
+          .from("form-uploads")
+          .uploadToSignedUrl(data.path, data.token, file);
+        if (upErr) throw upErr;
+        uploaded.push({ path: data.path, name: file.name, size: file.size });
+        if (!field.multiple) break;
+      }
+      onChange(field.multiple ? uploaded : uploaded.slice(-1));
+    } catch (e: any) {
+      toast.error(e.message || "Could not upload file");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      {labelEl}
+      <Input
+        type="file"
+        accept={field.accept || undefined}
+        multiple={Boolean(field.multiple)}
+        disabled={busy}
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+      <p className="mt-1 text-xs opacity-60">
+        {busy ? "Uploading…" : `Max ${maxMb}MB${field.accept ? ` · ${field.accept}` : ""}`}
+      </p>
+      {files.length > 0 && (
+        <ul className="mt-2 space-y-1 text-xs opacity-80">
+          {files.map((f) => (
+            <li key={f.path} className="flex items-center justify-between gap-2">
+              <span className="truncate">{f.name}</span>
+              <button
+                type="button"
+                className="underline"
+                onClick={() => onChange(files.filter((x) => x.path !== f.path))}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {field.help_text && <p className="mt-1 text-xs opacity-60">{field.help_text}</p>}
+    </div>
+  );
+}
+

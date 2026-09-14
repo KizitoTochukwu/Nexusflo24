@@ -15,11 +15,32 @@ export type FormFieldType =
   | "consent"
   | "hidden"
   | "date"
+  | "file"
   | "divider"
   | "heading"
   | "paragraph"
   | "image"
   | "logo";
+
+export type ConditionOperator =
+  | "equals"
+  | "not_equals"
+  | "contains"
+  | "not_contains"
+  | "is_empty"
+  | "is_not_empty";
+
+export interface FieldCondition {
+  field: string; // the `name` of another field
+  operator: ConditionOperator;
+  value?: string;
+}
+
+export interface VisibilityRule {
+  match: "all" | "any";
+  conditions: FieldCondition[];
+}
+
 
 export interface FormField {
   id: string;
@@ -65,7 +86,14 @@ export interface FormField {
   line_height?: number; // unitless multiplier
   margin_top?: number; // px
   margin_bottom?: number; // px
+  // conditional logic — field only renders when the rule passes
+  visible_when?: VisibilityRule;
+  // file upload
+  accept?: string; // e.g. ".pdf,.png,image/*"
+  max_size_mb?: number;
+  multiple?: boolean;
 }
+
 
 export interface FormStep {
   id: string;
@@ -94,7 +122,40 @@ export interface FormSettings {
   notify_channels?: FormNotifyChannels;
   notify_emails?: string[];
   notify_phones?: string[];
+  spam?: FormSpamSettings;
+  popup?: FormPopupSettings;
 }
+
+export interface FormSpamSettings {
+  honeypot: boolean;
+  min_seconds: number; // minimum time-to-submit; 0 disables
+  rate_limit_per_hour: number; // per IP per form; 0 disables
+  block_disposable_email: boolean;
+}
+
+export interface FormPopupSettings {
+  trigger: "button" | "delay" | "scroll" | "exit";
+  delay_seconds: number;
+  scroll_percent: number;
+  frequency: "always" | "session" | "days";
+  frequency_days: number;
+}
+
+export const DEFAULT_SPAM: FormSpamSettings = {
+  honeypot: true,
+  min_seconds: 2,
+  rate_limit_per_hour: 20,
+  block_disposable_email: false,
+};
+
+export const DEFAULT_POPUP: FormPopupSettings = {
+  trigger: "button",
+  delay_seconds: 5,
+  scroll_percent: 50,
+  frequency: "session",
+  frequency_days: 7,
+};
+
 
 export interface FormTheme {
   bg_color: string;
@@ -161,6 +222,9 @@ export const DEFAULT_SETTINGS: FormSettings = {
   notify_channels: { email: true, sms: false, whatsapp: false },
   notify_emails: [],
   notify_phones: [],
+  spam: DEFAULT_SPAM,
+  popup: DEFAULT_POPUP,
+
 };
 
 export const DEFAULT_THEME: FormTheme = {

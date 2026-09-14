@@ -107,6 +107,20 @@ export default function FormBuilder() {
     });
   };
 
+  const reorderFields = (stepIdx: number, from: number, to: number) => {
+    setSchema({
+      ...schema,
+      steps: schema.steps.map((s, i) => {
+        if (i !== stepIdx) return s;
+        const fields = [...s.fields];
+        const [moved] = fields.splice(from, 1);
+        fields.splice(to, 0, moved);
+        return { ...s, fields };
+      }),
+    });
+  };
+
+
   const deleteField = (stepIdx: number, fieldId: string) => {
     setSchema({
       ...schema,
@@ -187,6 +201,8 @@ export default function FormBuilder() {
               onSelectField={(s, f) => { setSelStep(s); setSelFieldId(f); }}
               onSelectStep={(i) => { setSelStep(i); setSelFieldId(null); }}
               onMoveField={moveField}
+              onReorderFields={reorderFields}
+
               onDeleteField={deleteField}
               onAddStep={addStep}
             />
@@ -202,7 +218,15 @@ export default function FormBuilder() {
             </TabsList>
             <TabsContent value="field" className="mt-3">
               {selectedField ? (
-                <FieldPropertiesPanel field={selectedField} onChange={updateField} />
+                <FieldPropertiesPanel
+                  field={selectedField}
+                  onChange={updateField}
+                  otherFields={(schema.steps ?? [])
+                    .flatMap((s) => s.fields)
+                    .filter((f) => f.id !== selectedField.id && f.name)
+                    .map((f) => ({ name: f.name, label: f.label || f.name }))}
+                />
+
               ) : (
                 <p className="p-4 text-center text-xs text-muted-foreground">Select a field to edit.</p>
               )}

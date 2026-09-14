@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789407241930,
+      "tag": "0000_form_uploads_storage_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789407260181,
+      "tag": "0001_fix_form_uploads_policy_args",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789407384944,
+      "tag": "0002_form_spam_rate_limit",
+      "breakpoints": true
+    }
+  ]
+}
