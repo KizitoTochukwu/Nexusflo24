@@ -82,6 +82,10 @@ export default function DashboardForms() {
             Build and manage lead capture forms. Embed them on any site or share the hosted link.
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={() => setAiOpen(true)}>
+          <Sparkles className="mr-1.5 h-4 w-4 text-accent" /> Generate with AI
+        </Button>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
