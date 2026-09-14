@@ -81,6 +81,8 @@ const DashboardImportExport = () => {
   const workspaceId = useWorkspaceId();
   const { canEdit } = useWorkspaceRole();
   const fileRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
+  const markImported = useMarkOnboardingFlag(workspaceId);
 
   const [entity, setEntity] = useState<Entity>("contacts");
   const [headers, setHeaders] = useState<string[]>([]);
