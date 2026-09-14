@@ -154,6 +154,10 @@ const DashboardImportExport = () => {
 
     setImporting(false);
     setResult({ inserted, failed });
+    if (inserted > 0) {
+      qc.invalidateQueries({ queryKey: ["getting-started"] });
+      if (entity === "contacts") markImported("contacts_imported");
+    }
     toast.success(`Imported ${inserted} ${LABELS[entity].toLowerCase()}${failed ? `, ${failed} skipped` : ""}`);
   };
 
