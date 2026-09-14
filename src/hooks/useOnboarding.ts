@@ -213,9 +213,10 @@ export function useGettingStarted(workspaceId: string) {
       id: "create_pipeline",
       label: "Create your pipeline",
       description: "Set the stages your deals move through in the CRM.",
-      done: Boolean(answers.pipeline_configured),
+      done: Boolean(s?.pipeline) || Boolean(answers.pipeline_configured),
       actionLabel: "Configure",
-      to: `${base}/leads?view=pipeline`,
+      to: `${base}/crm/pipelines`,
+
     },
     {
       id: "invite_team",
