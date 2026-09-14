@@ -12,12 +12,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import ConditionalLogicEditor from "@/components/forms/builder/ConditionalLogicEditor";
+import { uploadImageAsset } from "@/lib/storage/uploadImageAsset";
 
 
 interface Props {
   field: FormField;
   onChange: (next: FormField) => void;
   otherFields?: { name: string; label: string }[];
+  workspaceId?: string;
 }
 
 
@@ -26,7 +28,7 @@ const HAS_PLACEHOLDER = new Set(["short_text", "long_text", "email", "phone", "n
 const HAS_EDITOR_STYLING = new Set(["short_text", "long_text"]);
 const HAS_HEADING_STYLING = new Set(["heading", "paragraph"]);
 
-export default function FieldPropertiesPanel({ field, onChange, otherFields = [] }: Props) {
+export default function FieldPropertiesPanel({ field, onChange, otherFields = [], workspaceId }: Props) {
 
   const [uploading, setUploading] = useState(false);
 
@@ -42,17 +44,8 @@ export default function FieldPropertiesPanel({ field, onChange, otherFields = []
   const handleImageUpload = async (file: File) => {
     try {
       setUploading(true);
-      const { data: userRes } = await supabase.auth.getUser();
-      if (!userRes.user) throw new Error("Not authenticated");
-      const ext = file.name.split(".").pop() || "png";
-      const path = `${userRes.user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("funnel-assets").upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("funnel-assets").getPublicUrl(path);
-      update("image_url", pub.publicUrl);
+      const url = await uploadImageAsset(file, workspaceId ?? "", "forms");
+      update("image_url", url);
       toast.success("Image uploaded");
     } catch (e: any) {
       toast.error(e.message || "Upload failed");

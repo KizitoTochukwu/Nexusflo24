@@ -221,6 +221,7 @@ export default function FormBuilder() {
                 <FieldPropertiesPanel
                   field={selectedField}
                   onChange={updateField}
+                  workspaceId={workspaceId}
                   otherFields={(schema.steps ?? [])
                     .flatMap((s) => s.fields)
                     .filter((f) => f.id !== selectedField.id && f.name)
