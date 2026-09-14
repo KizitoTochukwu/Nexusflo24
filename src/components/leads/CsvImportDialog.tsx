@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCreateFolder, type LeadFolder } from "@/hooks/useLeadFolders";
+import { useMarkOnboardingFlag } from "@/hooks/useOnboarding";
 import { fireAutomationsForLeads } from "@/lib/automations/fireTriggers";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: string; folders?: LeadFolder[] };
