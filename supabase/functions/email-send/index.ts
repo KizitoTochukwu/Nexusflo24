@@ -293,6 +293,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    hold.held = false; // provider accepted — the credit is earned
     // Log outbound email (success)
     try {
       await adminClient.from("email_logs").insert({
@@ -319,7 +320,7 @@ Deno.serve(async (req) => {
           workspaceId, channel: "email",
           senderProfileId: resolvedSender?.profile?.id || null,
           messageId: result.messageId, country: null,
-          creditsDeducted: hold.held || deductAmount === 0 ? deductAmount : deductAmount, status: "sent",
+          creditsDeducted: deductAmount, status: "sent",
         });
       }
     } catch (_) { /* ignore logging errors */ }
