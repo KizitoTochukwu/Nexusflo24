@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Circle, ChevronDown, ChevronUp, X, Rocket, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, ChevronUp, X, Rocket, Loader2 } from "lucide-react";
 import { useGettingStarted, useOnboarding, useSaveOnboarding } from "@/hooks/useOnboarding";
 
 export const OPEN_CHECKLIST_EVENT = "nexusflo:open-checklist";
@@ -13,20 +13,21 @@ const GettingStartedChecklist = ({ workspaceId }: { workspaceId: string }) => {
   const save = useSaveOnboarding(workspaceId);
 
   const [dismissed, setDismissed] = useState(false);
-  const [minimized, setMinimized] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     if (hydrated || !record) return;
     setDismissed(Boolean(record.checklist_dismissed));
-    setMinimized(Boolean(record.checklist_minimized));
+    // Collapsed by default: the full list only opens when the user asks for it.
+    setExpanded(record.checklist_minimized === false);
     setHydrated(true);
   }, [record, hydrated]);
 
   useEffect(() => {
     const reopen = () => {
       setDismissed(false);
-      setMinimized(false);
+      setExpanded(true);
       save.mutate({ checklist_dismissed: false, checklist_minimized: false } as any);
     };
     window.addEventListener(OPEN_CHECKLIST_EVENT, reopen);
@@ -38,7 +39,45 @@ const GettingStartedChecklist = ({ workspaceId }: { workspaceId: string }) => {
     save.mutate(patch as any);
   };
 
+  // Nothing to prompt about once setup is finished, or after the user dismissed it.
   if (dismissed) return null;
+  if (!isLoading && completed >= total) return null;
+
+  const openFull = () => { setExpanded(true); update({ checklist_minimized: false }); };
+  const collapse = () => { setExpanded(false); update({ checklist_minimized: true }); };
+  const dismiss = () => { setDismissed(true); update({ checklist_dismissed: true }); };
+
+  if (!expanded) {
+    return (
+      <section
+        data-tour="getting-started"
+        className="mb-6 overflow-hidden rounded-xl border bg-gradient-to-r from-primary/5 to-accent/10"
+        aria-label="Finish setting up"
+      >
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Rocket className="h-4 w-4 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">
+              Finish setting up{isLoading ? "" : ` — ${completed} of ${total} done`}
+            </p>
+            <Progress value={isLoading ? 0 : percent} className="mt-1.5 h-1" />
+          </div>
+          <div className="flex items-center gap-1">
+            <Button size="sm" variant="outline" onClick={openFull}>Continue setup</Button>
+            <button
+              onClick={dismiss}
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Dismiss setup prompt"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -58,14 +97,14 @@ const GettingStartedChecklist = ({ workspaceId }: { workspaceId: string }) => {
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => { setMinimized((m) => !m); update({ checklist_minimized: !minimized }); }}
+            onClick={collapse}
             className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={minimized ? "Expand checklist" : "Minimise checklist"}
+            aria-label="Minimise checklist"
           >
-            {minimized ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            <ChevronUp className="h-4 w-4" />
           </button>
           <button
-            onClick={() => { setDismissed(true); update({ checklist_dismissed: true }); }}
+            onClick={dismiss}
             className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label="Dismiss checklist"
           >
@@ -77,31 +116,29 @@ const GettingStartedChecklist = ({ workspaceId }: { workspaceId: string }) => {
         </div>
       </div>
 
-      {!minimized && (
-        <div className="divide-y">
-          {isLoading && (
-            <div className="flex items-center gap-2 px-4 py-6 text-sm text-muted-foreground sm:px-5">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading your progress…
+      <div className="divide-y">
+        {isLoading && (
+          <div className="flex items-center gap-2 px-4 py-6 text-sm text-muted-foreground sm:px-5">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading your progress…
+          </div>
+        )}
+        {!isLoading && items.map((item) => (
+          <div key={item.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-5">
+            {item.done
+              ? <CheckCircle2 className="h-5 w-5 shrink-0 text-accent" />
+              : <Circle className="h-5 w-5 shrink-0 text-muted-foreground/50" />}
+            <div className="min-w-0 flex-1">
+              <p className={`text-sm font-medium ${item.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                {item.label}
+              </p>
+              <p className="text-xs text-muted-foreground">{item.description}</p>
             </div>
-          )}
-          {!isLoading && items.map((item) => (
-            <div key={item.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-5">
-              {item.done
-                ? <CheckCircle2 className="h-5 w-5 shrink-0 text-accent" />
-                : <Circle className="h-5 w-5 shrink-0 text-muted-foreground/50" />}
-              <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${item.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                  {item.label}
-                </p>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
-              </div>
-              <Button asChild size="sm" variant={item.done ? "ghost" : "outline"} className="w-full sm:w-auto">
-                <Link to={item.to ?? "#"}>{item.done ? "Review" : item.actionLabel}</Link>
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
+            <Button asChild size="sm" variant={item.done ? "ghost" : "outline"} className="w-full sm:w-auto">
+              <Link to={item.to ?? "#"}>{item.done ? "Review" : item.actionLabel}</Link>
+            </Button>
+          </div>
+        ))}
+      </div>
     </section>
   );
 };

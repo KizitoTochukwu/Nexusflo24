@@ -12,8 +12,11 @@ import {
   Loader2, Sparkles, Plus, X
 } from "lucide-react";
 import {
-  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, OnboardingAnswers,
+  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, useGettingStarted, OnboardingAnswers,
 } from "@/hooks/useOnboarding";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
 
 const INDUSTRIES = [
   "Coaching & Creators", "Marketing Agency", "E-commerce", "Professional Services",
@@ -44,6 +47,11 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
   const navigate = useNavigate();
   const { data: record, isLoading } = useOnboarding(workspaceId);
   const save = useSaveOnboarding(workspaceId);
+  const { user } = useAuth();
+  // Live setup signals, so a step shows as done when the real thing exists.
+  const { items: liveItems } = useGettingStarted(workspaceId);
+  const live = (id: string) => Boolean(liveItems.find((i) => i.id === id)?.done);
+
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>({});
@@ -98,12 +106,58 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
     } catch { /* noop */ }
   };
 
+  /** Creates the workspace pipeline from the entered stages, if none exists yet. */
+  const ensurePipeline = async () => {
+    const names = (stages ?? []).map((s) => s.trim()).filter(Boolean);
+    if (!names.length) return;
+    try {
+      const { data: existing, error } = await supabase
+        .from("crm_pipelines" as any)
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .limit(1);
+      if (error) return;
+      if ((existing ?? []).length) return; // never touch an existing pipeline
+
+      const { data: created, error: createError } = await supabase
+        .from("crm_pipelines" as any)
+        .insert({
+          workspace_id: workspaceId,
+          name: "Sales Pipeline",
+          is_default: true,
+          position: 0,
+          created_by: user?.id ?? null,
+        } as any)
+        .select("id")
+        .maybeSingle();
+      if (createError || !created) return;
+
+      await supabase.from("crm_pipeline_stages" as any).insert(
+        names.map((name, i) => ({
+          pipeline_id: (created as any).id,
+          workspace_id: workspaceId,
+          name,
+          position: i,
+        })) as any
+      );
+    } catch {
+      /* setup should never block finishing onboarding */
+    }
+  };
+
   const handleFinish = async () => {
     try {
-      await persist({ current_step: TOTAL_STEPS - 1, completed: true, completed_at: new Date().toISOString() });
+      await ensurePipeline();
+      await persist({
+        answers: { ...answers, pipeline_configured: true },
+        current_step: TOTAL_STEPS - 1,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      } as any);
       setCelebrate(true);
     } catch { /* noop */ }
   };
+
 
   const canContinue = useMemo(() => {
     if (current.id === "business") return Boolean((answers.business_name as string)?.trim());
@@ -271,8 +325,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Upload a CSV with names, emails, phone numbers, source and tags. Duplicates are merged automatically by email, then phone."
             actionLabel="Open CSV importer"
             onAction={() => window.open(`/dashboard/${workspaceId}/leads`, "_blank")}
-            done={Boolean(answers.contacts_imported)}
+            done={live("import_contacts") || Boolean(answers.contacts_imported)}
             onToggleDone={() => setAnswer("contacts_imported", !answers.contacts_imported)}
+            locked={live("import_contacts")}
             doneLabel="I've imported my contacts"
           />
         );
@@ -285,8 +340,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Add a verified sender profile so campaigns, automations and booking confirmations send from your own domain."
             actionLabel="Open sender settings"
             onAction={() => window.open(`/dashboard/${workspaceId}/settings/senders`, "_blank")}
-            done={Boolean(answers.email_connected)}
+            done={live("connect_email") || Boolean(answers.email_connected)}
             onToggleDone={() => setAnswer("email_connected", !answers.email_connected)}
+            locked={live("connect_email")}
             doneLabel="My sending email is connected"
           />
         );
@@ -299,8 +355,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Link Google Calendar to a booking page so availability stays in sync and confirmed meetings appear in your diary."
             actionLabel="Open bookings"
             onAction={() => window.open(`/dashboard/${workspaceId}/bookings`, "_blank")}
-            done={Boolean(answers.calendar_connected)}
+            done={live("connect_calendar") || Boolean(answers.calendar_connected)}
             onToggleDone={() => setAnswer("calendar_connected", !answers.calendar_connected)}
+            locked={live("connect_calendar")}
             doneLabel="My calendar is connected"
           />
         );
@@ -313,8 +370,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Invite colleagues by email and choose their role. They'll get access to the CRM, campaigns and shared inbox."
             actionLabel="Open team settings"
             onAction={() => window.open(`/dashboard/${workspaceId}/settings/team`, "_blank")}
-            done={Boolean(answers.team_invited)}
+            done={live("invite_team") || Boolean(answers.team_invited)}
             onToggleDone={() => setAnswer("team_invited", !answers.team_invited)}
+            locked={live("invite_team")}
             doneLabel="I've invited my team"
           />
         );
@@ -468,10 +526,10 @@ const Summary = ({ label, value }: { label: string; value: string }) => (
 );
 
 const ActionStep = ({
-  icon: Icon, title, copy, actionLabel, onAction, done, onToggleDone, doneLabel,
+  icon: Icon, title, copy, actionLabel, onAction, done, onToggleDone, doneLabel, locked = false,
 }: {
   icon: any; title: string; copy: string; actionLabel: string; onAction: () => void;
-  done: boolean; onToggleDone: () => void; doneLabel: string;
+  done: boolean; onToggleDone: () => void; doneLabel: string; locked?: boolean;
 }) => (
   <div className="space-y-4">
     <div className="rounded-xl border bg-muted/40 p-5">
@@ -481,8 +539,8 @@ const ActionStep = ({
       <Button variant="outline" className="mt-4" onClick={onAction}>{actionLabel}</Button>
     </div>
     <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-      <input type="checkbox" className="h-4 w-4 accent-current" checked={done} onChange={onToggleDone} />
-      {doneLabel}
+      <input type="checkbox" className="h-4 w-4 accent-current" checked={done} disabled={locked} onChange={onToggleDone} />
+      {locked ? "Done — we can see this in your workspace" : doneLabel}
     </label>
     <p className="text-xs text-muted-foreground">
       Not ready? Choose <span className="font-medium">Skip</span> — it will stay on your Getting Started checklist.

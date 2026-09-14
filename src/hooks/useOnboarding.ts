@@ -122,6 +122,28 @@ async function count(tableName: string, build: (q: any) => any): Promise<number>
   }
 }
 
+/** True when the workspace has at least one pipeline that actually has stages. */
+async function hasConfiguredPipeline(workspaceId: string): Promise<boolean> {
+  try {
+    const { data, error } = await (supabase as any)
+      .from("crm_pipelines")
+      .select("id")
+      .eq("workspace_id", workspaceId);
+    if (error) return false;
+    const ids = (data ?? []).map((r: any) => r.id);
+    if (!ids.length) return false;
+    const { count: c, error: stageError } = await (supabase as any)
+      .from("crm_pipeline_stages")
+      .select("id", { count: "exact", head: true })
+      .in("pipeline_id", ids);
+    if (stageError) return false;
+    return (c ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+
 export function useGettingStarted(workspaceId: string) {
   const { user } = useAuth();
   const { data: onboarding } = useOnboarding(workspaceId);
@@ -132,7 +154,7 @@ export function useGettingStarted(workspaceId: string) {
     staleTime: 60_000,
     queryFn: async () => {
       const ws = (q: any) => q.eq("workspace_id", workspaceId);
-      const [leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars] =
+      const [leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline] =
         await Promise.all([
           count("leads", ws),
           count("leads", (q) => ws(q).ilike("source", "%import%")),
@@ -143,8 +165,10 @@ export function useGettingStarted(workspaceId: string) {
           count("workspace_invites", ws),
           count("workspace_members", ws),
           count("google_calendar_tokens", (q) => q.eq("user_id", user!.id)),
+          hasConfiguredPipeline(workspaceId),
         ]);
-      return { leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars };
+      return { leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline };
+
     },
   });
 
@@ -189,9 +213,10 @@ export function useGettingStarted(workspaceId: string) {
       id: "create_pipeline",
       label: "Create your pipeline",
       description: "Set the stages your deals move through in the CRM.",
-      done: Boolean(answers.pipeline_configured),
+      done: Boolean(s?.pipeline) || Boolean(answers.pipeline_configured),
       actionLabel: "Configure",
-      to: `${base}/leads?view=pipeline`,
+      to: `${base}/crm/pipelines`,
+
     },
     {
       id: "invite_team",
