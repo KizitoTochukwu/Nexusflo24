@@ -184,6 +184,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const createFolder = useCreateFolder();
+  const markImported = useMarkOnboardingFlag(workspaceId);
 
   const [loading, setLoading] = useState(false);
   const [analysing, setAnalysing] = useState(false);
