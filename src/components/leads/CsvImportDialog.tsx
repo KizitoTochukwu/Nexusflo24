@@ -436,6 +436,8 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
       setResult({ imported, updated, skipped, errors });
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["lead-stats"] });
+      qc.invalidateQueries({ queryKey: ["getting-started"] });
+      if (imported > 0 || updated > 0) markImported("contacts_imported");
 
       const parts: string[] = [];
       if (imported) parts.push(`${imported} imported`);
