@@ -144,17 +144,25 @@ export default function CreateFunnelDialog({
           page_content: s.page_content,
         })),
       },
-      { onSuccess: () => { setOpen(false); resetAll(); } },
+      {
+        onSuccess: (created: any) => {
+          setOpen(false);
+          resetAll();
+          if (created?.id) navigate(`/dashboard/${workspaceId}/funnels/${created.id}`);
+        },
+      },
     );
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetAll(); }}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" /> Create Funnel
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" /> Create Funnel
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
