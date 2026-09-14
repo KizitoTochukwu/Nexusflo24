@@ -79,6 +79,7 @@ export function useSendInvite() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["workspace-invites", vars.workspaceId] });
+      qc.invalidateQueries({ queryKey: ["getting-started"] });
     },
   });
 }

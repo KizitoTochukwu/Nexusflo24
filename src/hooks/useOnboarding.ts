@@ -95,8 +95,24 @@ export function useSaveOnboarding(workspaceId?: string | null) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["onboarding", user?.id, workspaceId ?? null] });
+      qc.invalidateQueries({ queryKey: ["getting-started"] });
     },
   });
+}
+
+/**
+ * Records a Getting Started milestone (e.g. contacts_imported) against the
+ * current user's onboarding record and refreshes the checklist.
+ */
+export function useMarkOnboardingFlag(workspaceId?: string | null) {
+  const { data: onboarding } = useOnboarding(workspaceId);
+  const save = useSaveOnboarding(workspaceId);
+
+  return (key: keyof OnboardingAnswers, value: unknown = true) => {
+    const answers = onboarding?.answers ?? {};
+    if (answers[key] === value) return;
+    save.mutate({ answers: { ...answers, [key]: value } } as any);
+  };
 }
 
 /* ── Getting Started checklist ───────────────────────────── */
@@ -154,21 +170,48 @@ export function useGettingStarted(workspaceId: string) {
     staleTime: 60_000,
     queryFn: async () => {
       const ws = (q: any) => q.eq("workspace_id", workspaceId);
-      const [leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline] =
-        await Promise.all([
-          count("leads", ws),
-          count("leads", (q) => ws(q).ilike("source", "%import%")),
-          count("sender_profiles", ws),
-          count("campaigns", ws),
-          count("automations", ws),
-          count("booking_pages", ws),
-          count("workspace_invites", ws),
-          count("workspace_members", ws),
-          count("google_calendar_tokens", (q) => q.eq("user_id", user!.id)),
-          hasConfiguredPipeline(workspaceId),
-        ]);
-      return { leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline };
-
+      const [
+        leads,
+        importedLeads,
+        contacts,
+        emailSenders,
+        activeEmailSetup,
+        campaigns,
+        automations,
+        bookingPages,
+        invites,
+        members,
+        calendars,
+        pipeline,
+      ] = await Promise.all([
+        count("leads", ws),
+        count("leads", (q) => ws(q).ilike("source", "%import%")),
+        count("contacts", ws),
+        count("sender_profiles", (q) => ws(q).eq("channel", "email")),
+        count("email_settings", (q) => ws(q).eq("is_active", true)),
+        count("campaigns", ws),
+        count("automations", ws),
+        count("booking_pages", ws),
+        count("workspace_invites", ws),
+        count("workspace_members", ws),
+        count("google_calendar_tokens", (q) => q.eq("user_id", user!.id)),
+        hasConfiguredPipeline(workspaceId),
+      ]);
+      return {
+        leads,
+        // A bulk list is "imported" whether it came through the leads CSV
+        // importer or the CRM Import & Export page.
+        imported: importedLeads + contacts,
+        // Email can be connected via a sending setup or an email sender profile.
+        senders: emailSenders + activeEmailSetup,
+        campaigns,
+        automations,
+        bookingPages,
+        invites,
+        members,
+        calendars,
+        pipeline,
+      };
     },
   });
 

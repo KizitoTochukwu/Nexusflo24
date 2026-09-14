@@ -76,6 +76,7 @@ export default function SenderProfilesTab({ workspaceId }: Props) {
     setOpen(false);
     setForm({ channel: "email", label: "", display_name: "", address: "", is_default: false });
     qc.invalidateQueries({ queryKey: ["my-sender-profiles", workspaceId] });
+    qc.invalidateQueries({ queryKey: ["getting-started"] });
   };
 
   return (

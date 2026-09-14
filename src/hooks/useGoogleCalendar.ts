@@ -103,6 +103,7 @@ export function useGoogleCalendarConnect() {
         qc.invalidateQueries({ queryKey: ["google-calendar-status"] });
         qc.invalidateQueries({ queryKey: ["google-calendar-list"] });
         qc.invalidateQueries({ queryKey: ["booking-pages"] });
+        qc.invalidateQueries({ queryKey: ["getting-started"] });
         toast.success("Google Calendar connected!");
       }
     };

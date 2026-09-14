@@ -11,6 +11,8 @@ import Seo from "@/components/seo/Seo";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+import { useMarkOnboardingFlag } from "@/hooks/useOnboarding";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Entity = "contacts" | "companies" | "crm_deals";
 
@@ -79,6 +81,8 @@ const DashboardImportExport = () => {
   const workspaceId = useWorkspaceId();
   const { canEdit } = useWorkspaceRole();
   const fileRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
+  const markImported = useMarkOnboardingFlag(workspaceId);
 
   const [entity, setEntity] = useState<Entity>("contacts");
   const [headers, setHeaders] = useState<string[]>([]);
@@ -154,6 +158,10 @@ const DashboardImportExport = () => {
 
     setImporting(false);
     setResult({ inserted, failed });
+    if (inserted > 0) {
+      qc.invalidateQueries({ queryKey: ["getting-started"] });
+      if (entity === "contacts") markImported("contacts_imported");
+    }
     toast.success(`Imported ${inserted} ${LABELS[entity].toLowerCase()}${failed ? `, ${failed} skipped` : ""}`);
   };
 

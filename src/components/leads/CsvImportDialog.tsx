@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCreateFolder, type LeadFolder } from "@/hooks/useLeadFolders";
+import { useMarkOnboardingFlag } from "@/hooks/useOnboarding";
 import { fireAutomationsForLeads } from "@/lib/automations/fireTriggers";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: string; folders?: LeadFolder[] };
@@ -183,6 +184,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
   const qc = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const createFolder = useCreateFolder();
+  const markImported = useMarkOnboardingFlag(workspaceId);
 
   const [loading, setLoading] = useState(false);
   const [analysing, setAnalysing] = useState(false);
@@ -436,6 +438,8 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
       setResult({ imported, updated, skipped, errors });
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["lead-stats"] });
+      qc.invalidateQueries({ queryKey: ["getting-started"] });
+      if (imported > 0 || updated > 0) markImported("contacts_imported");
 
       const parts: string[] = [];
       if (imported) parts.push(`${imported} imported`);
