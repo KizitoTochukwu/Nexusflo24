@@ -4,7 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
-import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { deductCredit, addCredits } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { notifyCredentialFailure } from "../_shared/credential-alert.ts";

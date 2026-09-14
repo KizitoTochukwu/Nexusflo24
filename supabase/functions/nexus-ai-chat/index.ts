@@ -167,7 +167,6 @@ serve(async (req) => {
                     workspaceId: workspace.id,
                     to: profile.phone,
                     body: alertMsg,
-                    skipCredits: true,
                   }),
                 });
                 if (waRes.ok) {
@@ -193,8 +192,7 @@ serve(async (req) => {
                     workspaceId: workspace.id,
                       to: profile.phone,
                       message: alertMsg,
-                      skipCredits: true,
-                    }),
+                      }),
                   });
                   if (smsRes.ok) {
                     console.log("Human handoff SMS alert sent to", profile.phone);
