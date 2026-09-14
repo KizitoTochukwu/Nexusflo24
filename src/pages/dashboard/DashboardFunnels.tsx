@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutTemplate, MoreHorizontal, Play, Pause, Trash2, Copy, Eye } from "lucide-react";
+import { LayoutTemplate, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Sparkles } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   useFunnels, useDeleteFunnel, useUpdateFunnel, useCreateFunnel,
@@ -14,6 +14,7 @@ import {
 import CreateFunnelDialog from "@/components/funnels/CreateFunnelDialog";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const DashboardFunnels = () => {
   const workspaceId = useWorkspaceId();
