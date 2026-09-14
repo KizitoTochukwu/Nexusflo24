@@ -23,6 +23,7 @@ const DashboardFunnels = () => {
   const deleteFunnel = useDeleteFunnel();
   const updateFunnel = useUpdateFunnel();
   const createFunnel = useCreateFunnel();
+  const [aiOpen, setAiOpen] = useState(false);
 
   const openDetails = (f: Funnel) => {
     navigate(`/dashboard/${workspaceId}/funnels/${f.id}`);
