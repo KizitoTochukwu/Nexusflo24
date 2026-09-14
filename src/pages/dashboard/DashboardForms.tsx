@@ -18,13 +18,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  FormInput, Plus, MoreHorizontal, ExternalLink, Code2, Copy, Trash2, Pencil,
+  FormInput, Plus, MoreHorizontal, ExternalLink, Code2, Copy, Trash2, Pencil, Sparkles,
 } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   useForms, useCreateForm, useDeleteForm, useUpdateForm, type FormRecord,
 } from "@/hooks/useForms";
 import EmbedFormDialog from "@/components/forms/EmbedFormDialog";
+import AiFormDialog from "@/components/forms/AiFormDialog";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ export default function DashboardForms() {
   const deleteForm = useDeleteForm();
   const [newName, setNewName] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const handleCreate = async () => {
     if (!newName.trim()) {
@@ -82,6 +84,10 @@ export default function DashboardForms() {
             Build and manage lead capture forms. Embed them on any site or share the hosted link.
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={() => setAiOpen(true)}>
+          <Sparkles className="mr-1.5 h-4 w-4 text-accent" /> Generate with AI
+        </Button>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -107,7 +113,11 @@ export default function DashboardForms() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <AiFormDialog workspaceId={workspaceId} open={aiOpen} onOpenChange={setAiOpen} />
+
 
       {isLoading ? (
         <div className="mt-10 text-center text-muted-foreground">Loading forms…</div>
