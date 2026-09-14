@@ -11,6 +11,8 @@ import Seo from "@/components/seo/Seo";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+import { useMarkOnboardingFlag } from "@/hooks/useOnboarding";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Entity = "contacts" | "companies" | "crm_deals";
 
