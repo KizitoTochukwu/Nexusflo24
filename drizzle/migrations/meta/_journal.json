@@ -29,6 +29,13 @@
       "when": 1789409581629,
       "tag": "0003_lead_scoring_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789410360384,
+      "tag": "0004_grant_lead_scoring_settings",
+      "breakpoints": true
     }
   ]
 }
