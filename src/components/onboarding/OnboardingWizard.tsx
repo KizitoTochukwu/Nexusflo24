@@ -12,8 +12,11 @@ import {
   Loader2, Sparkles, Plus, X
 } from "lucide-react";
 import {
-  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, OnboardingAnswers,
+  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, useGettingStarted, OnboardingAnswers,
 } from "@/hooks/useOnboarding";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+
 
 const INDUSTRIES = [
   "Coaching & Creators", "Marketing Agency", "E-commerce", "Professional Services",
