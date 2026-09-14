@@ -13,7 +13,7 @@ import {
   Loader2, Sparkles, Plus, X
 } from "lucide-react";
 import {
-  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, useGettingStarted, OnboardingAnswers,
+  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, useGettingStarted, OnboardingAnswers, OnboardingRecord,
 } from "@/hooks/useOnboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -83,7 +83,7 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
     setAnswers((a) => ({ ...a, [key]: value }));
 
   const persist = async (
-    patch: Partial<Omit<import("@/hooks/useOnboarding").OnboardingRecord, "id" | "user_id" | "workspace_id">> = {},
+    patch: Partial<Omit<OnboardingRecord, "id" | "user_id" | "workspace_id">> = {},
     snapshot: { answers?: OnboardingAnswers; skipped_steps?: string[] } = {},
   ) => {
     try {
@@ -157,8 +157,8 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
       }, { answers: completedAnswers });
       setAnswers(completedAnswers);
       setCelebrate(true);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not finish workspace setup.");
+    } catch {
+      // persist and pipeline setup surface their own actionable error.
     } finally {
       setIsFinishing(false);
     }

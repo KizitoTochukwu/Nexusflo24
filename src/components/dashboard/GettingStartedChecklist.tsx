@@ -8,7 +8,7 @@ import { useGettingStarted, useOnboarding, useSaveOnboarding } from "@/hooks/use
 export const OPEN_CHECKLIST_EVENT = "nexusflo:open-checklist";
 
 const GettingStartedChecklist = ({ workspaceId }: { workspaceId: string }) => {
-  const { items, completed, total, percent, isLoading } = useGettingStarted(workspaceId);
+  const { items, completed, total, percent, isLoading, error } = useGettingStarted(workspaceId);
   const { data: record } = useOnboarding(workspaceId);
   const save = useSaveOnboarding(workspaceId);
 
@@ -42,6 +42,15 @@ const GettingStartedChecklist = ({ workspaceId }: { workspaceId: string }) => {
   // Nothing to prompt about once setup is finished, or after the user dismissed it.
   if (dismissed) return null;
   if (!isLoading && completed >= total) return null;
+
+  if (error) {
+    return (
+      <section className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3" aria-label="Setup status unavailable">
+        <p className="text-sm font-semibold text-foreground">Setup status could not be checked</p>
+        <p className="mt-1 text-xs text-muted-foreground">Refresh the page to try again. Your saved setup is unchanged.</p>
+      </section>
+    );
+  }
 
   const openFull = () => { setExpanded(true); update({ checklist_minimized: false }); };
   const collapse = () => { setExpanded(false); update({ checklist_minimized: true }); };
