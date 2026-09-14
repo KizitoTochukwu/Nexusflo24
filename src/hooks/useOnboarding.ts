@@ -154,21 +154,48 @@ export function useGettingStarted(workspaceId: string) {
     staleTime: 60_000,
     queryFn: async () => {
       const ws = (q: any) => q.eq("workspace_id", workspaceId);
-      const [leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline] =
-        await Promise.all([
-          count("leads", ws),
-          count("leads", (q) => ws(q).ilike("source", "%import%")),
-          count("sender_profiles", ws),
-          count("campaigns", ws),
-          count("automations", ws),
-          count("booking_pages", ws),
-          count("workspace_invites", ws),
-          count("workspace_members", ws),
-          count("google_calendar_tokens", (q) => q.eq("user_id", user!.id)),
-          hasConfiguredPipeline(workspaceId),
-        ]);
-      return { leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline };
-
+      const [
+        leads,
+        importedLeads,
+        contacts,
+        emailSenders,
+        activeEmailSetup,
+        campaigns,
+        automations,
+        bookingPages,
+        invites,
+        members,
+        calendars,
+        pipeline,
+      ] = await Promise.all([
+        count("leads", ws),
+        count("leads", (q) => ws(q).ilike("source", "%import%")),
+        count("contacts", ws),
+        count("sender_profiles", (q) => ws(q).eq("channel", "email")),
+        count("email_settings", (q) => ws(q).eq("is_active", true)),
+        count("campaigns", ws),
+        count("automations", ws),
+        count("booking_pages", ws),
+        count("workspace_invites", ws),
+        count("workspace_members", ws),
+        count("google_calendar_tokens", (q) => q.eq("user_id", user!.id)),
+        hasConfiguredPipeline(workspaceId),
+      ]);
+      return {
+        leads,
+        // A bulk list is "imported" whether it came through the leads CSV
+        // importer or the CRM Import & Export page.
+        imported: importedLeads + contacts,
+        // Email can be connected via a sending setup or an email sender profile.
+        senders: emailSenders + activeEmailSetup,
+        campaigns,
+        automations,
+        bookingPages,
+        invites,
+        members,
+        calendars,
+        pipeline,
+      };
     },
   });
 
