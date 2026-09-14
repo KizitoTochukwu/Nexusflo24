@@ -14,6 +14,8 @@ import { Slider } from "@/components/ui/slider";
 import { Plus, Trash2, RotateCcw, Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useParams } from "react-router-dom";
+import { uploadImageAsset } from "@/lib/storage/uploadImageAsset";
 
 interface Props {
   block: Block | null;
@@ -426,32 +428,15 @@ function ImageProps({ p, update }: { p: Record<string, unknown>; update: (k: str
 function ImageUploadButton({ onUploaded, label }: { onUploaded: (url: string) => void; label: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const { workspaceId } = useParams<{ workspaceId: string }>();
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowed.includes(file.type)) {
-      toast.error("Only JPG, PNG, GIF, and WEBP images are allowed");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
-      return;
-    }
 
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Please sign in to upload"); return; }
-
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("funnel-assets").upload(path, file);
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage.from("funnel-assets").getPublicUrl(path);
+      const publicUrl = await uploadImageAsset(file, workspaceId ?? "", "funnels");
       onUploaded(publicUrl);
       toast.success("Image uploaded");
     } catch (err: any) {
