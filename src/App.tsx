@@ -17,6 +17,8 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import DashboardLeads from "./pages/dashboard/DashboardLeads";
 import DashboardContacts from "./pages/dashboard/crm/DashboardContacts";
@@ -220,6 +222,8 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogArticle />} />
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
               <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
+              <Route path="/forgot-password" element={<RedirectIfAuth><ForgotPassword /></RedirectIfAuth>} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/oauth/gmail/return" element={<GmailReturn />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
