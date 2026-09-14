@@ -12859,6 +12859,10 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: string
       }
+      ensure_onboarding_pipeline: {
+        Args: { p_stage_names: string[]; p_workspace_id: string }
+        Returns: string
+      }
       get_booking_calendar_status: {
         Args: { p_booking_page_id: string }
         Returns: {

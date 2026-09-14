@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +13,11 @@ import {
   Loader2, Sparkles, Plus, X
 } from "lucide-react";
 import {
-  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, useGettingStarted, OnboardingAnswers,
+  ONBOARDING_STEPS, TOTAL_STEPS, useOnboarding, useSaveOnboarding, useGettingStarted, OnboardingAnswers, OnboardingRecord,
 } from "@/hooks/useOnboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { addSkippedStep, cleanPipelineStages, onboardingStatusLabel } from "@/lib/onboarding";
 
 
 const INDUSTRIES = [
@@ -47,6 +49,7 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
   const navigate = useNavigate();
   const { data: record, isLoading } = useOnboarding(workspaceId);
   const save = useSaveOnboarding(workspaceId);
+  const qc = useQueryClient();
   const { user } = useAuth();
   // Live setup signals, so a step shows as done when the real thing exists.
   const { items: liveItems } = useGettingStarted(workspaceId);
@@ -59,6 +62,7 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
   const [celebrate, setCelebrate] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [stageInput, setStageInput] = useState("");
+  const [isFinishing, setIsFinishing] = useState(false);
 
   useEffect(() => {
     if (isLoading || hydrated) return;
@@ -78,24 +82,40 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
   const setAnswer = (key: string, value: unknown) =>
     setAnswers((a) => ({ ...a, [key]: value }));
 
-  const persist = async (patch: Partial<{ current_step: number; completed: boolean; completed_at: string | null }> = {}) => {
+  const persist = async (
+    patch: Partial<Omit<OnboardingRecord, "id" | "user_id" | "workspace_id">> = {},
+    snapshot: { answers?: OnboardingAnswers; skipped_steps?: string[] } = {},
+  ) => {
     try {
-      await save.mutateAsync({ answers, skipped_steps: skipped, current_step: step, ...patch } as any);
+      await save.mutateAsync({
+        answers: snapshot.answers ?? answers,
+        skipped_steps: snapshot.skipped_steps ?? skipped,
+        current_step: step,
+        ...patch,
+      });
     } catch (e: any) {
       toast.error(e?.message ?? "Could not save your progress.");
+      if (e && typeof e === "object") e.onboardingNotified = true;
       throw e;
     }
   };
 
   const goTo = async (next: number) => {
     const clamped = Math.max(0, Math.min(next, TOTAL_STEPS - 1));
-    setStep(clamped);
-    try { await persist({ current_step: clamped }); } catch { /* toast already shown */ }
+    try {
+      await persist({ current_step: clamped });
+      setStep(clamped);
+    } catch { /* stay on the current step */ }
   };
 
   const handleSkip = async () => {
-    if (!skipped.includes(current.id)) setSkipped((s) => [...s, current.id]);
-    await goTo(step + 1);
+    const nextSkipped = addSkippedStep(skipped, current.id);
+    const nextStep = Math.min(step + 1, TOTAL_STEPS - 1);
+    try {
+      await persist({ current_step: nextStep }, { skipped_steps: nextSkipped });
+      setSkipped(nextSkipped);
+      setStep(nextStep);
+    } catch { /* stay on the current step */ }
   };
 
   const handleSaveLater = async () => {
@@ -108,54 +128,41 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
 
   /** Creates the workspace pipeline from the entered stages, if none exists yet. */
   const ensurePipeline = async () => {
-    const names = (stages ?? []).map((s) => s.trim()).filter(Boolean);
-    if (!names.length) return;
-    try {
-      const { data: existing, error } = await supabase
-        .from("crm_pipelines" as any)
-        .select("id")
-        .eq("workspace_id", workspaceId)
-        .limit(1);
-      if (error) return;
-      if ((existing ?? []).length) return; // never touch an existing pipeline
+    const names = cleanPipelineStages(stages ?? []);
+    if (!names.length) throw new Error("Add at least one pipeline stage before launching your dashboard.");
+    if (!user) throw new Error("Please sign in again to finish setup.");
 
-      const { data: created, error: createError } = await supabase
-        .from("crm_pipelines" as any)
-        .insert({
-          workspace_id: workspaceId,
-          name: "Sales Pipeline",
-          is_default: true,
-          position: 0,
-          created_by: user?.id ?? null,
-        } as any)
-        .select("id")
-        .maybeSingle();
-      if (createError || !created) return;
+    const { error } = await supabase.rpc("ensure_onboarding_pipeline" as any, {
+      p_workspace_id: workspaceId,
+      p_stage_names: names,
+    } as any);
+    if (error) throw error;
 
-      await supabase.from("crm_pipeline_stages" as any).insert(
-        names.map((name, i) => ({
-          pipeline_id: (created as any).id,
-          workspace_id: workspaceId,
-          name,
-          position: i,
-        })) as any
-      );
-    } catch {
-      /* setup should never block finishing onboarding */
-    }
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["crm-pipelines", workspaceId] }),
+      qc.invalidateQueries({ queryKey: ["crm-pipeline-stages"] }),
+      qc.invalidateQueries({ queryKey: ["getting-started"] }),
+    ]);
   };
 
   const handleFinish = async () => {
+    if (isFinishing) return;
+    setIsFinishing(true);
     try {
       await ensurePipeline();
+      const completedAnswers = { ...answers, pipeline_configured: true };
       await persist({
-        answers: { ...answers, pipeline_configured: true },
         current_step: TOTAL_STEPS - 1,
         completed: true,
         completed_at: new Date().toISOString(),
-      } as any);
+      }, { answers: completedAnswers });
+      setAnswers(completedAnswers);
       setCelebrate(true);
-    } catch { /* noop */ }
+    } catch (e: any) {
+      if (!e?.onboardingNotified) toast.error(e?.message ?? "Could not finish workspace setup.");
+    } finally {
+      setIsFinishing(false);
+    }
   };
 
 
@@ -437,9 +444,10 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
               <Summary label="Industry" value={(answers.industry as string) || "—"} />
               <Summary label="Team size" value={(answers.team_size as string) || "—"} />
               <Summary label="Goals" value={goals.length ? `${goals.length} selected` : "—"} />
-              <Summary label="Contacts imported" value={answers.contacts_imported ? "Yes" : "Not yet"} />
-              <Summary label="Email connected" value={answers.email_connected ? "Yes" : "Not yet"} />
-              <Summary label="Calendar connected" value={answers.calendar_connected ? "Yes" : "Not yet"} />
+              <Summary label="Contacts imported" value={onboardingStatusLabel(live("import_contacts"), answers.contacts_imported)} />
+              <Summary label="Email connected" value={onboardingStatusLabel(live("connect_email"), answers.email_connected)} />
+              <Summary label="Calendar connected" value={onboardingStatusLabel(live("connect_calendar"), answers.calendar_connected)} />
+              <Summary label="Team invited" value={onboardingStatusLabel(live("invite_team"), answers.team_invited)} />
               <Summary label="Pipeline stages" value={stages.join(" → ")} />
             </dl>
           </div>
@@ -492,23 +500,23 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
 
       {/* Controls */}
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Button variant="ghost" className="gap-1.5 sm:w-auto" onClick={() => goTo(step - 1)} disabled={step === 0}>
+        <Button variant="ghost" className="gap-1.5 sm:w-auto" onClick={() => goTo(step - 1)} disabled={step === 0 || save.isPending || isFinishing}>
           <ChevronLeft className="h-4 w-4" /> Back
         </Button>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button variant="outline" className="gap-1.5" onClick={handleSaveLater} disabled={save.isPending}>
+          <Button variant="outline" className="gap-1.5" onClick={handleSaveLater} disabled={save.isPending || isFinishing}>
             <Clock className="h-4 w-4" /> Save &amp; continue later
           </Button>
           {step < TOTAL_STEPS - 1 && (
-            <Button variant="ghost" onClick={handleSkip} disabled={save.isPending}>Skip</Button>
+            <Button variant="ghost" onClick={handleSkip} disabled={save.isPending || isFinishing}>Skip</Button>
           )}
           {step < TOTAL_STEPS - 1 ? (
-            <Button className="gap-1.5" onClick={() => goTo(step + 1)} disabled={!canContinue || save.isPending}>
+            <Button className="gap-1.5" onClick={() => goTo(step + 1)} disabled={!canContinue || save.isPending || isFinishing}>
               Continue <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button className="gap-1.5" onClick={handleFinish} disabled={save.isPending}>
-              {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+            <Button className="gap-1.5" onClick={handleFinish} disabled={save.isPending || isFinishing}>
+              {save.isPending || isFinishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
               Launch dashboard
             </Button>
           )}
