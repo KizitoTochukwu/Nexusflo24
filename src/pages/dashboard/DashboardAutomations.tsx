@@ -8,8 +8,6 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Zap, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Clock, DoorOpen, Sparkles, X, AlertTriangle, RotateCcw, LayoutGrid } from "lucide-react";
-import { SUBSCRIBER_NURTURE_DEFINITION, NURTURE_TEMPLATE_NAME } from "@/lib/automations/seedNurtureTemplate";
-import { META_LEAD_AD_DEFINITION, META_LEAD_AD_TEMPLATE_NAME } from "@/lib/automations/seedMetaLeadAdTemplate";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -99,32 +97,6 @@ const DashboardAutomations = () => {
     return <Badge variant="outline" className={colors[status] || colors.draft}>{status}</Badge>;
   };
 
-  const hasNurtureTemplate = useMemo(
-    () => !!automations?.some((a) => a.name === NURTURE_TEMPLATE_NAME),
-    [automations],
-  );
-  const hasMetaLeadAdTemplate = useMemo(
-    () => !!automations?.some((a) => a.name === META_LEAD_AD_TEMPLATE_NAME),
-    [automations],
-  );
-
-  const seedNurture = () => {
-    createAutomation.mutate(
-      { workspace_id: workspaceId, ...SUBSCRIBER_NURTURE_DEFINITION },
-      {
-        onSuccess: () => toast.success("Subscriber Nurture template created as draft — review & activate."),
-      },
-    );
-  };
-
-  const seedMetaLeadAd = () => {
-    createAutomation.mutate(
-      { workspace_id: workspaceId, ...META_LEAD_AD_DEFINITION },
-      {
-        onSuccess: () => toast.success("Facebook Lead Ad follow-up template created as draft — review & activate."),
-      },
-    );
-  };
 
   return (
     <DashboardLayout>
@@ -313,6 +285,18 @@ const DashboardAutomations = () => {
         open={aiOpen}
         onOpenChange={setAiOpen}
         onCreated={(id) => {
+          const next = new URLSearchParams(searchParams);
+          next.set("edit", id);
+          setSearchParams(next, { replace: false });
+        }}
+      />
+
+      <AutomationTemplateLibraryDialog
+        open={templatesOpen}
+        onOpenChange={setTemplatesOpen}
+        workspaceId={workspaceId}
+        existingNames={(automations ?? []).map((a) => a.name)}
+        onInstalled={(id) => {
           const next = new URLSearchParams(searchParams);
           next.set("edit", id);
           setSearchParams(next, { replace: false });
