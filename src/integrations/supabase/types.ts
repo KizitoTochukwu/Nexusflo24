@@ -4630,6 +4630,36 @@ export type Database = {
           },
         ]
       }
+      lead_scoring_settings: {
+        Row: {
+          bands: Json
+          created_at: string
+          custom_labels: Json
+          decay: Json
+          rules: Json
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          bands?: Json
+          created_at?: string
+          custom_labels?: Json
+          decay?: Json
+          rules?: Json
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          bands?: Json
+          created_at?: string
+          custom_labels?: Json
+          decay?: Json
+          rules?: Json
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       lead_tasks: {
         Row: {
           created_at: string
