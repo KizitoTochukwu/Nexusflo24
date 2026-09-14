@@ -5,27 +5,20 @@ export type CreditChannel = "email" | "sms" | "whatsapp";
 interface DeductResult {
   allowed: boolean;
   remaining: number;
+  unlimited?: boolean;
   error?: string;
 }
 
-const BALANCE_COL: Record<CreditChannel, string> = {
-  email: "email_balance",
-  sms: "sms_balance",
-  whatsapp: "whatsapp_balance",
-};
-
-const USED_COL: Record<CreditChannel, string> = {
-  email: "email_used",
-  sms: "sms_used",
-  whatsapp: "whatsapp_used",
-};
-
-export async function isAdminUser(userId: string): Promise<boolean> {
-  const adminClient = createClient(
+function admin() {
+  return createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
-  const { data } = await adminClient
+}
+
+/** Still used by platform-admin tooling; NOT used to waive message charges. */
+export async function isAdminUser(userId: string): Promise<boolean> {
+  const { data } = await admin()
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
@@ -34,120 +27,98 @@ export async function isAdminUser(userId: string): Promise<boolean> {
   return !!data;
 }
 
+/** True when the workspace is flagged for unlimited (uncharged) messaging. */
+export async function isWorkspaceUnlimited(workspaceId: string): Promise<boolean> {
+  const { data } = await admin()
+    .from("message_credits")
+    .select("unlimited")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+  return !!(data as { unlimited?: boolean } | null)?.unlimited;
+}
+
+const CHANNEL_LABEL: Record<CreditChannel, string> = {
+  email: "email",
+  sms: "SMS",
+  whatsapp: "WhatsApp",
+};
+
+/**
+ * Atomically deduct message credits. The balance change and the ledger row are
+ * written by a single database function, so concurrent sends can never collide
+ * or double-charge.
+ */
 export async function deductCredit(
   workspaceId: string,
   channel: CreditChannel,
   referenceId?: string,
-  userId?: string,
+  _userId?: string,
   amount: number = 1,
 ): Promise<DeductResult> {
-  const adminClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const adminClient = admin();
 
-  // Admin bypass — unlimited free messaging
-  if (userId) {
-    const admin = await isAdminUser(userId);
-    if (admin) {
-      // Log for audit trail but don't deduct
-      await adminClient.from("credit_transactions").insert({
-        workspace_id: workspaceId,
-        channel,
-        amount: 0,
-        reason: "admin_exempt",
-        reference_id: referenceId || null,
-      });
-      return { allowed: true, remaining: 999999 };
-    }
-  }
+  const call = async () => adminClient.rpc("deduct_message_credit", {
+    _workspace_id: workspaceId,
+    _channel: channel,
+    _amount: amount,
+    _reason: "message_sent",
+    _reference_id: referenceId ?? null,
+  });
 
-  const balCol = BALANCE_COL[channel];
-  const usedCol = USED_COL[channel];
+  let { data, error } = await call();
 
-  // Fetch current balance
-  const { data: credits, error: fetchErr } = await adminClient
-    .from("message_credits")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
-
-  if (fetchErr) {
-    console.error("[credit-guard] fetch error:", fetchErr);
+  if (error) {
+    console.error("[credit-guard] deduct rpc error:", error);
     return { allowed: false, remaining: 0, error: "Failed to check credits" };
   }
 
-  if (!credits) {
-    // Auto-allocate starter credits for workspaces that have none yet
-    const starterCredits = PLAN_CREDITS.starter;
-    const { error: seedErr } = await adminClient
-      .from("message_credits")
-      .insert({
-        workspace_id: workspaceId,
-        email_balance: starterCredits.email,
-        sms_balance: starterCredits.sms,
-        whatsapp_balance: starterCredits.whatsapp,
-      });
+  let result = data as { allowed: boolean; remaining: number; status: string };
 
-    if (seedErr) {
+  // No credits row yet — seed starter credits once, then retry.
+  if (result?.status === "no_row") {
+    const starter = PLAN_CREDITS.starter;
+    const { error: seedErr } = await adminClient.from("message_credits").insert({
+      workspace_id: workspaceId,
+      email_balance: starter.email,
+      sms_balance: starter.sms,
+      whatsapp_balance: starter.whatsapp,
+    });
+    if (seedErr && !/duplicate key/i.test(seedErr.message || "")) {
       console.error("[credit-guard] auto-seed error:", seedErr);
       return { allowed: false, remaining: 0, error: "Failed to initialise credits. Please try again." };
     }
-
-    // Log the auto-allocation
-    const channels: CreditChannel[] = ["email", "sms", "whatsapp"];
-    for (const ch of channels) {
-      if (starterCredits[ch] > 0) {
+    for (const ch of ["email", "sms", "whatsapp"] as CreditChannel[]) {
+      if (starter[ch] > 0) {
         await adminClient.from("credit_transactions").insert({
           workspace_id: workspaceId,
           channel: ch,
-          amount: starterCredits[ch],
+          amount: starter[ch],
           reason: "plan_allocation",
           reference_id: "starter_auto_seed",
         });
       }
     }
-
-    // Re-check: the channel we need might still be 0 (e.g. SMS on starter)
-    const newBalance = starterCredits[channel] ?? 0;
-    if (newBalance <= 0) {
-      return { allowed: false, remaining: 0, error: `Insufficient ${channel} credits. Upgrade your plan or buy more in Settings → Usage.` };
+    ({ data, error } = await call());
+    if (error) {
+      console.error("[credit-guard] deduct retry error:", error);
+      return { allowed: false, remaining: 0, error: "Failed to check credits" };
     }
-
-    // Continue with the freshly-seeded balance
-    return deductCredit(workspaceId, channel, referenceId);
+    result = data as { allowed: boolean; remaining: number; status: string };
   }
 
-  const currentBalance = (credits as Record<string, number>)[balCol] ?? 0;
-  if (currentBalance < amount) {
-    return { allowed: false, remaining: currentBalance, error: `Insufficient ${channel} credits. Buy more in Settings → Usage.` };
+  if (result?.status === "unlimited") {
+    return { allowed: true, remaining: -1, unlimited: true };
   }
 
-  // Atomically decrement balance and increment used
-  const { error: updateErr } = await adminClient
-    .from("message_credits")
-    .update({
-      [balCol]: currentBalance - amount,
-      [usedCol]: ((credits as Record<string, number>)[usedCol] ?? 0) + amount,
-    })
-    .eq("workspace_id", workspaceId)
-    .eq(balCol, currentBalance); // optimistic lock
-
-  if (updateErr) {
-    console.error("[credit-guard] update error:", updateErr);
-    return { allowed: false, remaining: 0, error: "Failed to deduct credit (contention). Retry." };
+  if (!result?.allowed) {
+    return {
+      allowed: false,
+      remaining: result?.remaining ?? 0,
+      error: `You've run out of ${CHANNEL_LABEL[channel]} credits. Top up in Settings → Usage.`,
+    };
   }
 
-  // Log transaction
-  await adminClient.from("credit_transactions").insert({
-    workspace_id: workspaceId,
-    channel,
-    amount: -amount,
-    reason: "message_sent",
-    reference_id: referenceId || null,
-  });
-
-  return { allowed: true, remaining: currentBalance - amount };
+  return { allowed: true, remaining: result.remaining };
 }
 
 /** Plan-included monthly credits */
@@ -164,12 +135,8 @@ export async function allocatePlanCredits(
   referenceId?: string,
 ): Promise<void> {
   const credits = PLAN_CREDITS[plan] || PLAN_CREDITS.starter;
-  const adminClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const adminClient = admin();
 
-  // Upsert credits row
   const { error: upsertErr } = await adminClient
     .from("message_credits")
     .upsert(
@@ -187,9 +154,7 @@ export async function allocatePlanCredits(
     return;
   }
 
-  // Log allocations
-  const channels: CreditChannel[] = ["email", "sms", "whatsapp"];
-  for (const ch of channels) {
+  for (const ch of ["email", "sms", "whatsapp"] as CreditChannel[]) {
     if (credits[ch] > 0) {
       await adminClient.from("credit_transactions").insert({
         workspace_id: workspaceId,
@@ -202,6 +167,7 @@ export async function allocatePlanCredits(
   }
 }
 
+/** Atomically add credits (top-up, refund, manual adjustment). */
 export async function addCredits(
   workspaceId: string,
   channel: CreditChannel,
@@ -209,39 +175,13 @@ export async function addCredits(
   reason: string,
   referenceId?: string,
 ): Promise<void> {
-  const adminClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-
-  const balCol = BALANCE_COL[channel];
-
-  // Fetch current
-  const { data: credits } = await adminClient
-    .from("message_credits")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
-
-  if (credits) {
-    await adminClient
-      .from("message_credits")
-      .update({ [balCol]: ((credits as Record<string, number>)[balCol] ?? 0) + amount })
-      .eq("workspace_id", workspaceId);
-  } else {
-    await adminClient
-      .from("message_credits")
-      .insert({
-        workspace_id: workspaceId,
-        [balCol]: amount,
-      });
-  }
-
-  await adminClient.from("credit_transactions").insert({
-    workspace_id: workspaceId,
-    channel,
-    amount,
-    reason,
-    reference_id: referenceId || null,
+  if (amount <= 0) return;
+  const { error } = await admin().rpc("add_message_credit", {
+    _workspace_id: workspaceId,
+    _channel: channel,
+    _amount: amount,
+    _reason: reason,
+    _reference_id: referenceId ?? null,
   });
+  if (error) console.error("[credit-guard] add rpc error:", error);
 }
