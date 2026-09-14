@@ -56,6 +56,9 @@ export default function UsageCreditsTab() {
           <CardDescription>
             Track your messaging usage and purchase additional credits.
           </CardDescription>
+          {credits?.unlimited && (
+            <Badge className="mt-2 w-fit">Unlimited messaging — no credits deducted</Badge>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -86,7 +89,13 @@ export default function UsageCreditsTab() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-sm text-muted-foreground">
-                          <span className="font-semibold text-foreground">{balance.toLocaleString()}</span> remaining
+                          {credits?.unlimited ? (
+                            <span className="font-semibold text-foreground">Unlimited</span>
+                          ) : (
+                            <>
+                              <span className="font-semibold text-foreground">{balance.toLocaleString()}</span> remaining
+                            </>
+                          )}
                         </span>
                         <Button
                           size="sm"
