@@ -12,6 +12,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useCreateFunnel, OBJECTIVE_OPTIONS, STEP_TYPE_OPTIONS } from "@/hooks/useFunnels";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const DEFAULT_STEPS: Record<string, string[]> = {
@@ -252,10 +253,46 @@ export default function CreateFunnelDialog({
                     <Textarea
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="e.g. A webinar funnel for my fitness coaching business that captures leads and upsells a $97 program…"
+                      placeholder="e.g. A webinar funnel for my fitness coaching business that captures leads and upsells a £97 program…"
                       rows={4}
                       disabled={aiLoading}
                     />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Starter ideas</Label>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {IDEAS.map((idea) => (
+                        <button
+                          key={idea}
+                          type="button"
+                          disabled={aiLoading}
+                          onClick={() => setAiPrompt(idea)}
+                          className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-foreground disabled:opacity-50"
+                        >
+                          {idea.split(" ").slice(0, 4).join(" ")}…
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Offer (optional)</Label>
+                      <Input
+                        value={aiOffer}
+                        onChange={(e) => setAiOffer(e.target.value)}
+                        placeholder="e.g. 6-week coaching programme"
+                        disabled={aiLoading}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Audience (optional)</Label>
+                      <Input
+                        value={aiAudience}
+                        onChange={(e) => setAiAudience(e.target.value)}
+                        placeholder="e.g. UK salon owners"
+                        disabled={aiLoading}
+                      />
+                    </div>
                   </div>
                   <Button
                     onClick={handleAiGenerate}
