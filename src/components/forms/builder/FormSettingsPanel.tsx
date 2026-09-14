@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { FormSettings, FormTheme } from "@/hooks/useForms";
+import { DEFAULT_SPAM, type FormSettings, type FormTheme } from "@/hooks/useForms";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -398,6 +398,60 @@ export default function FormSettingsPanel({
           </Select>
         </div>
       </div>
+
+      {/* Spam protection */}
+      <div className="space-y-3 rounded-lg border p-3">
+        <Label className="text-xs font-semibold">Spam protection</Label>
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-xs">Hidden bot trap</Label>
+            <p className="text-[11px] text-muted-foreground">Invisible field that only bots fill in.</p>
+          </div>
+          <Switch
+            checked={settings.spam?.honeypot !== false}
+            onCheckedChange={(v) => setS("spam", { ...DEFAULT_SPAM, ...settings.spam, honeypot: v })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Minimum time before submit (seconds)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={60}
+            value={settings.spam?.min_seconds ?? DEFAULT_SPAM.min_seconds}
+            onChange={(e) =>
+              setS("spam", { ...DEFAULT_SPAM, ...settings.spam, min_seconds: Number(e.target.value) || 0 })
+            }
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Max submissions per visitor per hour</Label>
+          <Input
+            type="number"
+            min={0}
+            max={200}
+            value={settings.spam?.rate_limit_per_hour ?? DEFAULT_SPAM.rate_limit_per_hour}
+            onChange={(e) =>
+              setS("spam", {
+                ...DEFAULT_SPAM,
+                ...settings.spam,
+                rate_limit_per_hour: Number(e.target.value) || 0,
+              })
+            }
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">Set to 0 to disable the limit.</p>
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Block throwaway email addresses</Label>
+          <Switch
+            checked={settings.spam?.block_disposable_email === true}
+            onCheckedChange={(v) =>
+              setS("spam", { ...DEFAULT_SPAM, ...settings.spam, block_disposable_email: v })
+            }
+          />
+        </div>
+      </div>
     </div>
+
   );
 }
