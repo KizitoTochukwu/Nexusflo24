@@ -31,11 +31,42 @@ interface AiFunnelResult {
   steps: { step_type: string; page_content: Record<string, unknown> }[];
 }
 
-export default function CreateFunnelDialog() {
+const IDEAS = [
+  "Lead magnet funnel offering a free checklist for small business owners",
+  "Webinar registration funnel for a live AI marketing masterclass",
+  "Coaching application funnel that qualifies serious clients",
+  "Product launch funnel for a £97 online course with an upsell",
+  "Free consultation booking funnel for a service business",
+];
+
+interface CreateFunnelDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialMode?: Mode;
+  hideTrigger?: boolean;
+}
+
+export default function CreateFunnelDialog({
+  open: openProp,
+  onOpenChange,
+  initialMode = "choose",
+  hideTrigger = false,
+}: CreateFunnelDialogProps = {}) {
   const workspaceId = useWorkspaceId();
+  const navigate = useNavigate();
   const createFunnel = useCreateFunnel();
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>("choose");
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v);
+    onOpenChange?.(v);
+  };
+  const [mode, setMode] = useState<Mode>(initialMode);
+
+  // Offer/audience hints for AI
+  const [aiOffer, setAiOffer] = useState("");
+  const [aiAudience, setAiAudience] = useState("");
 
   // Manual fields
   const [name, setName] = useState("");
