@@ -180,14 +180,9 @@ Deno.serve(async (req) => {
     }
 
     // Credits
-    let shouldDeductCredits = !preview;
-    if (shouldDeductCredits && isServiceRole && skipCredits) {
-      const { data: ws } = await adminClient
-        .from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
-      if (ws?.owner_user_id && (await isAdminUser(ws.owner_user_id))) {
-        shouldDeductCredits = false;
-      }
-    }
+    // skipCredits is only honoured for internal service-role calls where the
+    // caller (automation/workflow engine) has already taken the charge.
+    const shouldDeductCredits = !preview && !(isServiceRole && skipCredits);
 
     // Resolve sender profile (optional)
     const senderProfileId: string | null = (body as any).sender_profile_id || null;
