@@ -95,8 +95,24 @@ export function useSaveOnboarding(workspaceId?: string | null) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["onboarding", user?.id, workspaceId ?? null] });
+      qc.invalidateQueries({ queryKey: ["getting-started"] });
     },
   });
+}
+
+/**
+ * Records a Getting Started milestone (e.g. contacts_imported) against the
+ * current user's onboarding record and refreshes the checklist.
+ */
+export function useMarkOnboardingFlag(workspaceId?: string | null) {
+  const { data: onboarding } = useOnboarding(workspaceId);
+  const save = useSaveOnboarding(workspaceId);
+
+  return (key: keyof OnboardingAnswers, value: unknown = true) => {
+    const answers = onboarding?.answers ?? {};
+    if (answers[key] === value) return;
+    save.mutate({ answers: { ...answers, [key]: value } } as any);
+  };
 }
 
 /* ── Getting Started checklist ───────────────────────────── */
