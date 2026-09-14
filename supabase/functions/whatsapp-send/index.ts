@@ -650,7 +650,7 @@ Deno.serve(async (req) => {
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      creditsHeld = deductAmount > 0;
+      creditsHeld = deductAmount > 0 && !creditResult.unlimited;
     }
 
     // Credits are only *earned* by Meta once it accepts the message. Anything
