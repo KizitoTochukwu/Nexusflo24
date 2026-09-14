@@ -142,18 +142,10 @@ const DashboardAutomations = () => {
               Generate with AI
             </Button>
           </LockedFeature>
-          {!hasMetaLeadAdTemplate && (
-            <Button variant="outline" onClick={seedMetaLeadAd} disabled={createAutomation.isPending} className="gap-1.5">
-              <Facebook className="h-4 w-4" />
-              {createAutomation.isPending ? "Building…" : "Template: Facebook Lead Ad"}
-            </Button>
-          )}
-          {!hasNurtureTemplate && (
-            <Button variant="outline" onClick={seedNurture} disabled={createAutomation.isPending} className="gap-1.5">
-              <Wand2 className="h-4 w-4" />
-              {createAutomation.isPending ? "Building…" : "Seed: Subscriber Nurture"}
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => setTemplatesOpen(true)} className="gap-1.5">
+            <LayoutGrid className="h-4 w-4" />
+            Browse templates
+          </Button>
           <CreateAutomationDialog />
         </div>
       </div>
