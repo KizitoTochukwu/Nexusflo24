@@ -4,7 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
-import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { deductCredit, addCredits } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { notifyCredentialFailure } from "../_shared/credential-alert.ts";
@@ -180,14 +180,9 @@ Deno.serve(async (req) => {
     }
 
     // Credits
-    let shouldDeductCredits = !preview;
-    if (shouldDeductCredits && isServiceRole && skipCredits) {
-      const { data: ws } = await adminClient
-        .from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
-      if (ws?.owner_user_id && (await isAdminUser(ws.owner_user_id))) {
-        shouldDeductCredits = false;
-      }
-    }
+    // skipCredits is only honoured for internal service-role calls where the
+    // caller (automation/workflow engine) has already taken the charge.
+    const shouldDeductCredits = !preview && !(isServiceRole && skipCredits);
 
     // Resolve sender profile (optional)
     const senderProfileId: string | null = (body as any).sender_profile_id || null;
@@ -202,6 +197,7 @@ Deno.serve(async (req) => {
 
     const toCountry = countryFromE164(normalizedTo);
     const deductAmount = shouldDeductCredits ? await getDeductionAmount("whatsapp", toCountry) : 0;
+    let creditsHeld = false;
     if (shouldDeductCredits) {
       const creditResult = await deductCredit(workspaceId, "whatsapp", undefined, callerUserId, deductAmount);
       if (!creditResult.allowed) {
@@ -210,7 +206,15 @@ Deno.serve(async (req) => {
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+      creditsHeld = deductAmount > 0 && !creditResult.unlimited;
     }
+    // Credits are only earned once Twilio accepts the message.
+    const releaseCreditHold = async (reason: string) => {
+      if (!creditsHeld) return;
+      creditsHeld = false;
+      try { await addCredits(workspaceId, "whatsapp", deductAmount, `refund:${reason}`); }
+      catch (err) { console.error("twilio-whatsapp-send: failed to release credit hold", err); }
+    };
 
     // Prefer sender profile's Twilio WA SID if approved sender exists.
     const senderDetail = resolvedSender?.detail || null;
@@ -289,6 +293,7 @@ Deno.serve(async (req) => {
         workspaceId, status: sendRes.status, code, errMsg,
       });
 
+      await releaseCreditHold("provider_rejected");
       await adminClient.from("whatsapp_messages").insert({
         workspace_id: workspaceId,
         provider: "twilio",
@@ -331,6 +336,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    creditsHeld = false; // Twilio accepted — the credit is earned
     const sid = sendRes.data?.sid || null;
 
     await adminClient.from("whatsapp_messages").insert({

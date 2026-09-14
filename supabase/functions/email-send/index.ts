@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
-import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { deductCredit, addCredits } from "../_shared/credit-guard.ts";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { blocksToHtml, parseBlocksFromMessage } from "../_shared/email-blocks.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
@@ -56,6 +56,16 @@ async function sendSendgrid(apiKey: string, fromEmail: string, fromName: string,
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Credits are only earned once the provider accepts the message. Anything
+  // that fails before that must return the credit.
+  const hold = { workspaceId: "", amount: 0, held: false };
+  const releaseCreditHold = async (reason: string) => {
+    if (!hold.held || hold.amount <= 0) return;
+    hold.held = false;
+    try { await addCredits(hold.workspaceId, "email", hold.amount, `refund:${reason}`); }
+    catch (err) { console.error("email-send: failed to release credit hold", err); }
+  };
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -107,13 +117,9 @@ Deno.serve(async (req) => {
     // Check and deduct credits — only skip if (a) preview, or
     // (b) service-role + skipCredits + workspace owner is admin
     const skipCredits = body.skipCredits;
-    let shouldDeductCredits = !isPreview;
-    if (shouldDeductCredits && isServiceRole && skipCredits) {
-      const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
-      if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
-        shouldDeductCredits = false;
-      }
-    }
+    // skipCredits is only honoured for internal service-role calls where the
+    // caller (automation/workflow engine) has already taken the charge.
+    const shouldDeductCredits = !isPreview && !(isServiceRole && skipCredits);
     const senderProfileId: string | null = (body as any).sender_profile_id || null;
     let resolvedSender: any = null;
     try {
@@ -127,6 +133,9 @@ Deno.serve(async (req) => {
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient email credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      hold.workspaceId = workspaceId;
+      hold.amount = creditResult.unlimited ? 0 : deductAmount;
+      hold.held = hold.amount > 0;
     }
 
     // Resolve credentials: workspace-specific → platform ENV fallback.
@@ -144,6 +153,7 @@ Deno.serve(async (req) => {
     });
 
     if (creds.source === "none" || !creds.config.api_key) {
+      await releaseCreditHold("not_configured");
       return new Response(JSON.stringify({ error: "Email provider not configured. Contact platform admin or set up your own in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -158,11 +168,13 @@ Deno.serve(async (req) => {
     // but stored key is still a Resend `re_...`) before the provider returns 401.
     if (provider === "sendgrid" && !apiKey.startsWith("SG.")) {
       const msg = "Stored email API key doesn't match the selected provider (SendGrid). Re-enter your SendGrid API key in Settings → Channels.";
+      await releaseCreditHold("provider_mismatch");
       try { await adminClient.from("email_logs").insert({ workspace_id: workspaceId, to_email: to, from_email: fromEmail, subject, direction: "outbound", status: "failed", error: msg, lead_id: (body.leadId || body.lead_id || null) }); } catch (_) {}
       return new Response(JSON.stringify({ success: false, error: msg }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     if (provider === "resend" && !apiKey.startsWith("re_")) {
       const msg = "Stored email API key doesn't match the selected provider (Resend). Re-enter your Resend API key in Settings → Channels.";
+      await releaseCreditHold("provider_mismatch");
       try { await adminClient.from("email_logs").insert({ workspace_id: workspaceId, to_email: to, from_email: fromEmail, subject, direction: "outbound", status: "failed", error: msg, lead_id: (body.leadId || body.lead_id || null) }); } catch (_) {}
       return new Response(JSON.stringify({ success: false, error: msg }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -242,6 +254,7 @@ Deno.serve(async (req) => {
           meta: { provider, source: "email-send" },
         });
       }
+      await releaseCreditHold("provider_rejected");
       // Log the FAILED send so it appears in email_logs / dashboards
       try {
         await adminClient.from("email_logs").insert({
@@ -264,6 +277,14 @@ Deno.serve(async (req) => {
           error_message: errorMessage,
           metadata: { workspace_id: workspaceId, lead_id: leadId || null, source: "email-send", preview: isPreview },
         });
+        if (!isPreview) {
+          await logCommunicationUsage({
+            workspaceId, channel: "email",
+            senderProfileId: resolvedSender?.profile?.id || null,
+            messageId: null, country: null,
+            creditsDeducted: 0, status: "failed",
+          });
+        }
       } catch (_) { /* ignore logging errors */ }
 
       return new Response(
@@ -272,6 +293,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    hold.held = false; // provider accepted — the credit is earned
     // Log outbound email (success)
     try {
       await adminClient.from("email_logs").insert({
@@ -306,6 +328,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, messageId: result.messageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("email-send error:", err);
+    await releaseCreditHold("exception");
     return new Response(JSON.stringify({ success: false, error: err?.message || "Failed to send email" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { decryptWhatsApp, encryptChannelConfig } from "../_shared/whatsapp-crypto.ts";
-import { deductCredit, isAdminUser, addCredits } from "../_shared/credit-guard.ts";
+import { deductCredit, addCredits } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhone } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
@@ -632,13 +632,9 @@ Deno.serve(async (req) => {
     }
 
     // Check and deduct credits — skip on preview tests, or if service-role + skipCredits + workspace owner is admin
-    let shouldDeductCredits = !isPreview;
-    if (shouldDeductCredits && isServiceRole && skipCredits) {
-      const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
-      if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
-        shouldDeductCredits = false;
-      }
-    }
+    // skipCredits is only honoured for internal service-role calls where the
+    // caller (automation/workflow engine) has already taken the charge.
+    const shouldDeductCredits = !isPreview && !(isServiceRole && skipCredits);
     const senderProfileId: string | null = (body as any).sender_profile_id || null;
     let resolvedSender: any = null;
     try {
@@ -654,7 +650,7 @@ Deno.serve(async (req) => {
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient WhatsApp credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      creditsHeld = deductAmount > 0;
+      creditsHeld = deductAmount > 0 && !creditResult.unlimited;
     }
 
     // Credits are only *earned* by Meta once it accepts the message. Anything

@@ -18,7 +18,7 @@ export function useLowCreditAlert() {
   const alerted = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!credits) return;
+    if (!credits || credits.unlimited) return;
 
     for (const ch of CHANNELS) {
       const balance = (credits[ch.key] as number) ?? 0;

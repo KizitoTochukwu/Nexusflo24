@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
-import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { deductCredit, addCredits } from "../_shared/credit-guard.ts";
 import { htmlToPlainText } from "../_shared/htmlToPlainText.ts";
 import { normalizePhoneE164 as normalizePhoneNumber } from "../_shared/phone.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
@@ -119,6 +119,16 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let requestBody: { workspaceId?: string; to?: string; message?: string } = {};
+
+  // Credits are only earned once Twilio accepts the message; release the hold
+  // on any earlier failure so a failed text is never charged.
+  const hold = { workspaceId: "", amount: 0, held: false };
+  const releaseCreditHold = async (reason: string) => {
+    if (!hold.held || hold.amount <= 0) return;
+    hold.held = false;
+    try { await addCredits(hold.workspaceId, "sms", hold.amount, `refund:${reason}`); }
+    catch (err) { console.error("sms-send: failed to release credit hold", err); }
+  };
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -246,13 +256,9 @@ Deno.serve(async (req) => {
 
     // Check and deduct credits — skip on preview tests, or if service-role + skipCredits + workspace owner is admin
     const skipCredits = (requestBody as any).skipCredits;
-    let shouldDeductCredits = !isPreview;
-    if (shouldDeductCredits && isServiceRole && skipCredits) {
-      const { data: ws } = await adminClient.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
-      if (ws?.owner_user_id && await isAdminUser(ws.owner_user_id)) {
-        shouldDeductCredits = false;
-      }
-    }
+    // skipCredits is only honoured for internal service-role calls where the
+    // caller (automation/workflow engine) has already taken the charge.
+    const shouldDeductCredits = !isPreview && !(isServiceRole && skipCredits);
     const senderProfileId: string | null = (requestBody as any).sender_profile_id || null;
     let resolvedSender: any = null;
     try {
@@ -267,6 +273,9 @@ Deno.serve(async (req) => {
       if (!creditResult.allowed) {
         return new Response(JSON.stringify({ error: creditResult.error || "Insufficient SMS credits" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      hold.workspaceId = workspaceId;
+      hold.amount = creditResult.unlimited ? 0 : deductAmount;
+      hold.held = hold.amount > 0;
     }
 
     // Resolve credentials: workspace-specific → platform ENV fallback
@@ -287,11 +296,13 @@ Deno.serve(async (req) => {
 
     const senderRaw = String(resolvedSender?.detail?.phone_number || creds.config.from_number || Deno.env.get("TWILIO_FROM_NUMBER") || "").trim();
     if (!senderRaw) {
+      await releaseCreditHold("sender_missing");
       return new Response(JSON.stringify({ error: "SMS sender not configured. Add TWILIO_FROM_NUMBER (E.164 number or MG... Messaging Service SID) or save your own Twilio credentials in Settings → Channels." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let sender = resolveTwilioSender(senderRaw);
     if (!sender) {
+      await releaseCreditHold("sender_invalid");
       return new Response(JSON.stringify({ error: "Configured SMS sender is invalid. Use a valid E.164 number (e.g. +14155552671), Twilio Messaging Service SID (MG...), or supported alphanumeric sender ID." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -352,11 +363,13 @@ Deno.serve(async (req) => {
       result = await sendTwilioSmsGateway(sender, normalizedTo, message);
     } else {
       if (!accountSid || !authToken) {
+        await releaseCreditHold("not_configured");
         return new Response(JSON.stringify({ error: "SMS provider not configured. Save Twilio credentials in Settings → Channels or link the platform Twilio connector." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       result = await sendTwilioSmsDirect(accountSid, authToken, sender, normalizedTo, message);
     }
 
+    hold.held = false; // Twilio accepted — the credit is earned
     // Log success
     await adminClient.from("sms_logs").insert({
       workspace_id: workspaceId,
@@ -381,6 +394,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: true, providerMessageId: result.providerMessageId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("sms-send error:", err);
+    await releaseCreditHold("exception");
 
     const rawErr = err?.message || "Unknown error";
     const providerStatus = Number(err?.statusCode || err?.status || 0) || undefined;
@@ -396,6 +410,12 @@ Deno.serve(async (req) => {
           message: requestBody.message || "",
           status: "failed",
           error: rawErr,
+        });
+
+        await logCommunicationUsage({
+          workspaceId: requestBody.workspaceId, channel: "sms",
+          senderProfileId: null, messageId: null, country: null,
+          creditsDeducted: 0, status: "failed",
         });
 
         // Alert workspace owner if this is a credential failure

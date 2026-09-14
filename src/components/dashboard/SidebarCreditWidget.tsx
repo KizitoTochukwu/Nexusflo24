@@ -13,7 +13,9 @@ export default function SidebarCreditWidget({ collapsed }: { collapsed: boolean 
 
   if (!credits) return null;
 
-  const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
+  const unlimited = !!credits.unlimited;
+  const formatCount = (n: number) =>
+    unlimited ? "∞" : n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -22,8 +24,8 @@ export default function SidebarCreditWidget({ collapsed }: { collapsed: boolean 
           <div className="flex flex-col items-center gap-1.5">
             {channels.map((ch) => {
               const balance = (credits[ch.key] as number) ?? 0;
-              const isLow = balance <= 10 && balance > 0;
-              const isEmpty = balance === 0;
+              const isLow = !unlimited && balance <= 10 && balance > 0;
+              const isEmpty = !unlimited && balance === 0;
               return (
                 <Tooltip key={ch.key}>
                   <TooltipTrigger asChild>
@@ -40,7 +42,7 @@ export default function SidebarCreditWidget({ collapsed }: { collapsed: boolean 
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    {ch.label}: {balance.toLocaleString()} credits
+                    {ch.label}: {unlimited ? "Unlimited" : `${balance.toLocaleString()} credits`}
                   </TooltipContent>
                 </Tooltip>
               );
@@ -54,8 +56,8 @@ export default function SidebarCreditWidget({ collapsed }: { collapsed: boolean 
             {channels.map((ch) => {
               const Icon = ch.icon;
               const balance = (credits[ch.key] as number) ?? 0;
-              const isLow = balance <= 10 && balance > 0;
-              const isEmpty = balance === 0;
+              const isLow = !unlimited && balance <= 10 && balance > 0;
+              const isEmpty = !unlimited && balance === 0;
               return (
                 <div
                   key={ch.key}

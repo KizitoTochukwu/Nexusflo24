@@ -463,7 +463,6 @@ async function sendMessage(channel: string, lead: any, message: string, workspac
         subject: `Following up with you, ${lead.full_name || ""}`.trim(),
         html: message,
         leadId: lead.id,
-        skipCredits: true,
       };
     } else if (channel === "whatsapp" && lead.phone) {
       url = `${SUPABASE_URL}/functions/v1/whatsapp-send`;
@@ -472,7 +471,6 @@ async function sendMessage(channel: string, lead: any, message: string, workspac
         to: lead.phone,
         body: message,
         leadId: lead.id,
-        skipCredits: true,
       };
     } else if (channel === "sms" && lead.phone) {
       url = `${SUPABASE_URL}/functions/v1/sms-send`;
@@ -480,7 +478,6 @@ async function sendMessage(channel: string, lead: any, message: string, workspac
         workspaceId,
         to: lead.phone,
         message,
-        skipCredits: true,
       };
     }
 

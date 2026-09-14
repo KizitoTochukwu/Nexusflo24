@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { isAdminUser } from "../_shared/credit-guard.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
 import { enforceWaPacing } from "../_shared/wa-rate-limit.ts";
@@ -56,10 +55,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if workspace owner is admin → skip credits
-    const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspaceId).single();
-    const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
-    if (ownerIsAdmin) console.log("[execute-campaign] Admin workspace — credits exempt");
+    // Credits are charged per send by email-send / sms-send / whatsapp-send.
+    // Workspaces flagged "unlimited" are exempted inside the credit ledger itself.
 
     const channel = campaign.type;
     const content = (campaign.message_content || {}) as {
@@ -259,7 +256,6 @@ Deno.serve(async (req) => {
                 leadId: lead.id, campaignId: campaign_id,
                 templateSettings: content.templateSettings || undefined,
                 senderProfileId: (content as any).sender_profile_id_email || (content as any).sender_profile_id || null,
-                ...(ownerIsAdmin ? { skipCredits: true } : {}),
               }),
             });
             const data = await res.json();
@@ -286,7 +282,6 @@ Deno.serve(async (req) => {
                       },
                     }
                   : {}),
-                ...(ownerIsAdmin ? { skipCredits: true } : {}),
               }),
             });
             const data = await res.json();
@@ -304,7 +299,6 @@ Deno.serve(async (req) => {
                 workspaceId, to: lead.phone, message: textBody || messageSubject,
                 leadId: lead.id, campaignId: campaign_id,
                 senderProfileId: (content as any).sender_profile_id_sms || (content as any).sender_profile_id || null,
-                ...(ownerIsAdmin ? { skipCredits: true } : {}),
               }),
             });
             const data = await res.json();

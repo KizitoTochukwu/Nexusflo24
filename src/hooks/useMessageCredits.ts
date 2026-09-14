@@ -10,6 +10,7 @@ export interface MessageCredits {
   email_used: number;
   sms_used: number;
   whatsapp_used: number;
+  unlimited?: boolean;
 }
 
 export function useMessageCredits() {
