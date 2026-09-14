@@ -194,7 +194,7 @@ export function useGettingStarted(workspaceId: string) {
         count("booking_pages", ws),
         count("workspace_invites", ws),
         count("workspace_members", ws),
-        count("google_calendar_tokens", (q) => q.eq("user_id", user!.id)),
+        count("google_calendar_tokens", (q) => ws(q).eq("user_id", user!.id)),
         hasConfiguredPipeline(workspaceId),
       ]);
       return {
@@ -298,5 +298,5 @@ export function useGettingStarted(workspaceId: string) {
   const completed = items.filter((i) => i.done).length;
   const percent = Math.round((completed / items.length) * 100);
 
-  return { items, completed, total: items.length, percent, isLoading: query.isLoading };
+  return { items, completed, total: items.length, percent, isLoading: query.isLoading, error: query.error };
 }

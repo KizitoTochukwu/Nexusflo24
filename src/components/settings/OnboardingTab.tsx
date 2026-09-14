@@ -5,7 +5,7 @@ import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import { useOnboarding, useGettingStarted, useSaveOnboarding } from "@/hooks/useOnboarding";
 import { OPEN_TOUR_EVENT } from "@/components/onboarding/ProductTour";
 import { OPEN_CHECKLIST_EVENT } from "@/components/dashboard/GettingStartedChecklist";
-import { Sparkles, ListChecks } from "lucide-react";
+import { Sparkles, ListChecks, CheckCircle2 } from "lucide-react";
 
 const OnboardingTab = ({ workspaceId }: { workspaceId: string }) => {
   const { data: record } = useOnboarding(workspaceId);
@@ -30,9 +30,15 @@ const OnboardingTab = ({ workspaceId }: { workspaceId: string }) => {
           <Button variant="outline" className="gap-1.5" onClick={() => { save.mutate({ tour_completed: false } as any); window.dispatchEvent(new Event(OPEN_TOUR_EVENT)); }}>
             <Sparkles className="h-4 w-4" /> Replay product tour
           </Button>
-          <Button variant="outline" className="gap-1.5" onClick={() => { save.mutate({ checklist_dismissed: false, checklist_minimized: false } as any); window.dispatchEvent(new Event(OPEN_CHECKLIST_EVENT)); }}>
-            <ListChecks className="h-4 w-4" /> Reopen Getting Started ({completed}/{total} · {percent}%)
-          </Button>
+          {completed >= total ? (
+            <div className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-accent" /> Getting Started complete
+            </div>
+          ) : (
+            <Button variant="outline" className="gap-1.5" onClick={() => { save.mutate({ checklist_dismissed: false, checklist_minimized: false } as any); window.dispatchEvent(new Event(OPEN_CHECKLIST_EVENT)); }}>
+              <ListChecks className="h-4 w-4" /> Reopen Getting Started ({completed}/{total} · {percent}%)
+            </Button>
+          )}
         </CardContent>
       </Card>
 
