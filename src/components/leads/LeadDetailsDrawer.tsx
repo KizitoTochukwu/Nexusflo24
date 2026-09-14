@@ -130,10 +130,25 @@ const LeadDetailsDrawer = ({ lead, open, onOpenChange, workspaceId }: Props) => 
     setEditingScore(false);
   };
 
+  const scoringOptions = Object.entries(scoringConfig?.rules ?? {})
+    .filter(([, points]) => Number(points) !== 0)
+    .map(([key, points]) => ({
+      key,
+      label: scoringActivityLabel(key, scoringConfig?.custom_labels ?? {}),
+      points: Number(points),
+    }));
+
   const handleLogNote = () => {
-    if (!noteText.trim()) return;
-    logActivity.mutate({ leadId: lead.id, type: "manual_note", meta: { note: noteText.trim() }, workspaceId });
+    const isNote = activityType === "manual_note";
+    if (isNote && !noteText.trim()) return;
+    logActivity.mutate({
+      leadId: lead.id,
+      type: activityType,
+      meta: noteText.trim() ? { note: noteText.trim() } : {},
+      workspaceId,
+    });
     setNoteText("");
+    setActivityType("manual_note");
   };
 
   const handleQualify = () => {
