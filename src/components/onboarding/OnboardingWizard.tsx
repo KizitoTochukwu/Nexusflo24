@@ -325,8 +325,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Upload a CSV with names, emails, phone numbers, source and tags. Duplicates are merged automatically by email, then phone."
             actionLabel="Open CSV importer"
             onAction={() => window.open(`/dashboard/${workspaceId}/leads`, "_blank")}
-            done={Boolean(answers.contacts_imported)}
+            done={live("import_contacts") || Boolean(answers.contacts_imported)}
             onToggleDone={() => setAnswer("contacts_imported", !answers.contacts_imported)}
+            locked={live("import_contacts")}
             doneLabel="I've imported my contacts"
           />
         );
@@ -339,8 +340,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Add a verified sender profile so campaigns, automations and booking confirmations send from your own domain."
             actionLabel="Open sender settings"
             onAction={() => window.open(`/dashboard/${workspaceId}/settings/senders`, "_blank")}
-            done={Boolean(answers.email_connected)}
+            done={live("connect_email") || Boolean(answers.email_connected)}
             onToggleDone={() => setAnswer("email_connected", !answers.email_connected)}
+            locked={live("connect_email")}
             doneLabel="My sending email is connected"
           />
         );
@@ -353,8 +355,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Link Google Calendar to a booking page so availability stays in sync and confirmed meetings appear in your diary."
             actionLabel="Open bookings"
             onAction={() => window.open(`/dashboard/${workspaceId}/bookings`, "_blank")}
-            done={Boolean(answers.calendar_connected)}
+            done={live("connect_calendar") || Boolean(answers.calendar_connected)}
             onToggleDone={() => setAnswer("calendar_connected", !answers.calendar_connected)}
+            locked={live("connect_calendar")}
             doneLabel="My calendar is connected"
           />
         );
@@ -367,8 +370,9 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
             copy="Invite colleagues by email and choose their role. They'll get access to the CRM, campaigns and shared inbox."
             actionLabel="Open team settings"
             onAction={() => window.open(`/dashboard/${workspaceId}/settings/team`, "_blank")}
-            done={Boolean(answers.team_invited)}
+            done={live("invite_team") || Boolean(answers.team_invited)}
             onToggleDone={() => setAnswer("team_invited", !answers.team_invited)}
+            locked={live("invite_team")}
             doneLabel="I've invited my team"
           />
         );
@@ -522,10 +526,10 @@ const Summary = ({ label, value }: { label: string; value: string }) => (
 );
 
 const ActionStep = ({
-  icon: Icon, title, copy, actionLabel, onAction, done, onToggleDone, doneLabel,
+  icon: Icon, title, copy, actionLabel, onAction, done, onToggleDone, doneLabel, locked = false,
 }: {
   icon: any; title: string; copy: string; actionLabel: string; onAction: () => void;
-  done: boolean; onToggleDone: () => void; doneLabel: string;
+  done: boolean; onToggleDone: () => void; doneLabel: string; locked?: boolean;
 }) => (
   <div className="space-y-4">
     <div className="rounded-xl border bg-muted/40 p-5">
@@ -535,8 +539,8 @@ const ActionStep = ({
       <Button variant="outline" className="mt-4" onClick={onAction}>{actionLabel}</Button>
     </div>
     <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-      <input type="checkbox" className="h-4 w-4 accent-current" checked={done} onChange={onToggleDone} />
-      {doneLabel}
+      <input type="checkbox" className="h-4 w-4 accent-current" checked={done} disabled={locked} onChange={onToggleDone} />
+      {locked ? "Done — we can see this in your workspace" : doneLabel}
     </label>
     <p className="text-xs text-muted-foreground">
       Not ready? Choose <span className="font-medium">Skip</span> — it will stay on your Getting Started checklist.
