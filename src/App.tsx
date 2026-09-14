@@ -222,6 +222,8 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogArticle />} />
               <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
               <Route path="/register" element={<RedirectIfAuth><Register /></RedirectIfAuth>} />
+              <Route path="/forgot-password" element={<RedirectIfAuth><ForgotPassword /></RedirectIfAuth>} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/oauth/gmail/return" element={<GmailReturn />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
