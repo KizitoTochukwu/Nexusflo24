@@ -106,13 +106,20 @@ export default function CreateFunnelDialog({
     );
   };
 
+  const buildPrompt = () => {
+    const extras: string[] = [];
+    if (aiOffer.trim()) extras.push(`Offer / product: ${aiOffer.trim()}`);
+    if (aiAudience.trim()) extras.push(`Target audience: ${aiAudience.trim()}`);
+    return [aiPrompt.trim(), ...extras].join("\n");
+  };
+
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
     setAiResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-funnel", {
-        body: { prompt: aiPrompt.trim() },
+        body: { prompt: buildPrompt() },
       });
       if (error) throw error;
       if (!data?.funnel) throw new Error("No funnel data returned");
