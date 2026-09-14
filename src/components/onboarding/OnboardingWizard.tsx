@@ -106,12 +106,58 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
     } catch { /* noop */ }
   };
 
+  /** Creates the workspace pipeline from the entered stages, if none exists yet. */
+  const ensurePipeline = async () => {
+    const names = (stages ?? []).map((s) => s.trim()).filter(Boolean);
+    if (!names.length) return;
+    try {
+      const { data: existing, error } = await supabase
+        .from("crm_pipelines" as any)
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .limit(1);
+      if (error) return;
+      if ((existing ?? []).length) return; // never touch an existing pipeline
+
+      const { data: created, error: createError } = await supabase
+        .from("crm_pipelines" as any)
+        .insert({
+          workspace_id: workspaceId,
+          name: "Sales Pipeline",
+          is_default: true,
+          position: 0,
+          created_by: user?.id ?? null,
+        } as any)
+        .select("id")
+        .maybeSingle();
+      if (createError || !created) return;
+
+      await supabase.from("crm_pipeline_stages" as any).insert(
+        names.map((name, i) => ({
+          pipeline_id: (created as any).id,
+          workspace_id: workspaceId,
+          name,
+          position: i,
+        })) as any
+      );
+    } catch {
+      /* setup should never block finishing onboarding */
+    }
+  };
+
   const handleFinish = async () => {
     try {
-      await persist({ current_step: TOTAL_STEPS - 1, completed: true, completed_at: new Date().toISOString() });
+      await ensurePipeline();
+      await persist({
+        answers: { ...answers, pipeline_configured: true },
+        current_step: TOTAL_STEPS - 1,
+        completed: true,
+        completed_at: new Date().toISOString(),
+      } as any);
       setCelebrate(true);
     } catch { /* noop */ }
   };
+
 
   const canContinue = useMemo(() => {
     if (current.id === "business") return Boolean((answers.business_name as string)?.trim());
