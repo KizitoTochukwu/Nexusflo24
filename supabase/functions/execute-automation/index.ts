@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { formatEmailBody, wrapEmailTemplate } from "../_shared/email-layout.ts";
-import { deductCredit, isAdminUser } from "../_shared/credit-guard.ts";
+import { deductCredit } from "../_shared/credit-guard.ts";
 import { blocksToHtml, parseBlocksFromMessage, interpolateBlocks } from "../_shared/email-blocks.ts";
 import { buildLeadVars, interpolateText } from "../_shared/interpolate-vars.ts";
 import { isCredentialError, notifyCredentialFailure } from "../_shared/credential-alert.ts";
@@ -232,10 +232,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Resolve if workspace owner is admin → skip credit deduction
-    const { data: ws } = await supabase.from("workspaces").select("owner_user_id").eq("id", workspace_id).single();
-    const ownerIsAdmin = ws?.owner_user_id ? await isAdminUser(ws.owner_user_id) : false;
-    if (ownerIsAdmin) console.log("[execute-automation] Admin workspace — credits exempt");
+    // Credits are charged here once per messaging step; the downstream send
+    // functions receive skipCredits so the same message is never charged twice.
+    // Workspaces flagged "unlimited" are exempted inside the credit ledger.
 
     const results: any[] = [];
     let skipRemaining = false;
@@ -363,8 +362,8 @@ Deno.serve(async (req) => {
                 await sleep(550 - elapsed);
               }
 
-              // Credit deduction (admin bypass)
-              if (!ownerIsAdmin) {
+              // Credit deduction (unlimited workspaces are exempted in the ledger)
+              {
                 const creditChannel = actionType === "send_email" ? "email" : actionType === "send_sms" ? "sms" : "whatsapp";
                 const creditResult = await deductCredit(workspace_id, creditChannel as any, `automation:${automation_id}`);
                 if (!creditResult.allowed) {
