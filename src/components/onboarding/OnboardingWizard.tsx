@@ -95,6 +95,7 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
       });
     } catch (e: any) {
       toast.error(e?.message ?? "Could not save your progress.");
+      if (e && typeof e === "object") e.onboardingNotified = true;
       throw e;
     }
   };
@@ -157,8 +158,8 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
       }, { answers: completedAnswers });
       setAnswers(completedAnswers);
       setCelebrate(true);
-    } catch {
-      // persist and pipeline setup surface their own actionable error.
+    } catch (e: any) {
+      if (!e?.onboardingNotified) toast.error(e?.message ?? "Could not finish workspace setup.");
     } finally {
       setIsFinishing(false);
     }
