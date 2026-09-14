@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutTemplate, MoreHorizontal, Play, Pause, Trash2, Copy, Eye } from "lucide-react";
+import { LayoutTemplate, MoreHorizontal, Play, Pause, Trash2, Copy, Eye, Sparkles } from "lucide-react";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import {
   useFunnels, useDeleteFunnel, useUpdateFunnel, useCreateFunnel,
@@ -14,6 +14,7 @@ import {
 import CreateFunnelDialog from "@/components/funnels/CreateFunnelDialog";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const DashboardFunnels = () => {
   const workspaceId = useWorkspaceId();
@@ -22,6 +23,7 @@ const DashboardFunnels = () => {
   const deleteFunnel = useDeleteFunnel();
   const updateFunnel = useUpdateFunnel();
   const createFunnel = useCreateFunnel();
+  const [aiOpen, setAiOpen] = useState(false);
 
   const openDetails = (f: Funnel) => {
     navigate(`/dashboard/${workspaceId}/funnels/${f.id}`);
@@ -60,7 +62,18 @@ const DashboardFunnels = () => {
           <h1 className="text-2xl font-bold">Funnels</h1>
           <p className="mt-1 text-sm text-muted-foreground">Design and optimize your sales funnels.</p>
         </div>
-        <CreateFunnelDialog />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setAiOpen(true)}>
+            <Sparkles className="h-4 w-4 text-accent" /> Generate with AI
+          </Button>
+          <CreateFunnelDialog />
+          <CreateFunnelDialog
+            open={aiOpen}
+            onOpenChange={setAiOpen}
+            initialMode="ai"
+            hideTrigger
+          />
+        </div>
       </div>
 
       <div className="mt-6 rounded-xl border bg-card shadow-card">

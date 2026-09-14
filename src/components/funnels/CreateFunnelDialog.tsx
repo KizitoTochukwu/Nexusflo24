@@ -12,6 +12,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useCreateFunnel, OBJECTIVE_OPTIONS, STEP_TYPE_OPTIONS } from "@/hooks/useFunnels";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const DEFAULT_STEPS: Record<string, string[]> = {
@@ -31,11 +32,42 @@ interface AiFunnelResult {
   steps: { step_type: string; page_content: Record<string, unknown> }[];
 }
 
-export default function CreateFunnelDialog() {
+const IDEAS = [
+  "Lead magnet funnel offering a free checklist for small business owners",
+  "Webinar registration funnel for a live AI marketing masterclass",
+  "Coaching application funnel that qualifies serious clients",
+  "Product launch funnel for a £97 online course with an upsell",
+  "Free consultation booking funnel for a service business",
+];
+
+interface CreateFunnelDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  initialMode?: Mode;
+  hideTrigger?: boolean;
+}
+
+export default function CreateFunnelDialog({
+  open: openProp,
+  onOpenChange,
+  initialMode = "choose",
+  hideTrigger = false,
+}: CreateFunnelDialogProps = {}) {
   const workspaceId = useWorkspaceId();
+  const navigate = useNavigate();
   const createFunnel = useCreateFunnel();
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>("choose");
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v);
+    onOpenChange?.(v);
+  };
+  const [mode, setMode] = useState<Mode>(initialMode);
+
+  // Offer/audience hints for AI
+  const [aiOffer, setAiOffer] = useState("");
+  const [aiAudience, setAiAudience] = useState("");
 
   // Manual fields
   const [name, setName] = useState("");
@@ -50,11 +82,13 @@ export default function CreateFunnelDialog() {
   const suggestedSteps = DEFAULT_STEPS[objective] || DEFAULT_STEPS.lead_capture;
 
   const resetAll = () => {
-    setMode("choose");
+    setMode(initialMode);
     setName("");
     setDescription("");
     setObjective("lead_capture");
     setAiPrompt("");
+    setAiOffer("");
+    setAiAudience("");
     setAiResult(null);
     setAiLoading(false);
   };
@@ -73,13 +107,20 @@ export default function CreateFunnelDialog() {
     );
   };
 
+  const buildPrompt = () => {
+    const extras: string[] = [];
+    if (aiOffer.trim()) extras.push(`Offer / product: ${aiOffer.trim()}`);
+    if (aiAudience.trim()) extras.push(`Target audience: ${aiAudience.trim()}`);
+    return [aiPrompt.trim(), ...extras].join("\n");
+  };
+
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
     setAiResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("generate-funnel", {
-        body: { prompt: aiPrompt.trim() },
+        body: { prompt: buildPrompt() },
       });
       if (error) throw error;
       if (!data?.funnel) throw new Error("No funnel data returned");
@@ -104,17 +145,25 @@ export default function CreateFunnelDialog() {
           page_content: s.page_content,
         })),
       },
-      { onSuccess: () => { setOpen(false); resetAll(); } },
+      {
+        onSuccess: (created: any) => {
+          setOpen(false);
+          resetAll();
+          if (created?.id) navigate(`/dashboard/${workspaceId}/funnels/${created.id}`);
+        },
+      },
     );
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetAll(); }}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" /> Create Funnel
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" /> Create Funnel
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -204,10 +253,46 @@ export default function CreateFunnelDialog() {
                     <Textarea
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="e.g. A webinar funnel for my fitness coaching business that captures leads and upsells a $97 program…"
+                      placeholder="e.g. A webinar funnel for my fitness coaching business that captures leads and upsells a £97 program…"
                       rows={4}
                       disabled={aiLoading}
                     />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Starter ideas</Label>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {IDEAS.map((idea) => (
+                        <button
+                          key={idea}
+                          type="button"
+                          disabled={aiLoading}
+                          onClick={() => setAiPrompt(idea)}
+                          className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-accent hover:bg-accent/10 hover:text-foreground disabled:opacity-50"
+                        >
+                          {idea.split(" ").slice(0, 4).join(" ")}…
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Offer (optional)</Label>
+                      <Input
+                        value={aiOffer}
+                        onChange={(e) => setAiOffer(e.target.value)}
+                        placeholder="e.g. 6-week coaching programme"
+                        disabled={aiLoading}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Audience (optional)</Label>
+                      <Input
+                        value={aiAudience}
+                        onChange={(e) => setAiAudience(e.target.value)}
+                        placeholder="e.g. UK salon owners"
+                        disabled={aiLoading}
+                      />
+                    </div>
                   </div>
                   <Button
                     onClick={handleAiGenerate}
@@ -265,9 +350,11 @@ export default function CreateFunnelDialog() {
               )}
             </div>
             <DialogFooter>
-              <Button variant="ghost" size="sm" onClick={() => { setMode("choose"); setAiResult(null); }}>
-                <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
-              </Button>
+              {initialMode === "choose" && (
+                <Button variant="ghost" size="sm" onClick={() => { setMode("choose"); setAiResult(null); }}>
+                  <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               {aiResult && (
                 <Button onClick={handleAiCreate} disabled={createFunnel.isPending}>
