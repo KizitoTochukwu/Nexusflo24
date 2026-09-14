@@ -50,6 +50,13 @@
       "when": 1789412043284,
       "tag": "0006_ensure_onboarding_pipeline",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789417395755,
+      "tag": "0007_atomic_message_credits",
+      "breakpoints": true
     }
   ]
 }

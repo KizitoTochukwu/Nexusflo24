@@ -5054,6 +5054,7 @@ export type Database = {
           id: string
           sms_balance: number
           sms_used: number
+          unlimited: boolean
           updated_at: string
           whatsapp_balance: number
           whatsapp_used: number
@@ -5065,6 +5066,7 @@ export type Database = {
           id?: string
           sms_balance?: number
           sms_used?: number
+          unlimited?: boolean
           updated_at?: string
           whatsapp_balance?: number
           whatsapp_used?: number
@@ -5076,6 +5078,7 @@ export type Database = {
           id?: string
           sms_balance?: number
           sms_used?: number
+          unlimited?: boolean
           updated_at?: string
           whatsapp_balance?: number
           whatsapp_used?: number
@@ -12766,6 +12769,16 @@ export type Database = {
         Args: { p_funnel_id: string }
         Returns: string
       }
+      add_message_credit: {
+        Args: {
+          _amount: number
+          _channel: string
+          _reason?: string
+          _reference_id?: string
+          _workspace_id: string
+        }
+        Returns: Json
+      }
       assign_next_round_robin: {
         Args: { _workspace_id: string }
         Returns: string
@@ -12846,6 +12859,16 @@ export type Database = {
         Returns: string
       }
       decay_inactive_leads: { Args: never; Returns: number }
+      deduct_message_credit: {
+        Args: {
+          _amount?: number
+          _channel: string
+          _reason?: string
+          _reference_id?: string
+          _workspace_id: string
+        }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
