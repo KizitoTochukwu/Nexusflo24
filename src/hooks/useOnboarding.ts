@@ -154,7 +154,7 @@ export function useGettingStarted(workspaceId: string) {
     staleTime: 60_000,
     queryFn: async () => {
       const ws = (q: any) => q.eq("workspace_id", workspaceId);
-      const [leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars] =
+      const [leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline] =
         await Promise.all([
           count("leads", ws),
           count("leads", (q) => ws(q).ilike("source", "%import%")),
@@ -165,8 +165,10 @@ export function useGettingStarted(workspaceId: string) {
           count("workspace_invites", ws),
           count("workspace_members", ws),
           count("google_calendar_tokens", (q) => q.eq("user_id", user!.id)),
+          hasConfiguredPipeline(workspaceId),
         ]);
-      return { leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars };
+      return { leads, imported, senders, campaigns, automations, bookingPages, invites, members, calendars, pipeline };
+
     },
   });
 
