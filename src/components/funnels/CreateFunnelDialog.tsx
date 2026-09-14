@@ -81,11 +81,13 @@ export default function CreateFunnelDialog({
   const suggestedSteps = DEFAULT_STEPS[objective] || DEFAULT_STEPS.lead_capture;
 
   const resetAll = () => {
-    setMode("choose");
+    setMode(initialMode);
     setName("");
     setDescription("");
     setObjective("lead_capture");
     setAiPrompt("");
+    setAiOffer("");
+    setAiAudience("");
     setAiResult(null);
     setAiLoading(false);
   };
