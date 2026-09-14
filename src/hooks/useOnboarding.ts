@@ -122,6 +122,28 @@ async function count(tableName: string, build: (q: any) => any): Promise<number>
   }
 }
 
+/** True when the workspace has at least one pipeline that actually has stages. */
+async function hasConfiguredPipeline(workspaceId: string): Promise<boolean> {
+  try {
+    const { data, error } = await (supabase as any)
+      .from("crm_pipelines")
+      .select("id")
+      .eq("workspace_id", workspaceId);
+    if (error) return false;
+    const ids = (data ?? []).map((r: any) => r.id);
+    if (!ids.length) return false;
+    const { count: c, error: stageError } = await (supabase as any)
+      .from("crm_pipeline_stages")
+      .select("id", { count: "exact", head: true })
+      .in("pipeline_id", ids);
+    if (stageError) return false;
+    return (c ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+
 export function useGettingStarted(workspaceId: string) {
   const { user } = useAuth();
   const { data: onboarding } = useOnboarding(workspaceId);
