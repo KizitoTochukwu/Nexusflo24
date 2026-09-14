@@ -350,9 +350,11 @@ export default function CreateFunnelDialog({
               )}
             </div>
             <DialogFooter>
-              <Button variant="ghost" size="sm" onClick={() => { setMode("choose"); setAiResult(null); }}>
-                <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
-              </Button>
+              {initialMode === "choose" && (
+                <Button variant="ghost" size="sm" onClick={() => { setMode("choose"); setAiResult(null); }}>
+                  <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               {aiResult && (
                 <Button onClick={handleAiCreate} disabled={createFunnel.isPending}>
