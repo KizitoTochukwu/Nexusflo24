@@ -47,6 +47,11 @@ const OnboardingWizard = ({ workspaceId, embedded = false }: Props) => {
   const navigate = useNavigate();
   const { data: record, isLoading } = useOnboarding(workspaceId);
   const save = useSaveOnboarding(workspaceId);
+  const { user } = useAuth();
+  // Live setup signals, so a step shows as done when the real thing exists.
+  const { items: liveItems } = useGettingStarted(workspaceId);
+  const live = (id: string) => Boolean(liveItems.find((i) => i.id === id)?.done);
+
 
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>({});
