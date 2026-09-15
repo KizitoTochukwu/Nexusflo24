@@ -94,6 +94,50 @@ async function evaluateCondition(
       if (op === "not_exists") return lv === null || lv === undefined || lv === "";
       return false;
     }
+    case "if_whatsapp_replied": {
+      const { count } = await supabase.from("whatsapp_messages").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("direction", "inbound")
+        .or(`lead_id.eq.${leadId}${lead.phone ? `,phone_number.eq.${lead.phone}` : ""}`);
+      return (count ?? 0) > 0;
+    }
+    case "if_sms_replied": {
+      const { count } = await supabase.from("sms_logs").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("direction", "inbound")
+        .or(`${lead.phone ? `from_number.eq.${lead.phone},` : ""}contact_id.eq.${(lead as any).contact_id ?? "00000000-0000-0000-0000-000000000000"}`);
+      return (count ?? 0) > 0;
+    }
+    case "if_email_replied": {
+      if (!lead.email) return false;
+      const { count } = await supabase.from("email_logs").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("direction", "inbound")
+        .or(`lead_id.eq.${leadId},from_email.ilike.${lead.email}`);
+      return (count ?? 0) > 0;
+    }
+    // Combined exit check for enquiry chase sequences: true when the person has
+    // replied on ANY channel, booked a call, or been tagged as opted out.
+    case "if_responded_or_booked": {
+      const optedOut = Array.isArray(lead.tags) && lead.tags.some((t: string) =>
+        ["opted out", "opted-out", "unsubscribed", "do not contact"].includes(String(t).toLowerCase()));
+      if (optedOut) return true;
+      const nullUuid = "00000000-0000-0000-0000-000000000000";
+      const contactId = (lead as any).contact_id ?? nullUuid;
+      const [wa, sms, em, bk] = await Promise.all([
+        supabase.from("whatsapp_messages").select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId).eq("direction", "inbound")
+          .or(`lead_id.eq.${leadId},contact_id.eq.${contactId}${lead.phone ? `,phone_number.eq.${lead.phone}` : ""}`),
+        supabase.from("sms_logs").select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId).eq("direction", "inbound")
+          .or(`contact_id.eq.${contactId}${lead.phone ? `,from_number.eq.${lead.phone}` : ""}`),
+        lead.email
+          ? supabase.from("email_logs").select("id", { count: "exact", head: true })
+              .eq("workspace_id", workspaceId).eq("direction", "inbound")
+              .or(`lead_id.eq.${leadId},from_email.ilike.${lead.email}`)
+          : Promise.resolve({ count: 0 }),
+        supabase.from("bookings").select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId).eq("lead_id", leadId),
+      ]);
+      return ((wa.count ?? 0) + (sms.count ?? 0) + (em.count ?? 0) + (bk.count ?? 0)) > 0;
+    }
     default:
       return true;
   }
@@ -257,6 +301,32 @@ async function runAction(
           });
         }
         return { status: "success", details: { tag } };
+      }
+      case "update_deal_stage": {
+        // Move the lead's open deal in a named pipeline to a named stage.
+        if (isTest) return { status: "skipped", details: { reason: "test_mode" } };
+        const pipelineName = String(cfg.pipeline || "").trim();
+        const stageName = String(cfg.stage || "").trim();
+        if (!pipelineName || !stageName) return { status: "skipped", details: { reason: "missing_config" } };
+        const contactId = (lead as any).contact_id ?? null;
+        const { data: pipeline } = await supabase
+          .from("crm_pipelines").select("id")
+          .eq("workspace_id", workflow.workspace_id).ilike("name", pipelineName).maybeSingle();
+        if (!pipeline) return { status: "skipped", details: { reason: "pipeline_not_found", pipeline: pipelineName } };
+        let dealQ = supabase.from("crm_deals").select("id")
+          .eq("workspace_id", workflow.workspace_id).eq("pipeline_id", pipeline.id).eq("status", "open")
+          .order("created_at", { ascending: false }).limit(1);
+        dealQ = contactId ? dealQ.or(`contact_id.eq.${contactId},lead_id.eq.${lead.id}`) : dealQ.eq("lead_id", lead.id);
+        const { data: deal } = await dealQ.maybeSingle();
+        if (!deal) return { status: "skipped", details: { reason: "no_open_deal", pipeline: pipelineName } };
+        const { data: stage } = await supabase
+          .from("crm_pipeline_stages").select("id, probability")
+          .eq("pipeline_id", pipeline.id).ilike("name", stageName).maybeSingle();
+        if (!stage) return { status: "failed", details: { pipeline: pipelineName }, error: `stage_not_found:${stageName}` };
+        await supabase.from("crm_deals")
+          .update({ stage_id: stage.id, ...(stage.probability != null ? { probability: stage.probability } : {}), updated_at: new Date().toISOString() })
+          .eq("id", deal.id);
+        return { status: "success", details: { deal_id: deal.id, stage: stageName } };
       }
       case "update_status":
         if (!isTest) await supabase.from("leads").update({ status: String(cfg.status || cfg.value || "New") }).eq("id", lead.id);
