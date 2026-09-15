@@ -94,6 +94,50 @@ async function evaluateCondition(
       if (op === "not_exists") return lv === null || lv === undefined || lv === "";
       return false;
     }
+    case "if_whatsapp_replied": {
+      const { count } = await supabase.from("whatsapp_messages").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("direction", "inbound")
+        .or(`lead_id.eq.${leadId}${lead.phone ? `,phone_number.eq.${lead.phone}` : ""}`);
+      return (count ?? 0) > 0;
+    }
+    case "if_sms_replied": {
+      const { count } = await supabase.from("sms_logs").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("direction", "inbound")
+        .or(`${lead.phone ? `from_number.eq.${lead.phone},` : ""}contact_id.eq.${(lead as any).contact_id ?? "00000000-0000-0000-0000-000000000000"}`);
+      return (count ?? 0) > 0;
+    }
+    case "if_email_replied": {
+      if (!lead.email) return false;
+      const { count } = await supabase.from("email_logs").select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId).eq("direction", "inbound")
+        .or(`lead_id.eq.${leadId},from_email.ilike.${lead.email}`);
+      return (count ?? 0) > 0;
+    }
+    // Combined exit check for enquiry chase sequences: true when the person has
+    // replied on ANY channel, booked a call, or been tagged as opted out.
+    case "if_responded_or_booked": {
+      const optedOut = Array.isArray(lead.tags) && lead.tags.some((t: string) =>
+        ["opted out", "opted-out", "unsubscribed", "do not contact"].includes(String(t).toLowerCase()));
+      if (optedOut) return true;
+      const nullUuid = "00000000-0000-0000-0000-000000000000";
+      const contactId = (lead as any).contact_id ?? nullUuid;
+      const [wa, sms, em, bk] = await Promise.all([
+        supabase.from("whatsapp_messages").select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId).eq("direction", "inbound")
+          .or(`lead_id.eq.${leadId},contact_id.eq.${contactId}${lead.phone ? `,phone_number.eq.${lead.phone}` : ""}`),
+        supabase.from("sms_logs").select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId).eq("direction", "inbound")
+          .or(`contact_id.eq.${contactId}${lead.phone ? `,from_number.eq.${lead.phone}` : ""}`),
+        lead.email
+          ? supabase.from("email_logs").select("id", { count: "exact", head: true })
+              .eq("workspace_id", workspaceId).eq("direction", "inbound")
+              .or(`lead_id.eq.${leadId},from_email.ilike.${lead.email}`)
+          : Promise.resolve({ count: 0 }),
+        supabase.from("bookings").select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId).eq("lead_id", leadId),
+      ]);
+      return ((wa.count ?? 0) + (sms.count ?? 0) + (em.count ?? 0) + (bk.count ?? 0)) > 0;
+    }
     default:
       return true;
   }
