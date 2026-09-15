@@ -302,6 +302,32 @@ async function runAction(
         }
         return { status: "success", details: { tag } };
       }
+      case "update_deal_stage": {
+        // Move the lead's open deal in a named pipeline to a named stage.
+        if (isTest) return { status: "skipped", details: { reason: "test_mode" } };
+        const pipelineName = String(cfg.pipeline || "").trim();
+        const stageName = String(cfg.stage || "").trim();
+        if (!pipelineName || !stageName) return { status: "skipped", details: { reason: "missing_config" } };
+        const contactId = (lead as any).contact_id ?? null;
+        const { data: pipeline } = await supabase
+          .from("crm_pipelines").select("id")
+          .eq("workspace_id", workflow.workspace_id).ilike("name", pipelineName).maybeSingle();
+        if (!pipeline) return { status: "skipped", details: { reason: "pipeline_not_found", pipeline: pipelineName } };
+        let dealQ = supabase.from("crm_deals").select("id")
+          .eq("workspace_id", workflow.workspace_id).eq("pipeline_id", pipeline.id).eq("status", "open")
+          .order("created_at", { ascending: false }).limit(1);
+        dealQ = contactId ? dealQ.or(`contact_id.eq.${contactId},lead_id.eq.${lead.id}`) : dealQ.eq("lead_id", lead.id);
+        const { data: deal } = await dealQ.maybeSingle();
+        if (!deal) return { status: "skipped", details: { reason: "no_open_deal", pipeline: pipelineName } };
+        const { data: stage } = await supabase
+          .from("crm_pipeline_stages").select("id, probability")
+          .eq("pipeline_id", pipeline.id).ilike("name", stageName).maybeSingle();
+        if (!stage) return { status: "failed", details: { pipeline: pipelineName }, error: `stage_not_found:${stageName}` };
+        await supabase.from("crm_deals")
+          .update({ stage_id: stage.id, ...(stage.probability != null ? { probability: stage.probability } : {}), updated_at: new Date().toISOString() })
+          .eq("id", deal.id);
+        return { status: "success", details: { deal_id: deal.id, stage: stageName } };
+      }
       case "update_status":
         if (!isTest) await supabase.from("leads").update({ status: String(cfg.status || cfg.value || "New") }).eq("id", lead.id);
         return { status: "success", details: { status: cfg.status || cfg.value } };
