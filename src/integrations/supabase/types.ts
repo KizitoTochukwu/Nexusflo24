@@ -2940,7 +2940,9 @@ export type Database = {
           owner_user_id: string | null
           pipeline_id: string
           position: number
+          priority: string | null
           probability: number | null
+          reference_number: string | null
           source: string | null
           stage_id: string | null
           status: string
@@ -2965,7 +2967,9 @@ export type Database = {
           owner_user_id?: string | null
           pipeline_id: string
           position?: number
+          priority?: string | null
           probability?: number | null
+          reference_number?: string | null
           source?: string | null
           stage_id?: string | null
           status?: string
@@ -2990,7 +2994,9 @@ export type Database = {
           owner_user_id?: string | null
           pipeline_id?: string
           position?: number
+          priority?: string | null
           probability?: number | null
+          reference_number?: string | null
           source?: string | null
           stage_id?: string | null
           status?: string
