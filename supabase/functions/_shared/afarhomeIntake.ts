@@ -175,7 +175,7 @@ export async function processAfarhomeEnquiry(
           record_type: "deal",
           record_id: openDeal.id,
           body: `Repeat enquiry received (${new Date().toISOString().slice(0, 10)}):\n${summary}`,
-          created_by: ownerId,
+          author_user_id: ownerId,
         }).catch(() => {});
       } else {
         const { data: stage } = await supabase
