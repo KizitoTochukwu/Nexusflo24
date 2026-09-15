@@ -31,6 +31,14 @@ const CUSTOM_FIELD_KEYS = [
   "enquiry_date",
 ] as const;
 
+/** Short human-quotable enquiry reference, e.g. AFH-7K2D9. */
+function makeReference(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < 5; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `AFH-${out}`;
+}
+
 export function isAfarhomeEnquiry(tags: string[], explicit?: unknown): boolean {
   if (explicit === true) return true;
   return tags.some((t) => String(t).toLowerCase() === "afarhome");
@@ -148,16 +156,24 @@ export async function processAfarhomeEnquiry(
       .maybeSingle();
 
     if (pipeline && contactId) {
-      const { data: openDeal } = await supabase
+      // Re-entry rule: an open opportunity is only reused when the new enquiry
+      // is for the SAME service. A different service (or a closed earlier
+      // enquiry) opens a fresh opportunity.
+      const service = (f.service_interest || "").trim().toLowerCase();
+      const { data: openDeals } = await supabase
         .from("crm_deals")
-        .select("id")
+        .select("id, name, tags, reference_number")
         .eq("workspace_id", workspaceId)
         .eq("pipeline_id", pipeline.id)
         .eq("contact_id", contactId)
         .eq("status", "open")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(10);
+      const openDeal = (openDeals ?? []).find((d: any) => {
+        if (!service) return true;
+        const tags = (d.tags ?? []).map((t: string) => String(t).toLowerCase());
+        return tags.includes(service) || String(d.name || "").toLowerCase().includes(service);
+      }) ?? null;
 
       const summary = [
         f.service_interest && `Service: ${f.service_interest}`,
@@ -201,6 +217,7 @@ export async function processAfarhomeEnquiry(
             source: "Website Enquiry",
             description: summary || null,
             tags: ["AfarHome", "Website Enquiry", ...dynamicTags],
+            reference_number: makeReference(),
           })
           .select("id")
           .maybeSingle();

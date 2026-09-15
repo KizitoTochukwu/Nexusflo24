@@ -40,6 +40,8 @@ export type BuildVarsOptions = {
   links?: WorkspaceLinks;
   assignedRepName?: string;
   appBaseUrl?: string;
+  /** Extra tokens merged last (contact custom fields, opportunity data, …). */
+  extra?: Record<string, string>;
 };
 
 const APP_BASE_URL = "https://nexusflo24.lovable.app";
@@ -108,6 +110,9 @@ export function buildLeadVars(lead: LeadLike, opts: BuildVarsOptions = {}): Reco
     next_step_link: links.next_step_link || "#next",
     external_url: links.external_url || baseUrl,
     unsubscribe_link: links.unsubscribe_link || `${baseUrl}/unsubscribe`,
+
+    // Caller-supplied tokens (contact custom fields, opportunity reference, …)
+    ...(opts.extra || {}),
   };
 }
 
@@ -156,9 +161,28 @@ export function previewVars(overrides: Partial<Record<string, string>> = {}): Re
 /** Normalize a variable name to snake_case lowercase so all aliases match.
  *  Examples: "FirstName" → "first_name", "firstName" → "first_name",
  *  "firstname" → "firstname" (no change → caught by alias map below). */
-function normalizeVarKey(raw: string): string {
+function normalizeVarKey(rawInput: string): string {
+  let raw = String(rawInput);
+
+  // Dotted tokens, e.g. {{contact.first_name}}, {{opportunity.reference_number}},
+  // {{assigned_user.name}} — flatten to the underlying variable name.
+  if (raw.includes(".")) {
+    const parts = raw.split(".");
+    const prefix = parts[0].replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    const tail = parts.slice(1).join("_");
+    if (["contact", "lead", "customer", "person"].includes(prefix)) {
+      raw = tail;
+    } else if (["opportunity", "deal"].includes(prefix)) {
+      raw = `opportunity_${tail}`;
+    } else if (["assigned_user", "owner", "coordinator", "user", "rep"].includes(prefix)) {
+      raw = tail.toLowerCase() === "name" ? "assigned_rep" : `assigned_user_${tail}`;
+    } else {
+      raw = tail;
+    }
+  }
+
   // Insert underscore between lower→Upper boundaries, then lowercase.
-  const snake = String(raw).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+  const snake = raw.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
   // Common single-word aliases without separators
   const ALIASES: Record<string, string> = {
     firstname: "first_name",
@@ -183,7 +207,7 @@ function normalizeVarKey(raw: string): string {
 export function interpolateText(template: string | null | undefined, vars: Record<string, string>): string {
   if (!template) return "";
   return String(template).replace(
-    /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/g,
+    /\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/g,
     (_match, rawKey: string, rawFallback?: string) => {
       const key = normalizeVarKey(rawKey);
       const fallback = (rawFallback ?? "").trim();
@@ -197,5 +221,5 @@ export function interpolateText(template: string | null | undefined, vars: Recor
 /** Strip any remaining {{...}} tokens (used as a final safety net). */
 export function stripUnresolvedTokens(text: string | null | undefined): string {
   if (!text) return "";
-  return String(text).replace(/\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*(?:\|[^}]*)?\s*\}\}/g, "");
+  return String(text).replace(/\{\{\s*[a-zA-Z_][a-zA-Z0-9_.]*\s*(?:\|[^}]*)?\s*\}\}/g, "");
 }

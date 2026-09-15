@@ -13,7 +13,79 @@ const corsHeaders = {
 };
 
 function interpolate(template: string, lead: Record<string, any>): string {
-  return interpolateText(template, buildLeadVars(lead as any));
+  return interpolateText(template, buildLeadVars(lead as any, { extra: (lead as any).__extra || {} }));
+}
+
+/**
+ * Loads CRM context for the lead so messages can use {{contact.*}},
+ * {{opportunity.reference_number}} and {{assigned_user.name}} tokens.
+ * Never throws — messages simply fall back to empty tokens.
+ */
+async function loadCrmExtras(
+  supabase: any,
+  workspaceId: string,
+  lead: Record<string, any>,
+): Promise<Record<string, string>> {
+  const extra: Record<string, string> = {};
+  try {
+    // Contact (linked, or matched on email)
+    let contact: any = null;
+    if (lead.contact_id) {
+      const { data } = await supabase.from("contacts").select("*").eq("id", lead.contact_id).maybeSingle();
+      contact = data;
+    }
+    if (!contact && lead.email) {
+      const { data } = await supabase
+        .from("contacts").select("*")
+        .eq("workspace_id", workspaceId).ilike("email", lead.email)
+        .maybeSingle();
+      contact = data;
+    }
+
+    if (contact) {
+      extra.contact_id = contact.id;
+      if (contact.whatsapp_number) extra.whatsapp_number = contact.whatsapp_number;
+      const { data: vals } = await supabase
+        .from("crm_custom_field_values")
+        .select("value, crm_custom_field_defs!inner(field_key)")
+        .eq("record_id", contact.id);
+      for (const row of vals ?? []) {
+        const key = (row as any).crm_custom_field_defs?.field_key;
+        if (key && row.value != null) extra[String(key)] = String(row.value);
+      }
+
+      // Most recent open opportunity for this contact
+      const { data: deal } = await supabase
+        .from("crm_deals")
+        .select("id, name, reference_number, priority, stage_id, owner_user_id, status")
+        .eq("workspace_id", workspaceId)
+        .eq("contact_id", contact.id)
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (deal) {
+        extra.opportunity_id = deal.id;
+        extra.opportunity_name = deal.name || "";
+        extra.opportunity_reference_number = deal.reference_number || "";
+        extra.opportunity_reference = deal.reference_number || "";
+      }
+    }
+
+    // Assigned user display name
+    const ownerId = lead.assigned_owner_id || lead.user_id;
+    if (ownerId) {
+      const { data: profile } = await supabase
+        .from("profiles").select("full_name, email").eq("id", ownerId).maybeSingle();
+      if (profile) {
+        extra.assigned_rep = profile.full_name || profile.email || "";
+        extra.assigned_user_email = profile.email || "";
+      }
+    }
+  } catch (e) {
+    console.error("[execute-automation] loadCrmExtras failed:", String(e));
+  }
+  return extra;
 }
 
 function parseDelayFromConfig(config: Record<string, any>): number {
@@ -117,6 +189,35 @@ async function evaluateExitCriteria(
       const target = String(c.status || "");
       if (!target) continue;
       if (String(ctx.lead.status || "") === target) return type;
+    } else if (type === "deal_stage_reached") {
+      // Stops the sequence once the opportunity moves past the early stages
+      // (or is closed) in the named pipeline.
+      const pipelineName = String(c.pipeline || "afarhome enquiries");
+      const fromPosition = Number(c.from_position ?? 3);
+      const { data: pipeline } = await supabase
+        .from("crm_pipelines").select("id")
+        .eq("workspace_id", ctx.workspaceId).ilike("name", pipelineName).maybeSingle();
+      if (!pipeline) continue;
+      const { data: deals } = await supabase
+        .from("crm_deals")
+        .select("status, stage_id, crm_pipeline_stages(position)")
+        .eq("workspace_id", ctx.workspaceId)
+        .eq("pipeline_id", pipeline.id)
+        .eq("lead_id", ctx.leadId);
+      for (const d of deals ?? []) {
+        if (String((d as any).status || "") !== "open") return type;
+        const pos = (d as any).crm_pipeline_stages?.position;
+        if (typeof pos === "number" && pos >= fromPosition) return type;
+      }
+    } else if (type === "consent_withdrawn") {
+      const { data: contact } = await supabase
+        .from("contacts").select("consent_status, consent_email")
+        .eq("workspace_id", ctx.workspaceId)
+        .ilike("email", ctx.lead.email || "___none___")
+        .maybeSingle();
+      if (contact && (String(contact.consent_status || "") === "withdrawn" || contact.consent_email === false)) {
+        return type;
+      }
     }
   }
   return null;
@@ -200,6 +301,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Lead not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // CRM context for {{contact.*}} / {{opportunity.*}} / {{assigned_user.*}} tokens
+    (lead as any).__extra = await loadCrmExtras(supabase, workspace_id, lead);
+    {
+      const bl = (automation.trigger_config as any)?.booking_link;
+      if (bl) (lead as any).__extra.booking_link = String(bl);
     }
 
     // ---------- EXIT CRITERIA RE-CHECK (defense in depth) ----------
@@ -353,7 +461,20 @@ Deno.serve(async (req) => {
       try {
         switch (step.step_type) {
           case "action": {
-            const actionType = config.action || config.action_type || config.channel;
+            let actionType = config.action || config.action_type || config.channel;
+
+            // "Send on the contact's preferred channel" resolves to a concrete
+            // channel here; WhatsApp needs a number, otherwise we fall back to email.
+            if (actionType === "send_preferred_channel") {
+              const extras = ((lead as any).__extra || {}) as Record<string, string>;
+              const pref = String(extras.preferred_channel || config.default_channel || "email").toLowerCase();
+              const waNumber = extras.whatsapp_number || lead.phone;
+              if (pref.includes("whatsapp") && waNumber) actionType = "send_whatsapp";
+              else if (pref.includes("sms") && lead.phone) actionType = "send_sms";
+              else actionType = "send_email";
+              details.resolved_channel = actionType;
+            }
+
 
             // Rate-limit: wait at least 550ms between sends to stay under 2 req/s
             if (["send_email", "send_sms", "send_whatsapp"].includes(actionType)) {
@@ -1029,6 +1150,89 @@ Deno.serve(async (req) => {
                 ...(notifyNewOwner && !isReassignNoop ? { deliveries: notifyDeliveries } : {}),
                 ...(isReassignNoop ? { reassign_noop: true } : {}),
               };
+            } else if (actionType === "create_task") {
+              const extras = ((lead as any).__extra || {}) as Record<string, string>;
+              const dueMinutes = Number(config.due_in_minutes ?? config.due_minutes ?? 1440);
+              const assignee = config.assigned_to || lead.assigned_owner_id || automation.user_id;
+              const dedupeKey = `automation:${automation_id}:${step.id}:${lead_id}`;
+              const { data: existingTask } = await supabase
+                .from("crm_tasks").select("id")
+                .eq("workspace_id", workspace_id).eq("dedupe_key", dedupeKey)
+                .maybeSingle();
+              if (existingTask) {
+                status = "skipped";
+                details = { reason: "Task already created for this lead", task_id: existingTask.id };
+              } else {
+                const { data: task, error: taskErr } = await supabase
+                  .from("crm_tasks").insert({
+                    workspace_id,
+                    title: interpolate(config.title || "Follow up on this enquiry", lead),
+                    description: interpolate(config.description || "", lead) || null,
+                    due_date: new Date(Date.now() + (isNaN(dueMinutes) ? 1440 : dueMinutes) * 60000).toISOString(),
+                    priority: config.priority || "medium",
+                    status: "open",
+                    task_type: config.task_type || "follow_up",
+                    assigned_to: assignee || null,
+                    created_by: automation.user_id || null,
+                    lead_id,
+                    contact_id: extras.contact_id || null,
+                    deal_id: extras.opportunity_id || null,
+                    dedupe_key: dedupeKey,
+                  })
+                  .select("id").maybeSingle();
+                if (taskErr) { status = "error"; details = { error: taskErr.message }; }
+                else details = { task_id: task?.id, assigned_to: assignee };
+              }
+            } else if (actionType === "add_note") {
+              const extras = ((lead as any).__extra || {}) as Record<string, string>;
+              const body = interpolate(config.body || config.note || "", lead);
+              const recordType = extras.contact_id ? "contact" : "lead";
+              const recordId = extras.contact_id || lead_id;
+              if (!body) { status = "skipped"; details = { reason: "Empty note body" }; }
+              else {
+                const { error: noteErr } = await supabase.from("crm_notes").insert({
+                  workspace_id, record_type: recordType, record_id: recordId,
+                  body, author_user_id: automation.user_id || null,
+                });
+                if (noteErr) { status = "error"; details = { error: noteErr.message }; }
+                else {
+                  await supabase.from("crm_activities").insert({
+                    workspace_id, record_type: recordType, record_id: recordId,
+                    activity_type: "note_added",
+                    title: config.title || "Enquiry details",
+                    description: body.slice(0, 500),
+                    source: "automation",
+                    lead_id,
+                  });
+                  details = { record_type: recordType, record_id: recordId };
+                }
+              }
+            } else if (actionType === "update_deal_stage" || actionType === "set_deal_priority") {
+              const extras = ((lead as any).__extra || {}) as Record<string, string>;
+              const dealId = extras.opportunity_id;
+              if (!dealId) { status = "skipped"; details = { reason: "No open opportunity for this contact" }; }
+              else {
+                const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+                if (config.priority) patch.priority = config.priority;
+                if (config.stage) {
+                  const { data: pipeline } = await supabase
+                    .from("crm_pipelines").select("id")
+                    .eq("workspace_id", workspace_id)
+                    .ilike("name", config.pipeline || "afarhome enquiries")
+                    .maybeSingle();
+                  if (pipeline) {
+                    const { data: stage } = await supabase
+                      .from("crm_pipeline_stages").select("id")
+                      .eq("pipeline_id", pipeline.id).ilike("name", String(config.stage))
+                      .maybeSingle();
+                    if (stage) patch.stage_id = stage.id;
+                  }
+                }
+                if (config.owner_user_id) patch.owner_user_id = config.owner_user_id;
+                const { error: dealErr } = await supabase.from("crm_deals").update(patch).eq("id", dealId);
+                if (dealErr) { status = "error"; details = { error: dealErr.message }; }
+                else details = { deal_id: dealId, ...patch };
+              }
             } else if (actionType === "end_automation") {
               skipRemaining = true;
               details = { message: "Automation ended by End Automation action", reason: config.reason || null };

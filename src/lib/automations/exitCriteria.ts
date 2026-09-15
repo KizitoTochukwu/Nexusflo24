@@ -13,7 +13,9 @@ export type ExitCriterion =
   | { type: "unsubscribed" }
   | { type: "appointment_booked" }
   | { type: "tag_added"; tag: string }
-  | { type: "status_equals"; status: string };
+  | { type: "status_equals"; status: string }
+  | { type: "deal_stage_reached"; pipeline?: string; from_position?: number }
+  | { type: "consent_withdrawn" };
 
 export const EXIT_CRITERION_TYPES: {
   value: ExitCriterion["type"];
@@ -47,6 +49,16 @@ export const EXIT_CRITERION_TYPES: {
     label: "Lead reaches status",
     description: "Stop when the lead reaches a specific pipeline stage.",
     needsValue: "status",
+  },
+  {
+    value: "deal_stage_reached",
+    label: "Opportunity progresses or closes",
+    description: "Stop when the opportunity moves past the early stages or is closed.",
+  },
+  {
+    value: "consent_withdrawn",
+    label: "Communication consent withdrawn",
+    description: "Stop when the contact withdraws consent to be contacted.",
   },
 ];
 
@@ -121,6 +133,10 @@ export function describeCriterion(c: ExitCriterion): string {
       return `Tag "${c.tag}" added`;
     case "status_equals":
       return `Status becomes "${c.status}"`;
+    case "deal_stage_reached":
+      return "Opportunity progresses or closes";
+    case "consent_withdrawn":
+      return "Communication consent withdrawn";
   }
 }
 
