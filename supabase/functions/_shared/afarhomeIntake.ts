@@ -176,7 +176,7 @@ export async function processAfarhomeEnquiry(
           record_id: openDeal.id,
           body: `Repeat enquiry received (${new Date().toISOString().slice(0, 10)}):\n${summary}`,
           author_user_id: ownerId,
-        }).catch(() => {});
+        });
       } else {
         const { data: stage } = await supabase
           .from("crm_pipeline_stages")
@@ -223,7 +223,7 @@ export async function processAfarhomeEnquiry(
         source: "afarhome_intake",
         external_event_id: `afarhome-enquiry:${leadId}`,
         meta: { lead_id: leadId, deal_id: result.deal_id },
-      }).catch(() => {});
+      });
     }
   } catch (e) {
     console.error("[afarhome] intake failed:", String(e));
