@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sanitizeString, isValidEmail, isValidPhone, sanitizeTags, safeErrorResponse } from "../_shared/validation.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
+import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
 
 
 const corsHeaders = {
@@ -285,8 +286,9 @@ Deno.serve(async (req) => {
     }
 
     // Canonical CRM contact
+    let canonicalContactId: string | null = null;
     try {
-      const contactId = await upsertCanonicalContact(supabase, {
+      canonicalContactId = await upsertCanonicalContact(supabase, {
         workspaceId: workspaceId!,
         email: trimmedEmail || null,
         phone: trimmedPhone || null,
@@ -296,11 +298,11 @@ Deno.serve(async (req) => {
         sourceTable: "leads",
         sourceRecordId: leadId,
       });
-      if (contactId) {
-        await linkLeadToContact(supabase, leadId, contactId);
+      if (canonicalContactId) {
+        await linkLeadToContact(supabase, leadId, canonicalContactId);
         await recordContactTimeline(supabase, {
           workspaceId: workspaceId!,
-          contactId,
+          contactId: canonicalContactId,
           activityType: "lead_captured",
           title: "Lead ingested",
           description: source || "Make.com",
@@ -311,6 +313,69 @@ Deno.serve(async (req) => {
       }
     } catch (contactErr) {
       console.error("[ingest-leads] canonical contact failed:", String(contactErr));
+    }
+
+    // --- AfarHome enquiry intake (custom fields, dynamic tags, opportunity) ---
+    if (isAfarhomeEnquiry(tags, body.afarhome)) {
+      const fieldsObj = (typeof body.fields === "object" && body.fields !== null ? body.fields : {}) as Record<string, unknown>;
+      const pick = (k: string) => sanitizeString(fieldsObj[k] ?? (meta as any)?.[k], 2000);
+      await processAfarhomeEnquiry(supabase, {
+        workspaceId: workspaceId!,
+        leadId,
+        contactId: canonicalContactId,
+        ownerId,
+        fullName: full_name || null,
+        email: trimmedEmail || null,
+        phone: trimmedPhone || null,
+        fields: {
+          country_of_residence: pick("country_of_residence"),
+          service_interest: pick("service_interest"),
+          service_location: pick("service_location"),
+          service_urgency: pick("service_urgency"),
+          enquiry_details: pick("enquiry_details") || notes,
+          preferred_channel: pick("preferred_channel"),
+          enquiry_date: pick("enquiry_date") || now.slice(0, 10),
+          marketing_consent: fieldsObj["marketing_consent"] === true || fieldsObj["marketing_consent"] === "true",
+        },
+      });
+    }
+
+    // --- Fire workflow triggers for newly applied tags (mirrors capture-lead) ---
+    try {
+      const previousTags = (existing?.tags || []) as string[];
+      const addedTags = tags.filter(
+        (t: string) => !previousTags.some((p) => String(p).toLowerCase() === String(t).toLowerCase()),
+      );
+      if (addedTags.length > 0) {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        for (const tag of addedTags) {
+          fetch(`${supabaseUrl}/functions/v1/enroll-workflow-leads`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+            body: JSON.stringify({
+              workspace_id: workspaceId,
+              lead_ids: [leadId],
+              event_type: "lead_tagged",
+              event_config: { tag },
+            }),
+          }).catch((e) => console.error("[ingest-leads] workflow trigger failed:", e));
+        }
+        if (!existing) {
+          fetch(`${supabaseUrl}/functions/v1/enroll-workflow-leads`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+            body: JSON.stringify({
+              workspace_id: workspaceId,
+              lead_ids: [leadId],
+              event_type: "new_lead",
+              event_config: {},
+            }),
+          }).catch(() => {});
+        }
+      }
+    } catch (trigErr) {
+      console.error("[ingest-leads] trigger dispatch failed:", String(trigErr));
     }
 
     // Log activity
