@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sanitizeString, isValidEmail, sanitizeTags, safeErrorResponse } from "../_shared/validation.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
+import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
 
 
 const corsHeaders = {
@@ -435,6 +436,32 @@ Deno.serve(async (req) => {
       type: "form_submit",
       meta: meta,
     });
+
+    // --- AfarHome enquiry intake (custom fields, dynamic tags, opportunity) ---
+    if (isAfarhomeEnquiry(newTags, body.afarhome)) {
+      const formData = (typeof body.form_data === "object" && body.form_data !== null ? body.form_data : {}) as Record<string, unknown>;
+      const extraFields = (typeof body.fields === "object" && body.fields !== null ? body.fields : {}) as Record<string, unknown>;
+      const pick = (k: string) => sanitizeString(formData[k] ?? extraFields[k] ?? (meta as any)[k], 2000);
+      await processAfarhomeEnquiry(supabase, {
+        workspaceId,
+        leadId,
+        contactId: canonicalContactId,
+        ownerId,
+        fullName: full_name || null,
+        email: normalizedEmail,
+        phone: phone || null,
+        fields: {
+          country_of_residence: pick("country_of_residence"),
+          service_interest: pick("service_interest"),
+          service_location: pick("service_location"),
+          service_urgency: pick("service_urgency"),
+          enquiry_details: pick("enquiry_details"),
+          preferred_channel: pick("preferred_channel"),
+          enquiry_date: pick("enquiry_date") || now.slice(0, 10),
+          marketing_consent: formData["marketing_consent"] === true || formData["marketing_consent"] === "true",
+        },
+      });
+    }
 
 
     // --- Auto-route to folders based on routing rules ---
