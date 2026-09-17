@@ -1,49 +1,64 @@
-# Visitor Entry Popup for NexusFlo24
+# Make NexusFlo24 Installable on Mobile (Add to Home Screen)
 
-## What we're building
+## Goal
+Let visitors install NexusFlo24 onto their phone home screen from the browser — an app icon, full-screen launch, no app store. This is **manifest-only** home-screen support (no offline caching, no service worker), which is the smallest path the PWA skill allows for "installable / Add to Home Screen."
 
-A popup that appears shortly after a first-time visitor lands on the homepage, capturing their email in exchange for a free Quick Start guide — the same offer as the existing exit-intent popup, but triggered on **entry** instead of on exit. This complements (does not replace) the exit-intent popup: if the visitor already submitted or dismissed the entry popup, the exit-intent popup stays suppressed.
+## What changes
 
-## Defaults used (you skipped the questions)
-
-- **Goal:** Email capture / lead magnet — free Quick Start guide
-- **Trigger:** After a short delay (~4 seconds) on page load
-- **Frequency:** Once per browser session (re-shows after the browser session ends)
-- **Pages:** Homepage (`/`) only
-
-## How it works
-
-```text
-Visitor lands on /
-      |
-   4s delay
-      |
-  Session-seen? ── yes ──► no popup
-      | no
-  Show entry popup
-      |
-  Submit  ─► capture lead (source: entry_popup_homepage)
-  Dismiss ─► mark seen, exit-intent popup also suppressed
+### 1. App manifest — `public/manifest.webmanifest` (new)
+```json
+{
+  "name": "NexusFlo24 — Marketing Automation",
+  "short_name": "NexusFlo24",
+  "description": "CRM, WhatsApp, Email & SMS marketing automation — turn visitors into paying customers with AI.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B1F3B",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
 ```
+- Brand colors: Navy `#0B1F3B` theme, white background.
+- `display: standalone` → opens full-screen, no browser chrome, feels like an app.
 
-## Technical approach
+### 2. App icons — `public/icon-192.png`, `public/icon-512.png`, `public/icon-maskable-512.png` (new)
+Generate three PNG icons from the existing NexusFlo24 logo (`public/nexusflo24-logo.png`) on the Navy `#0B1F3B` background:
+- 192×192 (standard home-screen icon)
+- 512×512 (standard + Play Store-style)
+- 512×512 maskable (icon fills the maskable safe zone — logo centered with padding so Android adaptive icons don't crop it)
 
-1. **New hook `useEntryPopup`** (`src/hooks/useEntryPopup.ts`)
-   - Mirrors `useExitIntent` eligibility logic (skip if logged in, skip if already a captured lead, skip if already seen this session).
-   - Triggers after a configurable delay (`OPEN_DELAY_MS = 4000`) via `setTimeout`.
-   - Session-only frequency: `sessionStorage` key `nf24_entry_popup_state`.
-   - On dismiss or submit, also sets `localStorage` `nf24_exit_popup_state` so the existing exit-intent popup does **not** also fire for the same visitor.
+The existing `apple-touch-icon.png` (180×180) stays for iOS home-screen bookmarks.
 
-2. **New component `EntryPopup`** (`src/components/home/EntryPopup.tsx`)
-   - Reuses the visual design of `ExitIntentPopup` (Navy/Gold header, icon badge, value pills, email input, gradient CTA, success state) so the two popups look consistent.
-   - Calls `useCaptureLead` with `source: "entry_popup_homepage"`, tags `["quick-start-guide", "entry-popup"]`.
-   - Success state links to `/register` and `/academy`, matching the exit popup.
+### 3. Head tags — `index.html` (edit)
+Add inside `<head>`:
+- `<link rel="manifest" href="/manifest.webmanifest">`
+- `<meta name="theme-color" content="#0B1F3B">` (Android status bar matches Navy)
 
-3. **Wire into the homepage** (`src/pages/Index.tsx`)
-   - Render `<EntryPopup />` alongside `<ExitIntentPopup />`.
+The existing `<link rel="apple-touch-icon" ...>` already covers iOS Add to Home Screen.
 
-## Non-goals
+## What is NOT included
+- No service worker, no offline caching, no `vite-plugin-pwa`. The user asked for installability only; offline is a separate explicit ask.
+- No changes to app logic, routes, or data.
+- No install-prompt UI — browsers show their own Add to Home Screen prompt when the manifest + icons are present and the user engages. (iOS Safari always requires manual Add to Home Screen from the share sheet; no prompt.)
 
-- No changes to the exit-intent popup beyond suppression coordination.
-- No backend/schema changes — lead capture reuses the existing `useCaptureLead` pipeline.
-- No popup on dashboard or auth pages.
+## How users install
+- **Android (Chrome):** visit nexusflo24.com → browser shows "Install app" prompt → icon appears on home screen → opens full-screen.
+- **iPhone (Safari):** visit nexusflo24.com → Share → Add to Home Screen → icon appears → opens full-screen.
+- Works on the published app (`nexusflo24.com`) and custom domain. Installability does not affect the Lovable preview.
+
+## Verification
+After edits, in the published/preview app:
+- `curl https://nexusflo24.com/manifest.webmanifest` returns the manifest JSON.
+- Lighthouse "Installable" check passes (manifest + 192 + 512 icons + start_url + display standalone + fetch listener not required for installability).
+- On a phone, visiting the site shows the Add to Home Screen option.
+
+## Files
+- `public/manifest.webmanifest` (new)
+- `public/icon-192.png`, `public/icon-512.png`, `public/icon-maskable-512.png` (new, generated)
+- `index.html` (edit — add manifest + theme-color link tags)
