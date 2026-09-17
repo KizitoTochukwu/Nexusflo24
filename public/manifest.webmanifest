@@ -1,0 +1,16 @@
+{
+  "name": "NexusFlo24 — Marketing Automation",
+  "short_name": "NexusFlo24",
+  "description": "CRM, WhatsApp, Email & SMS marketing automation — turn visitors into paying customers with AI.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B1F3B",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
