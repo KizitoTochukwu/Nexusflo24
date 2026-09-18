@@ -26,20 +26,37 @@ interface TwilioCreds {
   source: "workspace" | "platform";
 }
 
+/**
+ * Prefer the workspace's own telephone account, fall back to the platform
+ * account when the workspace one is missing or no longer active.
+ */
 async function resolveTwilio(workspaceId: string): Promise<TwilioCreds | null> {
   const creds = await resolveChannelCredentials(workspaceId, "sms", {
     account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
     auth_token: Deno.env.get("TWILIO_AUTH_TOKEN"),
   });
-  const accountSid = String(creds.config.account_sid || "").trim();
-  const authToken = String(creds.config.auth_token || "").trim();
-  if (!accountSid || !authToken) return null;
-  return {
-    accountSid,
-    authToken,
-    source: creds.source === "workspace" ? "workspace" : "platform",
+
+  const candidates: TwilioCreds[] = [];
+  const push = (sid?: string | null, tok?: string | null, source: "workspace" | "platform" = "platform") => {
+    const accountSid = String(sid || "").trim();
+    const authToken = String(tok || "").trim();
+    if (!accountSid || !authToken) return;
+    if (candidates.some((c) => c.accountSid === accountSid)) return;
+    candidates.push({ accountSid, authToken, source });
   };
+  push(creds.config.account_sid, creds.config.auth_token, creds.source === "workspace" ? "workspace" : "platform");
+  push(Deno.env.get("TWILIO_ACCOUNT_SID"), Deno.env.get("TWILIO_AUTH_TOKEN"), "platform");
+  if (candidates.length === 0) return null;
+
+  for (const candidate of candidates) {
+    const probe = await twilio(candidate, ".json");
+    if (probe.ok && probe.data?.status !== "suspended" && probe.data?.status !== "closed") {
+      return { ...candidate, accountName: probe.data?.friendly_name ?? null, reachable: true };
+    }
+  }
+  return { ...candidates[0], reachable: false };
 }
+
 
 async function twilio(
   creds: TwilioCreds,
