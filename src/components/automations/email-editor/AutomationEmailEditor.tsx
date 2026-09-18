@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import InsertDropdown from "./InsertDropdown";
-import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "./EmailTemplateSettings";
+import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, normalizeTemplateSettings, templateSettingsFromBranding, type TemplateSettings } from "./EmailTemplateSettings";
+import { useWorkspaceBranding } from "@/hooks/useWorkspaceBranding";
 import { VARIABLE_OPTIONS, PREVIEW_VALUES } from "./editorConstants";
 import { buildPreviewHtml } from "./emailPreviewRenderer";
 import { EMAIL_PRESETS } from "./emailPresets";
