@@ -101,8 +101,22 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!call) return toolError("Call not found", "Sorry, something went wrong.", 404);
 
-    const denied = await requireInternalOrWorkspaceMember(req, admin, call.workspace_id);
-    if (denied) return denied;
+    // The voice gateway presents a short-lived token scoped to this one call
+    // and the tools that call is allowed to use; everyone else must be an
+    // internal caller or a member of the workspace.
+    const gatewayClaims = await requireGatewayToken(req);
+    if (gatewayClaims) {
+      if (gatewayClaims.call_session_id !== call.id || gatewayClaims.workspace_id !== call.workspace_id) {
+        return toolError("Token does not match this call", "Sorry, something went wrong.", 403);
+      }
+      if (Array.isArray(gatewayClaims.tools) && !gatewayClaims.tools.includes(tool)) {
+        return toolError("Tool not permitted for this call", "Sorry, I can't do that on this call.", 403);
+      }
+    } else {
+      const denied = await requireInternalOrWorkspaceMember(req, admin, call.workspace_id);
+      if (denied) return denied;
+    }
+
 
     const { data: assistant } = await admin
       .from("voice_assistants")
