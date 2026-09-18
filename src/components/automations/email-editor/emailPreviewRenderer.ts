@@ -113,7 +113,7 @@ export function buildPreviewHtml(
   for (const [key, val] of Object.entries(previewValues)) {
     content = content.split(key).join(val);
   }
-  content = content.replace(/\{\{(\w+)\}\}/g, "[$1]");
+  content = content.replace(/\{\{([\w.]+)(?:\|[^}]*)?\}\}/g, "[$1]");
 
   const formattedBody = formatEmailBody(content);
 

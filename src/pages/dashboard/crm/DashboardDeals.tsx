@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +25,10 @@ import { exportRowsToCsv } from "@/lib/crm/csv";
 const DashboardDeals = () => {
   const workspaceId = useWorkspaceId();
   const { canEdit } = useWorkspaceRole();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: pipelines = [], isLoading: loadingPipelines } = usePipelines(workspaceId);
-  const [pipelineId, setPipelineId] = useState<string>("");
+  const [pipelineId, setPipelineId] = useState<string>(() => searchParams.get("pipeline") ?? "");
   const activePipelineId = pipelineId || pipelines[0]?.id || "";
   const activePipeline = pipelines.find((p) => p.id === activePipelineId);
 
@@ -39,6 +41,13 @@ const DashboardDeals = () => {
   const [createStage, setCreateStage] = useState<string | undefined>();
   const [selected, setSelected] = useState<Deal | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
+
+  useEffect(() => {
+    const dealId = searchParams.get("deal");
+    if (!dealId || selected?.id === dealId) return;
+    const linkedDeal = deals.find((deal) => deal.id === dealId);
+    if (linkedDeal) setSelected(linkedDeal);
+  }, [deals, searchParams, selected?.id]);
 
   const stats = useMemo(() => {
     const open = deals.filter((d) => d.status === "open");
@@ -230,7 +239,16 @@ const DashboardDeals = () => {
         stages={stages}
         workspaceId={workspaceId}
         canEdit={canEdit}
-        onOpenChange={(v) => !v && setSelected(null)}
+        onOpenChange={(v) => {
+          if (!v) {
+            setSelected(null);
+            if (searchParams.has("deal")) {
+              const next = new URLSearchParams(searchParams);
+              next.delete("deal");
+              setSearchParams(next, { replace: true });
+            }
+          }
+        }}
       />
 
       <PipelineManagerDialog
