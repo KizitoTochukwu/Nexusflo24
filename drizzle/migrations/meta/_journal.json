@@ -71,6 +71,13 @@
       "when": 1789761086295,
       "tag": "0009_grant_public_funnel_tracking_function",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789763620958,
+      "tag": "0010_add_email_template_settings_to_workspace_branding",
+      "breakpoints": true
     }
   ]
 }
