@@ -216,25 +216,41 @@ Deno.serve(async (req) => {
       }
 
       const dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const { data: task } = await admin
+      const dedupeKey = `voice-callback:${call.id}`;
+      const row = {
+        workspace_id: call.workspace_id,
+        title: `Call back ${name}${phone ? ` on ${phone}` : ""}`,
+        description: [reason, preferredTime && `Preferred time: ${preferredTime}`].filter(Boolean).join("\n") || null,
+        status: "open",
+        priority: "high",
+        due_date: dueAt,
+        task_type: "call",
+        dedupe_key: dedupeKey,
+        contact_id: contactId,
+        assigned_to: config.ownerUserId ?? null,
+      };
+
+      // One callback task per call, even if the caller asks twice.
+      const { data: existingTask } = await admin
         .from("crm_tasks")
-        .upsert(
-          {
-            workspace_id: call.workspace_id,
-            title: `Call back ${name}${phone ? ` on ${phone}` : ""}`,
-            description: [reason, preferredTime && `Preferred time: ${preferredTime}`].filter(Boolean).join("\n") || null,
-            status: "open",
-            priority: "high",
-            due_date: dueAt,
-            task_type: "call",
-            dedupe_key: `voice-callback:${call.id}`,
-            contact_id: contactId,
-            assigned_to: config.ownerUserId ?? null,
-          },
-          { onConflict: "workspace_id,dedupe_key" },
-        )
         .select("id")
+        .eq("workspace_id", call.workspace_id)
+        .eq("dedupe_key", dedupeKey)
         .maybeSingle();
+
+      let task: { id: string } | null = existingTask ?? null;
+      if (task) {
+        await admin.from("crm_tasks").update(row).eq("id", task.id);
+      } else {
+        const { data: inserted, error: taskError } = await admin
+          .from("crm_tasks")
+          .insert(row)
+          .select("id")
+          .maybeSingle();
+        if (taskError) console.error("[voice-tools] callback task failed", taskError.message);
+        task = inserted ?? null;
+      }
+
 
 
       const result = { task_id: task?.id ?? null, contact_id: contactId, phone };
