@@ -451,9 +451,77 @@ export type ConditionRow = {
   value_to?: string;
   time_window_days?: number;
   reply_check?: string;
+  /** Field key for the "Contact field" condition. */
+  field?: string;
 };
 
 export type ConditionLogic = "AND" | "OR";
+
+export const ALL_CONDITION_OPTIONS: ConditionOption[] = CONDITION_GROUPS.flatMap((g) => g.options);
+
+export function findConditionOption(value?: string): ConditionOption | undefined {
+  return ALL_CONDITION_OPTIONS.find((o) => o.value === value);
+}
+
+/** Operators that never need a typed value. */
+export const OPERATORS_WITHOUT_VALUE: ConditionOperator[] = [
+  "is_known", "is_unknown", "happened", "not_happened", "is_true", "is_false",
+];
+
+/** Is this row fully configured (so it can actually be evaluated)? */
+export function isConditionRowComplete(row: ConditionRow | undefined): boolean {
+  if (!row?.condition) return false;
+  if (row.condition === "reply_status") return true;
+  const opt = findConditionOption(row.condition);
+  if (!opt) return false;
+  if (opt.input === "field" && !row.field) return false;
+  const op = row.operator || opt.operators[0];
+  if (OPERATORS_WITHOUT_VALUE.includes(op)) return true;
+  if (opt.input === "none") return true;
+  if (!String(row.value ?? "").trim()) return false;
+  if (op === "between" && !String(row.value_to ?? "").trim()) return false;
+  return true;
+}
+
+export function conditionRowsFromConfig(config: Record<string, any> | undefined): ConditionRow[] {
+  const cfg = config ?? {};
+  const rows = Array.isArray(cfg.conditions) ? (cfg.conditions as ConditionRow[]) : [];
+  if (rows.length) return rows.filter(Boolean);
+  if (cfg.condition) {
+    return [{
+      condition: cfg.condition,
+      operator: cfg.operator,
+      value: cfg.value ?? "",
+      value_to: cfg.value_to ?? "",
+      time_window_days: cfg.time_window_days,
+      reply_check: cfg.reply_check,
+      field: cfg.field,
+    }];
+  }
+  return [];
+}
+
+/** Returns the 1-based step numbers of condition steps that are not usable yet. */
+export function findIncompleteConditionSteps(
+  steps: { step_type: string; config?: Record<string, any> }[] | undefined,
+): { index: number; stepNumber: number; reason: string }[] {
+  const out: { index: number; stepNumber: number; reason: string }[] = [];
+  let n = 0;
+  (steps ?? []).forEach((s, index) => {
+    const isMarker = s.step_type.startsWith("branch_");
+    if (!isMarker) n++;
+    if (s.step_type !== "condition") return;
+    const rows = conditionRowsFromConfig(s.config);
+    if (rows.length === 0) {
+      out.push({ index, stepNumber: n, reason: "No condition chosen" });
+      return;
+    }
+    if (!rows.every(isConditionRowComplete)) {
+      out.push({ index, stepNumber: n, reason: "A condition is missing its value" });
+    }
+  });
+  return out;
+}
 
 /** Turn a single condition row into friction-free natural language. */
 export function phraseCondition(row: ConditionRow): string {
