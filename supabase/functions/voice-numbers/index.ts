@@ -148,24 +148,18 @@ Deno.serve(async (req) => {
 
     // --- status ---------------------------------------------------------
     if (action === "status") {
-      let accountName: string | null = null;
-      let reachable = false;
-      if (creds) {
-        const res = await twilio(creds, ".json");
-        reachable = res.ok;
-        accountName = res.data?.friendly_name ?? null;
-      }
       return json({
         ok: true,
-        connected: !!creds && reachable,
+        connected: creds?.reachable === true,
         credentials_found: !!creds,
         credentials_source: creds?.source ?? null,
-        account_name: accountName,
+        account_name: creds?.accountName ?? null,
         live_calling_enabled: VOICE_LIVE_CALLING_ENABLED,
         webhook_url: inboundWebhookUrl(),
         max_numbers: maxNumbers,
         numbers_in_use: await countNumbers(),
       });
+
     }
 
     if (!creds) {
