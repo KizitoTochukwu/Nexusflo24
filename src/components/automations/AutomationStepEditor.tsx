@@ -20,7 +20,7 @@ import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import type { ExitCriterion } from "@/lib/automations/exitCriteria";
-import { useAutomationTagOptions, useAutomationStageOptions, FALLBACK_PIPELINE_STAGES } from "@/hooks/useAutomationOptions";
+import { useAutomationTagOptions, useAutomationStageOptions, useAutomationPipelineOptions, FALLBACK_PIPELINE_STAGES } from "@/hooks/useAutomationOptions";
 import { AUTOMATION_SCORE_OPTIONS } from "@/lib/automations/scoreOptions";
 import { SenderProfilePicker } from "@/components/admin/SenderProfilePicker";
 import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
