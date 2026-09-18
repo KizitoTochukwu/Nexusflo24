@@ -1190,6 +1190,15 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                         onMessageChange={(v) => updateStep(i, { message: v })}
                         templateSettings={step.config.templateSettings as any}
                         onTemplateSettingsChange={(ts) => updateStep(i, { templateSettings: ts })}
+                        onApplyTemplateSettingsToAll={(ts) =>
+                          onChange(
+                            steps.map((s) =>
+                              (s.config?.action as string) === "send_email"
+                                ? { ...s, config: { ...s.config, templateSettings: ts } }
+                                : s,
+                            ),
+                          )
+                        }
                         whatsappTemplate={(step.config.whatsapp_template as WhatsAppTemplateSelection) || null}
                       />
                       {workspaceId && (
