@@ -16,11 +16,12 @@ const STATUS_MAP: Record<string, string> = {
   ringing: "ringing",
   "in-progress": "in_progress",
   completed: "completed",
-  busy: "failed",
+  busy: "busy",
   failed: "failed",
-  "no-answer": "missed",
-  canceled: "missed",
+  "no-answer": "no_answer",
+  canceled: "no_answer",
 };
+
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
