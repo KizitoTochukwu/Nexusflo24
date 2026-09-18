@@ -106,21 +106,21 @@ export default function VoiceAssistants() {
                   </div>
                   <VoiceStatusBadge status={a.status} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Select value={a.status} onValueChange={(status) => update.mutate({ id: a.id, status })}>
-                    <SelectTrigger className="h-8 w-40 rounded-full text-xs" aria-label="Assistant status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70]">
-                      {VOICE_ASSISTANT_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">
                     {a.language} · {a.timezone}
+                    {a.published_version ? ` · version ${a.published_version}` : " · not published"}
                   </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-full"
+                    onClick={() => navigate(`/dashboard/${workspaceId}/voice/assistants/${a.id}`)}
+                  >
+                    Set up <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Button>
                 </div>
+
               </CardContent>
             </Card>
           ))}
