@@ -667,7 +667,24 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </Select>
                             )}
 
-                            {selectedOpt && operatorNeedsValue && selectedOpt.input !== "none" && (
+                            {selectedOpt && operatorNeedsValue && selectedOpt.input === "select" && (
+                              <Select value={row.value || ""} onValueChange={(v) => updateRow(idx, { value: v })}>
+                                <SelectTrigger className="w-[190px] bg-background">
+                                  <SelectValue placeholder={selectedOpt.placeholder || "Choose…"} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[300px]">
+                                  {choicesFor(selectedOpt.optionsSource).length === 0 ? (
+                                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Nothing set up yet in your CRM</div>
+                                  ) : (
+                                    choicesFor(selectedOpt.optionsSource).map((c) => (
+                                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            {selectedOpt && operatorNeedsValue && ["text", "number", "field"].includes(selectedOpt.input) && (
                               <Input
                                 type={selectedOpt.input === "number" ? "number" : "text"}
                                 placeholder={selectedOpt.placeholder || "Value"}
