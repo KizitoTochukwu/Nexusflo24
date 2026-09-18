@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -295,7 +295,25 @@ export default function AutomationEmailEditor({
     }
   }, [resolvedChannel, subject, message, testRecipient, workspaceId, templateSettings, user?.email, whatsappTemplate]);
 
-  const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
+  // Start new emails from the workspace's saved brand rather than the
+  // NexusFlo24 defaults, so client workspaces don't restyle every message.
+  const { data: branding } = useWorkspaceBranding(workspaceId || "");
+  const workspaceDefaults = useMemo(
+    () => (branding ? templateSettingsFromBranding(branding as any) : DEFAULT_TEMPLATE_SETTINGS),
+    [branding],
+  );
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!isEmail || !onTemplateSettingsChange || templateSettings || hydratedRef.current) return;
+    if (!branding) return;
+    hydratedRef.current = true;
+    onTemplateSettingsChange(workspaceDefaults);
+  }, [isEmail, onTemplateSettingsChange, templateSettings, branding, workspaceDefaults]);
+
+  const currentSettings = useMemo(
+    () => normalizeTemplateSettings(templateSettings ?? workspaceDefaults),
+    [templateSettings, workspaceDefaults],
+  );
 
   // For email, determine the HTML to preview (blocks → HTML or legacy)
   const getEmailHtml = useCallback(() => {
