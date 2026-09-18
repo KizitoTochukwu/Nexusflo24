@@ -1,0 +1,22 @@
+{
+  "name": "nexusflo-voice-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "NexusFlo Voice gateway — bridges Twilio Media Streams to the OpenAI Realtime API.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
