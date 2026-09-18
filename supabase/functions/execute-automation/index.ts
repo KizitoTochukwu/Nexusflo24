@@ -395,6 +395,9 @@ Deno.serve(async (req) => {
         if (typeof incomingBranchCtx.last_condition_passed === "boolean" || incomingBranchCtx.last_condition_passed === null) {
           lastConditionPassed = incomingBranchCtx.last_condition_passed;
         }
+        if (typeof incomingBranchCtx.last_condition_unconfigured === "boolean") {
+          lastConditionUnconfigured = incomingBranchCtx.last_condition_unconfigured;
+        }
       } catch (_e) { /* noop */ }
     }
 
@@ -406,7 +409,9 @@ Deno.serve(async (req) => {
       // Branch markers — handled before skip checks so end-markers can pop frames
       if (step.step_type === "branch_yes_start" || step.step_type === "branch_no_start") {
         const kind: "yes" | "no" = step.step_type === "branch_yes_start" ? "yes" : "no";
-        const shouldSkip = lastConditionPassed === null
+        const shouldSkip = lastConditionUnconfigured
+          ? true // condition not finished → neither branch runs
+          : lastConditionPassed === null
           ? false // no preceding condition → run by default
           : (kind === "yes" ? lastConditionPassed === false : lastConditionPassed === true);
         // Nested skip: inherit parent skip too
@@ -417,11 +422,14 @@ Deno.serve(async (req) => {
         const markerDetails = {
           kind,
           last_condition_passed: lastConditionPassed,
+          last_condition_unconfigured: lastConditionUnconfigured,
           reason: parentSkipped
             ? "Parent branch was inactive"
-            : finalSkip
-              ? `Preceding condition was ${lastConditionPassed ? "true" : "false"}, so the ${kind.toUpperCase()} branch was not taken`
-              : `Preceding condition was ${lastConditionPassed === null ? "absent (default entry)" : lastConditionPassed ? "true" : "false"}, entering the ${kind.toUpperCase()} branch`,
+            : lastConditionUnconfigured
+              ? `The preceding condition is not finished, so the ${kind.toUpperCase()} branch was skipped`
+              : finalSkip
+                ? `Preceding condition was ${lastConditionPassed ? "true" : "false"}, so the ${kind.toUpperCase()} branch was not taken`
+                : `Preceding condition was ${lastConditionPassed === null ? "absent (default entry)" : lastConditionPassed ? "true" : "false"}, entering the ${kind.toUpperCase()} branch`,
         };
         results.push({ step_id: step.id, step_type: step.step_type, status: markerStatus, details: markerDetails });
         await supabase.from("automation_logs").insert({
