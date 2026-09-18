@@ -44,6 +44,8 @@ interface AutomationEmailEditorProps {
   onMessageChange: (v: string) => void;
   templateSettings?: TemplateSettings;
   onTemplateSettingsChange?: (settings: TemplateSettings) => void;
+  /** Optional — apply the current look to every email step in this automation. */
+  onApplyTemplateSettingsToAll?: (settings: TemplateSettings) => void;
   /** Optional selected WhatsApp approved template — when present, "Send test"
    *  routes as a template send (ContentSid + variables) instead of free text. */
   whatsappTemplate?: WhatsAppTemplateOverride | null;
@@ -125,6 +127,7 @@ export default function AutomationEmailEditor({
   onMessageChange,
   templateSettings,
   onTemplateSettingsChange,
+  onApplyTemplateSettingsToAll,
   whatsappTemplate,
 }: AutomationEmailEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
