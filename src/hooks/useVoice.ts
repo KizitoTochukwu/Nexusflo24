@@ -387,7 +387,9 @@ export type VoiceNumberStatus = {
   credentials_source: "workspace" | "platform" | null;
   account_name: string | null;
   live_calling_enabled: boolean;
+  gateway_configured?: boolean;
   webhook_url: string;
+  status_webhook_url?: string;
   max_numbers: number;
   numbers_in_use: number;
 };
