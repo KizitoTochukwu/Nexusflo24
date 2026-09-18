@@ -382,6 +382,58 @@ export function useVoiceCalls(workspaceId?: string) {
   });
 }
 
+/** The caller records already in the CRM, for showing names in the Call Inbox. */
+export function useVoiceCallContacts(workspaceId?: string, contactIds: string[] = []) {
+  const ids = Array.from(new Set(contactIds.filter(Boolean))).sort();
+  return useQuery({
+    queryKey: [...key(workspaceId, "call-contacts"), ids.join(",")],
+    enabled: !!workspaceId && ids.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, full_name, first_name, last_name, phone, email")
+        .in("id", ids);
+      if (error) throw error;
+      const map: Record<string, { id: string; name: string }> = {};
+      for (const c of data ?? []) {
+        const name =
+          (c.full_name as string) ||
+          [c.first_name, c.last_name].filter(Boolean).join(" ") ||
+          (c.phone as string) ||
+          (c.email as string) ||
+          "Contact";
+        map[c.id as string] = { id: c.id as string, name };
+      }
+      return map;
+    },
+  });
+}
+
+/** Creates or refreshes the caller's CRM contact, timeline entry and opportunity. */
+export function useSyncVoiceCallToCrm(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (callSessionId: string) => {
+      const { data, error } = await supabase.functions.invoke("voice-call-sync", {
+        body: { call_session_id: callSessionId },
+      });
+      if (error) throw error;
+      return data as { ok?: boolean; contactId?: string | null; dealId?: string | null; reason?: string };
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: key(workspaceId, "calls") });
+      qc.invalidateQueries({ queryKey: key(workspaceId, "call-contacts") });
+      if (result?.contactId) toast.success("Caller saved to your CRM");
+      else if (result?.reason === "number_withheld") toast.error("The caller withheld their number, so no contact could be created");
+      else if (result?.reason === "marked_spam") toast.error("This call is marked as spam, so it was not added");
+      else toast.error("There was nothing to identify this caller by");
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not save this caller"),
+  });
+}
+
+
+
 export function useVoiceKnowledge(workspaceId?: string) {
   return useQuery({
     queryKey: key(workspaceId, "knowledge"),
