@@ -191,19 +191,23 @@ async function evaluateExitCriteria(
       if (String(ctx.lead.status || "") === target) return type;
     } else if (type === "deal_stage_reached") {
       // Stops the sequence once the opportunity moves past the early stages
-      // (or is closed) in the named pipeline.
-      const pipelineName = String(c.pipeline || "afarhome enquiries");
+      // (or is closed). With no configured pipeline, inspect every
+      // opportunity linked to the lead instead of assuming a pipeline name.
+      const pipelineName = String(c.pipeline || "").trim();
       const fromPosition = Number(c.from_position ?? 3);
-      const { data: pipeline } = await supabase
-        .from("crm_pipelines").select("id")
-        .eq("workspace_id", ctx.workspaceId).ilike("name", pipelineName).maybeSingle();
-      if (!pipeline) continue;
-      const { data: deals } = await supabase
+      let dealQuery = supabase
         .from("crm_deals")
         .select("status, stage_id, crm_pipeline_stages(position)")
         .eq("workspace_id", ctx.workspaceId)
-        .eq("pipeline_id", pipeline.id)
         .eq("lead_id", ctx.leadId);
+      if (pipelineName) {
+        const { data: pipeline } = await supabase
+          .from("crm_pipelines").select("id")
+          .eq("workspace_id", ctx.workspaceId).ilike("name", pipelineName).maybeSingle();
+        if (!pipeline) continue;
+        dealQuery = dealQuery.eq("pipeline_id", pipeline.id);
+      }
+      const { data: deals } = await dealQuery;
       for (const d of deals ?? []) {
         if (String((d as any).status || "") !== "open") return type;
         const pos = (d as any).crm_pipeline_stages?.position;

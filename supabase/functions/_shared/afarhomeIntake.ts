@@ -238,7 +238,7 @@ export async function processAfarhomeEnquiry(
         title: result.deal_action === "created" ? "Opportunity created" : "Opportunity updated",
         description: `${nameSummary(input, f)} (${result.deal_action})`,
         source: "afarhome_intake",
-        external_event_id: `afarhome-enquiry:${leadId}`,
+        external_event_id: `afarhome-enquiry:${leadId}:${result.deal_id ?? "none"}:${Date.now()}`,
         meta: { lead_id: leadId, deal_id: result.deal_id },
       });
     }
