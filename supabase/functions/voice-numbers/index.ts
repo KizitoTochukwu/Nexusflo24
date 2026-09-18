@@ -159,15 +159,18 @@ Deno.serve(async (req) => {
         max_numbers: maxNumbers,
         numbers_in_use: await countNumbers(),
       });
-
     }
 
-    if (!creds) {
+    if (!creds || creds.reachable !== true) {
       return json(
-        { error: "Twilio is not connected for this workspace yet.", code: "not_connected" },
+        {
+          error: "Your telephone account isn't connected yet. Add working details in Settings → Channels.",
+          code: "not_connected",
+        },
         400,
       );
     }
+
 
     // --- search available numbers ---------------------------------------
     if (action === "search") {
