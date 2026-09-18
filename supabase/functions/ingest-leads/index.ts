@@ -340,40 +340,42 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- Fire workflow triggers for newly applied tags (mirrors capture-lead) ---
+    // --- Fire workflow triggers (mirrors capture-lead) ---
     try {
       const previousTags = (existing?.tags || []) as string[];
       const addedTags = tags.filter(
         (t: string) => !previousTags.some((p) => String(p).toLowerCase() === String(t).toLowerCase()),
       );
-      if (addedTags.length > 0) {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        for (const tag of addedTags) {
-          fetch(`${supabaseUrl}/functions/v1/enroll-workflow-leads`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
-            body: JSON.stringify({
-              workspace_id: workspaceId,
-              lead_ids: [leadId],
-              event_type: "lead_tagged",
-              event_config: { tag },
-            }),
-          }).catch((e) => console.error("[ingest-leads] workflow trigger failed:", e));
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const dispatchWorkflow = async (eventType: string, eventConfig: Record<string, unknown>) => {
+        const response = await fetch(`${supabaseUrl}/functions/v1/enroll-workflow-leads`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+          body: JSON.stringify({
+            workspace_id: workspaceId,
+            lead_ids: [leadId],
+            event_type: eventType,
+            event_config: eventConfig,
+          }),
+        });
+        if (!response.ok) {
+          console.error(`[ingest-leads] workflow trigger ${eventType} failed with status ${response.status}`);
         }
-        if (!existing) {
-          fetch(`${supabaseUrl}/functions/v1/enroll-workflow-leads`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
-            body: JSON.stringify({
-              workspace_id: workspaceId,
-              lead_ids: [leadId],
-              event_type: "new_lead",
-              event_config: {},
-            }),
-          }).catch(() => {});
+      };
+      if (addedTags.length > 0) {
+        for (const tag of addedTags) {
+          await dispatchWorkflow("lead_tagged", { tag });
         }
       }
+      if (!existing) await dispatchWorkflow("new_lead", {});
+
+      // A submission is an event even when it updates an existing lead and
+      // contributes no new tags. This enables intentional workflow re-entry.
+      await dispatchWorkflow("form_submitted", {
+        form_id: typeof body.form_id === "string" ? body.form_id : null,
+        source: source || "Make.com",
+      });
     } catch (trigErr) {
       console.error("[ingest-leads] trigger dispatch failed:", String(trigErr));
     }

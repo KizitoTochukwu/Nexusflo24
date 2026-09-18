@@ -49,6 +49,12 @@ describe("renderMessageHtml", () => {
     expect(html).toContain("{{first_name}}");
   });
 
+  it("renders plain text that starts with a template variable", () => {
+    const { html, failed } = renderMessageHtml({ body: "{{first_name}}, welcome!" });
+    expect(failed).toBe(false);
+    expect(html).toContain("{{first_name}}, welcome!");
+  });
+
   it("substitutes recipient values when supplied", () => {
     const { html } = renderMessageHtml({ body: "Hi {{first_name}}" }, { first_name: "Ada" });
     expect(html).toContain("Hi Ada");

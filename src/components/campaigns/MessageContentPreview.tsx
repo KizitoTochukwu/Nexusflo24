@@ -88,7 +88,7 @@ export function renderMessageHtml(
   const interp = (s: string) => (vars ? interpolateText(s, vars) : s);
 
   // 1. Editor block JSON
-  if (raw.startsWith("[") || raw.startsWith("{")) {
+  if (raw.startsWith("[") || (raw.startsWith("{") && !raw.startsWith("{{"))) {
     try {
       const blocks = parseBlocksFromMessage(raw);
       if (blocks) {
