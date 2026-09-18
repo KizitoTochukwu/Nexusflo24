@@ -398,27 +398,98 @@ export function useVoiceKnowledge(workspaceId?: string) {
   });
 }
 
+/** Reads a knowledge source into searchable chunks. Sets ready/failed. */
+async function processKnowledgeSource(sourceId: string) {
+  const { data, error } = await supabase.functions.invoke("voice-knowledge-process", {
+    body: { source_id: sourceId },
+  });
+  if (error) throw error;
+  return data as { ok?: boolean; status?: string; error?: string; chunks?: number };
+}
+
+export type VoiceKnowledgeInput = {
+  title: string;
+  content?: string | null;
+  url?: string | null;
+  storage_path?: string | null;
+  source_type: string;
+  assistant_id?: string | null;
+};
+
 export function useCreateVoiceKnowledge(workspaceId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { title: string; content: string; source_type: string; assistant_id?: string | null }) => {
+    mutationFn: async (input: VoiceKnowledgeInput) => {
       const { data: auth } = await supabase.auth.getUser();
-      const { error } = await supabase.from("voice_knowledge_sources").insert({
-        workspace_id: workspaceId!,
-        title: input.title,
-        content: input.content,
-        source_type: input.source_type,
-        assistant_id: input.assistant_id ?? null,
-        status: "ready",
-        created_by: auth.user?.id ?? null,
-      });
+      const { data, error } = await supabase
+        .from("voice_knowledge_sources")
+        .insert({
+          workspace_id: workspaceId!,
+          title: input.title,
+          content: input.content ?? null,
+          url: input.url ?? null,
+          storage_path: input.storage_path ?? null,
+          source_type: input.source_type,
+          assistant_id: input.assistant_id ?? null,
+          status: "pending",
+          created_by: auth.user?.id ?? null,
+        })
+        .select()
+        .maybeSingle();
       if (error) throw error;
+      const row = data as VoiceKnowledgeSource;
+      const result = await processKnowledgeSource(row.id);
+      return { row, result };
+    },
+    onSuccess: ({ result }) => {
+      qc.invalidateQueries({ queryKey: key(workspaceId, "knowledge") });
+      if (result?.status === "failed") toast.error(result.error ?? "This source could not be read");
+      else toast.success("Knowledge saved and ready");
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not save this knowledge entry"),
+  });
+}
+
+export function useUpdateVoiceKnowledge(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reprocess = true, ...patch }: Partial<VoiceKnowledgeSource> & { id: string; reprocess?: boolean }) => {
+      const { error } = await supabase.from("voice_knowledge_sources").update(patch).eq("id", id);
+      if (error) throw error;
+      if (reprocess) await processKnowledgeSource(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: key(workspaceId, "knowledge") });
-      toast.success("Knowledge saved");
+      toast.success("Knowledge updated");
     },
-    onError: (e: Error) => toast.error(e.message || "Could not save this knowledge entry"),
+    onError: (e: Error) => toast.error(e.message || "Could not update this entry"),
+  });
+}
+
+export function useRetryVoiceKnowledge(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => processKnowledgeSource(id),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: key(workspaceId, "knowledge") });
+      if (result?.status === "failed") toast.error(result.error ?? "Still could not read this source");
+      else toast.success("Source read successfully");
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not read this source"),
+  });
+}
+
+/** Uploads a document into the private voice-knowledge area. */
+export function useUploadVoiceKnowledgeDocument(workspaceId?: string) {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "document.txt";
+      const path = `${workspaceId}/knowledge/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+      const { error } = await supabase.storage.from("voice-knowledge").upload(path, file, { upsert: false });
+      if (error) throw error;
+      return path;
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not upload that file"),
   });
 }
 
@@ -436,6 +507,109 @@ export function useDeleteVoiceKnowledge(workspaceId?: string) {
     onError: (e: Error) => toast.error(e.message || "Could not remove this entry"),
   });
 }
+
+export type VoiceKnowledgeMatch = {
+  source_id: string;
+  source_title: string;
+  source_type: string;
+  chunk_id: string;
+  content: string;
+  rank: number;
+};
+
+/** What the receptionist would find for a caller's question. */
+export function useVoiceKnowledgeSearch(workspaceId?: string) {
+  return useMutation({
+    mutationFn: async ({ query, assistantId }: { query: string; assistantId?: string | null }) => {
+      const { data, error } = await supabase.rpc("voice_search_knowledge", {
+        _workspace_id: workspaceId!,
+        _query: query,
+        _assistant_id: assistantId ?? null,
+        _limit: 5,
+      });
+      if (error) throw error;
+      return (data ?? []) as VoiceKnowledgeMatch[];
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not run that search"),
+  });
+}
+
+export type VoiceUnansweredQuestion = {
+  id: string;
+  workspace_id: string;
+  assistant_id: string | null;
+  call_session_id: string | null;
+  question: string;
+  suggested_answer: string | null;
+  status: string;
+  created_at: string;
+};
+
+export function useVoiceUnansweredQuestions(workspaceId?: string) {
+  return useQuery({
+    queryKey: key(workspaceId, "unanswered"),
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("voice_unanswered_questions")
+        .select("*")
+        .eq("workspace_id", workspaceId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as VoiceUnansweredQuestion[];
+    },
+  });
+}
+
+/** Approving turns the question into a published answer; dismissing clears it. */
+export function useResolveUnansweredQuestion(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; action: "approve" | "dismiss"; answer?: string; assistantId?: string | null }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (input.action === "approve") {
+        const { data: q, error: loadError } = await supabase
+          .from("voice_unanswered_questions")
+          .select("*")
+          .eq("id", input.id)
+          .maybeSingle();
+        if (loadError) throw loadError;
+        if (!q) throw new Error("That question is no longer in the queue");
+        const { data: created, error: insertError } = await supabase
+          .from("voice_knowledge_sources")
+          .insert({
+            workspace_id: workspaceId!,
+            title: q.question,
+            content: input.answer ?? "",
+            source_type: "faq",
+            assistant_id: input.assistantId ?? q.assistant_id ?? null,
+            status: "pending",
+            created_by: auth.user?.id ?? null,
+          })
+          .select()
+          .maybeSingle();
+        if (insertError) throw insertError;
+        if (created) await processKnowledgeSource((created as VoiceKnowledgeSource).id);
+      }
+      const { error } = await supabase
+        .from("voice_unanswered_questions")
+        .update({
+          status: input.action === "approve" ? "approved" : "dismissed",
+          resolved_by: auth.user?.id ?? null,
+          resolved_at: new Date().toISOString(),
+        })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: key(workspaceId, "unanswered") });
+      qc.invalidateQueries({ queryKey: key(workspaceId, "knowledge") });
+      toast.success(vars.action === "approve" ? "Answer added to your knowledge" : "Question dismissed");
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not update that question"),
+  });
+}
+
 
 export function useVoiceUsage(workspaceId?: string) {
   return useQuery({
