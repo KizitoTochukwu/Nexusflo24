@@ -571,14 +571,27 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   onChange(updated);
                 };
 
+                const incompleteRows = rows.filter((r) => !isConditionRowComplete(r));
+
                 return (
                   <div className="space-y-2 mb-2">
+                    {incompleteRows.length > 0 && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0 text-amber-600" />
+                        <span>
+                          {rows.every((r) => !r.condition)
+                            ? "No condition chosen yet. While it's unfinished this step is skipped — both branches are ignored and the automation carries on to the next step."
+                            : "A condition is missing its value. While it's unfinished this step is skipped — both branches are ignored and the automation carries on."}
+                        </span>
+                      </div>
+                    )}
                     {rows.map((row, idx) => {
                       const selectedOpt = allOptions.find((o) => o.value === row.condition);
                       const currentOperator: ConditionOperator =
                         row.operator || (selectedOpt?.operators?.[0] ?? "equals");
-                      const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
+                      const operatorNeedsValue = !OPERATORS_WITHOUT_VALUE.includes(currentOperator);
                       const isBetween = currentOperator === "between";
+                      const rowComplete = isConditionRowComplete(row);
 
                       return (
                         <div key={idx} className="space-y-1.5">
