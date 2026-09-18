@@ -182,6 +182,170 @@ export function useUpdateVoiceAssistant(workspaceId?: string) {
   });
 }
 
+export type VoiceAssistantVersion = {
+  id: string;
+  assistant_id: string;
+  version: number;
+  config: Record<string, unknown>;
+  runtime_prompt: string | null;
+  published_by: string | null;
+  published_at: string;
+};
+
+/** A single assistant, including the working draft configuration. */
+export function useVoiceAssistant(assistantId?: string) {
+  return useQuery({
+    queryKey: ["voice", "assistant", assistantId],
+    enabled: !!assistantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("voice_assistants")
+        .select("*")
+        .eq("id", assistantId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as (VoiceAssistant & {
+        config: Record<string, unknown>;
+        runtime_prompt: string | null;
+      }) | null;
+    },
+  });
+}
+
+/** Save-and-resume: the wizard writes the working draft, never a version. */
+export function useSaveVoiceAssistantDraft(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      name: string;
+      greeting: string | null;
+      persona: string | null;
+      language: string;
+      timezone: string;
+      tags: string[];
+      recording_enabled: boolean;
+      crm_pipeline_id: string | null;
+      crm_stage_id: string | null;
+      default_owner_user_id: string | null;
+      voice_id: string | null;
+      config: Record<string, unknown>;
+    }) => {
+      const { id, ...patch } = input;
+      const { error } = await supabase.from("voice_assistants").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["voice", "assistant", vars.id] });
+      qc.invalidateQueries({ queryKey: key(workspaceId, "assistants") });
+      toast.success("Progress saved");
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not save your changes"),
+  });
+}
+
+export function useVoiceAssistantVersions(assistantId?: string) {
+  return useQuery({
+    queryKey: ["voice", "versions", assistantId],
+    enabled: !!assistantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("voice_assistant_versions")
+        .select("*")
+        .eq("assistant_id", assistantId!)
+        .order("version", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as VoiceAssistantVersion[];
+    },
+  });
+}
+
+export function usePublishVoiceAssistant(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { assistantId: string; config: Record<string, unknown>; runtimePrompt: string }) => {
+      const { data, error } = await (supabase as any).rpc("voice_publish_assistant", {
+        _assistant_id: input.assistantId,
+        _config: input.config,
+        _runtime_prompt: input.runtimePrompt,
+        _activate: true,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (version, vars) => {
+      qc.invalidateQueries({ queryKey: ["voice", "assistant", vars.assistantId] });
+      qc.invalidateQueries({ queryKey: ["voice", "versions", vars.assistantId] });
+      qc.invalidateQueries({ queryKey: key(workspaceId, "assistants") });
+      toast.success(`Published version ${version}`);
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not publish this assistant"),
+  });
+}
+
+export function useRollbackVoiceAssistant(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { assistantId: string; version: number }) => {
+      const { error } = await (supabase as any).rpc("voice_rollback_assistant", {
+        _assistant_id: input.assistantId,
+        _version: input.version,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["voice", "assistant", vars.assistantId] });
+      qc.invalidateQueries({ queryKey: ["voice", "versions", vars.assistantId] });
+      qc.invalidateQueries({ queryKey: key(workspaceId, "assistants") });
+      toast.success(`Restored version ${vars.version}`);
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not restore that version"),
+  });
+}
+
+/** Pipelines with their stages, for the CRM capture step. */
+export function useVoicePipelineOptions(workspaceId?: string) {
+  return useQuery({
+    queryKey: key(workspaceId, "pipelines"),
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [{ data: pipelines, error: pErr }, { data: stages, error: sErr }] = await Promise.all([
+        supabase.from("crm_pipelines").select("id, name").eq("workspace_id", workspaceId!).order("name"),
+        supabase
+          .from("crm_pipeline_stages")
+          .select("id, name, pipeline_id, position")
+          .eq("workspace_id", workspaceId!)
+          .order("position"),
+      ]);
+      if (pErr) throw pErr;
+      if (sErr) throw sErr;
+      return {
+        pipelines: (pipelines ?? []) as { id: string; name: string }[],
+        stages: (stages ?? []) as { id: string; name: string; pipeline_id: string; position: number }[],
+      };
+    },
+  });
+}
+
+/** Booking pages this assistant could book into. */
+export function useVoiceBookingPages(workspaceId?: string) {
+  return useQuery({
+    queryKey: key(workspaceId, "booking-pages"),
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("booking_pages")
+        .select("id, name")
+        .eq("workspace_id", workspaceId!)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+}
+
 export function useVoiceNumbers(workspaceId?: string) {
   return useQuery({
     queryKey: key(workspaceId, "numbers"),
