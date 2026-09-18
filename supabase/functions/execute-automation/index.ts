@@ -45,8 +45,14 @@ async function loadCrmExtras(
 
     if (contact) {
       extra.contact_id = contact.id;
-      for (const key of ["first_name", "last_name", "full_name", "email", "phone", "company", "source", "status", "score"]) {
+      for (const key of [
+        "first_name", "last_name", "full_name", "email", "phone", "company", "source", "status", "score",
+        "job_title", "lifecycle_stage", "temperature", "consent_status", "owner_user_id",
+      ]) {
         if (contact[key] != null) extra[key] = String(contact[key]);
+      }
+      for (const key of ["consent_email", "consent_sms", "consent_whatsapp"]) {
+        if (contact[key] != null) extra[key] = contact[key] ? "true" : "false";
       }
       if (contact.whatsapp_number) extra.whatsapp_number = contact.whatsapp_number;
       const { data: vals } = await supabase
