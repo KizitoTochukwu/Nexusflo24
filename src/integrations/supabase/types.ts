@@ -14069,6 +14069,22 @@ export type Database = {
         Args: { _assistant_id: string; _version: number }
         Returns: number
       }
+      voice_search_knowledge: {
+        Args: {
+          _assistant_id?: string
+          _limit?: number
+          _query: string
+          _workspace_id: string
+        }
+        Returns: {
+          chunk_id: string
+          content: string
+          rank: number
+          source_id: string
+          source_title: string
+          source_type: string
+        }[]
+      }
       workspace_role: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: string
