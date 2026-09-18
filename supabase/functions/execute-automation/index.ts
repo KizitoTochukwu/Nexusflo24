@@ -27,6 +27,7 @@ async function loadCrmExtras(
   lead: Record<string, any>,
 ): Promise<Record<string, string>> {
   const extra: Record<string, string> = {};
+  let dealOwnerId: string | null = null;
   try {
     // Contact (linked, or matched on email)
     let contact: any = null;
@@ -44,6 +45,9 @@ async function loadCrmExtras(
 
     if (contact) {
       extra.contact_id = contact.id;
+      for (const key of ["first_name", "last_name", "full_name", "email", "phone", "company", "source", "status", "score"]) {
+        if (contact[key] != null) extra[key] = String(contact[key]);
+      }
       if (contact.whatsapp_number) extra.whatsapp_number = contact.whatsapp_number;
       const { data: vals } = await supabase
         .from("crm_custom_field_values")
@@ -57,7 +61,7 @@ async function loadCrmExtras(
       // Most recent open opportunity for this contact
       const { data: deal } = await supabase
         .from("crm_deals")
-        .select("id, name, reference_number, priority, stage_id, owner_user_id, status")
+        .select("id, name, reference_number, priority, stage_id, pipeline_id, owner_user_id, status, amount, currency, expected_close_date, crm_pipeline_stages(name), crm_pipelines(name)")
         .eq("workspace_id", workspaceId)
         .eq("contact_id", contact.id)
         .eq("status", "open")
@@ -69,17 +73,30 @@ async function loadCrmExtras(
         extra.opportunity_name = deal.name || "";
         extra.opportunity_reference_number = deal.reference_number || "";
         extra.opportunity_reference = deal.reference_number || "";
+        extra.opportunity_stage = deal.crm_pipeline_stages?.name || "";
+        extra.opportunity_pipeline = deal.crm_pipelines?.name || "";
+        extra.opportunity_status = deal.status || "";
+        extra.opportunity_priority = deal.priority || "";
+        extra.opportunity_amount = deal.amount != null ? String(deal.amount) : "";
+        extra.opportunity_currency = deal.currency || "";
+        extra.opportunity_expected_close_date = deal.expected_close_date || "";
+        extra.opportunity_service_required = extra.service_interest || "";
+        extra.opportunity_timeframe = extra.service_urgency || "";
+        extra.opportunity_preferred_contact = extra.preferred_channel || "";
+        extra.opportunity_secure_url = `https://nexusflo24.com/dashboard/${workspaceId}/crm/deals?pipeline=${encodeURIComponent(deal.pipeline_id)}&deal=${encodeURIComponent(deal.id)}`;
+        dealOwnerId = deal.owner_user_id || null;
       }
     }
 
     // Assigned user display name
-    const ownerId = lead.assigned_owner_id || lead.user_id;
+    const ownerId = dealOwnerId || lead.assigned_owner_id || lead.user_id;
     if (ownerId) {
       const { data: profile } = await supabase
-        .from("profiles").select("full_name, email").eq("id", ownerId).maybeSingle();
+        .from("profiles").select("full_name, email, phone").eq("id", ownerId).maybeSingle();
       if (profile) {
         extra.assigned_rep = profile.full_name || profile.email || "";
         extra.assigned_user_email = profile.email || "";
+        extra.assigned_user_phone = profile.phone || "";
       }
     }
   } catch (e) {

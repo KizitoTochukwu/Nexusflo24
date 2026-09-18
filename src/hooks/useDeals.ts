@@ -13,6 +13,8 @@ export type Pipeline = {
   position: number;
   created_at: string;
   updated_at: string;
+  reference_number?: string | null;
+  priority?: string | null;
 };
 
 export type PipelineStage = {

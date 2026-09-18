@@ -110,12 +110,7 @@ function renderWhatsAppPreview(text: string): string {
     .replace(/(https?:\/\/[^\s<]+)/g, '<a class="text-primary underline">$1</a>')
     .replace(/\n/g, "<br />");
 
-  // Substitute variable previews.
-  for (const [key, val] of Object.entries(PREVIEW_VALUES)) {
-    html = html.split(key).join(`<span class="font-semibold">${val}</span>`);
-  }
-  // Unknown {{variables}} get a muted placeholder.
-  html = html.replace(/\{\{(\w+)\}\}/g, '<span class="text-muted-foreground">[$1]</span>');
+  html = interpolateText(html, previewVars());
 
   return html;
 }

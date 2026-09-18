@@ -20,6 +20,29 @@ export function previewVars(overrides: Partial<Record<string, string>> = {}): Re
     score: "85",
     last_activity_date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
     assigned_rep: "Sarah Miller",
+    assigned_user_email: "sarah@example.com",
+    assigned_user_phone: "+1 555-987-6543",
+    whatsapp_number: "+1 555-123-4567",
+    service_interest: "Property inspection and maintenance",
+    service_urgency: "Within 48 hours",
+    preferred_channel: "Email",
+    country_of_residence: "United Kingdom",
+    service_location: "Lagos",
+    enquiry_details: "Family support enquiry",
+    enquiry_date: "Sep 18, 2026",
+    opportunity_name: "John Doe – Property inspection and maintenance",
+    opportunity_reference_number: "AFH-10482",
+    opportunity_stage: "New Enquiry",
+    opportunity_pipeline: "AfarHome Enquiries",
+    opportunity_status: "Open",
+    opportunity_priority: "High",
+    opportunity_amount: "0",
+    opportunity_currency: "GBP",
+    opportunity_expected_close_date: "Sep 30, 2026",
+    opportunity_service_required: "Property inspection and maintenance",
+    opportunity_timeframe: "Within 48 hours",
+    opportunity_preferred_contact: "Email",
+    opportunity_secure_url: `${APP_BASE_URL}/dashboard/demo/crm/deals?deal=demo`,
     booking_link: `${APP_BASE_URL}/book/demo`,
     funnel_link: `${APP_BASE_URL}/f/offer`,
     offer_page_link: `${APP_BASE_URL}/offer`,
@@ -37,7 +60,18 @@ export function previewVars(overrides: Partial<Record<string, string>> = {}): Re
  * `{{token | fallback}}` syntax). Unknown / empty tokens render as "".
  */
 function normalizeVarKey(raw: string): string {
-  const snake = String(raw).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+  let normalized = String(raw);
+  if (normalized.includes(".")) {
+    const parts = normalized.split(".");
+    const prefix = parts[0].replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+    const tail = parts.slice(1).join("_");
+    if (["contact", "lead", "customer", "person"].includes(prefix)) normalized = tail;
+    else if (["opportunity", "deal"].includes(prefix)) normalized = `opportunity_${tail}`;
+    else if (["assigned_user", "owner", "coordinator", "user", "rep"].includes(prefix)) {
+      normalized = tail.toLowerCase() === "name" ? "assigned_rep" : `assigned_user_${tail}`;
+    } else normalized = tail;
+  }
+  const snake = normalized.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
   const ALIASES: Record<string, string> = {
     firstname: "first_name",
     lastname: "last_name",
@@ -61,7 +95,7 @@ function normalizeVarKey(raw: string): string {
 export function interpolateText(template: string | null | undefined, vars: Record<string, string>): string {
   if (!template) return "";
   return String(template).replace(
-    /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/g,
+    /\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*(?:\|\s*([^}]*?))?\s*\}\}/g,
     (_m, rawKey: string, rawFallback?: string) => {
       const key = normalizeVarKey(rawKey);
       const fallback = (rawFallback ?? "").trim();
