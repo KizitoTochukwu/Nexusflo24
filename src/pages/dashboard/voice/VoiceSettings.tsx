@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useVoiceSettings, useUpdateVoiceSettings } from "@/hooks/useVoice";
+import { useVoiceSettings, useUpdateVoiceSettings, useVoiceNumberStatus } from "@/hooks/useVoice";
 import { VoiceSection, VoiceSetupNotice } from "@/components/voice/VoicePrimitives";
 import {
   VOICE_SETUP_STEPS, VOICE_STARTER_ENTITLEMENT, VOICE_PROVIDER_LABEL,
