@@ -12,7 +12,13 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 
 /** Flipped on in Milestone 9, once the Cloud Run gateway is deployed. */
-const VOICE_LIVE_CALLING_ENABLED = false;
+// Live calling turns on by itself once the gateway and its signing key exist.
+const gatewayConfigured = () => {
+  const url = (Deno.env.get("VOICE_GATEWAY_URL") || "").trim();
+  const key = (Deno.env.get("VOICE_GATEWAY_SIGNING_KEY") || "").trim();
+  return url.length > 8 && key.length >= 16;
+};
+const VOICE_LIVE_CALLING_ENABLED = gatewayConfigured();
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
