@@ -33,14 +33,14 @@ Deno.serve(async (req) => {
     for (const [k, v] of new URLSearchParams(raw)) params[k] = v;
 
     const callSid = params.CallSid || "";
-    if (!callSid) return new Response("", { status: 204 });
+    if (!callSid) return new Response(null, { status: 204 });
 
     const { data: call } = await admin
       .from("voice_call_sessions")
       .select("id, workspace_id, status, duration_seconds, outcome")
       .eq("provider_call_id", callSid)
       .maybeSingle();
-    if (!call) return new Response("", { status: 204 });
+    if (!call) return new Response(null, { status: 204 });
 
     const creds = await resolveChannelCredentials(call.workspace_id, "sms", {
       account_sid: Deno.env.get("TWILIO_ACCOUNT_SID"),
@@ -100,9 +100,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response("", { status: 204 });
+    return new Response(null, { status: 204 });
   } catch (err) {
     console.error("[voice-call-status] error", err);
-    return new Response("", { status: 204 });
+    return new Response(null, { status: 204 });
   }
 });
