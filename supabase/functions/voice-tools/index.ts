@@ -7,6 +7,7 @@
 // Tools: check_availability, book_appointment, request_callback, transfer_call.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireInternalOrWorkspaceMember } from "../_shared/caller-auth.ts";
+import { requireGatewayToken } from "../_shared/voice-gateway-token.ts";
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { syncCallToCrm } from "../_shared/voiceCrm.ts";
 
