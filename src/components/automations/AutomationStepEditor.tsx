@@ -76,8 +76,21 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
   const { data: workspaceMembers } = useWorkspaceMembers(workspaceId || "");
   const { data: tagOptionsData } = useAutomationTagOptions(workspaceId || undefined);
   const { data: stageOptionsData } = useAutomationStageOptions(workspaceId || undefined);
+  const { data: pipelineOptionsData } = useAutomationPipelineOptions(workspaceId || undefined);
+  const { data: customFieldDefs } = useCustomFieldDefs(workspaceId || undefined, "contact", true);
   const AUTOMATION_TAG_OPTIONS = tagOptionsData ?? [];
   const PIPELINE_STAGES = stageOptionsData ?? FALLBACK_PIPELINE_STAGES;
+  const PIPELINE_NAMES = pipelineOptionsData ?? [];
+  const FIELD_CHOICES: { value: string; label: string }[] = [
+    ...CONTACT_FIELD_CHOICES,
+    ...((customFieldDefs ?? []) as any[]).map((d) => ({ value: String(d.field_key), label: String(d.label || d.field_key) })),
+  ];
+  const choicesFor = (source?: string): string[] => {
+    if (source === "tags") return AUTOMATION_TAG_OPTIONS;
+    if (source === "stages") return PIPELINE_STAGES;
+    if (source === "pipelines") return PIPELINE_NAMES;
+    return CONDITION_STATIC_CHOICES[source ?? ""] ?? [];
+  };
   const [collapsedSteps, setCollapsedSteps] = useState<Record<number, boolean>>({});
   const toggleCollapsed = (i: number) =>
     setCollapsedSteps((prev) => ({ ...prev, [i]: !prev[i] }));
