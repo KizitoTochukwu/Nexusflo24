@@ -576,6 +576,27 @@ export function phraseCondition(row: ConditionRow): string {
   // Reply status
   if (row.condition === "reply_status") return "Reply status";
 
+  // Contact field picker
+  if (row.condition === "contact_field") {
+    const fieldLabel =
+      CONTACT_FIELD_CHOICES.find((f) => f.value === row.field)?.label ||
+      (row.field ? row.field.replace(/_/g, " ") : "Field");
+    if (op === "is_known") return `${fieldLabel} is known`;
+    if (op === "is_unknown") return `${fieldLabel} is unknown`;
+    return `${fieldLabel} ${operatorLabel(op || "equals")} "${val}"`;
+  }
+
+  // Yes/no style checks
+  if (op === "is_true" || op === "is_false") {
+    return `${label} ${op === "is_true" ? "yes" : "no"}`;
+  }
+
+  // Timing
+  if (row.condition.startsWith("days_since_")) {
+    const sym = op === "less_than" ? "<" : op === "equals" ? "=" : ">";
+    return `${label} ${sym} ${val || "?"}`;
+  }
+
   // Fallback
   const opTxt = op ? ` ${operatorLabel(op)}` : "";
   const valTxt = val ? ` "${val}"` : "";
