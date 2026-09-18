@@ -1552,22 +1552,35 @@ Deno.serve(async (req) => {
                 details = { hasReply, movedTo: null, action: "continue_sequence" };
               }
               passed = true;
-            } else if (rows.length > 0) {
-              rowResults = await Promise.all(rows.map(evaluateRow));
+            } else if (usableRows.length > 0) {
+              rowResults = await Promise.all(usableRows.map(evaluateRow));
               passed = logic === "OR"
                 ? rowResults.some((r) => r.passed)
                 : rowResults.every((r) => r.passed);
-              details = { logic, rows: rowResults.map((r) => r.details), passed };
+              details = {
+                logic,
+                rows: rowResults.map((r) => r.details),
+                ...(incompleteCount > 0 ? { skipped_incomplete_rows: incompleteCount } : {}),
+                passed,
+              };
             } else {
-              details = { message: "Condition step has no rows configured", passed: false };
+              unconfigured = true;
+              details = {
+                message: rows.length === 0
+                  ? "Condition step has no rows configured — both branches skipped, automation continued"
+                  : "Condition step is incomplete — both branches skipped, automation continued",
+                unconfigured: true,
+                passed: false,
+              };
             }
 
             // Conditions are branching/wait points, NOT gates (legacy halt opt-in preserved).
-            if (!passed && config.halt_on_fail === true) {
+            if (!unconfigured && !passed && config.halt_on_fail === true) {
               skipRemaining = true;
             }
-            lastConditionPassed = passed;
-            status = passed ? "success" : "condition_not_met";
+            lastConditionPassed = unconfigured ? null : passed;
+            lastConditionUnconfigured = unconfigured;
+            status = unconfigured ? "condition_not_configured" : passed ? "success" : "condition_not_met";
             break;
           }
 
