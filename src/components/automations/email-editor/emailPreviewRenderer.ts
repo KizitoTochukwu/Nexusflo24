@@ -7,6 +7,7 @@ import type { TemplateSettings } from "./EmailTemplateSettings";
 import type { EmailBlock } from "./email-blocks/emailBlockTypes";
 import { blocksToHtml, parseBlocksFromMessage } from "./email-blocks/emailBlockSerializer";
 import { DEFAULT_TEMPLATE_SETTINGS } from "./EmailTemplateSettings";
+import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 
 export function formatEmailBody(raw: string): string {
   if (!raw) return "";
@@ -108,12 +109,11 @@ export function buildPreviewHtml(
   const logoAutoHeight = ts.logo.autoHeight ?? true;
   const logoHeight = ts.logo.height ?? (ts.logo as any).size ?? 56;
 
-  // Interpolate variables with preview values
-  let content = rawBody;
-  for (const [key, val] of Object.entries(previewValues)) {
-    content = content.split(key).join(val);
-  }
-  content = content.replace(/\{\{([\w.]+)(?:\|[^}]*)?\}\}/g, "[$1]");
+  // Use the same dotted-token and fallback rules as test sends and delivery.
+  const supplied = Object.fromEntries(
+    Object.entries(previewValues).map(([key, value]) => [key.replace(/^\{\{|\}\}$/g, ""), value]),
+  );
+  const content = interpolateText(rawBody, previewVars(supplied));
 
   const formattedBody = formatEmailBody(content);
 
@@ -132,10 +132,7 @@ export function buildPreviewHtml(
     ? `<tr><td align="${ts.footer.alignment}" style="padding:24px 0 0;"><p style="margin:0;font-size:12px;color:${ts.footer.color};">${ts.footer.text}</p></td></tr>`
     : "";
 
-  let interpolatedSubject = subject;
-  for (const [key, val] of Object.entries(previewValues)) {
-    interpolatedSubject = interpolatedSubject.split(key).join(val);
-  }
+  const interpolatedSubject = interpolateText(subject, previewVars(supplied));
 
   return `<!DOCTYPE html>
 <html lang="en" dir="ltr">
