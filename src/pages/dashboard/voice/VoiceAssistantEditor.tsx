@@ -23,6 +23,7 @@ import {
   useVoiceAssistant, useSaveVoiceAssistantDraft, usePublishVoiceAssistant,
   useVoiceAssistantVersions, useRollbackVoiceAssistant, useVoicePipelineOptions,
   useVoiceBookingPages, useVoiceNumbers, useVoiceKnowledge, useUpdateVoiceAssistant,
+  useVoiceAvailabilityPreview,
 } from "@/hooks/useVoice";
 import { VoiceSetupNotice, VoiceStatusBadge, VoiceSection } from "@/components/voice/VoicePrimitives";
 import ChipListEditor from "@/components/voice/ChipListEditor";
@@ -32,6 +33,7 @@ import {
   normalizeAssistantConfig, type VoiceAssistantConfig,
 } from "@/lib/voice/assistantConfig";
 import { VOICE_ASSISTANT_STATUSES } from "@/lib/voice/constants";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 export default function VoiceAssistantEditor() {
@@ -57,6 +59,8 @@ export default function VoiceAssistantEditor() {
   const [stepIndex, setStepIndex] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const availability = useVoiceAvailabilityPreview();
+  const [slotPreview, setSlotPreview] = useState<string[] | null>(null);
 
   // Hydrate from the saved draft (save-and-resume).
   useEffect(() => {
