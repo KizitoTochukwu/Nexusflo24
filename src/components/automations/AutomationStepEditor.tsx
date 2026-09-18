@@ -956,10 +956,22 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   );
                 };
 
+                const summaryRows = conditionRowsFromConfig(step.config);
+                const summaryReady = summaryRows.length > 0 && summaryRows.every(isConditionRowComplete);
+                const summaryLogic = ((step.config.logic as ConditionLogic) || "AND");
+
                 return (
                   <div className="space-y-1.5 mb-2">
                     <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       <GitBranch className="h-3 w-3" /> Branching (Logic)
+                    </div>
+                    <div className={cn(
+                      "rounded-md border px-2.5 py-1.5 text-[11px]",
+                      summaryReady ? "border-blue-200 bg-blue-50/60 text-blue-900" : "border-amber-300 bg-amber-50 text-amber-900",
+                    )}>
+                      {summaryReady
+                        ? <>Takes the <strong>YES</strong> path when {phraseConditionGroup(summaryRows, summaryLogic)}. Otherwise the <strong>NO</strong> path.</>
+                        : <>This condition isn't finished, so neither path runs — the automation continues at the next step below.</>}
                     </div>
                     {renderOutcome("yes")}
                     {renderOutcome("no")}
