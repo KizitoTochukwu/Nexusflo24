@@ -218,20 +218,24 @@ Deno.serve(async (req) => {
       const dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       const { data: task } = await admin
         .from("crm_tasks")
-        .insert({
-          workspace_id: call.workspace_id,
-          title: `Call back ${name}${phone ? ` on ${phone}` : ""}`,
-          description: [reason, preferredTime && `Preferred time: ${preferredTime}`].filter(Boolean).join("\n") || null,
-          status: "open",
-          priority: "high",
-          due_date: dueAt,
-          task_type: "call",
-          dedupe_key: `voice-callback:${call.id}`,
-          contact_id: contactId,
-          assigned_to: config.ownerUserId ?? null,
-        })
+        .upsert(
+          {
+            workspace_id: call.workspace_id,
+            title: `Call back ${name}${phone ? ` on ${phone}` : ""}`,
+            description: [reason, preferredTime && `Preferred time: ${preferredTime}`].filter(Boolean).join("\n") || null,
+            status: "open",
+            priority: "high",
+            due_date: dueAt,
+            task_type: "call",
+            dedupe_key: `voice-callback:${call.id}`,
+            contact_id: contactId,
+            assigned_to: config.ownerUserId ?? null,
+          },
+          { onConflict: "workspace_id,dedupe_key" },
+        )
         .select("id")
         .maybeSingle();
+
 
       const result = { task_id: task?.id ?? null, contact_id: contactId, phone };
       await admin.from("voice_call_sessions").update({ outcome: "callback_requested" }).eq("id", call.id);
