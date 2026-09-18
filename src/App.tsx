@@ -82,6 +82,13 @@ import BookingsWorkspaceLayout from "./components/bookings/BookingsWorkspaceLayo
 import AdsWorkspaceLayout from "./components/ads/AdsWorkspaceLayout";
 import AdsOverview from "./pages/dashboard/ads/AdsOverview";
 import AdsAccounts from "./pages/dashboard/ads/AdsAccounts";
+import VoiceWorkspaceLayout from "./components/voice/VoiceWorkspaceLayout";
+import VoiceOverview from "./pages/dashboard/voice/VoiceOverview";
+import VoiceAssistants from "./pages/dashboard/voice/VoiceAssistants";
+import VoiceCalls from "./pages/dashboard/voice/VoiceCalls";
+import VoiceNumbers from "./pages/dashboard/voice/VoiceNumbers";
+import VoiceKnowledge from "./pages/dashboard/voice/VoiceKnowledge";
+import VoiceSettings from "./pages/dashboard/voice/VoiceSettings";
 import BookingsOverview from "./pages/dashboard/bookings/BookingsOverview";
 import BookingsCalendar from "./pages/dashboard/bookings/BookingsCalendar";
 import BookingsTypes from "./pages/dashboard/bookings/BookingsTypes";
