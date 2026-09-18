@@ -1524,11 +1524,12 @@ Deno.serve(async (req) => {
 
               return {
                 passed,
-                details: { conditionType, operator, value, value_to: valueTo, time_window_days: twDays, passed },
+                details: { conditionType, field: row.field, operator, value, value_to: valueTo, time_window_days: twDays, passed },
               };
             };
 
             let passed = false;
+            let unconfigured = false;
             let rowResults: Array<{ passed: boolean; details: Record<string, unknown> }> = [];
 
             // Reply-status is a special single-row case (it mutates pipeline_stage).
