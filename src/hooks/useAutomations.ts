@@ -289,6 +289,148 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       },
     ],
   },
+  {
+    label: "Contact details",
+    options: [
+      {
+        value: "contact_field", label: "Contact field", input: "field",
+        placeholder: "Value",
+        operators: ["equals", "not_equals", "contains", "not_contains", "is_known", "is_unknown"],
+        hint: "Any standard or custom field on the contact record.",
+      },
+      {
+        value: "lead_status", label: "Lead status", input: "text", placeholder: "e.g. Qualified",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "pipeline_stage", label: "Pipeline stage (lead)", input: "select", optionsSource: "stages",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "lifecycle_stage", label: "Lifecycle stage", input: "select", optionsSource: "lifecycle",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "owner_assigned", label: "Owner", input: "none",
+        operators: ["is_known", "is_unknown"],
+        suggestedActions: [{ action: "assign_owner", label: "Assign an owner" }],
+      },
+    ],
+  },
+  {
+    label: "Tags",
+    options: [
+      {
+        value: "has_tag", label: "Has tag (exact)", input: "select", optionsSource: "tags",
+        operators: ["equals", "not_equals"],
+      },
+    ],
+  },
+  {
+    label: "Replies & consent",
+    options: [
+      {
+        value: "replied_any", label: "Replied (any channel)", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedActions: [
+          { action: "notify_sales", label: "Notify Sales" },
+          { action: "update_status", label: "Move to Engaged", defaults: { new_status: "Engaged" } },
+        ],
+      },
+      {
+        value: "sms_replied", label: "SMS replied", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+      },
+      {
+        value: "email_replied", label: "Email replied", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+      },
+      {
+        value: "email_bounced", label: "Email bounced or failed", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedActions: [{ action: "add_tag", label: "Tag: bad-email", defaults: { tag: "bad-email" } }],
+      },
+      {
+        value: "unsubscribed", label: "Unsubscribed / opted out", input: "none",
+        operators: ["is_true", "is_false"],
+      },
+      {
+        value: "marketing_consent", label: "Marketing consent", input: "none",
+        operators: ["is_true", "is_false"],
+        hint: "Use before any promotional or nurture message.",
+      },
+    ],
+  },
+  {
+    label: "Opportunity",
+    options: [
+      {
+        value: "opportunity_exists", label: "Has an open opportunity", input: "none",
+        operators: ["happened", "not_happened"],
+      },
+      {
+        value: "opportunity_stage", label: "Opportunity stage", input: "select", optionsSource: "stages",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_pipeline", label: "Opportunity pipeline", input: "select", optionsSource: "pipelines",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_status", label: "Opportunity status", input: "select", optionsSource: "dealStatus",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_priority", label: "Opportunity priority", input: "select", optionsSource: "dealPriority",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_value", label: "Opportunity value", input: "number", placeholder: "e.g. 500",
+        operators: ["greater_than", "less_than", "equals", "between"],
+      },
+    ],
+  },
+  {
+    label: "Timing",
+    options: [
+      {
+        value: "days_since_created", label: "Days since created", input: "number", placeholder: "e.g. 7",
+        operators: ["greater_than", "less_than", "equals"],
+      },
+      {
+        value: "days_since_last_activity", label: "Days since last activity", input: "number", placeholder: "e.g. 14",
+        operators: ["greater_than", "less_than", "equals"],
+      },
+      {
+        value: "days_since_last_message", label: "Days since last message", input: "number", placeholder: "e.g. 3",
+        operators: ["greater_than", "less_than", "equals"],
+      },
+    ],
+  },
+];
+
+/** Static choice lists for `select` conditions that don't come from workspace data. */
+export const CONDITION_STATIC_CHOICES: Record<string, string[]> = {
+  dealStatus: ["open", "won", "lost"],
+  dealPriority: ["low", "medium", "high", "urgent"],
+  lifecycle: ["subscriber", "lead", "marketing_qualified", "sales_qualified", "opportunity", "customer", "evangelist", "other"],
+  channels: ["email", "sms", "whatsapp"],
+};
+
+/** Standard contact fields offered by the "Contact field" condition. */
+export const CONTACT_FIELD_CHOICES: { value: string; label: string }[] = [
+  { value: "first_name", label: "First name" },
+  { value: "last_name", label: "Last name" },
+  { value: "full_name", label: "Full name" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "whatsapp_number", label: "WhatsApp number" },
+  { value: "company", label: "Company" },
+  { value: "job_title", label: "Job title" },
+  { value: "source", label: "Source" },
+  { value: "status", label: "Status" },
+  { value: "lifecycle_stage", label: "Lifecycle stage" },
+  { value: "temperature", label: "Temperature" },
 ];
 
 // Flat list for backward compatibility + reply_status (handled separately in UI)
