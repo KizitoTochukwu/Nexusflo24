@@ -558,10 +558,9 @@ Deno.serve(async (req) => {
               const unsubUrl = `${appBaseUrl}/unsubscribe?lid=${lead_id}&wid=${workspace_id}`;
               const ts = config.templateSettings as Record<string, any> | undefined;
               let html = wrapEmailTemplate(renderedBody, {
-                logo: ts?.logo,
-                unsubscribe: ts?.unsubscribe,
-                footer: ts?.footer,
+                ...(ts || {}),
                 unsubUrl,
+                interpolate: (s: string) => interpolate(s, lead),
               });
               const senderProfileId = (config as any).sender_profile_id || null;
               try {

@@ -12493,6 +12493,7 @@ export type Database = {
           brand_name: string | null
           created_at: string
           custom_domain: string | null
+          email_template_settings: Json | null
           icon_url: string | null
           id: string
           logo_url: string | null
@@ -12504,6 +12505,7 @@ export type Database = {
           brand_name?: string | null
           created_at?: string
           custom_domain?: string | null
+          email_template_settings?: Json | null
           icon_url?: string | null
           id?: string
           logo_url?: string | null
@@ -12515,6 +12517,7 @@ export type Database = {
           brand_name?: string | null
           created_at?: string
           custom_domain?: string | null
+          email_template_settings?: Json | null
           icon_url?: string | null
           id?: string
           logo_url?: string | null

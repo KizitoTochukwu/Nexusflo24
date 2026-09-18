@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import InsertDropdown from "./InsertDropdown";
-import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, type TemplateSettings } from "./EmailTemplateSettings";
+import EmailTemplateSettings, { DEFAULT_TEMPLATE_SETTINGS, normalizeTemplateSettings, templateSettingsFromBranding, type TemplateSettings } from "./EmailTemplateSettings";
+import { useWorkspaceBranding } from "@/hooks/useWorkspaceBranding";
 import { VARIABLE_OPTIONS, PREVIEW_VALUES } from "./editorConstants";
 import { buildPreviewHtml } from "./emailPreviewRenderer";
 import { EMAIL_PRESETS } from "./emailPresets";
@@ -43,6 +44,8 @@ interface AutomationEmailEditorProps {
   onMessageChange: (v: string) => void;
   templateSettings?: TemplateSettings;
   onTemplateSettingsChange?: (settings: TemplateSettings) => void;
+  /** Optional — apply the current look to every email step in this automation. */
+  onApplyTemplateSettingsToAll?: (settings: TemplateSettings) => void;
   /** Optional selected WhatsApp approved template — when present, "Send test"
    *  routes as a template send (ContentSid + variables) instead of free text. */
   whatsappTemplate?: WhatsAppTemplateOverride | null;
@@ -124,6 +127,7 @@ export default function AutomationEmailEditor({
   onMessageChange,
   templateSettings,
   onTemplateSettingsChange,
+  onApplyTemplateSettingsToAll,
   whatsappTemplate,
 }: AutomationEmailEditorProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -291,7 +295,25 @@ export default function AutomationEmailEditor({
     }
   }, [resolvedChannel, subject, message, testRecipient, workspaceId, templateSettings, user?.email, whatsappTemplate]);
 
-  const currentSettings = templateSettings ?? DEFAULT_TEMPLATE_SETTINGS;
+  // Start new emails from the workspace's saved brand rather than the
+  // NexusFlo24 defaults, so client workspaces don't restyle every message.
+  const { data: branding } = useWorkspaceBranding(workspaceId || "");
+  const workspaceDefaults = useMemo(
+    () => (branding ? templateSettingsFromBranding(branding as any) : DEFAULT_TEMPLATE_SETTINGS),
+    [branding],
+  );
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!isEmail || !onTemplateSettingsChange || templateSettings || hydratedRef.current) return;
+    if (!branding) return;
+    hydratedRef.current = true;
+    onTemplateSettingsChange(workspaceDefaults);
+  }, [isEmail, onTemplateSettingsChange, templateSettings, branding, workspaceDefaults]);
+
+  const currentSettings = useMemo(
+    () => normalizeTemplateSettings(templateSettings ?? workspaceDefaults),
+    [templateSettings, workspaceDefaults],
+  );
 
   // For email, determine the HTML to preview (blocks → HTML or legacy)
   const getEmailHtml = useCallback(() => {
@@ -572,7 +594,11 @@ export default function AutomationEmailEditor({
 
         {/* Template Settings (email only) */}
         {isEmail && onTemplateSettingsChange && (
-          <EmailTemplateSettings settings={currentSettings} onChange={onTemplateSettingsChange} />
+          <EmailTemplateSettings
+            settings={currentSettings}
+            onChange={onTemplateSettingsChange}
+            onApplyToAll={onApplyTemplateSettingsToAll}
+          />
         )}
       </div>
     </TooltipProvider>

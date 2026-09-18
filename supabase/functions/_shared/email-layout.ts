@@ -8,12 +8,26 @@ const DEFAULT_LOGO_URL =
 
 export interface TemplateOptions {
   preheader?: string;
+  brandName?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  address?: string;
   logo?: { url?: string; alignment?: string; size?: number; width?: number; height?: number; autoHeight?: boolean; visible?: boolean };
-  header?: { color?: string };
+  header?: { color?: string; showBar?: boolean };
   unsubscribe?: { enabled?: boolean; text?: string };
   footer?: { text?: string; color?: string; alignment?: string };
   unsubUrl?: string;
+  /** Optional resolver for {{variables}} inside footer/unsubscribe/address copy. */
+  interpolate?: (input: string) => string;
 }
+
+/** Remove any {{tokens}} that were never resolved so recipients never see braces. */
+function cleanChrome(input: string | undefined, resolve?: (s: string) => string): string {
+  if (!input) return "";
+  const resolved = resolve ? resolve(input) : input;
+  return resolved.replace(/\{\{[^{}]*\}\}/g, "").replace(/\s{2,}/g, " ").trim();
+}
+
 
 /**
  * Converts raw editor content (plain text, \n, bullets, inline HTML) into
@@ -121,6 +135,10 @@ export function wrapEmailTemplate(
     ...options?.logo,
   };
   const headerColor = options?.header?.color || "#0B1F3B";
+  const showBar = options?.header?.showBar !== false;
+  const brandName = (options?.brandName || "NexusFlo24").trim() || "NexusFlo24";
+  const accentColor = options?.accentColor || "#C9A227";
+  const backgroundColor = options?.backgroundColor || "#f4f5f7";
   const unsub = {
     enabled: true,
     text: "You received this email because you subscribed to NexusFlo24.",
@@ -133,29 +151,48 @@ export function wrapEmailTemplate(
     ...options?.footer,
   };
 
-  const preheader = options?.preheader
-    ? `<span style="display:none;font-size:1px;color:#f4f5f7;max-height:0;overflow:hidden;">${options.preheader}</span>`
+  const resolve = options?.interpolate;
+  const unsubText = cleanChrome(unsub.text, resolve);
+  const footerText = cleanChrome(footer.text, resolve);
+  const addressText = cleanChrome(options?.address, resolve);
+  const preheaderText = cleanChrome(options?.preheader, resolve);
+
+  const preheader = preheaderText
+    ? `<span style="display:none;font-size:1px;color:${backgroundColor};max-height:0;overflow:hidden;">${preheaderText}</span>`
     : "";
 
   const logoWidth = logo.width || logo.size || 120;
   const logoHeightAttr = logo.autoHeight ? "auto" : String(logo.height || logo.size || 56);
   const logoHeightStyle = logo.autoHeight ? "height:auto;" : `height:${logo.height || logo.size || 56}px;`;
 
-  const logoBlock = logo.visible && logo.url
-    ? `<tr><td align="${logo.alignment}" style="padding:16px 0 24px;"><img src="${logo.url}" width="${logoWidth}" height="${logoHeightAttr}" alt="NexusFlo24" style="border-radius:10px;display:block;width:${logoWidth}px;${logoHeightStyle}" /></td></tr>`
+  const logoImg = logo.visible && logo.url
+    ? `<img src="${logo.url}" width="${logoWidth}" height="${logoHeightAttr}" alt="${brandName}" style="border-radius:10px;display:block;width:${logoWidth}px;${logoHeightStyle}" />`
     : "";
+
+  // Branded header band — uses the chosen header colour and carries the logo.
+  let headerBlock = "";
+  if (showBar) {
+    const inner = logoImg
+      || `<span style="font-size:18px;font-weight:bold;color:#ffffff;">${brandName}</span>`;
+    headerBlock = `<tr><td align="${logo.alignment}" style="background-color:${headerColor};border-radius:16px 16px 0 0;padding:20px 24px;">${inner}</td></tr>`;
+  } else if (logoImg) {
+    headerBlock = `<tr><td align="${logo.alignment}" style="padding:16px 0 24px;">${logoImg}</td></tr>`;
+  }
+
+  const cardRadius = showBar ? "0 0 16px 16px" : "16px";
 
   // Unsubscribe footer inside the body card
   let unsubBlock = "";
   if (unsub.enabled) {
-    const unsubLink = options?.unsubUrl
-      ? `<a href="${options.unsubUrl}" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a>`
-      : `<a href="#" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a>`;
-    unsubBlock = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">${unsub.text} ${unsubLink}</span></div>`;
+    const unsubLink = `<a href="${options?.unsubUrl || "#"}" style="color:${headerColor};text-decoration:underline;">Unsubscribe</a>`;
+    const addressLine = addressText
+      ? `<br /><span style="font-size:11px;color:#999999;">${addressText}</span>`
+      : "";
+    unsubBlock = `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">${unsubText} ${unsubLink}</span>${addressLine}</div>`;
   }
 
-  const footerBlock = footer.text
-    ? `<tr><td align="${footer.alignment}" style="padding:24px 0 0;"><p style="margin:0;font-size:12px;color:${footer.color};">${footer.text}</p></td></tr>`
+  const footerBlock = footerText
+    ? `<tr><td align="${footer.alignment}" style="padding:24px 0 0;"><p style="margin:0;font-size:12px;color:${footer.color};">${footerText}</p></td></tr>`
     : "";
 
   return `<!DOCTYPE html>
@@ -164,28 +201,28 @@ export function wrapEmailTemplate(
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<title>NexusFlo24</title>
+<title>${brandName}</title>
 <style>
   body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   body { margin: 0; padding: 0; width: 100% !important; }
   img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-  a { color: #0B1F3B; text-decoration: underline; }
+  a { color: ${accentColor}; text-decoration: underline; }
   @media only screen and (max-width: 640px) {
     .email-container { padding: 16px !important; }
     .email-body { padding: 24px 16px !important; }
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:'Inter',Arial,'Helvetica Neue',Helvetica,sans-serif;">
+<body style="margin:0;padding:0;background-color:${backgroundColor};font-family:'Inter',Arial,'Helvetica Neue',Helvetica,sans-serif;">
 ${preheader}
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${backgroundColor};">
   <tr>
     <td align="center" class="email-container" style="padding:32px 24px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-        ${logoBlock}
+        ${headerBlock}
         <!-- Body Card -->
         <tr>
-          <td class="email-body" style="background-color:#ffffff;border-radius:16px;padding:32px 32px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <td class="email-body" style="background-color:#ffffff;border-radius:${cardRadius};padding:32px 32px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
             ${body}
             ${unsubBlock}
           </td>

@@ -6,7 +6,7 @@
 import type { TemplateSettings } from "./EmailTemplateSettings";
 import type { EmailBlock } from "./email-blocks/emailBlockTypes";
 import { blocksToHtml, parseBlocksFromMessage } from "./email-blocks/emailBlockSerializer";
-import { DEFAULT_TEMPLATE_SETTINGS } from "./EmailTemplateSettings";
+import { normalizeTemplateSettings } from "./EmailTemplateSettings";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 
 export function formatEmailBody(raw: string): string {
@@ -97,12 +97,7 @@ export function buildPreviewHtml(
   previewValues: Record<string, string>,
   templateSettings?: Partial<TemplateSettings>
 ): string {
-  const ts = {
-    header: { ...DEFAULT_TEMPLATE_SETTINGS.header, ...templateSettings?.header },
-    logo: { ...DEFAULT_TEMPLATE_SETTINGS.logo, ...templateSettings?.logo },
-    unsubscribe: { ...DEFAULT_TEMPLATE_SETTINGS.unsubscribe, ...templateSettings?.unsubscribe },
-    footer: { ...DEFAULT_TEMPLATE_SETTINGS.footer, ...templateSettings?.footer },
-  };
+  const ts = normalizeTemplateSettings(templateSettings);
 
   // Backward compat: migrate old `size` to width/height
   const logoWidth = ts.logo.width ?? (ts.logo as any).size ?? 120;
@@ -113,26 +108,47 @@ export function buildPreviewHtml(
   const supplied = Object.fromEntries(
     Object.entries(previewValues).map(([key, value]) => [key.replace(/^\{\{|\}\}$/g, ""), value]),
   );
-  const content = interpolateText(rawBody, previewVars(supplied));
+  const vars = previewVars(supplied);
+  const resolveChrome = (input: string | undefined) =>
+    interpolateText(input ?? "", vars).replace(/\{\{[^{}]*\}\}/g, "").replace(/\s{2,}/g, " ").trim();
 
+  const content = interpolateText(rawBody, vars);
   const formattedBody = formatEmailBody(content);
+
+  const brandName = (ts.brandName || "NexusFlo24").trim() || "NexusFlo24";
+  const accentColor = ts.accentColor || "#C9A227";
+  const backgroundColor = ts.backgroundColor || "#f4f5f7";
+  const headerColor = ts.header.color || "#0B1F3B";
+  const showBar = ts.header.showBar !== false;
+
+  const unsubText = resolveChrome(ts.unsubscribe.text);
+  const footerText = resolveChrome(ts.footer.text);
+  const addressText = resolveChrome(ts.address);
+  const preheaderText = resolveChrome(ts.preheader);
 
   // Build unsubscribe footer
   const unsubFooter = ts.unsubscribe.enabled
-    ? `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">${ts.unsubscribe.text} <a href="#" style="color:#0B1F3B;text-decoration:underline;">Unsubscribe</a></span></div>`
+    ? `<div style="text-align:center;padding:24px 0 8px;border-top:1px solid #e5e7eb;margin-top:32px;"><span style="font-size:12px;color:#999999;">${unsubText} <a href="#" style="color:${headerColor};text-decoration:underline;">Unsubscribe</a></span>${addressText ? `<br /><span style="font-size:11px;color:#999999;">${addressText}</span>` : ""}</div>`
     : "";
 
-  // Build logo block
-  const logoBlock = ts.logo.visible && ts.logo.url
-    ? `<tr><td align="${ts.logo.alignment}" style="padding:16px 0 24px;"><img src="${ts.logo.url}" width="${logoWidth}"${logoAutoHeight ? '' : ` height="${logoHeight}"`} alt="Logo" style="border-radius:10px;display:block;${logoAutoHeight ? 'height:auto;' : ''}" /></td></tr>`
+  const logoImg = ts.logo.visible && ts.logo.url
+    ? `<img src="${ts.logo.url}" width="${logoWidth}"${logoAutoHeight ? "" : ` height="${logoHeight}"`} alt="${brandName}" style="border-radius:10px;display:block;${logoAutoHeight ? "height:auto;" : ""}" />`
     : "";
+
+  const headerBlock = showBar
+    ? `<tr><td align="${ts.logo.alignment}" style="background-color:${headerColor};border-radius:16px 16px 0 0;padding:20px 24px;">${logoImg || `<span style="font-size:18px;font-weight:bold;color:#ffffff;">${brandName}</span>`}</td></tr>`
+    : logoImg
+      ? `<tr><td align="${ts.logo.alignment}" style="padding:16px 0 24px;">${logoImg}</td></tr>`
+      : "";
+
+  const cardRadius = showBar ? "0 0 16px 16px" : "16px";
 
   // Build footer
-  const footerBlock = ts.footer.text
-    ? `<tr><td align="${ts.footer.alignment}" style="padding:24px 0 0;"><p style="margin:0;font-size:12px;color:${ts.footer.color};">${ts.footer.text}</p></td></tr>`
+  const footerBlock = footerText
+    ? `<tr><td align="${ts.footer.alignment}" style="padding:24px 0 0;"><p style="margin:0;font-size:12px;color:${ts.footer.color};">${footerText}</p></td></tr>`
     : "";
 
-  const interpolatedSubject = interpolateText(subject, previewVars(supplied));
+  const interpolatedSubject = interpolateText(subject, vars);
 
   return `<!DOCTYPE html>
 <html lang="en" dir="ltr">
@@ -144,28 +160,29 @@ export function buildPreviewHtml(
   body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
   body { margin: 0; padding: 0; width: 100% !important; }
   img { border: 0; outline: none; text-decoration: none; }
-  a { color: #0B1F3B; text-decoration: underline; }
+  a { color: ${accentColor}; text-decoration: underline; }
 </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:'Inter',Arial,'Helvetica Neue',Helvetica,sans-serif;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;">
+<body style="margin:0;padding:0;background-color:${backgroundColor};font-family:'Inter',Arial,'Helvetica Neue',Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${backgroundColor};">
   <tr>
     <td align="center" style="padding:32px 16px;">
-      <!-- Subject bar -->
+      <!-- Inbox line -->
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
         <tr>
           <td style="padding:0 0 12px;">
-            <div style="background:${ts.header.color};border-radius:12px 12px 0 0;padding:14px 20px;color:#ffffff;font-size:14px;font-weight:600;">
-              Subject: ${interpolatedSubject || "(no subject)"}
+            <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px;color:#0B1F3B;font-size:13px;">
+              <strong>Subject:</strong> ${interpolatedSubject || "(no subject)"}
+              ${preheaderText ? `<div style="color:#6b7280;font-size:12px;margin-top:4px;">${preheaderText}</div>` : ""}
             </div>
           </td>
         </tr>
       </table>
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;margin-top:-12px;">
-        ${logoBlock}
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        ${headerBlock}
         <!-- Body Card -->
         <tr>
-          <td style="background-color:#ffffff;border-radius:16px;padding:32px 32px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+          <td style="background-color:#ffffff;border-radius:${cardRadius};padding:32px 32px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
             ${formattedBody}
             ${unsubFooter}
           </td>
