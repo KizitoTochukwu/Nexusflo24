@@ -383,6 +383,9 @@ Deno.serve(async (req) => {
     // across delay-resumes via scheduled_jobs.payload.branch_context.
     type BranchFrame = { kind: "yes" | "no"; skip: boolean };
     let lastConditionPassed: boolean | null = null;
+    // True when the preceding condition step could not be evaluated (not finished
+    // in the builder). Neither branch runs; the automation continues below them.
+    let lastConditionUnconfigured = false;
     let branchStack: BranchFrame[] = [];
 
     // Restore branch context if resuming from a scheduled job
