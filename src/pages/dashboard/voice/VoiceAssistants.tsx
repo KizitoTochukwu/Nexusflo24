@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bot, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowRight, Bot, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,21 +10,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import {
-  useVoiceAssistants, useCreateVoiceAssistant, useUpdateVoiceAssistant,
-} from "@/hooks/useVoice";
+import { useVoiceAssistants, useCreateVoiceAssistant } from "@/hooks/useVoice";
 import { VoiceEmptyState, VoiceSetupNotice, VoiceStatusBadge } from "@/components/voice/VoicePrimitives";
-import { VOICE_ASSISTANT_STATUSES } from "@/lib/voice/constants";
 
 export default function VoiceAssistants() {
   const workspaceId = useWorkspaceId();
+  const navigate = useNavigate();
   const { data: assistants = [], isLoading } = useVoiceAssistants(workspaceId);
   const create = useCreateVoiceAssistant(workspaceId);
-  const update = useUpdateVoiceAssistant(workspaceId);
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -32,9 +27,11 @@ export default function VoiceAssistants() {
 
   const submit = async () => {
     if (!name.trim()) return;
-    await create.mutateAsync({ name: name.trim(), greeting: greeting.trim(), persona: persona.trim() });
+    const created = await create.mutateAsync({ name: name.trim(), greeting: greeting.trim(), persona: persona.trim() });
     setName(""); setGreeting(""); setPersona(""); setOpen(false);
+    if (created?.id) navigate(`/dashboard/${workspaceId}/voice/assistants/${created.id}`);
   };
+
 
   return (
     <div className="space-y-5 pb-10">
