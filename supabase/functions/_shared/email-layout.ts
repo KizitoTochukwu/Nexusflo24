@@ -8,12 +8,26 @@ const DEFAULT_LOGO_URL =
 
 export interface TemplateOptions {
   preheader?: string;
+  brandName?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  address?: string;
   logo?: { url?: string; alignment?: string; size?: number; width?: number; height?: number; autoHeight?: boolean; visible?: boolean };
-  header?: { color?: string };
+  header?: { color?: string; showBar?: boolean };
   unsubscribe?: { enabled?: boolean; text?: string };
   footer?: { text?: string; color?: string; alignment?: string };
   unsubUrl?: string;
+  /** Optional resolver for {{variables}} inside footer/unsubscribe/address copy. */
+  interpolate?: (input: string) => string;
 }
+
+/** Remove any {{tokens}} that were never resolved so recipients never see braces. */
+function cleanChrome(input: string | undefined, resolve?: (s: string) => string): string {
+  if (!input) return "";
+  const resolved = resolve ? resolve(input) : input;
+  return resolved.replace(/\{\{[^{}]*\}\}/g, "").replace(/\s{2,}/g, " ").trim();
+}
+
 
 /**
  * Converts raw editor content (plain text, \n, bullets, inline HTML) into
