@@ -6,7 +6,7 @@
 import type { TemplateSettings } from "./EmailTemplateSettings";
 import type { EmailBlock } from "./email-blocks/emailBlockTypes";
 import { blocksToHtml, parseBlocksFromMessage } from "./email-blocks/emailBlockSerializer";
-import { DEFAULT_TEMPLATE_SETTINGS } from "./EmailTemplateSettings";
+import { normalizeTemplateSettings } from "./EmailTemplateSettings";
 import { interpolateText, previewVars } from "@/lib/messaging/interpolate";
 
 export function formatEmailBody(raw: string): string {

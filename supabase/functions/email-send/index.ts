@@ -197,9 +197,7 @@ Deno.serve(async (req) => {
     const blocks = parseBlocksFromMessage(html);
     const renderedBody = blocks ? blocksToHtml(blocks) : formatEmailBody(html);
     let trackedHtml = wrapEmailTemplate(renderedBody, {
-      logo: ts?.logo,
-      unsubscribe: ts?.unsubscribe,
-      footer: ts?.footer,
+      ...(ts || {}),
       unsubUrl,
     });
 
