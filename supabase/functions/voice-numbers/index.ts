@@ -24,7 +24,10 @@ interface TwilioCreds {
   accountSid: string;
   authToken: string;
   source: "workspace" | "platform";
+  accountName?: string | null;
+  reachable?: boolean;
 }
+
 
 /**
  * Prefer the workspace's own telephone account, fall back to the platform
