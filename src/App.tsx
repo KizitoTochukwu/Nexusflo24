@@ -323,6 +323,16 @@ const App = () => (
                   {/* Sections still in build-out fall back to the overview. */}
                   <Route path="*" element={<Navigate to="overview" replace />} />
                 </Route>
+                <Route path="voice" element={<VoiceWorkspaceLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<VoiceOverview />} />
+                  <Route path="assistants" element={<VoiceAssistants />} />
+                  <Route path="calls" element={<VoiceCalls />} />
+                  <Route path="numbers" element={<VoiceNumbers />} />
+                  <Route path="knowledge" element={<VoiceKnowledge />} />
+                  <Route path="settings" element={<VoiceSettings />} />
+                  <Route path="*" element={<Navigate to="overview" replace />} />
+                </Route>
 
 
                 
