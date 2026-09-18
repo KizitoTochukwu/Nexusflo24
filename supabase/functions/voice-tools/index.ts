@@ -174,7 +174,6 @@ Deno.serve(async (req) => {
         guest_phone: phone,
         start_time: startTime,
         notes: [notes, `Booked by phone with ${assistant?.name ?? "the receptionist"}.`].filter(Boolean).join("\n"),
-        source: "voice_call",
       });
       if (!ok || !data?.booking?.id) {
         const reason = String(data?.error || "Booking failed");
@@ -225,10 +224,11 @@ Deno.serve(async (req) => {
           description: [reason, preferredTime && `Preferred time: ${preferredTime}`].filter(Boolean).join("\n") || null,
           status: "open",
           priority: "high",
-          due_at: dueAt,
+          due_date: dueAt,
+          task_type: "call",
+          dedupe_key: `voice-callback:${call.id}`,
           contact_id: contactId,
           assigned_to: config.ownerUserId ?? null,
-          source: "voice_call",
         })
         .select("id")
         .maybeSingle();
