@@ -289,29 +289,51 @@ export async function syncCallToCrm(
   await applyContactUpdates(supabase, contactId, crm, call);
   const dealId = call.deal_id ?? (await ensureDeal(supabase, call, crm, contactId, assistantName));
 
-  await recordContactTimeline(supabase, {
-    workspaceId: call.workspace_id,
-    contactId,
-    activityType: "call",
-    title:
-      call.direction === "outbound"
-        ? `Outbound call${assistantName ? ` by ${assistantName}` : ""}`
-        : `Inbound call${assistantName ? ` answered by ${assistantName}` : ""}`,
-    description: buildCallSummary(call, assistantName) || "No summary was captured for this call.",
-    source: "voice",
-    externalEventId: `voice-call:${call.id}`,
-    meta: {
-      call_session_id: call.id,
-      provider: call.provider,
-      provider_call_id: call.provider_call_id,
-      duration_seconds: call.duration_seconds,
-      outcome: call.outcome,
-      intent: call.intent,
-      sentiment: call.sentiment,
-      from_number: call.from_number,
-      to_number: call.to_number,
-    },
-  });
+  const eventId = `voice-call:${call.id}`;
+  const timelineTitle =
+    call.direction === "outbound"
+      ? `Outbound call${assistantName ? ` by ${assistantName}` : ""}`
+      : `Inbound call${assistantName ? ` answered by ${assistantName}` : ""}`;
+  const timelineBody = buildCallSummary(call, assistantName) || "No summary was captured for this call.";
+  const timelineMeta = {
+    call_session_id: call.id,
+    provider: call.provider,
+    provider_call_id: call.provider_call_id,
+    duration_seconds: call.duration_seconds,
+    outcome: call.outcome,
+    intent: call.intent,
+    sentiment: call.sentiment,
+    from_number: call.from_number,
+    to_number: call.to_number,
+  };
+
+  // A re-run must refresh the same timeline entry, never add a second one.
+  const { data: existing } = await supabase
+    .from("crm_activities")
+    .select("id")
+    .eq("workspace_id", call.workspace_id)
+    .eq("source", "voice")
+    .eq("external_event_id", eventId)
+    .maybeSingle();
+
+  if (existing?.id) {
+    await supabase
+      .from("crm_activities")
+      .update({ title: timelineTitle, description: timelineBody, meta: timelineMeta, record_id: contactId })
+      .eq("id", existing.id);
+  } else {
+    await recordContactTimeline(supabase, {
+      workspaceId: call.workspace_id,
+      contactId,
+      activityType: "call",
+      title: timelineTitle,
+      description: timelineBody,
+      source: "voice",
+      externalEventId: eventId,
+      meta: timelineMeta,
+    });
+  }
+
 
   const patch: Record<string, unknown> = { contact_id: contactId };
   if (dealId && !call.deal_id) patch.deal_id = dealId;
