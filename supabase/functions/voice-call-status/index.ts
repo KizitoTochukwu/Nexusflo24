@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     const providerStatus = (params.CallStatus || "").toLowerCase();
     const status = STATUS_MAP[providerStatus] || call.status;
     const duration = Number(params.CallDuration || 0) || call.duration_seconds || 0;
-    const finished = ["completed", "failed", "missed"].includes(status);
+    const finished = ["completed", "failed", "no_answer", "busy"].includes(status);
 
     // Store the raw status once.
     await admin.from("voice_call_events").insert({
