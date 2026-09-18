@@ -649,6 +649,20 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </SelectContent>
                             </Select>
 
+                            {selectedOpt?.input === "field" && (
+                              <Select value={row.field || ""} onValueChange={(v) => updateRow(idx, { field: v })}>
+                                <SelectTrigger className="w-[190px] bg-background">
+                                  <SelectValue placeholder="Choose field" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[320px]">
+                                  {FIELD_CHOICES.map((f) => (
+                                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+
                             {selectedOpt && selectedOpt.operators.length > 0 && (
                               <Select
                                 value={currentOperator}
