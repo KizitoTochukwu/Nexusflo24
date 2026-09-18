@@ -739,6 +739,12 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </div>
                             )}
 
+                            {!rowComplete && (
+                              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-[10px] text-amber-800">
+                                Incomplete
+                              </Badge>
+                            )}
+
                             {rows.length > 1 && (
                               <Button
                                 type="button"
@@ -752,6 +758,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </Button>
                             )}
                           </div>
+                          {selectedOpt?.hint && (
+                            <p className="pl-1 text-[11px] text-muted-foreground">{selectedOpt.hint}</p>
+                          )}
                         </div>
                       );
                     })}
