@@ -79,12 +79,17 @@ export const TRIGGER_OPTIONS = [
   { value: "roi_calculator_submitted", label: "ROI Calculator submitted" },
 ] as const;
 
-export type ConditionInputType = "none" | "text" | "number";
+export type ConditionInputType = "none" | "text" | "number" | "select" | "field";
+
+/** Where a `select` input pulls its choices from (workspace data). */
+export type ConditionOptionsSource =
+  | "tags" | "stages" | "pipelines" | "dealStatus" | "dealPriority" | "lifecycle" | "channels";
 
 export type ConditionOperator =
   | "equals" | "not_equals" | "contains" | "not_contains"
   | "greater_than" | "less_than" | "between"
-  | "happened" | "not_happened" | "is_known" | "is_unknown";
+  | "happened" | "not_happened" | "is_known" | "is_unknown"
+  | "is_true" | "is_false";
 
 export type ConditionOption = {
   value: string;
