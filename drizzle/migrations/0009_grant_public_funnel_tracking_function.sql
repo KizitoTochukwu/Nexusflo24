@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.active_funnel_workspace_id(uuid) TO anon, authenticated;

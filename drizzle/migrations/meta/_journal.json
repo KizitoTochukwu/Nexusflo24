@@ -64,6 +64,13 @@
       "when": 1789510434429,
       "tag": "0008_add_deal_reference_and_priority",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789761086295,
+      "tag": "0009_grant_public_funnel_tracking_function",
+      "breakpoints": true
     }
   ]
 }
