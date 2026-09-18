@@ -85,6 +85,7 @@ import AdsAccounts from "./pages/dashboard/ads/AdsAccounts";
 import VoiceWorkspaceLayout from "./components/voice/VoiceWorkspaceLayout";
 import VoiceOverview from "./pages/dashboard/voice/VoiceOverview";
 import VoiceAssistants from "./pages/dashboard/voice/VoiceAssistants";
+import VoiceAssistantEditor from "./pages/dashboard/voice/VoiceAssistantEditor";
 import VoiceCalls from "./pages/dashboard/voice/VoiceCalls";
 import VoiceNumbers from "./pages/dashboard/voice/VoiceNumbers";
 import VoiceKnowledge from "./pages/dashboard/voice/VoiceKnowledge";
@@ -327,6 +328,7 @@ const App = () => (
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<VoiceOverview />} />
                   <Route path="assistants" element={<VoiceAssistants />} />
+                  <Route path="assistants/:assistantId" element={<VoiceAssistantEditor />} />
                   <Route path="calls" element={<VoiceCalls />} />
                   <Route path="numbers" element={<VoiceNumbers />} />
                   <Route path="knowledge" element={<VoiceKnowledge />} />

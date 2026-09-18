@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bot, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowRight, Bot, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,21 +10,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import {
-  useVoiceAssistants, useCreateVoiceAssistant, useUpdateVoiceAssistant,
-} from "@/hooks/useVoice";
+import { useVoiceAssistants, useCreateVoiceAssistant } from "@/hooks/useVoice";
 import { VoiceEmptyState, VoiceSetupNotice, VoiceStatusBadge } from "@/components/voice/VoicePrimitives";
-import { VOICE_ASSISTANT_STATUSES } from "@/lib/voice/constants";
 
 export default function VoiceAssistants() {
   const workspaceId = useWorkspaceId();
+  const navigate = useNavigate();
   const { data: assistants = [], isLoading } = useVoiceAssistants(workspaceId);
   const create = useCreateVoiceAssistant(workspaceId);
-  const update = useUpdateVoiceAssistant(workspaceId);
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -32,9 +27,11 @@ export default function VoiceAssistants() {
 
   const submit = async () => {
     if (!name.trim()) return;
-    await create.mutateAsync({ name: name.trim(), greeting: greeting.trim(), persona: persona.trim() });
+    const created = await create.mutateAsync({ name: name.trim(), greeting: greeting.trim(), persona: persona.trim() });
     setName(""); setGreeting(""); setPersona(""); setOpen(false);
+    if (created?.id) navigate(`/dashboard/${workspaceId}/voice/assistants/${created.id}`);
   };
+
 
   return (
     <div className="space-y-5 pb-10">
@@ -106,21 +103,21 @@ export default function VoiceAssistants() {
                   </div>
                   <VoiceStatusBadge status={a.status} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Select value={a.status} onValueChange={(status) => update.mutate({ id: a.id, status })}>
-                    <SelectTrigger className="h-8 w-40 rounded-full text-xs" aria-label="Assistant status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70]">
-                      {VOICE_ASSISTANT_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">
                     {a.language} · {a.timezone}
+                    {a.published_version ? ` · version ${a.published_version}` : " · not published"}
                   </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-full"
+                    onClick={() => navigate(`/dashboard/${workspaceId}/voice/assistants/${a.id}`)}
+                  >
+                    Set up <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  </Button>
                 </div>
+
               </CardContent>
             </Card>
           ))}

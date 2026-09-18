@@ -14056,6 +14056,19 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      voice_publish_assistant: {
+        Args: {
+          _activate?: boolean
+          _assistant_id: string
+          _config: Json
+          _runtime_prompt: string
+        }
+        Returns: number
+      }
+      voice_rollback_assistant: {
+        Args: { _assistant_id: string; _version: number }
+        Returns: number
+      }
       workspace_role: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: string
