@@ -142,7 +142,6 @@ Deno.serve(async (req) => {
         .from("voice_call_sessions")
         .update({
           summary: typeof body.summary === "string" ? body.summary.slice(0, 4000) : undefined,
-          transcript_summary: typeof body.summary === "string" ? body.summary.slice(0, 4000) : undefined,
           extracted_fields: body.extracted_fields ?? undefined,
           intent: typeof body.intent === "string" ? body.intent.slice(0, 120) : undefined,
           sentiment: typeof body.sentiment === "string" ? body.sentiment.slice(0, 40) : undefined,
