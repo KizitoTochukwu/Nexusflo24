@@ -102,11 +102,17 @@ export type ConditionOption = {
   timeWindow?: boolean;
   /** Suggested follow-up actions (curated mappings) shown as one-click chips. */
   suggestedActions?: { action: string; label: string; defaults?: Record<string, unknown> }[];
+  /** For `select` inputs — which workspace list to offer. */
+  optionsSource?: ConditionOptionsSource;
+  /** Static choices for `select` inputs that don't come from workspace data. */
+  choices?: string[];
+  /** Short helper shown under the row. */
+  hint?: string;
 };
 
 const OPERATOR_LABELS: Record<ConditionOperator, string> = {
-  equals: "equals",
-  not_equals: "does not equal",
+  equals: "is",
+  not_equals: "is not",
   contains: "contains",
   not_contains: "does not contain",
   greater_than: "greater than",
@@ -116,6 +122,8 @@ const OPERATOR_LABELS: Record<ConditionOperator, string> = {
   not_happened: "has not happened",
   is_known: "is known",
   is_unknown: "is unknown",
+  is_true: "is yes",
+  is_false: "is no",
 };
 
 export function operatorLabel(op: ConditionOperator): string {
