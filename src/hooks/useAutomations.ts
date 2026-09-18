@@ -580,7 +580,7 @@ export function phraseCondition(row: ConditionRow): string {
   if (row.condition === "contact_field") {
     const fieldLabel =
       CONTACT_FIELD_CHOICES.find((f) => f.value === row.field)?.label ||
-      (row.field ? row.field.replace(/_/g, " ") : "Field");
+      (row.field ? row.field.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()) : "Field");
     if (op === "is_known") return `${fieldLabel} is known`;
     if (op === "is_unknown") return `${fieldLabel} is unknown`;
     return `${fieldLabel} ${operatorLabel(op || "equals")} "${val}"`;
