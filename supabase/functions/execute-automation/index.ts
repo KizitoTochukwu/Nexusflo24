@@ -1411,6 +1411,106 @@ Deno.serve(async (req) => {
                   .limit(1);
                 const hasReply = !!(replies && replies.length > 0);
                 passed = conditionType === "has_replied" ? hasReply : !hasReply;
+              } else if (
+                conditionType === "contact_field" || conditionType === "lead_status" ||
+                conditionType === "pipeline_stage" || conditionType === "lifecycle_stage" ||
+                conditionType === "owner_assigned" ||
+                conditionType?.startsWith("opportunity_") ||
+                conditionType?.startsWith("days_since_") ||
+                ["replied_any", "sms_replied", "email_replied", "email_bounced", "unsubscribed", "marketing_consent"].includes(String(conditionType))
+              ) {
+                const extras = ((lead as any).__extra || {}) as Record<string, string>;
+                const txt = (v: unknown) => String(v ?? "").trim().toLowerCase();
+                const cmp = (actual: unknown): boolean => {
+                  const a = txt(actual), b = txt(value);
+                  switch (operator) {
+                    case "not_equals": return a !== b;
+                    case "contains": return !!b && a.includes(b);
+                    case "not_contains": return !b || !a.includes(b);
+                    case "is_known": return a !== "";
+                    case "is_unknown": return a === "";
+                    default: return a === b;
+                  }
+                };
+                const num = (actual: unknown): boolean => {
+                  const a = Number(actual), v = Number(value);
+                  if (!Number.isFinite(a)) return false;
+                  if (operator === "less_than") return a < v;
+                  if (operator === "equals") return a === v;
+                  if (operator === "between") return a >= v && a <= Number(valueTo);
+                  return a > v;
+                };
+                const daysSince = (iso: unknown) => {
+                  const t = iso ? new Date(String(iso)).getTime() : NaN;
+                  return Number.isFinite(t) ? (Date.now() - t) / 86_400_000 : NaN;
+                };
+                const countConversations = async (filters: (qb: any) => any) => {
+                  let q = supabase.from("sales_conversations")
+                    .select("id", { count: "exact", head: true })
+                    .eq("lead_id", lead_id).eq("direction", "inbound");
+                  q = filters(q);
+                  if (sinceIso) q = q.gte("created_at", sinceIso);
+                  const { count } = await q;
+                  return count ?? 0;
+                };
+
+                if (conditionType === "contact_field") {
+                  const key = String(row.field || "");
+                  const actual = extras[key] ?? (lead as any)[key];
+                  passed = cmp(actual);
+                } else if (conditionType === "lead_status") {
+                  passed = cmp(lead.status);
+                } else if (conditionType === "pipeline_stage") {
+                  passed = cmp(lead.pipeline_stage);
+                } else if (conditionType === "lifecycle_stage") {
+                  passed = cmp(extras.lifecycle_stage);
+                } else if (conditionType === "owner_assigned") {
+                  const owner = extras.owner_user_id || lead.assigned_owner_id || "";
+                  passed = operator === "is_unknown" ? !owner : !!owner;
+                } else if (conditionType === "opportunity_exists") {
+                  const has = !!extras.opportunity_id;
+                  passed = operator === "not_happened" ? !has : has;
+                } else if (conditionType === "opportunity_value") {
+                  passed = num(extras.opportunity_amount);
+                } else if (conditionType?.startsWith("opportunity_")) {
+                  passed = cmp(extras[conditionType]);
+                } else if (conditionType === "replied_any") {
+                  passed = evalHappened(await countConversations((q) => q));
+                } else if (conditionType === "sms_replied") {
+                  passed = evalHappened(await countConversations((q) => q.eq("channel", "sms")));
+                } else if (conditionType === "email_replied") {
+                  passed = evalHappened(await countConversations((q) => q.eq("channel", "email")));
+                } else if (conditionType === "email_bounced") {
+                  let q = supabase.from("email_logs")
+                    .select("id", { count: "exact", head: true })
+                    .eq("lead_id", lead_id).in("status", ["bounced", "failed"]);
+                  if (sinceIso) q = q.gte("created_at", sinceIso);
+                  const { count } = await q;
+                  passed = evalHappened(count ?? 0);
+                } else if (conditionType === "unsubscribed") {
+                  let opted = lead.sms_opt_out === true || lead.unsubscribed === true;
+                  if (!opted && lead.email) {
+                    const { data: sup } = await supabase.from("suppressed_emails")
+                      .select("email").eq("email", String(lead.email).toLowerCase()).limit(1);
+                    opted = !!(sup && sup.length > 0);
+                  }
+                  passed = operator === "is_false" ? !opted : opted;
+                } else if (conditionType === "marketing_consent") {
+                  const consent =
+                    extras.consent_email === "true" || extras.consent_sms === "true" ||
+                    extras.consent_whatsapp === "true" || txt(extras.consent_status) === "granted" ||
+                    lead.sms_consent === true || !!lead.wa_opt_in_at;
+                  passed = operator === "is_false" ? !consent : consent;
+                } else if (conditionType === "days_since_created") {
+                  passed = num(daysSince(lead.created_at));
+                } else if (conditionType === "days_since_last_activity") {
+                  passed = num(daysSince(lead.last_activity_at || lead.updated_at || lead.created_at));
+                } else if (conditionType === "days_since_last_message") {
+                  const { data: last } = await supabase.from("sales_conversations")
+                    .select("created_at").eq("lead_id", lead_id)
+                    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+                  passed = num(daysSince(last?.created_at));
+                }
               } else if (config.field && config.operator) {
                 const leadValue = (lead as any)[config.field as string];
                 if (config.operator === "equals") passed = String(leadValue) === String(value);
