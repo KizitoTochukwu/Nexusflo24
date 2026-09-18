@@ -4,4 +4,4 @@
 - [x] Wire CRM, opportunity, assigned-user, and secure-link values
 - [x] Support exact opportunity links in the CRM
 - [x] Add interpolation and regression tests
-- [ ] Verify runtime functions and app build
+- [x] Verify runtime functions and app build
