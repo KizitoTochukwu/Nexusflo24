@@ -16,6 +16,19 @@ export default function VoiceSettings() {
   const workspaceId = useWorkspaceId();
   const { data: settings, isLoading } = useVoiceSettings(workspaceId);
   const save = useUpdateVoiceSettings(workspaceId);
+  const { data: status } = useVoiceNumberStatus(workspaceId);
+
+  const connectionRows = VOICE_SETUP_STEPS.map((s) => ({
+    key: s.key,
+    label: s.label,
+    detail: s.detail,
+    ready:
+      s.key === "gateway"
+        ? status?.gateway_configured === true
+        : s.key === "telephony"
+          ? status?.connected === true
+          : status?.live_calling_enabled === true,
+  }));
 
   const [enabled, setEnabled] = useState(false);
   const [recording, setRecording] = useState(false);
