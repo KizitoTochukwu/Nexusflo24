@@ -79,12 +79,17 @@ export const TRIGGER_OPTIONS = [
   { value: "roi_calculator_submitted", label: "ROI Calculator submitted" },
 ] as const;
 
-export type ConditionInputType = "none" | "text" | "number";
+export type ConditionInputType = "none" | "text" | "number" | "select" | "field";
+
+/** Where a `select` input pulls its choices from (workspace data). */
+export type ConditionOptionsSource =
+  | "tags" | "stages" | "pipelines" | "dealStatus" | "dealPriority" | "lifecycle" | "channels";
 
 export type ConditionOperator =
   | "equals" | "not_equals" | "contains" | "not_contains"
   | "greater_than" | "less_than" | "between"
-  | "happened" | "not_happened" | "is_known" | "is_unknown";
+  | "happened" | "not_happened" | "is_known" | "is_unknown"
+  | "is_true" | "is_false";
 
 export type ConditionOption = {
   value: string;
@@ -97,11 +102,17 @@ export type ConditionOption = {
   timeWindow?: boolean;
   /** Suggested follow-up actions (curated mappings) shown as one-click chips. */
   suggestedActions?: { action: string; label: string; defaults?: Record<string, unknown> }[];
+  /** For `select` inputs — which workspace list to offer. */
+  optionsSource?: ConditionOptionsSource;
+  /** Static choices for `select` inputs that don't come from workspace data. */
+  choices?: string[];
+  /** Short helper shown under the row. */
+  hint?: string;
 };
 
 const OPERATOR_LABELS: Record<ConditionOperator, string> = {
-  equals: "equals",
-  not_equals: "does not equal",
+  equals: "is",
+  not_equals: "is not",
   contains: "contains",
   not_contains: "does not contain",
   greater_than: "greater than",
@@ -111,6 +122,8 @@ const OPERATOR_LABELS: Record<ConditionOperator, string> = {
   not_happened: "has not happened",
   is_known: "is known",
   is_unknown: "is unknown",
+  is_true: "is yes",
+  is_false: "is no",
 };
 
 export function operatorLabel(op: ConditionOperator): string {
@@ -276,6 +289,148 @@ export const CONDITION_GROUPS: { label: string; options: ConditionOption[] }[] =
       },
     ],
   },
+  {
+    label: "Contact details",
+    options: [
+      {
+        value: "contact_field", label: "Contact field", input: "field",
+        placeholder: "Value",
+        operators: ["equals", "not_equals", "contains", "not_contains", "is_known", "is_unknown"],
+        hint: "Any standard or custom field on the contact record.",
+      },
+      {
+        value: "lead_status", label: "Lead status", input: "text", placeholder: "e.g. Qualified",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "pipeline_stage", label: "Pipeline stage (lead)", input: "select", optionsSource: "stages",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "lifecycle_stage", label: "Lifecycle stage", input: "select", optionsSource: "lifecycle",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "owner_assigned", label: "Owner", input: "none",
+        operators: ["is_known", "is_unknown"],
+        suggestedActions: [{ action: "assign_owner", label: "Assign an owner" }],
+      },
+    ],
+  },
+  {
+    label: "Tags",
+    options: [
+      {
+        value: "has_tag", label: "Has tag (exact)", input: "select", optionsSource: "tags",
+        operators: ["equals", "not_equals"],
+      },
+    ],
+  },
+  {
+    label: "Replies & consent",
+    options: [
+      {
+        value: "replied_any", label: "Replied (any channel)", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedActions: [
+          { action: "notify_sales", label: "Notify Sales" },
+          { action: "update_status", label: "Move to Engaged", defaults: { new_status: "Engaged" } },
+        ],
+      },
+      {
+        value: "sms_replied", label: "SMS replied", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+      },
+      {
+        value: "email_replied", label: "Email replied", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+      },
+      {
+        value: "email_bounced", label: "Email bounced or failed", input: "none",
+        operators: ["happened", "not_happened"], timeWindow: true,
+        suggestedActions: [{ action: "add_tag", label: "Tag: bad-email", defaults: { tag: "bad-email" } }],
+      },
+      {
+        value: "unsubscribed", label: "Unsubscribed / opted out", input: "none",
+        operators: ["is_true", "is_false"],
+      },
+      {
+        value: "marketing_consent", label: "Marketing consent", input: "none",
+        operators: ["is_true", "is_false"],
+        hint: "Use before any promotional or nurture message.",
+      },
+    ],
+  },
+  {
+    label: "Opportunity",
+    options: [
+      {
+        value: "opportunity_exists", label: "Has an open opportunity", input: "none",
+        operators: ["happened", "not_happened"],
+      },
+      {
+        value: "opportunity_stage", label: "Opportunity stage", input: "select", optionsSource: "stages",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_pipeline", label: "Opportunity pipeline", input: "select", optionsSource: "pipelines",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_status", label: "Opportunity status", input: "select", optionsSource: "dealStatus",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_priority", label: "Opportunity priority", input: "select", optionsSource: "dealPriority",
+        operators: ["equals", "not_equals"],
+      },
+      {
+        value: "opportunity_value", label: "Opportunity value", input: "number", placeholder: "e.g. 500",
+        operators: ["greater_than", "less_than", "equals", "between"],
+      },
+    ],
+  },
+  {
+    label: "Timing",
+    options: [
+      {
+        value: "days_since_created", label: "Days since created", input: "number", placeholder: "e.g. 7",
+        operators: ["greater_than", "less_than", "equals"],
+      },
+      {
+        value: "days_since_last_activity", label: "Days since last activity", input: "number", placeholder: "e.g. 14",
+        operators: ["greater_than", "less_than", "equals"],
+      },
+      {
+        value: "days_since_last_message", label: "Days since last message", input: "number", placeholder: "e.g. 3",
+        operators: ["greater_than", "less_than", "equals"],
+      },
+    ],
+  },
+];
+
+/** Static choice lists for `select` conditions that don't come from workspace data. */
+export const CONDITION_STATIC_CHOICES: Record<string, string[]> = {
+  dealStatus: ["open", "won", "lost"],
+  dealPriority: ["low", "medium", "high", "urgent"],
+  lifecycle: ["subscriber", "lead", "marketing_qualified", "sales_qualified", "opportunity", "customer", "evangelist", "other"],
+  channels: ["email", "sms", "whatsapp"],
+};
+
+/** Standard contact fields offered by the "Contact field" condition. */
+export const CONTACT_FIELD_CHOICES: { value: string; label: string }[] = [
+  { value: "first_name", label: "First name" },
+  { value: "last_name", label: "Last name" },
+  { value: "full_name", label: "Full name" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "whatsapp_number", label: "WhatsApp number" },
+  { value: "company", label: "Company" },
+  { value: "job_title", label: "Job title" },
+  { value: "source", label: "Source" },
+  { value: "status", label: "Status" },
+  { value: "lifecycle_stage", label: "Lifecycle stage" },
+  { value: "temperature", label: "Temperature" },
 ];
 
 // Flat list for backward compatibility + reply_status (handled separately in UI)
@@ -296,9 +451,77 @@ export type ConditionRow = {
   value_to?: string;
   time_window_days?: number;
   reply_check?: string;
+  /** Field key for the "Contact field" condition. */
+  field?: string;
 };
 
 export type ConditionLogic = "AND" | "OR";
+
+export const ALL_CONDITION_OPTIONS: ConditionOption[] = CONDITION_GROUPS.flatMap((g) => g.options);
+
+export function findConditionOption(value?: string): ConditionOption | undefined {
+  return ALL_CONDITION_OPTIONS.find((o) => o.value === value);
+}
+
+/** Operators that never need a typed value. */
+export const OPERATORS_WITHOUT_VALUE: ConditionOperator[] = [
+  "is_known", "is_unknown", "happened", "not_happened", "is_true", "is_false",
+];
+
+/** Is this row fully configured (so it can actually be evaluated)? */
+export function isConditionRowComplete(row: ConditionRow | undefined): boolean {
+  if (!row?.condition) return false;
+  if (row.condition === "reply_status") return true;
+  const opt = findConditionOption(row.condition);
+  if (!opt) return false;
+  if (opt.input === "field" && !row.field) return false;
+  const op = row.operator || opt.operators[0];
+  if (OPERATORS_WITHOUT_VALUE.includes(op)) return true;
+  if (opt.input === "none") return true;
+  if (!String(row.value ?? "").trim()) return false;
+  if (op === "between" && !String(row.value_to ?? "").trim()) return false;
+  return true;
+}
+
+export function conditionRowsFromConfig(config: Record<string, any> | undefined): ConditionRow[] {
+  const cfg = config ?? {};
+  const rows = Array.isArray(cfg.conditions) ? (cfg.conditions as ConditionRow[]) : [];
+  if (rows.length) return rows.filter(Boolean);
+  if (cfg.condition) {
+    return [{
+      condition: cfg.condition,
+      operator: cfg.operator,
+      value: cfg.value ?? "",
+      value_to: cfg.value_to ?? "",
+      time_window_days: cfg.time_window_days,
+      reply_check: cfg.reply_check,
+      field: cfg.field,
+    }];
+  }
+  return [];
+}
+
+/** Returns the 1-based step numbers of condition steps that are not usable yet. */
+export function findIncompleteConditionSteps(
+  steps: { step_type: string; config?: Record<string, any> }[] | undefined,
+): { index: number; stepNumber: number; reason: string }[] {
+  const out: { index: number; stepNumber: number; reason: string }[] = [];
+  let n = 0;
+  (steps ?? []).forEach((s, index) => {
+    const isMarker = s.step_type.startsWith("branch_");
+    if (!isMarker) n++;
+    if (s.step_type !== "condition") return;
+    const rows = conditionRowsFromConfig(s.config);
+    if (rows.length === 0) {
+      out.push({ index, stepNumber: n, reason: "No condition chosen" });
+      return;
+    }
+    if (!rows.every(isConditionRowComplete)) {
+      out.push({ index, stepNumber: n, reason: "A condition is missing its value" });
+    }
+  });
+  return out;
+}
 
 /** Turn a single condition row into friction-free natural language. */
 export function phraseCondition(row: ConditionRow): string {
@@ -352,6 +575,27 @@ export function phraseCondition(row: ConditionRow): string {
 
   // Reply status
   if (row.condition === "reply_status") return "Reply status";
+
+  // Contact field picker
+  if (row.condition === "contact_field") {
+    const fieldLabel =
+      CONTACT_FIELD_CHOICES.find((f) => f.value === row.field)?.label ||
+      (row.field ? row.field.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()) : "Field");
+    if (op === "is_known") return `${fieldLabel} is known`;
+    if (op === "is_unknown") return `${fieldLabel} is unknown`;
+    return `${fieldLabel} ${operatorLabel(op || "equals")} "${val}"`;
+  }
+
+  // Yes/no style checks
+  if (op === "is_true" || op === "is_false") {
+    return `${label} ${op === "is_true" ? "yes" : "no"}`;
+  }
+
+  // Timing
+  if (row.condition.startsWith("days_since_")) {
+    const sym = op === "less_than" ? "<" : op === "equals" ? "=" : ">";
+    return `${label} ${sym} ${val || "?"}`;
+  }
 
   // Fallback
   const opTxt = op ? ` ${operatorLabel(op)}` : "";

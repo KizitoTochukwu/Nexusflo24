@@ -45,8 +45,14 @@ async function loadCrmExtras(
 
     if (contact) {
       extra.contact_id = contact.id;
-      for (const key of ["first_name", "last_name", "full_name", "email", "phone", "company", "source", "status", "score"]) {
+      for (const key of [
+        "first_name", "last_name", "full_name", "email", "phone", "company", "source", "status", "score",
+        "job_title", "lifecycle_stage", "temperature", "consent_status", "owner_user_id",
+      ]) {
         if (contact[key] != null) extra[key] = String(contact[key]);
+      }
+      for (const key of ["consent_email", "consent_sms", "consent_whatsapp"]) {
+        if (contact[key] != null) extra[key] = contact[key] ? "true" : "false";
       }
       if (contact.whatsapp_number) extra.whatsapp_number = contact.whatsapp_number;
       const { data: vals } = await supabase
@@ -377,6 +383,9 @@ Deno.serve(async (req) => {
     // across delay-resumes via scheduled_jobs.payload.branch_context.
     type BranchFrame = { kind: "yes" | "no"; skip: boolean };
     let lastConditionPassed: boolean | null = null;
+    // True when the preceding condition step could not be evaluated (not finished
+    // in the builder). Neither branch runs; the automation continues below them.
+    let lastConditionUnconfigured = false;
     let branchStack: BranchFrame[] = [];
 
     // Restore branch context if resuming from a scheduled job
@@ -385,6 +394,9 @@ Deno.serve(async (req) => {
         if (Array.isArray(incomingBranchCtx.branch_stack)) branchStack = incomingBranchCtx.branch_stack;
         if (typeof incomingBranchCtx.last_condition_passed === "boolean" || incomingBranchCtx.last_condition_passed === null) {
           lastConditionPassed = incomingBranchCtx.last_condition_passed;
+        }
+        if (typeof incomingBranchCtx.last_condition_unconfigured === "boolean") {
+          lastConditionUnconfigured = incomingBranchCtx.last_condition_unconfigured;
         }
       } catch (_e) { /* noop */ }
     }
@@ -397,7 +409,9 @@ Deno.serve(async (req) => {
       // Branch markers — handled before skip checks so end-markers can pop frames
       if (step.step_type === "branch_yes_start" || step.step_type === "branch_no_start") {
         const kind: "yes" | "no" = step.step_type === "branch_yes_start" ? "yes" : "no";
-        const shouldSkip = lastConditionPassed === null
+        const shouldSkip = lastConditionUnconfigured
+          ? true // condition not finished → neither branch runs
+          : lastConditionPassed === null
           ? false // no preceding condition → run by default
           : (kind === "yes" ? lastConditionPassed === false : lastConditionPassed === true);
         // Nested skip: inherit parent skip too
@@ -408,11 +422,14 @@ Deno.serve(async (req) => {
         const markerDetails = {
           kind,
           last_condition_passed: lastConditionPassed,
+          last_condition_unconfigured: lastConditionUnconfigured,
           reason: parentSkipped
             ? "Parent branch was inactive"
-            : finalSkip
-              ? `Preceding condition was ${lastConditionPassed ? "true" : "false"}, so the ${kind.toUpperCase()} branch was not taken`
-              : `Preceding condition was ${lastConditionPassed === null ? "absent (default entry)" : lastConditionPassed ? "true" : "false"}, entering the ${kind.toUpperCase()} branch`,
+            : lastConditionUnconfigured
+              ? `The preceding condition is not finished, so the ${kind.toUpperCase()} branch was skipped`
+              : finalSkip
+                ? `Preceding condition was ${lastConditionPassed ? "true" : "false"}, so the ${kind.toUpperCase()} branch was not taken`
+                : `Preceding condition was ${lastConditionPassed === null ? "absent (default entry)" : lastConditionPassed ? "true" : "false"}, entering the ${kind.toUpperCase()} branch`,
         };
         results.push({ step_id: step.id, step_type: step.step_type, status: markerStatus, details: markerDetails });
         await supabase.from("automation_logs").insert({
@@ -1271,6 +1288,7 @@ Deno.serve(async (req) => {
               value_to?: unknown;
               time_window_days?: number | string;
               reply_check?: string;
+              field?: string;
             };
 
             // Build the list of rows to evaluate. Prefer new `conditions[]` shape;
@@ -1288,9 +1306,29 @@ Deno.serve(async (req) => {
                   value_to: config.value_to,
                   time_window_days: config.time_window_days as number | undefined,
                   reply_check: config.reply_check as string | undefined,
+                  field: config.field as string | undefined,
                 }]
               : [];
             const logic = (((config as any).logic as string) || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+
+            // A row is only usable when it has everything it needs. Half-finished rows
+            // must NOT be treated as "false" (that used to silently push everyone down
+            // the NO branch) — the whole step is skipped instead.
+            const NO_VALUE_OPS = ["is_known", "is_unknown", "happened", "not_happened", "is_true", "is_false"];
+            const rowIsUsable = (r: Row): boolean => {
+              if (!r?.condition) return false;
+              if (r.condition === "reply_status") return true;
+              if (r.condition === "contact_field" && !r.field) return false;
+              const op = String(r.operator || "");
+              if (NO_VALUE_OPS.includes(op)) return true;
+              const v = r.value;
+              if (v === undefined || v === null || String(v).trim() === "") return false;
+              if (op === "between" && String(r.value_to ?? "").trim() === "") return false;
+              return true;
+            };
+            const usableRows = rows.filter(rowIsUsable);
+            const incompleteCount = rows.length - usableRows.length;
+
 
             // Evaluate a single row → boolean.
             const evaluateRow = async (row: Row): Promise<{ passed: boolean; details: Record<string, unknown> }> => {
@@ -1384,6 +1422,106 @@ Deno.serve(async (req) => {
                   .limit(1);
                 const hasReply = !!(replies && replies.length > 0);
                 passed = conditionType === "has_replied" ? hasReply : !hasReply;
+              } else if (
+                conditionType === "contact_field" || conditionType === "lead_status" ||
+                conditionType === "pipeline_stage" || conditionType === "lifecycle_stage" ||
+                conditionType === "owner_assigned" ||
+                conditionType?.startsWith("opportunity_") ||
+                conditionType?.startsWith("days_since_") ||
+                ["replied_any", "sms_replied", "email_replied", "email_bounced", "unsubscribed", "marketing_consent"].includes(String(conditionType))
+              ) {
+                const extras = ((lead as any).__extra || {}) as Record<string, string>;
+                const txt = (v: unknown) => String(v ?? "").trim().toLowerCase();
+                const cmp = (actual: unknown): boolean => {
+                  const a = txt(actual), b = txt(value);
+                  switch (operator) {
+                    case "not_equals": return a !== b;
+                    case "contains": return !!b && a.includes(b);
+                    case "not_contains": return !b || !a.includes(b);
+                    case "is_known": return a !== "";
+                    case "is_unknown": return a === "";
+                    default: return a === b;
+                  }
+                };
+                const num = (actual: unknown): boolean => {
+                  const a = Number(actual), v = Number(value);
+                  if (!Number.isFinite(a)) return false;
+                  if (operator === "less_than") return a < v;
+                  if (operator === "equals") return a === v;
+                  if (operator === "between") return a >= v && a <= Number(valueTo);
+                  return a > v;
+                };
+                const daysSince = (iso: unknown) => {
+                  const t = iso ? new Date(String(iso)).getTime() : NaN;
+                  return Number.isFinite(t) ? (Date.now() - t) / 86_400_000 : NaN;
+                };
+                const countConversations = async (filters: (qb: any) => any) => {
+                  let q = supabase.from("sales_conversations")
+                    .select("id", { count: "exact", head: true })
+                    .eq("lead_id", lead_id).eq("direction", "inbound");
+                  q = filters(q);
+                  if (sinceIso) q = q.gte("created_at", sinceIso);
+                  const { count } = await q;
+                  return count ?? 0;
+                };
+
+                if (conditionType === "contact_field") {
+                  const key = String(row.field || "");
+                  const actual = extras[key] ?? (lead as any)[key];
+                  passed = cmp(actual);
+                } else if (conditionType === "lead_status") {
+                  passed = cmp(lead.status);
+                } else if (conditionType === "pipeline_stage") {
+                  passed = cmp(lead.pipeline_stage);
+                } else if (conditionType === "lifecycle_stage") {
+                  passed = cmp(extras.lifecycle_stage);
+                } else if (conditionType === "owner_assigned") {
+                  const owner = extras.owner_user_id || lead.assigned_owner_id || "";
+                  passed = operator === "is_unknown" ? !owner : !!owner;
+                } else if (conditionType === "opportunity_exists") {
+                  const has = !!extras.opportunity_id;
+                  passed = operator === "not_happened" ? !has : has;
+                } else if (conditionType === "opportunity_value") {
+                  passed = num(extras.opportunity_amount);
+                } else if (conditionType?.startsWith("opportunity_")) {
+                  passed = cmp(extras[conditionType]);
+                } else if (conditionType === "replied_any") {
+                  passed = evalHappened(await countConversations((q) => q));
+                } else if (conditionType === "sms_replied") {
+                  passed = evalHappened(await countConversations((q) => q.eq("channel", "sms")));
+                } else if (conditionType === "email_replied") {
+                  passed = evalHappened(await countConversations((q) => q.eq("channel", "email")));
+                } else if (conditionType === "email_bounced") {
+                  let q = supabase.from("email_logs")
+                    .select("id", { count: "exact", head: true })
+                    .eq("lead_id", lead_id).in("status", ["bounced", "failed"]);
+                  if (sinceIso) q = q.gte("created_at", sinceIso);
+                  const { count } = await q;
+                  passed = evalHappened(count ?? 0);
+                } else if (conditionType === "unsubscribed") {
+                  let opted = lead.sms_opt_out === true || lead.unsubscribed === true;
+                  if (!opted && lead.email) {
+                    const { data: sup } = await supabase.from("suppressed_emails")
+                      .select("email").eq("email", String(lead.email).toLowerCase()).limit(1);
+                    opted = !!(sup && sup.length > 0);
+                  }
+                  passed = operator === "is_false" ? !opted : opted;
+                } else if (conditionType === "marketing_consent") {
+                  const consent =
+                    extras.consent_email === "true" || extras.consent_sms === "true" ||
+                    extras.consent_whatsapp === "true" || txt(extras.consent_status) === "granted" ||
+                    lead.sms_consent === true || !!lead.wa_opt_in_at;
+                  passed = operator === "is_false" ? !consent : consent;
+                } else if (conditionType === "days_since_created") {
+                  passed = num(daysSince(lead.created_at));
+                } else if (conditionType === "days_since_last_activity") {
+                  passed = num(daysSince(lead.last_activity_at || lead.updated_at || lead.created_at));
+                } else if (conditionType === "days_since_last_message") {
+                  const { data: last } = await supabase.from("sales_conversations")
+                    .select("created_at").eq("lead_id", lead_id)
+                    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+                  passed = num(daysSince(last?.created_at));
+                }
               } else if (config.field && config.operator) {
                 const leadValue = (lead as any)[config.field as string];
                 if (config.operator === "equals") passed = String(leadValue) === String(value);
@@ -1397,11 +1535,12 @@ Deno.serve(async (req) => {
 
               return {
                 passed,
-                details: { conditionType, operator, value, value_to: valueTo, time_window_days: twDays, passed },
+                details: { conditionType, field: row.field, operator, value, value_to: valueTo, time_window_days: twDays, passed },
               };
             };
 
             let passed = false;
+            let unconfigured = false;
             let rowResults: Array<{ passed: boolean; details: Record<string, unknown> }> = [];
 
             // Reply-status is a special single-row case (it mutates pipeline_stage).
@@ -1424,22 +1563,35 @@ Deno.serve(async (req) => {
                 details = { hasReply, movedTo: null, action: "continue_sequence" };
               }
               passed = true;
-            } else if (rows.length > 0) {
-              rowResults = await Promise.all(rows.map(evaluateRow));
+            } else if (usableRows.length > 0) {
+              rowResults = await Promise.all(usableRows.map(evaluateRow));
               passed = logic === "OR"
                 ? rowResults.some((r) => r.passed)
                 : rowResults.every((r) => r.passed);
-              details = { logic, rows: rowResults.map((r) => r.details), passed };
+              details = {
+                logic,
+                rows: rowResults.map((r) => r.details),
+                ...(incompleteCount > 0 ? { skipped_incomplete_rows: incompleteCount } : {}),
+                passed,
+              };
             } else {
-              details = { message: "Condition step has no rows configured", passed: false };
+              unconfigured = true;
+              details = {
+                message: rows.length === 0
+                  ? "Condition step has no rows configured — both branches skipped, automation continued"
+                  : "Condition step is incomplete — both branches skipped, automation continued",
+                unconfigured: true,
+                passed: false,
+              };
             }
 
             // Conditions are branching/wait points, NOT gates (legacy halt opt-in preserved).
-            if (!passed && config.halt_on_fail === true) {
+            if (!unconfigured && !passed && config.halt_on_fail === true) {
               skipRemaining = true;
             }
-            lastConditionPassed = passed;
-            status = passed ? "success" : "condition_not_met";
+            lastConditionPassed = unconfigured ? null : passed;
+            lastConditionUnconfigured = unconfigured;
+            status = unconfigured ? "condition_not_configured" : passed ? "success" : "condition_not_met";
             break;
           }
 
@@ -1507,6 +1659,7 @@ Deno.serve(async (req) => {
                 branch_context: {
                   branch_stack: branchStack,
                   last_condition_passed: lastConditionPassed,
+                  last_condition_unconfigured: lastConditionUnconfigured,
                 },
               },
               status: "pending",

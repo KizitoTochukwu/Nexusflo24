@@ -58,3 +58,21 @@ export function useAutomationStageOptions(workspaceId: string | undefined) {
     staleTime: 60_000,
   });
 }
+
+/** Pipeline names configured in CRM → Pipelines. */
+export function useAutomationPipelineOptions(workspaceId: string | undefined) {
+  return useQuery({
+    queryKey: ["automation-pipeline-options", workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crm_pipelines" as any)
+        .select("name")
+        .eq("workspace_id", workspaceId!)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return Array.from(new Set(((data ?? []) as any[]).map((p) => String(p.name)).filter(Boolean)));
+    },
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+}

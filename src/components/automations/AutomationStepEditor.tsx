@@ -8,10 +8,11 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import {
   Plus, Minus, Trash2, GripVertical, Zap, Filter, Play, Clock,
   Mail, MessageCircle, Smartphone, Tag, XCircle, RefreshCw, Bell, ArrowDown, Sparkles, DoorOpen, TrendingUp, X, GitBranch, UserPlus,
-  ChevronDown, ChevronRight, ArrowRight, Check, CheckCircle2, CircleSlash
+  ChevronDown, ChevronRight, ArrowRight, Check, CheckCircle2, CircleSlash, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, phraseConditionGroup, type ConditionOperator, type ConditionRow, type ConditionLogic } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, phraseConditionGroup, isConditionRowComplete, conditionRowsFromConfig, OPERATORS_WITHOUT_VALUE, CONDITION_STATIC_CHOICES, CONTACT_FIELD_CHOICES, type ConditionOperator, type ConditionRow, type ConditionLogic } from "@/hooks/useAutomations";
+import { useCustomFieldDefs } from "@/hooks/useCrmCustomFields";
 import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useWorkspaceMembers } from "@/hooks/useWorkspaceInvites";
@@ -19,7 +20,7 @@ import AutomationEmailEditor from "./email-editor/AutomationEmailEditor";
 import InsertDropdown from "./email-editor/InsertDropdown";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import type { ExitCriterion } from "@/lib/automations/exitCriteria";
-import { useAutomationTagOptions, useAutomationStageOptions, FALLBACK_PIPELINE_STAGES } from "@/hooks/useAutomationOptions";
+import { useAutomationTagOptions, useAutomationStageOptions, useAutomationPipelineOptions, FALLBACK_PIPELINE_STAGES } from "@/hooks/useAutomationOptions";
 import { AUTOMATION_SCORE_OPTIONS } from "@/lib/automations/scoreOptions";
 import { SenderProfilePicker } from "@/components/admin/SenderProfilePicker";
 import WhatsAppTemplatePicker, { type WhatsAppTemplateSelection } from "@/components/settings/WhatsAppTemplatePicker";
@@ -76,8 +77,21 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
   const { data: workspaceMembers } = useWorkspaceMembers(workspaceId || "");
   const { data: tagOptionsData } = useAutomationTagOptions(workspaceId || undefined);
   const { data: stageOptionsData } = useAutomationStageOptions(workspaceId || undefined);
+  const { data: pipelineOptionsData } = useAutomationPipelineOptions(workspaceId || undefined);
+  const { data: customFieldDefs } = useCustomFieldDefs(workspaceId || undefined, "contact", true);
   const AUTOMATION_TAG_OPTIONS = tagOptionsData ?? [];
   const PIPELINE_STAGES = stageOptionsData ?? FALLBACK_PIPELINE_STAGES;
+  const PIPELINE_NAMES = pipelineOptionsData ?? [];
+  const FIELD_CHOICES: { value: string; label: string }[] = [
+    ...CONTACT_FIELD_CHOICES,
+    ...((customFieldDefs ?? []) as any[]).map((d) => ({ value: String(d.field_key), label: String(d.label || d.field_key) })),
+  ];
+  const choicesFor = (source?: string): string[] => {
+    if (source === "tags") return AUTOMATION_TAG_OPTIONS;
+    if (source === "stages") return PIPELINE_STAGES;
+    if (source === "pipelines") return PIPELINE_NAMES;
+    return CONDITION_STATIC_CHOICES[source ?? ""] ?? [];
+  };
   const [collapsedSteps, setCollapsedSteps] = useState<Record<number, boolean>>({});
   const toggleCollapsed = (i: number) =>
     setCollapsedSteps((prev) => ({ ...prev, [i]: !prev[i] }));
@@ -557,14 +571,27 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   onChange(updated);
                 };
 
+                const incompleteRows = rows.filter((r) => !isConditionRowComplete(r));
+
                 return (
                   <div className="space-y-2 mb-2">
+                    {incompleteRows.length > 0 && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0 text-amber-600" />
+                        <span>
+                          {rows.every((r) => !r.condition)
+                            ? "No condition chosen yet. While it's unfinished this step is skipped — both branches are ignored and the automation carries on to the next step."
+                            : "A condition is missing its value. While it's unfinished this step is skipped — both branches are ignored and the automation carries on."}
+                        </span>
+                      </div>
+                    )}
                     {rows.map((row, idx) => {
                       const selectedOpt = allOptions.find((o) => o.value === row.condition);
                       const currentOperator: ConditionOperator =
                         row.operator || (selectedOpt?.operators?.[0] ?? "equals");
-                      const operatorNeedsValue = !["is_known", "is_unknown", "happened", "not_happened"].includes(currentOperator);
+                      const operatorNeedsValue = !OPERATORS_WITHOUT_VALUE.includes(currentOperator);
                       const isBetween = currentOperator === "between";
+                      const rowComplete = isConditionRowComplete(row);
 
                       return (
                         <div key={idx} className="space-y-1.5">
@@ -622,6 +649,20 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </SelectContent>
                             </Select>
 
+                            {selectedOpt?.input === "field" && (
+                              <Select value={row.field || ""} onValueChange={(v) => updateRow(idx, { field: v })}>
+                                <SelectTrigger className="w-[190px] bg-background">
+                                  <SelectValue placeholder="Choose field" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[320px]">
+                                  {FIELD_CHOICES.map((f) => (
+                                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+
                             {selectedOpt && selectedOpt.operators.length > 0 && (
                               <Select
                                 value={currentOperator}
@@ -640,7 +681,24 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </Select>
                             )}
 
-                            {selectedOpt && operatorNeedsValue && selectedOpt.input !== "none" && (
+                            {selectedOpt && operatorNeedsValue && selectedOpt.input === "select" && (
+                              <Select value={row.value || ""} onValueChange={(v) => updateRow(idx, { value: v })}>
+                                <SelectTrigger className="w-[190px] bg-background">
+                                  <SelectValue placeholder={selectedOpt.placeholder || "Choose…"} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[300px]">
+                                  {choicesFor(selectedOpt.optionsSource).length === 0 ? (
+                                    <div className="px-2 py-1.5 text-xs text-muted-foreground">Nothing set up yet in your CRM</div>
+                                  ) : (
+                                    choicesFor(selectedOpt.optionsSource).map((c) => (
+                                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            {selectedOpt && operatorNeedsValue && ["text", "number", "field"].includes(selectedOpt.input) && (
                               <Input
                                 type={selectedOpt.input === "number" ? "number" : "text"}
                                 placeholder={selectedOpt.placeholder || "Value"}
@@ -681,6 +739,12 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </div>
                             )}
 
+                            {!rowComplete && (
+                              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-[10px] text-amber-800">
+                                Incomplete
+                              </Badge>
+                            )}
+
                             {rows.length > 1 && (
                               <Button
                                 type="button"
@@ -694,6 +758,9 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                               </Button>
                             )}
                           </div>
+                          {selectedOpt?.hint && (
+                            <p className="pl-1 text-[11px] text-muted-foreground">{selectedOpt.hint}</p>
+                          )}
                         </div>
                       );
                     })}
@@ -889,10 +956,22 @@ export default function AutomationStepEditor({ steps, onChange, triggerType, exi
                   );
                 };
 
+                const summaryRows = conditionRowsFromConfig(step.config);
+                const summaryReady = summaryRows.length > 0 && summaryRows.every(isConditionRowComplete);
+                const summaryLogic = ((step.config.logic as ConditionLogic) || "AND");
+
                 return (
                   <div className="space-y-1.5 mb-2">
                     <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       <GitBranch className="h-3 w-3" /> Branching (Logic)
+                    </div>
+                    <div className={cn(
+                      "rounded-md border px-2.5 py-1.5 text-[11px]",
+                      summaryReady ? "border-blue-200 bg-blue-50/60 text-blue-900" : "border-amber-300 bg-amber-50 text-amber-900",
+                    )}>
+                      {summaryReady
+                        ? <>Takes the <strong>YES</strong> path when {phraseConditionGroup(summaryRows, summaryLogic)}. Otherwise the <strong>NO</strong> path.</>
+                        : <>This condition isn't finished, so neither path runs — the automation continues at the next step below.</>}
                     </div>
                     {renderOutcome("yes")}
                     {renderOutcome("no")}

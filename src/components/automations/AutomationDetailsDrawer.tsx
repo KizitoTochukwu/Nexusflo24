@@ -17,6 +17,7 @@ import {
   useAutomationEmailDeliveries,
   useUpdateAutomation,
   useSimulateAutomation,
+  findIncompleteConditionSteps,
 } from "@/hooks/useAutomations";
 import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExecutionTimeline from "./ExecutionTimeline";
@@ -138,8 +139,17 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
     });
   };
 
+  const incompleteConditions = findIncompleteConditionSteps(steps as any);
+
   const toggleStatus = () => {
     const newStatus = automation.status === "active" ? "paused" : "active";
+    if (newStatus === "active" && incompleteConditions.length > 0) {
+      const first = incompleteConditions[0];
+      toast.error("Finish your conditions first", {
+        description: `Step ${first.stepNumber}: ${first.reason}. Unfinished conditions are skipped, so neither branch would run.`,
+      });
+      return;
+    }
     updateAutomation.mutate({ id: automation.id, workspace_id: workspaceId, status: newStatus });
   };
 
