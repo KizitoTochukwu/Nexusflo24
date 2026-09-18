@@ -11,7 +11,7 @@ import {
   ChevronDown, ChevronRight, ArrowRight, Check, CheckCircle2, CircleSlash, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, phraseConditionGroup, isConditionRowComplete, OPERATORS_WITHOUT_VALUE, CONDITION_STATIC_CHOICES, CONTACT_FIELD_CHOICES, type ConditionOperator, type ConditionRow, type ConditionLogic } from "@/hooks/useAutomations";
+import { CONDITION_GROUPS, ACTION_OPTIONS, REPLY_STATUS_OPTIONS, operatorLabel, useAutomations, phraseConditionGroup, isConditionRowComplete, conditionRowsFromConfig, OPERATORS_WITHOUT_VALUE, CONDITION_STATIC_CHOICES, CONTACT_FIELD_CHOICES, type ConditionOperator, type ConditionRow, type ConditionLogic } from "@/hooks/useAutomations";
 import { useCustomFieldDefs } from "@/hooks/useCrmCustomFields";
 import { useSmartActionOverrides, resolveSmartActions } from "@/hooks/useSmartActions";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
