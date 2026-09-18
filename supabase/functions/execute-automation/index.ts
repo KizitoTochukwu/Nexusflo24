@@ -1659,6 +1659,7 @@ Deno.serve(async (req) => {
                 branch_context: {
                   branch_stack: branchStack,
                   last_condition_passed: lastConditionPassed,
+                  last_condition_unconfigured: lastConditionUnconfigured,
                 },
               },
               status: "pending",
