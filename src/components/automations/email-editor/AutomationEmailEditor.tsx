@@ -594,7 +594,11 @@ export default function AutomationEmailEditor({
 
         {/* Template Settings (email only) */}
         {isEmail && onTemplateSettingsChange && (
-          <EmailTemplateSettings settings={currentSettings} onChange={onTemplateSettingsChange} />
+          <EmailTemplateSettings
+            settings={currentSettings}
+            onChange={onTemplateSettingsChange}
+            onApplyToAll={onApplyTemplateSettingsToAll}
+          />
         )}
       </div>
     </TooltipProvider>
