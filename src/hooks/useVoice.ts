@@ -349,6 +349,22 @@ export function useVoiceBookingPages(workspaceId?: string) {
   });
 }
 
+/** Shows the real times the receptionist would offer a caller today. */
+export function useVoiceAvailabilityPreview() {
+  return useMutation({
+    mutationFn: async ({ bookingPageId, date }: { bookingPageId: string; date: string }) => {
+      const { data, error } = await supabase.functions.invoke("booking-availability", {
+        body: { booking_page_id: bookingPageId, date },
+      });
+      if (error) throw error;
+      return (data ?? {}) as { slots?: string[]; timezone?: string; duration?: number };
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not read your diary"),
+  });
+}
+
+
+
 export function useVoiceNumbers(workspaceId?: string) {
   return useQuery({
     queryKey: key(workspaceId, "numbers"),
