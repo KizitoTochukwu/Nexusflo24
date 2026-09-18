@@ -168,7 +168,9 @@ Deno.serve(async (req) => {
         credentials_source: creds?.source ?? null,
         account_name: creds?.accountName ?? null,
         live_calling_enabled: VOICE_LIVE_CALLING_ENABLED,
+        gateway_configured: VOICE_LIVE_CALLING_ENABLED,
         webhook_url: inboundWebhookUrl(),
+        status_webhook_url: statusWebhookUrl(),
         max_numbers: maxNumbers,
         numbers_in_use: await countNumbers(),
       });
@@ -255,10 +257,7 @@ Deno.serve(async (req) => {
         PhoneNumber: phoneNumber,
         FriendlyName: `NexusFlo Voice — ${phoneNumber}`,
       };
-      if (VOICE_LIVE_CALLING_ENABLED) {
-        form.VoiceUrl = inboundWebhookUrl();
-        form.VoiceMethod = "POST";
-      }
+      if (VOICE_LIVE_CALLING_ENABLED) Object.assign(form, routingForm());
       const res = await twilio(creds, "/IncomingPhoneNumbers.json", { method: "POST", body: form });
       if (!res.ok) {
         return json(
@@ -392,7 +391,7 @@ Deno.serve(async (req) => {
       }
       const res = await twilio(creds, `/IncomingPhoneNumbers/${number.provider_sid}.json`, {
         method: "POST",
-        body: { VoiceUrl: inboundWebhookUrl(), VoiceMethod: "POST" },
+        body: routingForm(),
       });
       if (!res.ok) {
         return json({ error: providerMessage(res.data, "Could not set up call routing"), status: res.status }, res.status);
