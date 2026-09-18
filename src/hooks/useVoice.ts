@@ -381,6 +381,101 @@ export function useVoiceNumbers(workspaceId?: string) {
   });
 }
 
+export type VoiceNumberStatus = {
+  connected: boolean;
+  credentials_found: boolean;
+  credentials_source: "workspace" | "platform" | null;
+  account_name: string | null;
+  live_calling_enabled: boolean;
+  webhook_url: string;
+  max_numbers: number;
+  numbers_in_use: number;
+};
+
+export type VoiceAvailableNumber = {
+  phone_number: string;
+  friendly_name: string;
+  locality: string | null;
+  region: string | null;
+  country: string;
+  capabilities: Record<string, boolean>;
+};
+
+export type VoiceProviderNumber = {
+  sid: string;
+  phone_number: string;
+  friendly_name: string;
+  country: string | null;
+  capabilities: Record<string, boolean>;
+  already_added: boolean;
+};
+
+async function callVoiceNumbers<T>(payload: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("voice-numbers", { body: payload });
+  if (error) {
+    const details = (error as { context?: { text?: () => Promise<string> } })?.context?.text
+      ? await (error as { context: { text: () => Promise<string> } }).context.text()
+      : error.message;
+    let message = details;
+    try {
+      message = JSON.parse(details)?.error ?? details;
+    } catch { /* plain text */ }
+    throw new Error(message || "Something went wrong");
+  }
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+  return data as T;
+}
+
+export function useVoiceNumberStatus(workspaceId?: string) {
+  return useQuery({
+    queryKey: key(workspaceId, "number-status"),
+    enabled: !!workspaceId,
+    queryFn: () => callVoiceNumbers<VoiceNumberStatus>({ action: "status", workspace_id: workspaceId }),
+  });
+}
+
+export function useSearchVoiceNumbers(workspaceId?: string) {
+  return useMutation({
+    mutationFn: (input: { country: string; contains?: string; area_code?: string }) =>
+      callVoiceNumbers<{ results: VoiceAvailableNumber[] }>({
+        action: "search", workspace_id: workspaceId, ...input,
+      }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useProviderVoiceNumbers(workspaceId?: string) {
+  return useMutation({
+    mutationFn: () =>
+      callVoiceNumbers<{ results: VoiceProviderNumber[] }>({
+        action: "list_provider_numbers", workspace_id: workspaceId,
+      }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+function useVoiceNumberAction(workspaceId: string | undefined, successMessage: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Record<string, unknown>) =>
+      callVoiceNumbers<Record<string, unknown>>({ workspace_id: workspaceId, ...payload }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key(workspaceId, "numbers") });
+      qc.invalidateQueries({ queryKey: key(workspaceId, "number-status") });
+      toast.success(successMessage);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export const useBuyVoiceNumber = (w?: string) => useVoiceNumberAction(w, "Number added");
+export const useImportVoiceNumber = (w?: string) => useVoiceNumberAction(w, "Number added");
+export const useAssignVoiceNumber = (w?: string) => useVoiceNumberAction(w, "Assignment saved");
+export const useReleaseVoiceNumber = (w?: string) => useVoiceNumberAction(w, "Number removed");
+export const useCheckVoiceRouting = (w?: string) => useVoiceNumberAction(w, "Routing checked");
+
+
+
 export function useVoiceCalls(workspaceId?: string) {
   return useQuery({
     queryKey: key(workspaceId, "calls"),
