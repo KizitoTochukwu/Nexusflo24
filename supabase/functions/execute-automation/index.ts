@@ -1277,6 +1277,7 @@ Deno.serve(async (req) => {
               value_to?: unknown;
               time_window_days?: number | string;
               reply_check?: string;
+              field?: string;
             };
 
             // Build the list of rows to evaluate. Prefer new `conditions[]` shape;
@@ -1294,9 +1295,29 @@ Deno.serve(async (req) => {
                   value_to: config.value_to,
                   time_window_days: config.time_window_days as number | undefined,
                   reply_check: config.reply_check as string | undefined,
+                  field: config.field as string | undefined,
                 }]
               : [];
             const logic = (((config as any).logic as string) || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+
+            // A row is only usable when it has everything it needs. Half-finished rows
+            // must NOT be treated as "false" (that used to silently push everyone down
+            // the NO branch) — the whole step is skipped instead.
+            const NO_VALUE_OPS = ["is_known", "is_unknown", "happened", "not_happened", "is_true", "is_false"];
+            const rowIsUsable = (r: Row): boolean => {
+              if (!r?.condition) return false;
+              if (r.condition === "reply_status") return true;
+              if (r.condition === "contact_field" && !r.field) return false;
+              const op = String(r.operator || "");
+              if (NO_VALUE_OPS.includes(op)) return true;
+              const v = r.value;
+              if (v === undefined || v === null || String(v).trim() === "") return false;
+              if (op === "between" && String(r.value_to ?? "").trim() === "") return false;
+              return true;
+            };
+            const usableRows = rows.filter(rowIsUsable);
+            const incompleteCount = rows.length - usableRows.length;
+
 
             // Evaluate a single row → boolean.
             const evaluateRow = async (row: Row): Promise<{ passed: boolean; details: Record<string, unknown> }> => {
