@@ -231,8 +231,11 @@ export function useSaveVoiceAssistantDraft(workspaceId?: string) {
       voice_id: string | null;
       config: Record<string, unknown>;
     }) => {
-      const { id, ...patch } = input;
-      const { error } = await supabase.from("voice_assistants").update(patch).eq("id", id);
+      const { id, config, ...patch } = input;
+      const { error } = await supabase
+        .from("voice_assistants")
+        .update({ ...patch, config: config as never })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: (_d, vars) => {
