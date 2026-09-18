@@ -23,6 +23,7 @@ import {
   useVoiceAssistant, useSaveVoiceAssistantDraft, usePublishVoiceAssistant,
   useVoiceAssistantVersions, useRollbackVoiceAssistant, useVoicePipelineOptions,
   useVoiceBookingPages, useVoiceNumbers, useVoiceKnowledge, useUpdateVoiceAssistant,
+  useVoiceAvailabilityPreview,
 } from "@/hooks/useVoice";
 import { VoiceSetupNotice, VoiceStatusBadge, VoiceSection } from "@/components/voice/VoicePrimitives";
 import ChipListEditor from "@/components/voice/ChipListEditor";
@@ -32,6 +33,7 @@ import {
   normalizeAssistantConfig, type VoiceAssistantConfig,
 } from "@/lib/voice/assistantConfig";
 import { VOICE_ASSISTANT_STATUSES } from "@/lib/voice/constants";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 export default function VoiceAssistantEditor() {
@@ -57,6 +59,8 @@ export default function VoiceAssistantEditor() {
   const [stepIndex, setStepIndex] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const availability = useVoiceAvailabilityPreview();
+  const [slotPreview, setSlotPreview] = useState<string[] | null>(null);
 
   // Hydrate from the saved draft (save-and-resume).
   useEffect(() => {
@@ -387,7 +391,44 @@ export default function VoiceAssistantEditor() {
                           ]}
                         />
                       </Field>
+                      <Field label="Check your diary">
+                        <div className="space-y-2">
+                          <Button
+                            type="button" size="sm" variant="secondary" className="rounded-full"
+                            disabled={!config.bookingPageId || availability.isPending}
+                            onClick={() =>
+                              availability.mutate(
+                                { bookingPageId: config.bookingPageId!, date: new Date().toISOString().slice(0, 10) },
+                                { onSuccess: (r) => setSlotPreview(r.slots ?? []) },
+                              )
+                            }
+                          >
+                            {availability.isPending ? "Looking…" : "Show today's free times"}
+                          </Button>
+                          {slotPreview && (
+                            slotPreview.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">
+                                Nothing free today. Your receptionist would offer another day rather than invent a time.
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                It would offer: {slotPreview.slice(0, 5).map((s) => format(new Date(s), "HH:mm")).join(", ")}
+                              </p>
+                            )
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Bookings go into your normal diary with the usual confirmations and reminders. If a slot is taken
+                            mid-call it offers another time instead of double-booking.
+                          </p>
+                        </div>
+                      </Field>
                     </>
+                  )}
+                  {!config.bookingEnabled && (
+                    <p className="text-xs text-muted-foreground">
+                      With booking off, callers who ask for an appointment get a callback request instead — a high-priority
+                      task is created for whoever owns the enquiry.
+                    </p>
                   )}
                 </>
               )}
@@ -400,7 +441,18 @@ export default function VoiceAssistantEditor() {
                     <Field label="Transfer number">
                       <Input value={config.transferNumber} onChange={(e) => patch({ transferNumber: e.target.value })}
                         placeholder="+44 20 1234 5678" />
+                      {config.transferNumber.trim() && !/^\+?[0-9\s()-]{9,}$/.test(config.transferNumber.trim()) && (
+                        <p className="mt-1 text-xs text-destructive">
+                          That doesn't look like a phone number. Use the full number including the country code.
+                        </p>
+                      )}
                     </Field>
+                  )}
+                  {!config.transferEnabled && (
+                    <p className="text-xs text-muted-foreground">
+                      With transfers off, callers asking for a person are told someone will call them back, and a callback
+                      task is created straight away.
+                    </p>
                   )}
                   <Field label="Phrases that mean 'get me a person'">
                     <ChipListEditor value={config.escalationPhrases} onChange={(v) => patch({ escalationPhrases: v })}
@@ -408,6 +460,7 @@ export default function VoiceAssistantEditor() {
                   </Field>
                 </>
               )}
+
 
               {step.key === "crm" && (
                 <>
