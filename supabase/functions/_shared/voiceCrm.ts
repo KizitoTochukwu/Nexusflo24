@@ -177,7 +177,7 @@ async function ensureDeal(
   let stageId: string | null = crm.stageId ?? null;
   if (!stageId) {
     const { data: stage } = await supabase
-      .from("crm_pipile_placeholder" in crm ? "crm_pipeline_stages" : "crm_pipeline_stages")
+      .from("crm_pipeline_stages")
       .select("id")
       .eq("pipeline_id", pipelineId)
       .order("position", { ascending: true })
