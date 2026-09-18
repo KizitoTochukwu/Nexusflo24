@@ -97,6 +97,13 @@ function providerMessage(data: any, fallback: string): string {
 }
 
 const inboundWebhookUrl = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1/voice-inbound-call`;
+const statusWebhookUrl = () => `${Deno.env.get("SUPABASE_URL")}/functions/v1/voice-call-status`;
+const routingForm = () => ({
+  VoiceUrl: inboundWebhookUrl(),
+  VoiceMethod: "POST",
+  StatusCallback: statusWebhookUrl(),
+  StatusCallbackMethod: "POST",
+});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
