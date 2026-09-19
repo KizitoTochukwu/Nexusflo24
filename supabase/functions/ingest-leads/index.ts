@@ -4,6 +4,11 @@ import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
 import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
 import { dispatchTriggerEvent } from "../_shared/triggerDispatch.ts";
+import {
+  isWebinarRegistration,
+  processWebinarRegistration,
+  type WebinarIntakeResult,
+} from "../_shared/webinarIntake.ts";
 
 
 const corsHeaders = {
@@ -341,6 +346,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Webinar registration intake (company, consent, fields, opportunity) ---
+    let webinarResult: WebinarIntakeResult | null = null;
+    if (isWebinarRegistration(tags, body.webinar)) {
+      const fieldsObj = (typeof body.fields === "object" && body.fields !== null ? body.fields : {}) as Record<string, unknown>;
+      const pick = (k: string) => sanitizeString(fieldsObj[k] ?? (meta as any)?.[k], 2000);
+      const bool = (k: string) => fieldsObj[k] === true || fieldsObj[k] === "true";
+      webinarResult = await processWebinarRegistration(supabase, {
+        workspaceId: workspaceId!,
+        leadId,
+        contactId: canonicalContactId,
+        ownerId,
+        fullName: full_name || null,
+        email: trimmedEmail || null,
+        phone: trimmedPhone || null,
+        fields: {
+          first_name: pick("first_name"),
+          business_name: pick("business_name"),
+          business_type: pick("business_type"),
+          whatsapp_enquiry_volume: pick("whatsapp_enquiry_volume"),
+          webinar_consent: bool("webinar_communication_consent") || bool("webinar_consent"),
+          marketing_consent: bool("marketing_consent"),
+          consent_version: pick("consent_version"),
+          consent_text: pick("consent_text"),
+          source_url: pick("source_url"),
+          landing_page_url: pick("landing_page_url"),
+          campaign: pick("campaign"),
+          utm: (utm as Record<string, unknown>) ?? {},
+          ip_address:
+            req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+            req.headers.get("cf-connecting-ip") ||
+            null,
+          user_agent: req.headers.get("user-agent"),
+        },
+      });
+    }
+
     // --- Fire enrolment triggers (Automations + Workflows, one dispatcher) ---
     try {
       const previousTags = (existing?.tags || []) as string[];
@@ -368,10 +409,16 @@ Deno.serve(async (req) => {
 
       // A submission is an event even when it updates an existing lead and
       // contributes no new tags. This enables intentional re-entry.
-      await fire("form_submitted", {
-        form_id: typeof body.form_id === "string" ? body.form_id : null,
-        source: source || "Make.com",
-      });
+      // Webinar registrations only enrol when consent was given and the person
+      // is outside the 30-day re-enrolment window.
+      if (!webinarResult || webinarResult.should_enrol) {
+        await fire("form_submitted", {
+          form_id: typeof body.form_id === "string" ? body.form_id : null,
+          source: source || "Make.com",
+        });
+      } else {
+        console.log("[ingest-leads] webinar re-enrolment suppressed for lead", leadId);
+      }
 
       // Triggered campaigns — same semantics as website capture: genuinely
       // new leads only, so a repeat submission never re-sends the campaign.
@@ -418,7 +465,26 @@ Deno.serve(async (req) => {
 
 
     return new Response(
-      JSON.stringify({ ok: true, action, lead_id: leadId, workspace_id: workspaceId }),
+      JSON.stringify({
+        ok: true,
+        action,
+        lead_id: leadId,
+        workspace_id: workspaceId,
+        ...(webinarResult
+          ? {
+              webinar: {
+                registration_id: webinarResult.registration_id,
+                contact_id: webinarResult.contact_id,
+                deal_id: webinarResult.deal_id,
+                repeat: webinarResult.repeat,
+                enrolled: webinarResult.should_enrol,
+                webinar_url: webinarResult.webinar_url,
+                booking_url: webinarResult.booking_url,
+                product_url: webinarResult.product_url,
+              },
+            }
+          : {}),
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

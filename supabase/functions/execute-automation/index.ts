@@ -55,6 +55,7 @@ async function loadCrmExtras(
         if (contact[key] != null) extra[key] = contact[key] ? "true" : "false";
       }
       if (contact.whatsapp_number) extra.whatsapp_number = contact.whatsapp_number;
+      if (contact.company) extra.company_name = String(contact.company);
       const { data: vals } = await supabase
         .from("crm_custom_field_values")
         .select("value, crm_custom_field_defs!inner(field_key)")
@@ -333,8 +334,13 @@ Deno.serve(async (req) => {
     // CRM context for {{contact.*}} / {{opportunity.*}} / {{assigned_user.*}} tokens
     (lead as any).__extra = await loadCrmExtras(supabase, workspace_id, lead);
     {
-      const bl = (automation.trigger_config as any)?.booking_link;
+      const cfg = (automation.trigger_config as any) || {};
+      const bl = cfg.booking_link;
       if (bl) (lead as any).__extra.booking_link = String(bl);
+      const pl = cfg.product_link;
+      if (pl) (lead as any).__extra.product_link = String(pl);
+      const wu = cfg.webinar_url || Deno.env.get("WEBINAR_RECORDING_URL");
+      if (wu) (lead as any).__extra.webinar_url = String(wu);
     }
 
     // ---------- EXIT CRITERIA RE-CHECK (defense in depth) ----------
