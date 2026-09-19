@@ -86,12 +86,14 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
 
   const draft = {
     enrollment_object_type: enrollmentObject,
+    enrollment_method: method,
     trigger_source: source,
     trigger_event: event,
     trigger_config: config,
   };
   const summary = buildTriggerSummary({ ...draft, name: workflow?.name });
   const status = configurationStatus(draft);
+  const problem = triggerReadinessProblem(draft);
 
   const handleSave = async () => {
     setSaving(true);
