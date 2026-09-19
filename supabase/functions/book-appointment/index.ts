@@ -335,30 +335,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fire matching automations with trigger_type = 'book_appointment'
-    const { data: automations } = await supabase
-      .from("automations")
-      .select("id")
-      .eq("workspace_id", page.workspace_id)
-      .eq("trigger_type", "book_appointment")
-      .eq("status", "active");
-
-    if (automations && automations.length > 0) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-      for (const auto of automations) {
-        try {
-          await fetch(`${supabaseUrl}/functions/v1/execute-automation`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
-            body: JSON.stringify({
-              automation_id: auto.id,
-              workspace_id: page.workspace_id,
-              lead_id: leadId,
-              trigger_data: { booking_id: booking.id, guest_name, guest_email },
-            }),
-          });
-        } catch (_) { /* best effort */ }
+    // Fire the booking event to BOTH engines through the shared dispatcher, so
+    // scope (calendar, booking type, assigned user) is honoured consistently.
+    if (leadId) {
+      try {
+        await dispatchTriggerEvent({
+          supabase,
+          supabaseUrl: Deno.env.get("SUPABASE_URL")!,
+          serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          workspaceId: page.workspace_id,
+          leadIds: [leadId],
+          eventType: "book_appointment",
+          eventConfig: {
+            booking_id: booking.id,
+            calendar_id: page.id,
+            booking_type: appointmentTypeId ?? null,
+            assigned_user: page.user_id,
+            guest_name,
+            guest_email,
+          },
+        });
+      } catch (e) {
+        console.error("[book-appointment] trigger dispatch failed:", String(e));
       }
     }
 
