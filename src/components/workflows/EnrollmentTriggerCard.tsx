@@ -139,7 +139,7 @@ export default function EnrollmentTriggerCard({
         </div>
       </div>
 
-      {record.id && (
+      {record.id && recordKind === "workflow" && (
         <div className="mt-3">
           <TriggerActivityPanel
             recordId={record.id}
