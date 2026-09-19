@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
+import { dispatchTriggerEvent } from "../_shared/triggerDispatch.ts";
 
 
 const corsHeaders = {
@@ -349,7 +350,7 @@ Deno.serve(async (req) => {
           eventConfig: {
             booking_id: booking.id,
             calendar_id: page.id,
-            booking_type: appointmentTypeId ?? null,
+            booking_type: (booking as any).appointment_type_id ?? null,
             assigned_user: page.user_id,
             guest_name,
             guest_email,
