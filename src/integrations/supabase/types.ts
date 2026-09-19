@@ -12123,6 +12123,128 @@ export type Database = {
           },
         ]
       }
+      webinar_registrations: {
+        Row: {
+          business_name: string | null
+          business_type: string | null
+          campaign: string | null
+          consent_text: string | null
+          consent_version: string | null
+          contact_id: string | null
+          created_at: string
+          deal_id: string | null
+          email: string | null
+          enrolled_at: string | null
+          first_name: string | null
+          id: string
+          ip_address: string | null
+          landing_page_url: string | null
+          last_submitted_at: string
+          lead_id: string | null
+          marketing_consent: boolean
+          marketing_consent_at: string | null
+          phone: string | null
+          source_url: string | null
+          submission_count: number
+          updated_at: string
+          user_agent: string | null
+          utm: Json
+          webinar_consent: boolean
+          webinar_consent_at: string | null
+          whatsapp_enquiry_volume: string | null
+          workspace_id: string
+        }
+        Insert: {
+          business_name?: string | null
+          business_type?: string | null
+          campaign?: string | null
+          consent_text?: string | null
+          consent_version?: string | null
+          contact_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          email?: string | null
+          enrolled_at?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          landing_page_url?: string | null
+          last_submitted_at?: string
+          lead_id?: string | null
+          marketing_consent?: boolean
+          marketing_consent_at?: string | null
+          phone?: string | null
+          source_url?: string | null
+          submission_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm?: Json
+          webinar_consent?: boolean
+          webinar_consent_at?: string | null
+          whatsapp_enquiry_volume?: string | null
+          workspace_id: string
+        }
+        Update: {
+          business_name?: string | null
+          business_type?: string | null
+          campaign?: string | null
+          consent_text?: string | null
+          consent_version?: string | null
+          contact_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          email?: string | null
+          enrolled_at?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          landing_page_url?: string | null
+          last_submitted_at?: string
+          lead_id?: string | null
+          marketing_consent?: boolean
+          marketing_consent_at?: string | null
+          phone?: string | null
+          source_url?: string | null
+          submission_count?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm?: Json
+          webinar_consent?: boolean
+          webinar_consent_at?: string | null
+          whatsapp_enquiry_volume?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webinar_registrations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webinar_registrations_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webinar_registrations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webinar_registrations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_accounts: {
         Row: {
           business_name: string | null
