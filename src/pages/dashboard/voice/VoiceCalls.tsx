@@ -7,13 +7,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useVoiceCalls, useVoiceCallContacts, useSyncVoiceCallToCrm } from "@/hooks/useVoice";
+import {
+  useVoiceCalls, useVoiceCallContacts, useSyncVoiceCallToCrm, type VoiceCallSession,
+} from "@/hooks/useVoice";
 import { VoiceEmptyState, VoiceSetupNotice } from "@/components/voice/VoicePrimitives";
+import VoiceCallDetail from "@/components/voice/VoiceCallDetail";
 import { formatMinutes } from "@/lib/voice/constants";
 import { format } from "date-fns";
+
+const OUTCOME_FILTERS = [
+  { value: "all", label: "All calls" },
+  { value: "booked", label: "Appointment booked" },
+  { value: "callback_requested", label: "Callback requested" },
+  { value: "transferred", label: "Transferred" },
+  { value: "enquiry", label: "Enquiry" },
+  { value: "information_given", label: "Information given" },
+  { value: "no_answer", label: "No answer" },
+  { value: "spam", label: "Spam" },
+];
 
 export default function VoiceCalls() {
   const workspaceId = useWorkspaceId();
@@ -24,16 +41,21 @@ export default function VoiceCalls() {
   );
   const sync = useSyncVoiceCallToCrm(workspaceId);
   const [query, setQuery] = useState("");
+  const [outcome, setOutcome] = useState("all");
+  const [selected, setSelected] = useState<VoiceCallSession | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return calls;
-    return calls.filter((c) =>
-      [c.from_number, c.to_number, c.summary, c.outcome, c.intent]
+    return calls.filter((c) => {
+      if (outcome !== "all" && (c.outcome ?? "") !== outcome) return false;
+      if (!q) return true;
+      return [c.from_number, c.to_number, c.summary, c.outcome, c.intent]
         .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q)),
-    );
-  }, [calls, query]);
+        .some((v) => String(v).toLowerCase().includes(q));
+    });
+  }, [calls, query, outcome]);
+
+  const current = selected ? calls.find((c) => c.id === selected.id) ?? selected : null;
 
   return (
     <div className="space-y-5 pb-10">
@@ -41,16 +63,28 @@ export default function VoiceCalls() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Call Inbox</h1>
           <p className="text-sm text-muted-foreground">
-            Every answered call, with its summary and the caller's CRM record.
+            Every answered call, with what was said, what was captured and the caller's CRM record.
           </p>
         </div>
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search calls"
-          className="w-full rounded-full sm:w-64"
-          aria-label="Search calls"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={outcome} onValueChange={setOutcome}>
+            <SelectTrigger className="w-48 rounded-full" aria-label="Filter by outcome">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {OUTCOME_FILTERS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search calls"
+            className="w-full rounded-full sm:w-64"
+            aria-label="Search calls"
+          />
+        </div>
       </div>
 
       <VoiceSetupNotice compact />
@@ -60,8 +94,12 @@ export default function VoiceCalls() {
       ) : filtered.length === 0 ? (
         <VoiceEmptyState
           icon={PhoneCall}
-          title="No calls yet"
-          description="Once live calling is connected and a number is assigned to an assistant, every call shows up here — and the caller is saved to your CRM with the call written onto their timeline."
+          title={calls.length === 0 ? "No calls yet" : "No calls match that"}
+          description={
+            calls.length === 0
+              ? "Once live calling is connected and a number is assigned to an assistant, every call shows up here — with a transcript, a written summary and the caller saved to your CRM."
+              : "Try a different search or outcome."
+          }
         />
       ) : (
         <Card className="rounded-2xl">
@@ -81,7 +119,11 @@ export default function VoiceCalls() {
                 {filtered.map((c) => {
                   const contact = c.contact_id ? contacts[c.contact_id] : undefined;
                   return (
-                    <TableRow key={c.id}>
+                    <TableRow
+                      key={c.id}
+                      className="cursor-pointer"
+                      onClick={() => setSelected(c)}
+                    >
                       <TableCell className="font-medium">{c.from_number ?? "Unknown"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {c.started_at ? format(new Date(c.started_at), "d MMM, HH:mm") : "—"}
@@ -89,10 +131,10 @@ export default function VoiceCalls() {
                       <TableCell className="text-xs">{formatMinutes(c.duration_seconds)}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="capitalize">
-                          {c.outcome ?? c.status.replace("_", " ")}
+                          {(c.outcome ?? c.status).replace(/_/g, " ")}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs">
+                      <TableCell className="text-xs" onClick={(e) => e.stopPropagation()}>
                         {c.contact_id ? (
                           <div className="flex items-center gap-1">
                             <Link
@@ -131,7 +173,16 @@ export default function VoiceCalls() {
           </CardContent>
         </Card>
       )}
+
+      <VoiceCallDetail
+        call={current}
+        workspaceId={workspaceId}
+        contactName={current?.contact_id ? contacts[current.contact_id]?.name : undefined}
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+      />
     </div>
   );
 }
+
 
