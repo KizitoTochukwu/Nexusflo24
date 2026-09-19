@@ -1,43 +1,19 @@
 // Test-only trigger evaluator. Returns a sample payload and whether the current
-// filter set would pass — never runs the workflow/automation.
+// scope + filter set would pass — never runs the workflow/automation.
+//
+// Uses exactly the same matching code as the live engines, so a passing test
+// means the real trigger would also pass.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  matchTriggerScope,
+  evaluateFilterGroups,
+  type FilterGroup,
+} from "../_shared/triggerMatch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface FilterCondition { property: string; operator: string; value?: string }
-interface FilterGroup { combinator: "AND" | "OR"; conditions: FilterCondition[] }
-
-function evalCondition(rec: Record<string, any>, c: FilterCondition): boolean {
-  const v = rec?.[c.property];
-  switch (c.operator) {
-    case "eq": return String(v ?? "") === String(c.value ?? "");
-    case "neq": return String(v ?? "") !== String(c.value ?? "");
-    case "in": return (c.value || "").split(",").map((s) => s.trim()).includes(String(v ?? ""));
-    case "nin": return !(c.value || "").split(",").map((s) => s.trim()).includes(String(v ?? ""));
-    case "contains": return String(v ?? "").toLowerCase().includes(String(c.value ?? "").toLowerCase());
-    case "ncontains": return !String(v ?? "").toLowerCase().includes(String(c.value ?? "").toLowerCase());
-    case "known": return v !== undefined && v !== null && v !== "";
-    case "unknown": return v === undefined || v === null || v === "";
-    case "gt": return Number(v) > Number(c.value);
-    case "lt": return Number(v) < Number(c.value);
-    case "before": return new Date(v).getTime() < new Date(c.value || "").getTime();
-    case "after": return new Date(v).getTime() > new Date(c.value || "").getTime();
-    default: return true;
-  }
-}
-
-function evalGroups(rec: Record<string, any>, groups: FilterGroup[]): boolean {
-  if (!groups?.length) return true;
-  return groups.some((g) => {
-    if (!g.conditions?.length) return true;
-    return g.combinator === "OR"
-      ? g.conditions.some((c) => evalCondition(rec, c))
-      : g.conditions.every((c) => evalCondition(rec, c));
-  });
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
