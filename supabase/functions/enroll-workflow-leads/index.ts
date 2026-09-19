@@ -3,6 +3,12 @@
 // 2. For each (workflow, lead) pair: checks suppression + duplicate guard, creates enrollment, kicks off execute-workflow.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireInternalCaller } from "../_shared/internal-auth.ts";
+import {
+  matchTriggerScope,
+  evaluateFilterGroups,
+  canReEnrol,
+  type FilterGroup,
+} from "../_shared/triggerMatch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,96 +24,16 @@ function leadIsSuppressed(lead: any, suppression: any): boolean {
   return false;
 }
 
-function triggerMatches(wf: any, triggerNode: any, eventType: string, eventConfig: Record<string, any>): boolean {
-  // Prefer new structured trigger columns; fall back to legacy canvas trigger node.
-  const structuredEvent: string | null = wf?.trigger_event || null;
-  const structuredCfg: Record<string, any> = wf?.trigger_config || {};
-  const sub = structuredEvent || triggerNode?.data?.subType;
-  if (!sub) return false;
-  if (sub !== eventType) return false;
-  const cfg = structuredEvent ? structuredCfg : ((triggerNode?.data?.config || {}) as Record<string, any>);
-
-  const isAny = (v: any) => v === undefined || v === null || v === "" || v === "__any__";
-
-  if (sub === "lead_added_to_folder" && !isAny(cfg.folder_id) && eventConfig.folder_id) {
-    return String(cfg.folder_id) === String(eventConfig.folder_id);
-  }
-  if (sub === "lead_tagged" && !isAny(cfg.tag) && eventConfig.tag) {
-    return String(cfg.tag).toLowerCase() === String(eventConfig.tag).toLowerCase();
-  }
-  if (sub === "score_threshold" && !isAny(cfg.threshold) && eventConfig.score !== undefined) {
-    return Number(eventConfig.score) >= Number(cfg.threshold);
-  }
-  // Commerce scoping: optional store and product filters.
-  if (!isAny(cfg.store_id) && eventConfig.store_id) {
-    if (String(cfg.store_id) !== String(eventConfig.store_id)) return false;
-  }
-  if (!isAny(cfg.shop_product_id) && "product_ids" in eventConfig) {
-    // A product-scoped trigger must never fire for an order we could not read
-    // the line items of, so an empty list is treated as "no match".
-    const ids: string[] = Array.isArray(eventConfig.product_ids) ? eventConfig.product_ids.map(String) : [];
-    if (!ids.includes(String(cfg.shop_product_id))) return false;
-  }
-  return true;
+/** Event-name match only. Scope is evaluated per-record (it can depend on the record). */
+function eventMatches(wf: any, triggerNode: any, eventType: string): boolean {
+  const sub = wf?.trigger_event || triggerNode?.data?.subType;
+  return !!sub && sub === eventType;
 }
 
-
-/** Evaluate additional filter groups (AND across groups by default; OR/AND inside a group). */
-function leadPassesFilters(lead: any, filterGroups: any[]): boolean {
-  if (!Array.isArray(filterGroups) || filterGroups.length === 0) return true;
-  const cmp = (raw: any, op: string, val: any): boolean => {
-    const l = raw === undefined || raw === null ? "" : raw;
-    const v = val === undefined || val === null ? "" : val;
-    switch (op) {
-      case "equals": return String(l).toLowerCase() === String(v).toLowerCase();
-      case "not_equals": return String(l).toLowerCase() !== String(v).toLowerCase();
-      case "contains": return String(l).toLowerCase().includes(String(v).toLowerCase());
-      case "not_contains": return !String(l).toLowerCase().includes(String(v).toLowerCase());
-      case "exists": return l !== "" && l !== null && l !== undefined;
-      case "not_exists": return l === "" || l === null || l === undefined;
-      case "gt": return Number(l) > Number(v);
-      case "lt": return Number(l) < Number(v);
-      case "gte": return Number(l) >= Number(v);
-      case "lte": return Number(l) <= Number(v);
-      case "in":
-        return Array.isArray(v) ? v.map(String).includes(String(l)) : String(v).split(",").map((s) => s.trim()).includes(String(l));
-      case "has_tag":
-        return Array.isArray(lead?.tags) && lead.tags.map((t: string) => String(t).toLowerCase()).includes(String(v).toLowerCase());
-      case "not_has_tag":
-        return !(Array.isArray(lead?.tags) && lead.tags.map((t: string) => String(t).toLowerCase()).includes(String(v).toLowerCase()));
-      default: return true;
-    }
-  };
-  for (const group of filterGroups) {
-    const conds = Array.isArray(group?.conditions) ? group.conditions : [];
-    if (conds.length === 0) continue;
-    const combinator = String(group?.combinator || "AND").toUpperCase();
-    const evaluated = conds.map((c: any) => cmp(lead?.[c.property], c.operator, c.value));
-    const groupPassed = combinator === "OR" ? evaluated.some(Boolean) : evaluated.every(Boolean);
-    if (!groupPassed) return false;
-  }
-  return true;
-}
-
-/** Re-enrollment check using new structured reenrollment_config; falls back to legacy enrollment_config.reEnrollment. */
-function canReEnroll(wf: any, lastEnrollment: any): boolean {
-  const cfg = wf?.reenrollment_config;
-  if (cfg && typeof cfg === "object" && cfg.mode) {
-    const mode = String(cfg.mode);
-    if (mode === "never") return false;
-    if (mode === "every_event") return true;
-    if (mode === "after_wait") {
-      const amt = Number(cfg.wait_amount || 0);
-      const unit = String(cfg.wait_unit || "hours");
-      const mult: Record<string, number> = { minutes: 60_000, hours: 3_600_000, days: 86_400_000, weeks: 604_800_000 };
-      const waitMs = amt * (mult[unit] || mult.hours);
-      const last = lastEnrollment?.started_at ? new Date(lastEnrollment.started_at).getTime() : 0;
-      return Date.now() - last >= waitMs;
-    }
-    if (mode === "on_status_change") return true;
-    return false;
-  }
-  return !!wf?.enrollment_config?.reEnrollment;
+/** The trigger settings to evaluate scope against (structured first, legacy canvas second). */
+function effectiveTriggerConfig(wf: any, triggerNode: any): Record<string, any> {
+  if (wf?.trigger_event) return (wf.trigger_config || {}) as Record<string, any>;
+  return (triggerNode?.data?.config || {}) as Record<string, any>;
 }
 
 Deno.serve(async (req) => {
