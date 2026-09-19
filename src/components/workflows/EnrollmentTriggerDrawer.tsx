@@ -13,8 +13,10 @@ import { Label } from "@/components/ui/label";
 import {
   ENROLLMENT_METHODS, TRIGGER_SOURCES, REENROLLMENT_MODES,
   findSource, findEvent, scopeFieldsFor, buildTriggerSummary, configurationStatus,
+  triggerReadinessProblem, isMethodSupported,
   type EnrollmentObject,
 } from "@/lib/workflows/triggerCatalog";
+import ScopeValuePicker from "./ScopeValuePicker";
 import FilterGroupBuilder, { type FilterGroup } from "./FilterGroupBuilder";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -247,7 +249,7 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
           {/* Step 5 – Additional filters */}
           {event && (
             <Section title="5. Additional filters">
-              <FilterGroupBuilder value={filters} onChange={setFilters} propertySuggestions={["email", "phone", "name", "tags", "score", "source", "status"]} />
+              <FilterGroupBuilder value={filters} onChange={setFilters} propertySuggestions={["email", "phone", "full_name", "tags", "score", "source", "status", "company", "city", "country"]} />
             </Section>
           )}
 
