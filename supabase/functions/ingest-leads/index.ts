@@ -341,6 +341,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- Webinar registration intake (company, consent, fields, opportunity) ---
+    let webinarResult: WebinarIntakeResult | null = null;
+    if (isWebinarRegistration(tags, body.webinar)) {
+      const fieldsObj = (typeof body.fields === "object" && body.fields !== null ? body.fields : {}) as Record<string, unknown>;
+      const pick = (k: string) => sanitizeString(fieldsObj[k] ?? (meta as any)?.[k], 2000);
+      const bool = (k: string) => fieldsObj[k] === true || fieldsObj[k] === "true";
+      webinarResult = await processWebinarRegistration(supabase, {
+        workspaceId: workspaceId!,
+        leadId,
+        contactId: canonicalContactId,
+        ownerId,
+        fullName: full_name || null,
+        email: trimmedEmail || null,
+        phone: trimmedPhone || null,
+        fields: {
+          first_name: pick("first_name"),
+          business_name: pick("business_name"),
+          business_type: pick("business_type"),
+          whatsapp_enquiry_volume: pick("whatsapp_enquiry_volume"),
+          webinar_consent: bool("webinar_communication_consent") || bool("webinar_consent"),
+          marketing_consent: bool("marketing_consent"),
+          consent_version: pick("consent_version"),
+          consent_text: pick("consent_text"),
+          source_url: pick("source_url"),
+          landing_page_url: pick("landing_page_url"),
+          campaign: pick("campaign"),
+          utm: (utm as Record<string, unknown>) ?? {},
+          ip_address:
+            req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+            req.headers.get("cf-connecting-ip") ||
+            null,
+          user_agent: req.headers.get("user-agent"),
+        },
+      });
+    }
+
     // --- Fire enrolment triggers (Automations + Workflows, one dispatcher) ---
     try {
       const previousTags = (existing?.tags || []) as string[];
