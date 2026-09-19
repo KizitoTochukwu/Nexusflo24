@@ -304,14 +304,47 @@ export interface TriggerLike {
   trigger_config?: Record<string, any> | null;
 }
 
-/** Green = configured, amber = incomplete, red = error. */
-export function configurationStatus(w: TriggerLike): "configured" | "incomplete" | "error" {
-  if (!w.trigger_source || !w.trigger_event) return "incomplete";
+export function isEventEmitted(sourceKey?: string | null, eventKey?: string | null): boolean {
+  return findEvent(sourceKey, eventKey)?.emitted === true;
+}
+
+/**
+ * Explains, in plain words, why a trigger cannot run yet. Returns null when the
+ * trigger is ready. Used to block activation and to show a warning in the UI.
+ */
+export function triggerReadinessProblem(
+  w: TriggerLike & { enrollment_method?: string | null },
+): string | null {
+  if (!w.trigger_source || !w.trigger_event) return "Choose what should start this.";
+  if (w.enrollment_method && !isMethodSupported(w.enrollment_method)) {
+    return "This way of starting is not available yet. Use \"When an event occurs\" or manual.";
+  }
+  if (w.enrollment_object_type && !isObjectSupported(w.enrollment_object_type)) {
+    return "Only leads and contacts can be enrolled at the moment.";
+  }
+  if (!isEventEmitted(w.trigger_source, w.trigger_event)) {
+    return "This event is not available yet, so nothing would ever start it.";
+  }
   const fields = scopeFieldsFor(w.trigger_source, w.trigger_event);
   const cfg = w.trigger_config || {};
-  const missingRequired = fields.filter((f) => f.required && !cfg[f.key]);
-  if (missingRequired.length > 0) return "incomplete";
-  return "configured";
+  const missing = fields.filter((f) => f.required && !cfg[f.key]).map((f) => f.label);
+  if (missing.length) return `Still needed: ${missing.join(", ")}.`;
+  return null;
+}
+
+/** Green = configured, amber = incomplete, red = error. */
+export function configurationStatus(
+  w: TriggerLike & { enrollment_method?: string | null },
+): "configured" | "incomplete" | "error" {
+  if (!w.trigger_source || !w.trigger_event) return "incomplete";
+  if (
+    (w.enrollment_method && !isMethodSupported(w.enrollment_method)) ||
+    (w.enrollment_object_type && !isObjectSupported(w.enrollment_object_type)) ||
+    !isEventEmitted(w.trigger_source, w.trigger_event)
+  ) {
+    return "error";
+  }
+  return triggerReadinessProblem(w) ? "incomplete" : "configured";
 }
 
 export function buildTriggerSummary(w: TriggerLike & { name?: string }): string {
