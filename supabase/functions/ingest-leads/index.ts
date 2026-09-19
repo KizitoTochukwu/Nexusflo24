@@ -4,6 +4,11 @@ import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
 import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
 import { dispatchTriggerEvent } from "../_shared/triggerDispatch.ts";
+import {
+  isWebinarRegistration,
+  processWebinarRegistration,
+  type WebinarIntakeResult,
+} from "../_shared/webinarIntake.ts";
 
 
 const corsHeaders = {
@@ -404,10 +409,16 @@ Deno.serve(async (req) => {
 
       // A submission is an event even when it updates an existing lead and
       // contributes no new tags. This enables intentional re-entry.
-      await fire("form_submitted", {
-        form_id: typeof body.form_id === "string" ? body.form_id : null,
-        source: source || "Make.com",
-      });
+      // Webinar registrations only enrol when consent was given and the person
+      // is outside the 30-day re-enrolment window.
+      if (!webinarResult || webinarResult.should_enrol) {
+        await fire("form_submitted", {
+          form_id: typeof body.form_id === "string" ? body.form_id : null,
+          source: source || "Make.com",
+        });
+      } else {
+        console.log("[ingest-leads] webinar re-enrolment suppressed for lead", leadId);
+      }
 
       // Triggered campaigns — same semantics as website capture: genuinely
       // new leads only, so a repeat submission never re-sends the campaign.
