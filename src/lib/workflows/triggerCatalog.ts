@@ -45,6 +45,12 @@ export interface TriggerEventDef {
   description?: string;
   scopeFields?: ScopeField[]; // override source-level fields when event-specific
   defaultDedupKey?: string;   // e.g. meta.leadgen_id
+  /**
+   * False when nothing in the platform fires this event yet. Such events are
+   * shown as "Coming soon" and cannot be selected, so a trigger can never be
+   * saved in a state that silently never runs.
+   */
+  emitted?: boolean;
 }
 
 export interface TriggerSourceDef {
@@ -56,23 +62,35 @@ export interface TriggerSourceDef {
   events: TriggerEventDef[];
 }
 
-export const ENROLLMENT_OBJECTS: { key: EnrollmentObject; label: string; description: string }[] = [
-  { key: "contact", label: "Contact", description: "Any person record" },
-  { key: "lead", label: "Lead", description: "Prospect in the CRM" },
-  { key: "deal", label: "Deal", description: "Pipeline opportunity" },
-  { key: "booking", label: "Booking", description: "Calendar appointment" },
-  { key: "conversation", label: "Conversation", description: "Inbox thread" },
-  { key: "payment", label: "Payment", description: "One-off transaction" },
-  { key: "subscription", label: "Subscription", description: "Recurring plan" },
+export const ENROLLMENT_OBJECTS: {
+  key: EnrollmentObject; label: string; description: string; supported?: boolean;
+}[] = [
+  { key: "contact", label: "Contact", description: "Any person record", supported: true },
+  { key: "lead", label: "Lead", description: "Prospect in the CRM", supported: true },
+  { key: "deal", label: "Deal", description: "Pipeline opportunity", supported: false },
+  { key: "booking", label: "Booking", description: "Calendar appointment", supported: false },
+  { key: "conversation", label: "Conversation", description: "Inbox thread", supported: false },
+  { key: "payment", label: "Payment", description: "One-off transaction", supported: false },
+  { key: "subscription", label: "Subscription", description: "Recurring plan", supported: false },
 ];
 
-export const ENROLLMENT_METHODS: { key: EnrollmentMethod; label: string; description: string }[] = [
-  { key: "event", label: "When an event occurs", description: "Enrol as soon as a matching event fires" },
-  { key: "filter", label: "When filter criteria are met", description: "Enrol when a record starts matching a saved filter" },
-  { key: "schedule", label: "On a schedule", description: "Run at a fixed interval" },
-  { key: "webhook", label: "When a webhook is received", description: "Enrol from an inbound webhook call" },
-  { key: "manual", label: "Manual enrollment", description: "Only enrol records added manually" },
+export const ENROLLMENT_METHODS: {
+  key: EnrollmentMethod; label: string; description: string; supported?: boolean;
+}[] = [
+  { key: "event", label: "When an event occurs", description: "Enrol as soon as a matching event fires", supported: true },
+  { key: "manual", label: "Manual enrollment", description: "Only enrol records you add by hand", supported: true },
+  { key: "filter", label: "When filter criteria are met", description: "Enrol when a record starts matching a saved filter", supported: false },
+  { key: "schedule", label: "On a schedule", description: "Run at a fixed interval", supported: false },
+  { key: "webhook", label: "When a webhook is received", description: "Enrol from an inbound webhook call", supported: false },
 ];
+
+export function isObjectSupported(key?: string | null): boolean {
+  return ENROLLMENT_OBJECTS.find((o) => o.key === key)?.supported === true;
+}
+
+export function isMethodSupported(key?: string | null): boolean {
+  return ENROLLMENT_METHODS.find((m) => m.key === key)?.supported === true;
+}
 
 const CRM_SCOPE: ScopeField[] = [
   { key: "pipeline", label: "Pipeline", allowAny: true },
