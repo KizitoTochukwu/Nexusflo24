@@ -129,12 +129,14 @@ export default function CreateAutomationDialog() {
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {ENROLLMENT_OBJECTS.map((o) => (
+                {ENROLLMENT_OBJECTS.filter((o) => o.supported).map((o) => (
                   <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground mt-1">Controls which records can enter this automation.</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Controls which records can enter this automation. Leads and contacts are supported today.
+            </p>
           </div>
 
           <EnrollmentTriggerCard
