@@ -59,6 +59,15 @@ Deno.serve(async (req) => {
     // Workspaces flagged "unlimited" are exempted inside the credit ledger itself.
 
     const channel = campaign.type;
+    // Triggered campaigns keep running: they must never be flipped to
+    // completed/failed, or they would stop firing after the first lead.
+    const isTriggered = campaign.campaign_mode === "triggered";
+    const triggerCfg = (campaign.trigger_config || {}) as {
+      type?: string; value?: string; actions?: string[];
+      status_value?: string; tag_value?: string;
+    };
+    const triggerActions: string[] = Array.isArray(triggerCfg.actions) ? triggerCfg.actions : [];
+    const wantsMessage = !isTriggered || triggerActions.length === 0 || triggerActions.includes("send_message");
     const content = (campaign.message_content || {}) as {
       subject?: string;
       body?: string;
