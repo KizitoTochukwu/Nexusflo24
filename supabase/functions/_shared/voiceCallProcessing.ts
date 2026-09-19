@@ -126,7 +126,7 @@ async function summariseWithAi(
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash",
+      model: "google/gemini-3-flash-preview",
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
@@ -247,18 +247,17 @@ export async function processCall(
     await admin.from("voice_call_sessions").update(updates).eq("id", call.id);
   }
 
-  await admin
-    .from("voice_call_events")
-    .upsert(
-      {
-        workspace_id: call.workspace_id,
-        call_session_id: call.id,
-        event_type: "post_call_processed",
-        external_event_id: processedKey,
-        payload: { status, turns: lines.length },
-      },
-      { onConflict: "call_session_id,external_event_id" },
-    );
+  // Marker row: a partial unique index guards this, so insert and ignore repeats.
+  const marker = await admin.from("voice_call_events").insert({
+    workspace_id: call.workspace_id,
+    call_session_id: call.id,
+    event_type: "post_call_processed",
+    external_event_id: processedKey,
+    payload: { status, turns: lines.length },
+  });
+  if (marker.error && !String(marker.error.message || "").includes("duplicate")) {
+    console.error("[voice-process] marker insert failed", marker.error.message);
+  }
 
   let crm: unknown = null;
   try {
