@@ -349,25 +349,57 @@ Deno.serve(async (req) => {
           automation_id: campaign_id,
           lead_id: lead.id,
           step_index: 0,
-          run_at: new Date().toISOString(),
+          // Honour the configured delay instead of firing immediately.
+          run_at: new Date(
+            Date.now() + Math.max(0, Number(fallback.delay_minutes) || 0) * 60_000,
+          ).toISOString(),
           payload: {
             type: "campaign_fallback",
             campaign_id, lead_id: lead.id, workspace_id: workspaceId,
             channel: fallback.channel, subject: lastSubject, body: lastTextBody,
+            condition: fallback.condition || "failed",
             reason: "primary_send_failed",
           },
         });
       }
+
+      // ---- Trigger actions beyond the message (triggered campaigns only) ----
+      if (isTriggered && triggerActions.length > 0) {
+        try {
+          const patch: Record<string, unknown> = {};
+          if (triggerActions.includes("update_status") && triggerCfg.status_value) {
+            patch.status = triggerCfg.status_value;
+          }
+          if (triggerActions.includes("add_tag") && triggerCfg.tag_value) {
+            const current: string[] = Array.isArray(lead.tags) ? lead.tags : [];
+            if (!current.some((t) => String(t).toLowerCase() === triggerCfg.tag_value!.toLowerCase())) {
+              patch.tags = [...current, triggerCfg.tag_value];
+            }
+          }
+          if (Object.keys(patch).length > 0) {
+            patch.updated_at = new Date().toISOString();
+            await supabase.from("leads").update(patch).eq("id", lead.id);
+          }
+        } catch (actionErr) {
+          console.error("Trigger action failed:", (actionErr as Error).message);
+        }
+      }
     }
 
-    // Update campaign stats
+    // Update campaign stats. Triggered campaigns accumulate and stay active.
     const totalTargeted = filteredLeads.length;
-    const finalStatus = sentCount === 0 ? "failed" : "completed";
-    await supabase.from("campaigns").update({
-      sent_count: sentCount,
-      status: finalStatus,
-      updated_at: new Date().toISOString(),
-    }).eq("id", campaign_id);
+    if (isTriggered) {
+      await supabase.from("campaigns").update({
+        sent_count: (Number(campaign.sent_count) || 0) + sentCount,
+        updated_at: new Date().toISOString(),
+      }).eq("id", campaign_id);
+    } else {
+      await supabase.from("campaigns").update({
+        sent_count: sentCount,
+        status: sentCount === 0 ? "failed" : "completed",
+        updated_at: new Date().toISOString(),
+      }).eq("id", campaign_id);
+    }
 
     if (sentCount === 0) {
       const reasons: string[] = [];
