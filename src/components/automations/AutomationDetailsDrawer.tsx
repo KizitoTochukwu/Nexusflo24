@@ -23,6 +23,7 @@ import AutomationStepEditor, { type StepData } from "./AutomationStepEditor";
 import ExecutionTimeline from "./ExecutionTimeline";
 import ExecutionHistoryTable from "./ExecutionHistoryTable";
 import SequenceHealthPanel from "./SequenceHealthPanel";
+import AutomationPerformancePanel from "./AutomationPerformancePanel";
 import ExitCriteriaEditor from "./ExitCriteriaEditor";
 import EnrollmentTriggerCard, {
   type EnrollmentTriggerRecord,
@@ -185,8 +186,9 @@ export default function AutomationDetailsDrawer({ automation, open, onClose }: P
       {/* Content */}
       <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-2xl grid-cols-5">
+          <TabsList className="grid w-full max-w-3xl grid-cols-6">
             <TabsTrigger value="builder">Workflow</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="health">Health</TabsTrigger>
