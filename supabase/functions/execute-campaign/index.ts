@@ -59,6 +59,15 @@ Deno.serve(async (req) => {
     // Workspaces flagged "unlimited" are exempted inside the credit ledger itself.
 
     const channel = campaign.type;
+    // Triggered campaigns keep running: they must never be flipped to
+    // completed/failed, or they would stop firing after the first lead.
+    const isTriggered = campaign.campaign_mode === "triggered";
+    const triggerCfg = (campaign.trigger_config || {}) as {
+      type?: string; value?: string; actions?: string[];
+      status_value?: string; tag_value?: string;
+    };
+    const triggerActions: string[] = Array.isArray(triggerCfg.actions) ? triggerCfg.actions : [];
+    const wantsMessage = !isTriggered || triggerActions.length === 0 || triggerActions.includes("send_message");
     const content = (campaign.message_content || {}) as {
       subject?: string;
       body?: string;
@@ -118,10 +127,13 @@ Deno.serve(async (req) => {
     if (leadsErr) throw leadsErr;
 
     if (!leads || leads.length === 0) {
-      // Update campaign to completed with 0 sent
-      await supabase.from("campaigns").update({
-        status: "completed", sent_count: 0, updated_at: new Date().toISOString(),
-      }).eq("id", campaign_id);
+      // Broadcasts close out; triggered campaigns stay active and wait for the next event.
+      if (!isTriggered) {
+        await supabase.from("campaigns").update({
+          status: "completed", sent_count: 0, updated_at: new Date().toISOString(),
+        }).eq("id", campaign_id);
+      }
+
 
       return new Response(JSON.stringify({ ok: true, sent: 0, message: "No matching leads" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -176,9 +188,11 @@ Deno.serve(async (req) => {
       const reason = skippedUnsubscribed > 0
         ? `${skippedUnsubscribed} lead(s) skipped — all recipients are unsubscribed.`
         : "No matching leads for this audience.";
-      await supabase.from("campaigns").update({
-        status: "failed", sent_count: 0, updated_at: new Date().toISOString(),
-      }).eq("id", campaign_id);
+      if (!isTriggered) {
+        await supabase.from("campaigns").update({
+          status: "failed", sent_count: 0, updated_at: new Date().toISOString(),
+        }).eq("id", campaign_id);
+      }
       await notifyZeroSend(reason);
       return new Response(JSON.stringify({
         ok: true, sent: 0, failed: 0, total: 0,
@@ -233,7 +247,7 @@ Deno.serve(async (req) => {
       let lastSubject = messageSubject;
       let lastTextBody = "";
 
-      for (const ch of allChannels) {
+      for (const ch of (wantsMessage ? allChannels : [])) {
         // Skip channels the lead can't receive on
         if (ch === "email" && !lead.email) continue;
         if ((ch === "whatsapp" || ch === "sms") && !lead.phone) continue;
@@ -335,25 +349,57 @@ Deno.serve(async (req) => {
           automation_id: campaign_id,
           lead_id: lead.id,
           step_index: 0,
-          run_at: new Date().toISOString(),
+          // Honour the configured delay instead of firing immediately.
+          run_at: new Date(
+            Date.now() + Math.max(0, Number(fallback.delay_minutes) || 0) * 60_000,
+          ).toISOString(),
           payload: {
             type: "campaign_fallback",
             campaign_id, lead_id: lead.id, workspace_id: workspaceId,
             channel: fallback.channel, subject: lastSubject, body: lastTextBody,
+            condition: fallback.condition || "failed",
             reason: "primary_send_failed",
           },
         });
       }
+
+      // ---- Trigger actions beyond the message (triggered campaigns only) ----
+      if (isTriggered && triggerActions.length > 0) {
+        try {
+          const patch: Record<string, unknown> = {};
+          if (triggerActions.includes("update_status") && triggerCfg.status_value) {
+            patch.status = triggerCfg.status_value;
+          }
+          if (triggerActions.includes("add_tag") && triggerCfg.tag_value) {
+            const current: string[] = Array.isArray(lead.tags) ? lead.tags : [];
+            if (!current.some((t) => String(t).toLowerCase() === triggerCfg.tag_value!.toLowerCase())) {
+              patch.tags = [...current, triggerCfg.tag_value];
+            }
+          }
+          if (Object.keys(patch).length > 0) {
+            patch.updated_at = new Date().toISOString();
+            await supabase.from("leads").update(patch).eq("id", lead.id);
+          }
+        } catch (actionErr) {
+          console.error("Trigger action failed:", (actionErr as Error).message);
+        }
+      }
     }
 
-    // Update campaign stats
+    // Update campaign stats. Triggered campaigns accumulate and stay active.
     const totalTargeted = filteredLeads.length;
-    const finalStatus = sentCount === 0 ? "failed" : "completed";
-    await supabase.from("campaigns").update({
-      sent_count: sentCount,
-      status: finalStatus,
-      updated_at: new Date().toISOString(),
-    }).eq("id", campaign_id);
+    if (isTriggered) {
+      await supabase.from("campaigns").update({
+        sent_count: (Number(campaign.sent_count) || 0) + sentCount,
+        updated_at: new Date().toISOString(),
+      }).eq("id", campaign_id);
+    } else {
+      await supabase.from("campaigns").update({
+        sent_count: sentCount,
+        status: sentCount === 0 ? "failed" : "completed",
+        updated_at: new Date().toISOString(),
+      }).eq("id", campaign_id);
+    }
 
     if (sentCount === 0) {
       const reasons: string[] = [];

@@ -31,6 +31,7 @@ const statusColors: Record<string, string> = {
   active: "bg-green-100 text-green-800",
   paused: "bg-orange-100 text-orange-800",
   completed: "bg-primary/10 text-primary",
+  failed: "bg-destructive/10 text-destructive",
 };
 
 const channelIcons: Record<string, React.ReactNode> = {

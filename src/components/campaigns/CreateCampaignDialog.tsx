@@ -83,6 +83,8 @@ export default function CreateCampaignDialog({
   const [triggerType, setTriggerType] = useState("new_lead");
   const [triggerValue, setTriggerValue] = useState("");
   const [triggerActions, setTriggerActions] = useState<string[]>(["send_message"]);
+  const [triggerStatusValue, setTriggerStatusValue] = useState("");
+  const [triggerTagValue, setTriggerTagValue] = useState("");
 
   // Step 3 - Content
   const [subject, setSubject] = useState("");
@@ -247,7 +249,8 @@ export default function CreateCampaignDialog({
   const reset = (opts: { keepAudience?: boolean } = { keepAudience: true }) => {
     setStep(1); setName(""); setType("email"); setObjective("broadcast");
     setCampaignMode("broadcast"); setTriggerType("new_lead"); setTriggerValue("");
-    setTriggerActions(["send_message"]); setSubject(""); setBody("");
+    setTriggerActions(["send_message"]); setTriggerStatusValue(""); setTriggerTagValue("");
+    setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
     setTemplateSettings(DEFAULT_TEMPLATE_SETTINGS);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
@@ -280,6 +283,8 @@ export default function CreateCampaignDialog({
     setTriggerType(trigger.type ?? "new_lead");
     setTriggerValue(trigger.value ?? "");
     setTriggerActions(Array.isArray(trigger.actions) && trigger.actions.length ? trigger.actions : ["send_message"]);
+    setTriggerStatusValue(trigger.status_value ?? "");
+    setTriggerTagValue(trigger.tag_value ?? "");
     setSubject(content.subject ?? "");
     setBody(content.body ?? "");
     if (content.templateSettings) setTemplateSettings({ ...DEFAULT_TEMPLATE_SETTINGS, ...content.templateSettings });
@@ -387,6 +392,7 @@ export default function CreateCampaignDialog({
           scheduled_at: campaignMode === "broadcast" ? (scheduleNow ? null : scheduledAt || null) : editCampaign.scheduled_at,
           trigger_config: campaignMode === "triggered" ? {
             type: triggerType, value: triggerValue, actions: triggerActions,
+            status_value: triggerStatusValue, tag_value: triggerTagValue.trim(),
           } as any : {} as any,
           fallback_settings: fallbackEnabled ? {
             enabled: true, channel: fallbackChannel,
@@ -427,6 +433,7 @@ export default function CreateCampaignDialog({
       scheduled_at: scheduleNow ? null : scheduledAt || null,
       trigger_config: campaignMode === "triggered" ? {
         type: triggerType, value: triggerValue, actions: triggerActions,
+        status_value: triggerStatusValue, tag_value: triggerTagValue.trim(),
       } as any : {} as any,
       fallback_settings: fallbackEnabled ? {
         enabled: true, channel: fallbackChannel,
@@ -495,6 +502,21 @@ export default function CreateCampaignDialog({
     if (campaignMode === "broadcast" && step === 2) return -1; // skip
     return step;
   };
+
+  // A triggered campaign that is missing the value an action needs would do
+  // nothing at run time, so it cannot be saved half-configured.
+  const triggerIssue =
+    campaignMode !== "triggered" ? null
+    : triggerActions.length === 0 ? "Choose at least one action for this trigger."
+    : (triggerType === "tag_added" || triggerType === "tag_removed") && !triggerValue.trim()
+      ? "Enter the tag that should start this campaign."
+    : triggerType === "score_threshold" && !triggerValue.trim()
+      ? "Enter the score that should start this campaign."
+    : triggerActions.includes("update_status") && !triggerStatusValue
+      ? "Choose the status the lead should move to."
+    : triggerActions.includes("add_tag") && !triggerTagValue.trim()
+      ? "Enter the tag that should be added to the lead."
+    : null;
 
   const nextStep = () => {
     if (step === 1 && campaignMode === "broadcast") setStep(3);
@@ -636,9 +658,38 @@ export default function CreateCampaignDialog({
                 ))}
               </div>
             </div>
+
+            {triggerActions.includes("update_status") && (
+              <div>
+                <Label>New lead status</Label>
+                <Select value={triggerStatusValue} onValueChange={setTriggerStatusValue}>
+                  <SelectTrigger><SelectValue placeholder="Choose a status" /></SelectTrigger>
+                  <SelectContent>
+                    {["New", "Warm", "Hot", "Won", "Lost"].map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">The lead moves to this status each time the campaign fires.</p>
+              </div>
+            )}
+
+            {triggerActions.includes("add_tag") && (
+              <div>
+                <Label>Tag to add</Label>
+                <Input value={triggerTagValue} onChange={(e) => setTriggerTagValue(e.target.value)} placeholder="e.g. campaign-summer" />
+              </div>
+            )}
+
+            {triggerIssue && (
+              <p className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+                {triggerIssue}
+              </p>
+            )}
+
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={nextStep} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
+              <Button onClick={nextStep} disabled={!!triggerIssue} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>
         )}
@@ -1092,7 +1143,10 @@ export default function CreateCampaignDialog({
                 onClick={handleCreate}
                 disabled={
                   createCampaign.isPending || updateCampaign.isPending ||
-                  (campaignMode === "broadcast" && audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))
+                  !!triggerIssue ||
+                  (triggerActions.includes("send_message") && !body.trim()) ||
+                  (campaignMode === "broadcast" && (!body.trim() ||
+                    (audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))))
                 }
                 className="flex-1"
               >

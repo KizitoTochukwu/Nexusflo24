@@ -31,13 +31,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!jobs || jobs.length === 0) {
-      return new Response(JSON.stringify({ ok: true, processed: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // --- Also check for scheduled campaigns ---
+    // --- Due scheduled campaigns. Runs on EVERY pass, whether or not other
+    // jobs are pending, otherwise a quiet account never sends them. ---
     const { data: scheduledCampaigns } = await supabase
       .from("campaigns")
       .select("id")
@@ -45,21 +40,35 @@ Deno.serve(async (req) => {
       .lte("scheduled_at", new Date().toISOString())
       .limit(20);
 
-    if (scheduledCampaigns && scheduledCampaigns.length > 0) {
-      for (const camp of scheduledCampaigns) {
-        try {
-          await fetch(`${supabaseUrl}/functions/v1/execute-campaign`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceRoleKey}`,
-            },
-            body: JSON.stringify({ campaign_id: camp.id }),
-          });
-        } catch (e) {
-          console.error(`Failed to execute scheduled campaign ${camp.id}:`, e);
-        }
+    for (const camp of scheduledCampaigns ?? []) {
+      try {
+        // Claim it first: only one runner can move it out of "scheduled",
+        // so an overlapping cron pass cannot send the same campaign twice.
+        const { data: claimed } = await supabase
+          .from("campaigns")
+          .update({ status: "active", updated_at: new Date().toISOString() })
+          .eq("id", camp.id)
+          .eq("status", "scheduled")
+          .select("id");
+        if (!claimed || claimed.length === 0) continue;
+
+        await fetch(`${supabaseUrl}/functions/v1/execute-campaign`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({ campaign_id: camp.id }),
+        });
+      } catch (e) {
+        console.error(`Failed to execute scheduled campaign ${camp.id}:`, e);
       }
+    }
+
+    if (!jobs || jobs.length === 0) {
+      return new Response(JSON.stringify({ ok: true, processed: 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const results: any[] = [];
@@ -88,6 +97,28 @@ Deno.serve(async (req) => {
           const fbWorkspaceId = payload.workspace_id || job.workspace_id;
           const fbLeadId = payload.lead_id || job.lead_id;
           const fbCampaignId = payload.campaign_id;
+
+          // Honour the configured condition at send time: if the person has
+          // since opened or replied on a primary channel, the fallback is
+          // no longer wanted.
+          const fbCondition = String(payload.condition || "failed");
+          if (fbCondition === "unread" || fbCondition === "no_reply") {
+            const { data: priorMsgs } = await supabase
+              .from("campaign_messages")
+              .select("opened, replied")
+              .eq("campaign_id", fbCampaignId)
+              .eq("lead_id", fbLeadId)
+              .limit(50);
+            const engaged = (priorMsgs ?? []).some((m: any) =>
+              fbCondition === "no_reply" ? m.replied : (m.opened || m.replied));
+            if (engaged) {
+              await supabase.from("scheduled_jobs")
+                .update({ status: "completed", error: null, updated_at: new Date().toISOString() })
+                .eq("id", job.id);
+              results.push({ job_id: job.id, status: "skipped_condition_met" });
+              continue;
+            }
+          }
 
           // Re-fetch lead to get current phone/email (and to interpolate
           // {{vars}} in case the queued payload predates the normalizer).

@@ -372,6 +372,30 @@ Deno.serve(async (req) => {
         form_id: typeof body.form_id === "string" ? body.form_id : null,
         source: source || "Make.com",
       });
+
+      // Triggered campaigns — same semantics as website capture: genuinely
+      // new leads only, so a repeat submission never re-sends the campaign.
+      if (!existing) {
+        const { data: triggeredCampaigns } = await supabase
+          .from("campaigns")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .eq("campaign_mode", "triggered")
+          .eq("status", "active")
+          .contains("trigger_config", { type: "new_lead" });
+
+        for (const camp of triggeredCampaigns ?? []) {
+          try {
+            await fetch(`${supabaseUrl}/functions/v1/execute-campaign`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
+              body: JSON.stringify({ campaign_id: camp.id, lead_ids: [leadId] }),
+            });
+          } catch (e) {
+            console.error(`[ingest-leads] campaign ${camp.id} failed:`, e);
+          }
+        }
+      }
     } catch (trigErr) {
       console.error("[ingest-leads] trigger dispatch failed:", String(trigErr));
     }
