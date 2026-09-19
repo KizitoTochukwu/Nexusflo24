@@ -241,7 +241,10 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
     key: "webhooks", label: "Webhooks", description: "Inbound webhooks from external systems",
     objects: ["contact", "lead", "deal", "payment"],
     scopeFields: [{ key: "webhook_path", label: "Webhook path" }],
-    events: [{ key: "webhook_received", label: "Webhook received" }],
+    events: [
+      { key: "new_lead", label: "Lead received from an inbound webhook", emitted: true },
+      { key: "webhook_received", label: "Webhook received", emitted: false },
+    ],
   },
 ];
 
