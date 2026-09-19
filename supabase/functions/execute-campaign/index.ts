@@ -127,10 +127,13 @@ Deno.serve(async (req) => {
     if (leadsErr) throw leadsErr;
 
     if (!leads || leads.length === 0) {
-      // Update campaign to completed with 0 sent
-      await supabase.from("campaigns").update({
-        status: "completed", sent_count: 0, updated_at: new Date().toISOString(),
-      }).eq("id", campaign_id);
+      // Broadcasts close out; triggered campaigns stay active and wait for the next event.
+      if (!isTriggered) {
+        await supabase.from("campaigns").update({
+          status: "completed", sent_count: 0, updated_at: new Date().toISOString(),
+        }).eq("id", campaign_id);
+      }
+
 
       return new Response(JSON.stringify({ ok: true, sent: 0, message: "No matching leads" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
