@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
       let lastSubject = messageSubject;
       let lastTextBody = "";
 
-      for (const ch of allChannels) {
+      for (const ch of (wantsMessage ? allChannels : [])) {
         // Skip channels the lead can't receive on
         if (ch === "email" && !lead.email) continue;
         if ((ch === "whatsapp" || ch === "sms") && !lead.phone) continue;
