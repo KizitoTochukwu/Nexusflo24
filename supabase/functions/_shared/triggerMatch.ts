@@ -155,7 +155,7 @@ export function matchTriggerScope(params: {
     // Event-scoped key
     const eventValue = event[key];
     if (eventValue === undefined || eventValue === null || eventValue === "") {
-      if (resolved[key] === true) continue;
+      if (resolved[key] === true || assume) continue;
       return { matched: false, failedKey: key, reason: `Event did not carry ${key}` };
     }
     if (key === "shop_product_id" && Array.isArray(eventValue)) {
