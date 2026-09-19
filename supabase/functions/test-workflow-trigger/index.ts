@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
       workspace_id: bodyWorkspaceId,
       trigger_source,
       trigger_event,
+      trigger_config = {},
       filter_groups = [],
     } = body;
 
