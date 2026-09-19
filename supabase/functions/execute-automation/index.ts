@@ -55,6 +55,7 @@ async function loadCrmExtras(
         if (contact[key] != null) extra[key] = contact[key] ? "true" : "false";
       }
       if (contact.whatsapp_number) extra.whatsapp_number = contact.whatsapp_number;
+      if (contact.company) extra.company_name = String(contact.company);
       const { data: vals } = await supabase
         .from("crm_custom_field_values")
         .select("value, crm_custom_field_defs!inner(field_key)")
