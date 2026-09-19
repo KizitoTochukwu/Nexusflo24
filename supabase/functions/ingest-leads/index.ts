@@ -3,6 +3,7 @@ import { sanitizeString, isValidEmail, isValidPhone, sanitizeTags, safeErrorResp
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
 import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
+import { dispatchTriggerEvent } from "../_shared/triggerDispatch.ts";
 
 
 const corsHeaders = {
@@ -340,7 +341,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- Fire workflow triggers (mirrors capture-lead) ---
+    // --- Fire enrolment triggers (Automations + Workflows, one dispatcher) ---
     try {
       const previousTags = (existing?.tags || []) as string[];
       const addedTags = tags.filter(
@@ -348,31 +349,26 @@ Deno.serve(async (req) => {
       );
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const dispatchWorkflow = async (eventType: string, eventConfig: Record<string, unknown>) => {
-        const response = await fetch(`${supabaseUrl}/functions/v1/enroll-workflow-leads`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${svcKey}` },
-          body: JSON.stringify({
-            workspace_id: workspaceId,
-            lead_ids: [leadId],
-            event_type: eventType,
-            event_config: eventConfig,
-          }),
+      const fire = (eventType: string, eventConfig: Record<string, unknown>) =>
+        dispatchTriggerEvent({
+          supabase,
+          supabaseUrl,
+          serviceKey: svcKey,
+          workspaceId,
+          leadIds: [leadId],
+          eventType,
+          eventConfig,
         });
-        if (!response.ok) {
-          console.error(`[ingest-leads] workflow trigger ${eventType} failed with status ${response.status}`);
-        }
-      };
-      if (addedTags.length > 0) {
-        for (const tag of addedTags) {
-          await dispatchWorkflow("lead_tagged", { tag });
-        }
+
+      for (const tag of addedTags) {
+        await fire("lead_tagged", { tag });
+        await fire("tag_added", { tag });
       }
-      if (!existing) await dispatchWorkflow("new_lead", {});
+      if (!existing) await fire("new_lead", {});
 
       // A submission is an event even when it updates an existing lead and
-      // contributes no new tags. This enables intentional workflow re-entry.
-      await dispatchWorkflow("form_submitted", {
+      // contributes no new tags. This enables intentional re-entry.
+      await fire("form_submitted", {
         form_id: typeof body.form_id === "string" ? body.form_id : null,
         source: source || "Make.com",
       });

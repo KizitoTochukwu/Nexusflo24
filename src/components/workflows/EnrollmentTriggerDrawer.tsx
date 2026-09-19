@@ -13,8 +13,10 @@ import { Label } from "@/components/ui/label";
 import {
   ENROLLMENT_METHODS, TRIGGER_SOURCES, REENROLLMENT_MODES,
   findSource, findEvent, scopeFieldsFor, buildTriggerSummary, configurationStatus,
+  triggerReadinessProblem, isMethodSupported,
   type EnrollmentObject,
 } from "@/lib/workflows/triggerCatalog";
+import ScopeValuePicker from "./ScopeValuePicker";
 import FilterGroupBuilder, { type FilterGroup } from "./FilterGroupBuilder";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -84,12 +86,14 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
 
   const draft = {
     enrollment_object_type: enrollmentObject,
+    enrollment_method: method,
     trigger_source: source,
     trigger_event: event,
     trigger_config: config,
   };
   const summary = buildTriggerSummary({ ...draft, name: workflow?.name });
   const status = configurationStatus(draft);
+  const problem = triggerReadinessProblem(draft);
 
   const handleSave = async () => {
     setSaving(true);
@@ -162,18 +166,36 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
             <p className="text-foreground/90">{summary}</p>
           </div>
 
+          {problem && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs text-amber-800">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{problem}</span>
+            </div>
+          )}
+
           {/* Step 1 – Enrollment method */}
           <Section title="1. Enrollment method">
             <RadioGroup value={method} onValueChange={setMethod} className="space-y-2">
-              {ENROLLMENT_METHODS.map((m) => (
-                <label key={m.key} className="flex cursor-pointer items-start gap-2 rounded-md border p-2 hover:bg-muted/30">
-                  <RadioGroupItem value={m.key} id={`m-${m.key}`} className="mt-0.5" />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{m.label}</div>
-                    <div className="text-xs text-muted-foreground">{m.description}</div>
-                  </div>
-                </label>
-              ))}
+              {ENROLLMENT_METHODS.map((m) => {
+                const off = !isMethodSupported(m.key);
+                return (
+                  <label
+                    key={m.key}
+                    className={`flex items-start gap-2 rounded-md border p-2 ${
+                      off ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-muted/30"
+                    }`}
+                  >
+                    <RadioGroupItem value={m.key} id={`m-${m.key}`} className="mt-0.5" disabled={off} />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        {m.label}
+                        {off && <Badge variant="outline" className="text-[10px]">Coming soon</Badge>}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{m.description}</div>
+                    </div>
+                  </label>
+                );
+              })}
             </RadioGroup>
           </Section>
 
@@ -199,15 +221,29 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
           {srcDef && (
             <Section title="3. Trigger event">
               <div className="space-y-1.5">
-                {srcDef.events.map((e) => (
-                  <label key={e.key} className={`flex cursor-pointer items-start gap-2 rounded-md border p-2 hover:bg-muted/30 ${event === e.key ? "border-accent bg-accent/5" : ""}`}>
-                    <input type="radio" name="ev" checked={event === e.key} onChange={() => setEvent(e.key)} className="mt-1" />
-                    <div>
-                      <div className="text-sm font-medium">{e.label}</div>
-                      {e.description && <div className="text-xs text-muted-foreground">{e.description}</div>}
-                    </div>
-                  </label>
-                ))}
+                {srcDef.events.map((e) => {
+                  const off = e.emitted !== true;
+                  return (
+                    <label
+                      key={e.key}
+                      className={`flex items-start gap-2 rounded-md border p-2 ${
+                        off ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-muted/30"
+                      } ${event === e.key ? "border-accent bg-accent/5" : ""}`}
+                    >
+                      <input
+                        type="radio" name="ev" checked={event === e.key} disabled={off}
+                        onChange={() => setEvent(e.key)} className="mt-1"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          {e.label}
+                          {off && <Badge variant="outline" className="text-[10px]">Coming soon</Badge>}
+                        </div>
+                        {e.description && <div className="text-xs text-muted-foreground">{e.description}</div>}
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </Section>
           )}
@@ -222,29 +258,24 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
                       {f.label}
                       {f.required && <span className="ml-1 text-destructive">*</span>}
                     </Label>
-                    <div className="mt-1 flex gap-2">
-                      <Input
-                        value={
-                          typeof config[f.key] === "object"
-                            ? (config[f.key]?.label ?? config[f.key]?.value ?? "")
-                            : (config[f.key] === "__any__" ? "" : (config[f.key] ?? ""))
+                    <div className="mt-1">
+                      <ScopeValuePicker
+                        scopeKey={f.key}
+                        label={f.label}
+                        workspaceId={workflow?.workspace_id}
+                        value={config[f.key]}
+                        allowAny={f.allowAny !== false && !f.required}
+                        pipelineId={
+                          typeof config.pipeline === "object" ? config.pipeline?.id : config.pipeline
                         }
-                        placeholder={f.allowAny ? "Any value" : "Enter ID or name"}
-                        onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
-                        className="h-8"
+                        onChange={(v) => setConfig({ ...config, [f.key]: v })}
                       />
-                      {f.allowAny && (
-                        <Button
-                          variant={config[f.key] === "__any__" || !config[f.key] ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setConfig({ ...config, [f.key]: "__any__" })}
-                        >
-                          Any
-                        </Button>
-                      )}
                     </div>
                   </div>
                 ))}
+                <p className="text-[11px] text-muted-foreground">
+                  Leave a box on "Any value" to let every record through.
+                </p>
               </div>
             </Section>
           )}
@@ -252,7 +283,7 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
           {/* Step 5 – Additional filters */}
           {event && (
             <Section title="5. Additional filters">
-              <FilterGroupBuilder value={filters} onChange={setFilters} propertySuggestions={["email", "phone", "name", "tags", "score", "source", "status"]} />
+              <FilterGroupBuilder value={filters} onChange={setFilters} propertySuggestions={["email", "phone", "full_name", "tags", "score", "source", "status", "company", "city", "country"]} />
             </Section>
           )}
 

@@ -9,6 +9,7 @@ import { Zap, FlaskConical, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import EnrollmentTriggerDrawer, { type EnrollmentTriggerPatch } from "./EnrollmentTriggerDrawer";
+import TriggerActivityPanel from "./TriggerActivityPanel";
 import {
   ENROLLMENT_OBJECTS,
   TRIGGER_SOURCES,
@@ -137,6 +138,16 @@ export default function EnrollmentTriggerCard({
           </Button>
         </div>
       </div>
+
+      {record.id && (
+        <div className="mt-3">
+          <TriggerActivityPanel
+            recordId={record.id}
+            recordKind={recordKind}
+            workspaceId={record.workspace_id}
+          />
+        </div>
+      )}
 
       <EnrollmentTriggerDrawer
         open={drawerOpen}

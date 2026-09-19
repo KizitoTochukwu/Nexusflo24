@@ -1,5 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { eventMatchesCriterion, type ExitCriterion } from "@/lib/automations/exitCriteria";
+import {
+  matchTriggerScope,
+  evaluateFilterGroups,
+  scopeValueId,
+  type FilterGroup,
+} from "@/lib/workflows/triggerMatch";
 
 /**
  * Fires automations matching a given trigger_type for the given lead(s).
@@ -36,66 +42,50 @@ export async function fireAutomationsForLeads(params: {
     },
   }).catch((e) => console.error("[fireAutomationsForLeads] exit-criteria cancel error:", e));
 
-  // ---------- 2) Original matching + dispatch logic ----------
-  // Exclusive dispatch: if any active LEGACY automation matches this trigger,
-  // we send to execute-automation only. Otherwise we hand off to the new
-  // Workflows engine. This stops both engines from running for the same
-  // (automation, lead) pair, which was causing one engine to silently
-  // overwrite the other's branch_context / scheduled_jobs state.
-  let legacyMatched = false;
+  // ---------- 2) Matching + dispatch ----------
+  // Non-exclusive: the same event is offered to BOTH engines using one shared
+  // set of scope rules. Each engine keeps its own single-run guard, so a record
+  // never enters the same automation or workflow twice for one event.
   try {
     const { data: autos, error } = await supabase
       .from("automations")
-      .select("id, trigger_config")
+      .select("id, trigger_config, filter_groups")
       .eq("workspace_id", workspaceId)
       .eq("status", "active")
       .eq("trigger_type", triggerType);
     if (error) throw error;
 
-    const candidate = (autos ?? []).filter((a) => {
-      const cfg = (a.trigger_config ?? {}) as Record<string, unknown>;
-      if (!triggerConfigMatch) {
-        // No event-side scope provided. Funnel-scoped automations need an
-        // association lookup (handled below). Other scoped configs (tag,
-        // status, folder, form) without a matching event value are skipped.
-        const hasNonFunnelScope = Object.entries(cfg).some(
-          ([k, v]) => k !== "funnel_id" && v !== undefined && v !== null && v !== ""
-        );
-        return !hasNonFunnelScope;
-      }
-      return Object.entries(triggerConfigMatch).every(([k, v]) => {
-        const av = cfg[k];
-        if (av === undefined || av === null || av === "") return true;
-        return String(av) === String(v);
-      });
-    });
+    for (const auto of autos ?? []) {
+      const cfg = (auto.trigger_config ?? {}) as Record<string, any>;
 
-    // Resolve funnel-scope: when an automation has a funnel_id but the event
-    // didn't carry one, check whether the lead has any association with that
-    // funnel via funnel_visits or form_submissions→forms.
-    const matched: typeof candidate = [];
-    for (const auto of candidate) {
-      const cfg = (auto.trigger_config ?? {}) as Record<string, unknown>;
-      const cfgFunnelId = (cfg.funnel_id as string | null | undefined) || null;
-      const eventFunnelId = (triggerConfigMatch?.funnel_id as string | undefined) || null;
-      if (cfgFunnelId && !eventFunnelId) {
-        const associated = await leadAssociatedWithFunnel(leadIds, cfgFunnelId);
-        if (!associated) continue;
-      }
-      matched.push(auto);
-    }
-
-    legacyMatched = matched.length > 0;
-
-    for (const auto of matched) {
       for (const leadId of leadIds) {
+        const { data: lead } = await supabase
+          .from("leads")
+          .select("*")
+          .eq("id", leadId)
+          .maybeSingle();
+        if (!lead) continue;
+
+        const resolvedKeys: Record<string, boolean> = {};
+        const cfgFunnelId = scopeValueId(cfg.funnel_id);
+        if (cfgFunnelId && !triggerConfigMatch?.funnel_id) {
+          resolvedKeys.funnel_id = await leadAssociatedWithFunnel([leadId], cfgFunnelId);
+        }
+
+        const scope = matchTriggerScope({
+          triggerConfig: cfg,
+          eventConfig: (triggerConfigMatch || {}) as Record<string, any>,
+          record: lead,
+          resolvedKeys,
+        });
+        if (!scope.matched) continue;
+
+        const filters = evaluateFilterGroups(lead, (auto.filter_groups || []) as FilterGroup[]);
+        if (!filters.passed) continue;
+
         supabase.functions
           .invoke("execute-automation", {
-            body: {
-              automation_id: auto.id,
-              workspace_id: workspaceId,
-              lead_id: leadId,
-            },
+            body: { automation_id: auto.id, workspace_id: workspaceId, lead_id: leadId },
           })
           .catch((e) => console.error("[fireAutomationsForLeads] invoke error:", e));
       }
@@ -104,22 +94,20 @@ export async function fireAutomationsForLeads(params: {
     console.error("[fireAutomationsForLeads] lookup error:", e);
   }
 
-  // Only dispatch to Workflows engine if no legacy automation took the trigger.
-  if (!legacyMatched) {
-    try {
-      supabase.functions
-        .invoke("enroll-workflow-leads", {
-          body: {
-            workspace_id: workspaceId,
-            lead_ids: leadIds,
-            event_type: triggerType,
-            event_config: triggerConfigMatch || {},
-          },
-        })
-        .catch((e) => console.error("[fireAutomationsForLeads] workflow invoke error:", e));
-    } catch (e) {
-      console.error("[fireAutomationsForLeads] workflow dispatch error:", e);
-    }
+  // Workflows always get the event too.
+  try {
+    supabase.functions
+      .invoke("enroll-workflow-leads", {
+        body: {
+          workspace_id: workspaceId,
+          lead_ids: leadIds,
+          event_type: triggerType,
+          event_config: triggerConfigMatch || {},
+        },
+      })
+      .catch((e) => console.error("[fireAutomationsForLeads] workflow invoke error:", e));
+  } catch (e) {
+    console.error("[fireAutomationsForLeads] workflow dispatch error:", e);
   }
 }
 

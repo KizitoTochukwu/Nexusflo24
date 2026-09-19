@@ -45,6 +45,12 @@ export interface TriggerEventDef {
   description?: string;
   scopeFields?: ScopeField[]; // override source-level fields when event-specific
   defaultDedupKey?: string;   // e.g. meta.leadgen_id
+  /**
+   * False when nothing in the platform fires this event yet. Such events are
+   * shown as "Coming soon" and cannot be selected, so a trigger can never be
+   * saved in a state that silently never runs.
+   */
+  emitted?: boolean;
 }
 
 export interface TriggerSourceDef {
@@ -56,23 +62,35 @@ export interface TriggerSourceDef {
   events: TriggerEventDef[];
 }
 
-export const ENROLLMENT_OBJECTS: { key: EnrollmentObject; label: string; description: string }[] = [
-  { key: "contact", label: "Contact", description: "Any person record" },
-  { key: "lead", label: "Lead", description: "Prospect in the CRM" },
-  { key: "deal", label: "Deal", description: "Pipeline opportunity" },
-  { key: "booking", label: "Booking", description: "Calendar appointment" },
-  { key: "conversation", label: "Conversation", description: "Inbox thread" },
-  { key: "payment", label: "Payment", description: "One-off transaction" },
-  { key: "subscription", label: "Subscription", description: "Recurring plan" },
+export const ENROLLMENT_OBJECTS: {
+  key: EnrollmentObject; label: string; description: string; supported?: boolean;
+}[] = [
+  { key: "contact", label: "Contact", description: "Any person record", supported: true },
+  { key: "lead", label: "Lead", description: "Prospect in the CRM", supported: true },
+  { key: "deal", label: "Deal", description: "Pipeline opportunity", supported: false },
+  { key: "booking", label: "Booking", description: "Calendar appointment", supported: false },
+  { key: "conversation", label: "Conversation", description: "Inbox thread", supported: false },
+  { key: "payment", label: "Payment", description: "One-off transaction", supported: false },
+  { key: "subscription", label: "Subscription", description: "Recurring plan", supported: false },
 ];
 
-export const ENROLLMENT_METHODS: { key: EnrollmentMethod; label: string; description: string }[] = [
-  { key: "event", label: "When an event occurs", description: "Enrol as soon as a matching event fires" },
-  { key: "filter", label: "When filter criteria are met", description: "Enrol when a record starts matching a saved filter" },
-  { key: "schedule", label: "On a schedule", description: "Run at a fixed interval" },
-  { key: "webhook", label: "When a webhook is received", description: "Enrol from an inbound webhook call" },
-  { key: "manual", label: "Manual enrollment", description: "Only enrol records added manually" },
+export const ENROLLMENT_METHODS: {
+  key: EnrollmentMethod; label: string; description: string; supported?: boolean;
+}[] = [
+  { key: "event", label: "When an event occurs", description: "Enrol as soon as a matching event fires", supported: true },
+  { key: "manual", label: "Manual enrollment", description: "Only enrol records you add by hand", supported: true },
+  { key: "filter", label: "When filter criteria are met", description: "Enrol when a record starts matching a saved filter", supported: false },
+  { key: "schedule", label: "On a schedule", description: "Run at a fixed interval", supported: false },
+  { key: "webhook", label: "When a webhook is received", description: "Enrol from an inbound webhook call", supported: false },
 ];
+
+export function isObjectSupported(key?: string | null): boolean {
+  return ENROLLMENT_OBJECTS.find((o) => o.key === key)?.supported === true;
+}
+
+export function isMethodSupported(key?: string | null): boolean {
+  return ENROLLMENT_METHODS.find((m) => m.key === key)?.supported === true;
+}
 
 const CRM_SCOPE: ScopeField[] = [
   { key: "pipeline", label: "Pipeline", allowAny: true },
@@ -98,11 +116,13 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
     objects: ["contact", "lead", "deal"],
     scopeFields: CRM_SCOPE,
     events: [
-      { key: "new_lead", label: "New lead created" },
-      { key: "lead_added_to_folder", label: "Lead added to folder" },
-      { key: "lead_tagged", label: "Lead tagged" },
-      { key: "tag_added_any", label: "Any tag added" },
-      { key: "score_threshold", label: "Lead score threshold reached" },
+      { key: "new_lead", label: "New lead created", emitted: true },
+      { key: "lead_added_to_folder", label: "Lead added to folder", emitted: true },
+      { key: "lead_tagged", label: "Lead tagged", emitted: true },
+      { key: "tag_added", label: "Any tag added", description: "Fires for every newly applied tag", emitted: true },
+      { key: "contact_created", label: "Contact created", emitted: true },
+      { key: "contact_updated", label: "Contact updated", emitted: true },
+      { key: "score_threshold", label: "Lead score threshold reached", emitted: false },
     ],
   },
   {
@@ -110,8 +130,8 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
     objects: ["lead", "contact"],
     scopeFields: [{ key: "form_id", label: "Form", allowAny: true }],
     events: [
-      { key: "form_submitted", label: "Form submitted" },
-      { key: "roi_calculator_submitted", label: "ROI calculator submitted" },
+      { key: "form_submitted", label: "Form submitted", emitted: true },
+      { key: "roi_calculator_submitted", label: "ROI calculator submitted", emitted: true },
     ],
   },
   {
@@ -124,7 +144,8 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
       { key: "funnel_step_id", label: "Funnel step", allowAny: true },
     ],
     events: [
-      { key: "funnel_step_completed", label: "Funnel step completed" },
+      { key: "form_submitted", label: "Funnel form submitted", emitted: true },
+      { key: "funnel_step_completed", label: "Funnel step completed", emitted: false },
     ],
   },
   {
@@ -132,21 +153,21 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
     objects: ["lead", "contact"],
     scopeFields: META_SCOPE,
     events: [
-      { key: "meta_lead_received", label: "New Facebook lead received", defaultDedupKey: "meta.leadgen_id" },
-      { key: "meta_lead_updated", label: "Facebook lead updated", defaultDedupKey: "meta.leadgen_id" },
+      { key: "meta_lead_received", label: "New Facebook lead received", defaultDedupKey: "meta.leadgen_id", emitted: false },
+      { key: "meta_lead_updated", label: "Facebook lead updated", defaultDedupKey: "meta.leadgen_id", emitted: false },
     ],
   },
   {
     key: "linkedin_lead_gen", label: "LinkedIn Lead Gen", description: "LinkedIn Lead Gen Forms",
     objects: ["lead", "contact"],
     scopeFields: [{ key: "meta_form_id", label: "Lead form", allowAny: true }],
-    events: [{ key: "linkedin_lead_received", label: "New LinkedIn lead received" }],
+    events: [{ key: "linkedin_lead_received", label: "New LinkedIn lead received", emitted: false }],
   },
   {
     key: "google_lead_forms", label: "Google Lead Forms", description: "Google Ads Lead Form extensions",
     objects: ["lead", "contact"],
     scopeFields: [{ key: "meta_form_id", label: "Lead form", allowAny: true }],
-    events: [{ key: "google_lead_received", label: "New Google lead received" }],
+    events: [{ key: "google_lead_received", label: "New Google lead received", emitted: false }],
   },
   {
     key: "bookings", label: "Bookings", description: "Calendar appointments",
@@ -158,9 +179,9 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
       { key: "appointment_status", label: "Appointment status", allowAny: true },
     ],
     events: [
-      { key: "appointment_booked", label: "Appointment booked" },
-      { key: "appointment_cancelled", label: "Appointment cancelled" },
-      { key: "appointment_completed", label: "Appointment completed" },
+      { key: "book_appointment", label: "Appointment booked", emitted: true },
+      { key: "appointment_cancelled", label: "Appointment cancelled", emitted: false },
+      { key: "appointment_completed", label: "Appointment completed", emitted: false },
     ],
   },
   {
@@ -168,28 +189,28 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
     objects: ["lead", "contact"],
     scopeFields: [],
     events: [
-      { key: "email_opened", label: "Email opened" },
-      { key: "email_not_opened", label: "Email not opened after delay" },
-      { key: "link_clicked", label: "Link clicked" },
+      { key: "email_opened", label: "Email opened", emitted: false },
+      { key: "email_not_opened", label: "Email not opened after delay", emitted: false },
+      { key: "link_clicked", label: "Link clicked", emitted: false },
     ],
   },
   {
     key: "whatsapp", label: "WhatsApp", description: "WhatsApp conversation events",
     objects: ["conversation", "lead", "contact"],
     scopeFields: [],
-    events: [{ key: "whatsapp_replied", label: "WhatsApp reply received" }],
+    events: [{ key: "whatsapp_replied", label: "WhatsApp reply received", emitted: false }],
   },
   {
     key: "sms", label: "SMS", description: "SMS conversation events",
     objects: ["conversation", "lead", "contact"],
     scopeFields: [],
-    events: [{ key: "sms_replied", label: "SMS reply received" }],
+    events: [{ key: "sms_replied", label: "SMS reply received", emitted: false }],
   },
   {
     key: "payments", label: "Payments", description: "Stripe / Paystack transactions",
     objects: ["payment", "contact"],
     scopeFields: [],
-    events: [{ key: "purchase_event", label: "Purchase completed" }],
+    events: [{ key: "order_paid", label: "Purchase completed", emitted: true }],
   },
   {
     key: "commerce", label: "Commerce store", description: "Your storefront orders, subscriptions and refunds",
@@ -199,27 +220,31 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
       { key: "shop_product_id", label: "Product", allowAny: true },
     ],
     events: [
-      { key: "order_paid", label: "Order paid", description: "Any successful storefront purchase", defaultDedupKey: "order_id" },
-      { key: "first_order_placed", label: "First order placed", description: "Buyer's very first paid order" },
-      { key: "order_refunded", label: "Order refunded" },
-      { key: "checkout_abandoned", label: "Checkout abandoned", description: "Checkout session expired without payment" },
-      { key: "payment_failed", label: "Payment failed" },
-      { key: "subscription_started", label: "Subscription started" },
-      { key: "subscription_renewed", label: "Subscription renewed" },
-      { key: "subscription_cancelled", label: "Subscription cancelled" },
+      { key: "order_paid", label: "Order paid", description: "Any successful storefront purchase", defaultDedupKey: "order_id", emitted: true },
+      { key: "first_order_placed", label: "First order placed", description: "Buyer's very first paid order", emitted: true },
+      { key: "order_refunded", label: "Order refunded", emitted: true },
+      { key: "checkout_started", label: "Checkout started", description: "Buyer began checkout", emitted: true },
+      { key: "checkout_abandoned", label: "Checkout abandoned", description: "Checkout session expired without payment", emitted: false },
+      { key: "payment_failed", label: "Payment failed", emitted: false },
+      { key: "subscription_started", label: "Subscription started", emitted: true },
+      { key: "subscription_renewed", label: "Subscription renewed", emitted: true },
+      { key: "subscription_cancelled", label: "Subscription cancelled", emitted: true },
     ],
   },
   {
     key: "campaigns", label: "Campaigns", description: "Broadcasts and drips",
     objects: ["lead", "contact"],
     scopeFields: [{ key: "campaign_id", label: "Campaign", allowAny: true }],
-    events: [{ key: "campaign_completed", label: "Campaign completed" }],
+    events: [{ key: "campaign_completed", label: "Campaign completed", emitted: false }],
   },
   {
     key: "webhooks", label: "Webhooks", description: "Inbound webhooks from external systems",
     objects: ["contact", "lead", "deal", "payment"],
     scopeFields: [{ key: "webhook_path", label: "Webhook path" }],
-    events: [{ key: "webhook_received", label: "Webhook received" }],
+    events: [
+      { key: "new_lead", label: "Lead received from an inbound webhook", emitted: true },
+      { key: "webhook_received", label: "Webhook received", emitted: false },
+    ],
   },
 ];
 
@@ -279,14 +304,47 @@ export interface TriggerLike {
   trigger_config?: Record<string, any> | null;
 }
 
-/** Green = configured, amber = incomplete, red = error. */
-export function configurationStatus(w: TriggerLike): "configured" | "incomplete" | "error" {
-  if (!w.trigger_source || !w.trigger_event) return "incomplete";
+export function isEventEmitted(sourceKey?: string | null, eventKey?: string | null): boolean {
+  return findEvent(sourceKey, eventKey)?.emitted === true;
+}
+
+/**
+ * Explains, in plain words, why a trigger cannot run yet. Returns null when the
+ * trigger is ready. Used to block activation and to show a warning in the UI.
+ */
+export function triggerReadinessProblem(
+  w: TriggerLike & { enrollment_method?: string | null },
+): string | null {
+  if (!w.trigger_source || !w.trigger_event) return "Choose what should start this.";
+  if (w.enrollment_method && !isMethodSupported(w.enrollment_method)) {
+    return "This way of starting is not available yet. Use \"When an event occurs\" or manual.";
+  }
+  if (w.enrollment_object_type && !isObjectSupported(w.enrollment_object_type)) {
+    return "Only leads and contacts can be enrolled at the moment.";
+  }
+  if (!isEventEmitted(w.trigger_source, w.trigger_event)) {
+    return "This event is not available yet, so nothing would ever start it.";
+  }
   const fields = scopeFieldsFor(w.trigger_source, w.trigger_event);
   const cfg = w.trigger_config || {};
-  const missingRequired = fields.filter((f) => f.required && !cfg[f.key]);
-  if (missingRequired.length > 0) return "incomplete";
-  return "configured";
+  const missing = fields.filter((f) => f.required && !cfg[f.key]).map((f) => f.label);
+  if (missing.length) return `Still needed: ${missing.join(", ")}.`;
+  return null;
+}
+
+/** Green = configured, amber = incomplete, red = error. */
+export function configurationStatus(
+  w: TriggerLike & { enrollment_method?: string | null },
+): "configured" | "incomplete" | "error" {
+  if (!w.trigger_source || !w.trigger_event) return "incomplete";
+  if (
+    (w.enrollment_method && !isMethodSupported(w.enrollment_method)) ||
+    (w.enrollment_object_type && !isObjectSupported(w.enrollment_object_type)) ||
+    !isEventEmitted(w.trigger_source, w.trigger_event)
+  ) {
+    return "error";
+  }
+  return triggerReadinessProblem(w) ? "incomplete" : "configured";
 }
 
 export function buildTriggerSummary(w: TriggerLike & { name?: string }): string {

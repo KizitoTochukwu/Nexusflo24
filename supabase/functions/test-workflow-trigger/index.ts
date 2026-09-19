@@ -1,43 +1,19 @@
 // Test-only trigger evaluator. Returns a sample payload and whether the current
-// filter set would pass — never runs the workflow/automation.
+// scope + filter set would pass — never runs the workflow/automation.
+//
+// Uses exactly the same matching code as the live engines, so a passing test
+// means the real trigger would also pass.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  matchTriggerScope,
+  evaluateFilterGroups,
+  type FilterGroup,
+} from "../_shared/triggerMatch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface FilterCondition { property: string; operator: string; value?: string }
-interface FilterGroup { combinator: "AND" | "OR"; conditions: FilterCondition[] }
-
-function evalCondition(rec: Record<string, any>, c: FilterCondition): boolean {
-  const v = rec?.[c.property];
-  switch (c.operator) {
-    case "eq": return String(v ?? "") === String(c.value ?? "");
-    case "neq": return String(v ?? "") !== String(c.value ?? "");
-    case "in": return (c.value || "").split(",").map((s) => s.trim()).includes(String(v ?? ""));
-    case "nin": return !(c.value || "").split(",").map((s) => s.trim()).includes(String(v ?? ""));
-    case "contains": return String(v ?? "").toLowerCase().includes(String(c.value ?? "").toLowerCase());
-    case "ncontains": return !String(v ?? "").toLowerCase().includes(String(c.value ?? "").toLowerCase());
-    case "known": return v !== undefined && v !== null && v !== "";
-    case "unknown": return v === undefined || v === null || v === "";
-    case "gt": return Number(v) > Number(c.value);
-    case "lt": return Number(v) < Number(c.value);
-    case "before": return new Date(v).getTime() < new Date(c.value || "").getTime();
-    case "after": return new Date(v).getTime() > new Date(c.value || "").getTime();
-    default: return true;
-  }
-}
-
-function evalGroups(rec: Record<string, any>, groups: FilterGroup[]): boolean {
-  if (!groups?.length) return true;
-  return groups.some((g) => {
-    if (!g.conditions?.length) return true;
-    return g.combinator === "OR"
-      ? g.conditions.some((c) => evalCondition(rec, c))
-      : g.conditions.every((c) => evalCondition(rec, c));
-  });
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -51,6 +27,7 @@ Deno.serve(async (req) => {
       workspace_id: bodyWorkspaceId,
       trigger_source,
       trigger_event,
+      trigger_config = {},
       filter_groups = [],
     } = body;
 
@@ -88,10 +65,20 @@ Deno.serve(async (req) => {
     }
 
     if (!sample) {
-      sample = { note: `No recent ${trigger_source ?? "event"} sample found. Filters were evaluated against an empty payload.` };
+      sample = { note: `No recent ${trigger_source ?? "event"} sample found. Rules were checked against an empty payload.` };
     }
 
-    const passed = evalGroups(sample, filter_groups as FilterGroup[]);
+    // Same rules the live engines use: scope first, then extra filters.
+    const scope = matchTriggerScope({
+      triggerConfig: (trigger_config || {}) as Record<string, any>,
+      eventConfig: {},
+      record: sample,
+      // In a test there is no real event, so scoped values are treated as
+      // satisfied — otherwise every scoped trigger would look broken.
+      assumeScopeSatisfied: true,
+    });
+    const filters = evaluateFilterGroups(sample, filter_groups as FilterGroup[]);
+    const passed = scope.matched && filters.passed;
 
     // Mark last_tested_at on the originating record
     const nowIso = new Date().toISOString();
@@ -107,6 +94,7 @@ Deno.serve(async (req) => {
       sample_payload: sample,
       mapped_fields: mapped,
       passed,
+      reason: passed ? null : (scope.matched ? filters.reason : scope.reason),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e?.message || "test_failed" }), {
