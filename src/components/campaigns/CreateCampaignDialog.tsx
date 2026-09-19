@@ -643,9 +643,38 @@ export default function CreateCampaignDialog({
                 ))}
               </div>
             </div>
+
+            {triggerActions.includes("update_status") && (
+              <div>
+                <Label>New lead status</Label>
+                <Select value={triggerStatusValue} onValueChange={setTriggerStatusValue}>
+                  <SelectTrigger><SelectValue placeholder="Choose a status" /></SelectTrigger>
+                  <SelectContent>
+                    {["New", "Warm", "Hot", "Won", "Lost"].map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">The lead moves to this status each time the campaign fires.</p>
+              </div>
+            )}
+
+            {triggerActions.includes("add_tag") && (
+              <div>
+                <Label>Tag to add</Label>
+                <Input value={triggerTagValue} onChange={(e) => setTriggerTagValue(e.target.value)} placeholder="e.g. campaign-summer" />
+              </div>
+            )}
+
+            {triggerIssue && (
+              <p className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+                {triggerIssue}
+              </p>
+            )}
+
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={nextStep} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
+              <Button onClick={nextStep} disabled={!!triggerIssue} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>
         )}
