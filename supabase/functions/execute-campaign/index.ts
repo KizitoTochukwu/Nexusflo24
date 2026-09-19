@@ -188,9 +188,11 @@ Deno.serve(async (req) => {
       const reason = skippedUnsubscribed > 0
         ? `${skippedUnsubscribed} lead(s) skipped — all recipients are unsubscribed.`
         : "No matching leads for this audience.";
-      await supabase.from("campaigns").update({
-        status: "failed", sent_count: 0, updated_at: new Date().toISOString(),
-      }).eq("id", campaign_id);
+      if (!isTriggered) {
+        await supabase.from("campaigns").update({
+          status: "failed", sent_count: 0, updated_at: new Date().toISOString(),
+        }).eq("id", campaign_id);
+      }
       await notifyZeroSend(reason);
       return new Response(JSON.stringify({
         ok: true, sent: 0, failed: 0, total: 0,
