@@ -3,6 +3,7 @@ import { sanitizeString, isValidEmail, sanitizeTags, safeErrorResponse } from ".
 import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
 import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
+import { dispatchTriggerEvent } from "../_shared/triggerDispatch.ts";
 
 
 const corsHeaders = {
