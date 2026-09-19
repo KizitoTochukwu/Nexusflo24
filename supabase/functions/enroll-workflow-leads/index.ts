@@ -82,7 +82,8 @@ Deno.serve(async (req) => {
     for (const wf of workflows) {
       const canvas = wf.canvas_json || { nodes: [] };
       const trig = (canvas.nodes || []).find((n: any) => n.data?.kind === "trigger");
-      if (!triggerMatches(wf, trig, event_type, event_config)) continue;
+      if (!eventMatches(wf, trig, event_type)) continue;
+      const triggerCfg = effectiveTriggerConfig(wf, trig);
       matchedWorkflows++;
 
       // Webhook / duplicate-event guard (e.g. Meta leadgen_id retries).
@@ -112,6 +113,35 @@ Deno.serve(async (req) => {
         const { data: lead } = await supabase.from("leads").select("*").eq("id", leadId).maybeSingle();
         if (!lead) continue;
 
+        // Scope (funnel scope may be satisfied by an existing funnel visit)
+        const resolvedKeys: Record<string, boolean> = {};
+        const cfgFunnel = typeof triggerCfg.funnel_id === "object"
+          ? triggerCfg.funnel_id?.id
+          : triggerCfg.funnel_id;
+        if (cfgFunnel && cfgFunnel !== "__any__" && !event_config.funnel_id) {
+          const { count } = await supabase
+            .from("funnel_visits")
+            .select("id", { count: "exact", head: true })
+            .eq("funnel_id", String(cfgFunnel))
+            .eq("lead_id", leadId);
+          resolvedKeys.funnel_id = (count ?? 0) > 0;
+        }
+        const scope = matchTriggerScope({
+          triggerConfig: triggerCfg,
+          eventConfig: event_config,
+          record: lead,
+          resolvedKeys,
+        });
+        if (!scope.matched) {
+          await supabase.from("workflow_logs").insert({
+            workflow_id: wf.id, workspace_id, enrollment_id: null, lead_id: leadId,
+            event_type: "out_of_scope", level: "info",
+            message: scope.reason || "Event outside this trigger's scope",
+            details: { scope_key: scope.failedKey, trigger_config: triggerCfg, event_config },
+          }).then(() => {}, () => {});
+          continue;
+        }
+
         if (leadIsSuppressed(lead, wf.suppression_config)) {
           await supabase.from("workflow_logs").insert({
             workflow_id: wf.id, workspace_id, enrollment_id: null, lead_id: leadId,
@@ -121,13 +151,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Additional filter groups (from new trigger drawer)
-        if (!leadPassesFilters(lead, wf.filter_groups || [])) {
+        // Additional filter groups (from the trigger drawer)
+        const filters = evaluateFilterGroups(lead, (wf.filter_groups || []) as FilterGroup[]);
+        if (!filters.passed) {
           await supabase.from("workflow_logs").insert({
             workflow_id: wf.id, workspace_id, enrollment_id: null, lead_id: leadId,
             event_type: "filtered_out", level: "info",
-            message: `Lead did not match trigger filters`,
-            details: { filter_groups: wf.filter_groups },
+            message: filters.reason || "Lead did not match trigger filters",
+            details: { condition: filters.failed },
           }).then(() => {}, () => {});
           continue;
         }
@@ -142,7 +173,8 @@ Deno.serve(async (req) => {
         const last = existing?.[0];
         if (last) {
           if (last.status === "active") continue; // duplicate guard
-          if (!canReEnroll(wf, last)) continue;
+          const legacyAllow = !!wf?.enrollment_config?.reEnrollment;
+          if (!canReEnrol(wf.reenrollment_config, { started_at: last.started_at, status: last.status }, legacyAllow)) continue;
         }
 
         const { data: enrollment, error: insErr } = await supabase
