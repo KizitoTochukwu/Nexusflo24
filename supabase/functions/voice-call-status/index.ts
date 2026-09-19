@@ -8,7 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveChannelCredentials } from "../_shared/channel-credentials.ts";
 import { validateTwilioSignature } from "../_shared/voice-gateway-token.ts";
-import { syncCallToCrm } from "../_shared/voiceCrm.ts";
+import { processCall } from "../_shared/voiceCallProcessing.ts";
 
 const STATUS_MAP: Record<string, string> = {
   queued: "ringing",
@@ -94,9 +94,10 @@ Deno.serve(async (req) => {
         });
       }
       try {
-        await syncCallToCrm(admin, call.id);
+        // Summary, intent, sentiment, recording and CRM sync — once per call.
+        await processCall(admin, call.id);
       } catch (err) {
-        console.error("[voice-call-status] crm sync failed", err);
+        console.error("[voice-call-status] post-call processing failed", err);
       }
     }
 

@@ -49,6 +49,10 @@ export type VoiceCallSession = {
   intent: string | null;
   sentiment: string | null;
   summary: string | null;
+  extracted_fields: Record<string, unknown> | null;
+  deal_id?: string | null;
+  booking_id?: string | null;
+  assistant_version?: number | null;
 };
 
 export type VoiceKnowledgeSource = {
@@ -542,6 +546,117 @@ export function useSyncVoiceCallToCrm(workspaceId?: string) {
       else toast.error("There was nothing to identify this caller by");
     },
     onError: (e: Error) => toast.error(e.message || "Could not save this caller"),
+  });
+}
+
+export type VoiceTranscriptTurn = {
+  id: string;
+  turn_index: number;
+  speaker: string;
+  content: string;
+  started_offset_ms: number | null;
+};
+
+export type VoiceCallRecording = {
+  id: string;
+  storage_path: string;
+  duration_seconds: number | null;
+  size_bytes: number | null;
+  mime_type: string | null;
+  retention_expires_at: string | null;
+  created_at: string;
+};
+
+/** What was said during a call, in order. */
+export function useVoiceCallTranscript(callSessionId?: string) {
+  return useQuery({
+    queryKey: ["voice", "transcript", callSessionId],
+    enabled: !!callSessionId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("voice_call_transcripts")
+        .select("id, turn_index, speaker, content, started_offset_ms")
+        .eq("call_session_id", callSessionId!)
+        .order("turn_index", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as VoiceTranscriptTurn[];
+    },
+  });
+}
+
+/** The stored recording for a call, if one was kept. */
+export function useVoiceCallRecording(callSessionId?: string) {
+  return useQuery({
+    queryKey: ["voice", "recording", callSessionId],
+    enabled: !!callSessionId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("voice_call_recordings")
+        .select("id, storage_path, duration_seconds, size_bytes, mime_type, retention_expires_at, created_at")
+        .eq("call_session_id", callSessionId!)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as VoiceCallRecording | null;
+    },
+  });
+}
+
+/** A short-lived private link for playing a recording back. */
+export function useVoiceRecordingLink() {
+  return useMutation({
+    mutationFn: async (recordingId: string) => {
+      const { data, error } = await supabase.functions.invoke("voice-recording-access", {
+        body: { recording_id: recordingId, action: "link" },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error(data?.error || "Recording file is unavailable");
+      return data.url as string;
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not open this recording"),
+  });
+}
+
+/** Permanently removes a recording and its stored audio (workspace admins only). */
+export function useDeleteVoiceRecording(callSessionId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (recordingId: string) => {
+      const { data, error } = await supabase.functions.invoke("voice-recording-access", {
+        body: { recording_id: recordingId, action: "delete" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["voice", "recording", callSessionId] });
+      toast.success("Recording deleted");
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not delete this recording"),
+  });
+}
+
+/** Writes (or rewrites) the summary, intent, sentiment and captured details. */
+export function useProcessVoiceCall(workspaceId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { callSessionId: string; force?: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("voice-call-process", {
+        body: { call_session_id: input.callSessionId, force: input.force ?? true },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as { ok: boolean; status: string; summary?: string | null };
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: key(workspaceId, "calls") });
+      qc.invalidateQueries({ queryKey: key(workspaceId, "call-contacts") });
+      if (result?.status === "no_transcript") toast.error("There was nothing said on this call to summarise");
+      else if (result?.status === "summary_unavailable") toast.error("The summary service was unavailable — please try again");
+      else toast.success("Call summary updated");
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not summarise this call"),
   });
 }
 
