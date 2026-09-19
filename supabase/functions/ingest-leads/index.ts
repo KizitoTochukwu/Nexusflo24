@@ -465,7 +465,26 @@ Deno.serve(async (req) => {
 
 
     return new Response(
-      JSON.stringify({ ok: true, action, lead_id: leadId, workspace_id: workspaceId }),
+      JSON.stringify({
+        ok: true,
+        action,
+        lead_id: leadId,
+        workspace_id: workspaceId,
+        ...(webinarResult
+          ? {
+              webinar: {
+                registration_id: webinarResult.registration_id,
+                contact_id: webinarResult.contact_id,
+                deal_id: webinarResult.deal_id,
+                repeat: webinarResult.repeat,
+                enrolled: webinarResult.should_enrol,
+                webinar_url: webinarResult.webinar_url,
+                booking_url: webinarResult.booking_url,
+                product_url: webinarResult.product_url,
+              },
+            }
+          : {}),
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
