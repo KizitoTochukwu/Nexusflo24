@@ -49,6 +49,10 @@ export type VoiceCallSession = {
   intent: string | null;
   sentiment: string | null;
   summary: string | null;
+  extracted_fields: Record<string, unknown> | null;
+  deal_id?: string | null;
+  booking_id?: string | null;
+  assistant_version?: number | null;
 };
 
 export type VoiceKnowledgeSource = {
