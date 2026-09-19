@@ -222,29 +222,24 @@ export default function EnrollmentTriggerDrawer({ open, onOpenChange, workflow, 
                       {f.label}
                       {f.required && <span className="ml-1 text-destructive">*</span>}
                     </Label>
-                    <div className="mt-1 flex gap-2">
-                      <Input
-                        value={
-                          typeof config[f.key] === "object"
-                            ? (config[f.key]?.label ?? config[f.key]?.value ?? "")
-                            : (config[f.key] === "__any__" ? "" : (config[f.key] ?? ""))
+                    <div className="mt-1">
+                      <ScopeValuePicker
+                        scopeKey={f.key}
+                        label={f.label}
+                        workspaceId={workflow?.workspace_id}
+                        value={config[f.key]}
+                        allowAny={f.allowAny !== false && !f.required}
+                        pipelineId={
+                          typeof config.pipeline === "object" ? config.pipeline?.id : config.pipeline
                         }
-                        placeholder={f.allowAny ? "Any value" : "Enter ID or name"}
-                        onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
-                        className="h-8"
+                        onChange={(v) => setConfig({ ...config, [f.key]: v })}
                       />
-                      {f.allowAny && (
-                        <Button
-                          variant={config[f.key] === "__any__" || !config[f.key] ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setConfig({ ...config, [f.key]: "__any__" })}
-                        >
-                          Any
-                        </Button>
-                      )}
                     </div>
                   </div>
                 ))}
+                <p className="text-[11px] text-muted-foreground">
+                  Leave a box on "Any value" to let every record through.
+                </p>
               </div>
             </Section>
           )}
