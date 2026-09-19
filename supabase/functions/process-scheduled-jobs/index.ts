@@ -98,6 +98,28 @@ Deno.serve(async (req) => {
           const fbLeadId = payload.lead_id || job.lead_id;
           const fbCampaignId = payload.campaign_id;
 
+          // Honour the configured condition at send time: if the person has
+          // since opened or replied on a primary channel, the fallback is
+          // no longer wanted.
+          const fbCondition = String(payload.condition || "failed");
+          if (fbCondition === "unread" || fbCondition === "no_reply") {
+            const { data: priorMsgs } = await supabase
+              .from("campaign_messages")
+              .select("opened, replied")
+              .eq("campaign_id", fbCampaignId)
+              .eq("lead_id", fbLeadId)
+              .limit(50);
+            const engaged = (priorMsgs ?? []).some((m: any) =>
+              fbCondition === "no_reply" ? m.replied : (m.opened || m.replied));
+            if (engaged) {
+              await supabase.from("scheduled_jobs")
+                .update({ status: "completed", error: null, updated_at: new Date().toISOString() })
+                .eq("id", job.id);
+              results.push({ job_id: job.id, status: "skipped_condition_met" });
+              continue;
+            }
+          }
+
           // Re-fetch lead to get current phone/email (and to interpolate
           // {{vars}} in case the queued payload predates the normalizer).
           const { data: lead } = await supabase
