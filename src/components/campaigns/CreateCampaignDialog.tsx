@@ -503,6 +503,21 @@ export default function CreateCampaignDialog({
     return step;
   };
 
+  // A triggered campaign that is missing the value an action needs would do
+  // nothing at run time, so it cannot be saved half-configured.
+  const triggerIssue =
+    campaignMode !== "triggered" ? null
+    : triggerActions.length === 0 ? "Choose at least one action for this trigger."
+    : (triggerType === "tag_added" || triggerType === "tag_removed") && !triggerValue.trim()
+      ? "Enter the tag that should start this campaign."
+    : triggerType === "score_threshold" && !triggerValue.trim()
+      ? "Enter the score that should start this campaign."
+    : triggerActions.includes("update_status") && !triggerStatusValue
+      ? "Choose the status the lead should move to."
+    : triggerActions.includes("add_tag") && !triggerTagValue.trim()
+      ? "Enter the tag that should be added to the lead."
+    : null;
+
   const nextStep = () => {
     if (step === 1 && campaignMode === "broadcast") setStep(3);
     else setStep(step + 1);
