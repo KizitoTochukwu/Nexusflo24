@@ -1143,7 +1143,10 @@ export default function CreateCampaignDialog({
                 onClick={handleCreate}
                 disabled={
                   createCampaign.isPending || updateCampaign.isPending ||
-                  (campaignMode === "broadcast" && audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))
+                  !!triggerIssue ||
+                  (triggerActions.includes("send_message") && !body.trim()) ||
+                  (campaignMode === "broadcast" && (!body.trim() ||
+                    (audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))))
                 }
                 className="flex-1"
               >
