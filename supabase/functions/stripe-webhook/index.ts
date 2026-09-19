@@ -189,6 +189,99 @@ serve(async (req) => {
             log("WARNING: store-notify failed", notifyErr);
           }
 
+          // Webinar purchase conversion: stop the follow-up sequence (the
+          // "purchase" activity is the purchase_happened exit signal), tag the
+          // buyer, move the webinar deal to Customer Won and notify the owner.
+          // Idempotent — a repeated Stripe event for the same order writes nothing twice.
+          try {
+            const { data: paidOrder } = await supabase
+              .from("store_orders")
+              .select("email, full_name, total_pence, currency, workspace_id")
+              .eq("id", orderId)
+              .maybeSingle();
+            const buyerEmail = (paidOrder?.email || "").trim().toLowerCase();
+            if (buyerEmail) {
+              const { data: lead } = await supabase
+                .from("leads")
+                .select("id, workspace_id, user_id, tags, full_name")
+                .ilike("email", buyerEmail)
+                .order("created_at", { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+              if (lead) {
+                const { data: already } = await supabase
+                  .from("lead_activities")
+                  .select("id")
+                  .eq("lead_id", lead.id)
+                  .eq("type", "purchase")
+                  .filter("meta->>order_id", "eq", orderId)
+                  .limit(1);
+
+                if (!already?.length) {
+                  await supabase.from("lead_activities").insert({
+                    lead_id: lead.id,
+                    workspace_id: lead.workspace_id,
+                    user_id: lead.user_id,
+                    type: "purchase",
+                    meta: {
+                      order_id: orderId,
+                      amount_pence: paidOrder?.total_pence ?? null,
+                      currency: paidOrder?.currency ?? "GBP",
+                      campaign: "WhatsApp Lead Follow-Up Webinar",
+                      purchased_at: new Date().toISOString(),
+                    },
+                  });
+
+                  const tags = new Set([...(lead.tags ?? []), "whatsapp-system-customer"]);
+                  await supabase.from("leads").update({
+                    tags: [...tags],
+                    status: "Converted",
+                    updated_at: new Date().toISOString(),
+                  }).eq("id", lead.id);
+
+                  await supabase.from("contacts").update({
+                    lifecycle_stage: "Customer",
+                    updated_at: new Date().toISOString(),
+                  }).eq("workspace_id", lead.workspace_id).ilike("email", buyerEmail);
+
+                  // Move any open webinar deal for this lead to Customer Won.
+                  const { data: pipeline } = await supabase
+                    .from("crm_pipelines").select("id")
+                    .eq("workspace_id", lead.workspace_id)
+                    .ilike("name", "Whatsapp Lead Follow Up Webinar")
+                    .maybeSingle();
+                  if (pipeline) {
+                    const { data: wonStage } = await supabase
+                      .from("crm_pipeline_stages").select("id")
+                      .eq("pipeline_id", pipeline.id).ilike("name", "Customer Won")
+                      .maybeSingle();
+                    if (wonStage) {
+                      await supabase.from("crm_deals").update({
+                        stage_id: wonStage.id,
+                        status: "won",
+                        updated_at: new Date().toISOString(),
+                      }).eq("workspace_id", lead.workspace_id)
+                        .eq("lead_id", lead.id)
+                        .eq("status", "open");
+                    }
+                  }
+
+                  await supabase.from("notifications").insert({
+                    workspace_id: lead.workspace_id,
+                    user_id: lead.user_id,
+                    type: "purchase",
+                    title: "Webinar lead purchased",
+                    body: `${lead.full_name || buyerEmail} has purchased the WhatsApp Lead Follow-Up System.`,
+                  });
+                  log("Webinar purchase conversion recorded", { orderId, leadId: lead.id });
+                }
+              }
+            }
+          } catch (convErr) {
+            log("WARNING: webinar conversion tracking failed", convErr);
+          }
+
           log("Store order fulfilled", { orderId });
           break;
         }
