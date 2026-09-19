@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useVoiceSettings, useUpdateVoiceSettings } from "@/hooks/useVoice";
+import { useVoiceSettings, useUpdateVoiceSettings, useVoiceNumberStatus } from "@/hooks/useVoice";
 import { VoiceSection, VoiceSetupNotice } from "@/components/voice/VoicePrimitives";
 import {
   VOICE_SETUP_STEPS, VOICE_STARTER_ENTITLEMENT, VOICE_PROVIDER_LABEL,
@@ -16,6 +16,19 @@ export default function VoiceSettings() {
   const workspaceId = useWorkspaceId();
   const { data: settings, isLoading } = useVoiceSettings(workspaceId);
   const save = useUpdateVoiceSettings(workspaceId);
+  const { data: status } = useVoiceNumberStatus(workspaceId);
+
+  const connectionRows = VOICE_SETUP_STEPS.map((s) => ({
+    key: s.key,
+    label: s.label,
+    detail: s.detail,
+    ready:
+      s.key === "gateway"
+        ? status?.gateway_configured === true
+        : s.key === "telephony"
+          ? status?.connected === true
+          : status?.live_calling_enabled === true,
+  }));
 
   const [enabled, setEnabled] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -102,17 +115,29 @@ export default function VoiceSettings() {
 
       <VoiceSection title="Connections" description={`Telephone calls run on ${VOICE_PROVIDER_LABEL}.`}>
         <ul className="space-y-2">
-          {VOICE_SETUP_STEPS.map((s) => (
-            <li key={s.key} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 px-4 py-3">
+          {connectionRows.map((row) => (
+            <li key={row.key} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium">{s.label}</p>
-                <p className="truncate text-xs text-muted-foreground">{s.detail}</p>
+                <p className="text-sm font-medium">{row.label}</p>
+                <p className="truncate text-xs text-muted-foreground">{row.detail}</p>
               </div>
-              <Badge variant="secondary">Setup required</Badge>
+              <Badge variant={row.ready ? "default" : "secondary"}>{row.ready ? "Ready" : "Setup required"}</Badge>
             </li>
           ))}
         </ul>
+        {status?.webhook_url && (
+          <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-muted/30 p-4">
+            <p className="text-sm font-medium">Addresses your telephone provider calls</p>
+            <p className="break-all text-xs text-muted-foreground">Incoming calls: {status.webhook_url}</p>
+            <p className="break-all text-xs text-muted-foreground">Call updates: {status.status_webhook_url}</p>
+            <p className="text-xs text-muted-foreground">
+              These are set on your numbers automatically. Requests that aren't genuinely from your telephone
+              provider are refused.
+            </p>
+          </div>
+        )}
       </VoiceSection>
+
 
       <div className="flex justify-end">
         <Button
