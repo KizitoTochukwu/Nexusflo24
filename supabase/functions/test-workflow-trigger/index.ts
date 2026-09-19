@@ -65,10 +65,20 @@ Deno.serve(async (req) => {
     }
 
     if (!sample) {
-      sample = { note: `No recent ${trigger_source ?? "event"} sample found. Filters were evaluated against an empty payload.` };
+      sample = { note: `No recent ${trigger_source ?? "event"} sample found. Rules were checked against an empty payload.` };
     }
 
-    const passed = evalGroups(sample, filter_groups as FilterGroup[]);
+    // Same rules the live engines use: scope first, then extra filters.
+    const scope = matchTriggerScope({
+      triggerConfig: (trigger_config || {}) as Record<string, any>,
+      eventConfig: {},
+      record: sample,
+      // In a test there is no real event, so scoped values are treated as
+      // satisfied — otherwise every scoped trigger would look broken.
+      assumeScopeSatisfied: true,
+    });
+    const filters = evaluateFilterGroups(sample, filter_groups as FilterGroup[]);
+    const passed = scope.matched && filters.passed;
 
     // Mark last_tested_at on the originating record
     const nowIso = new Date().toISOString();
@@ -84,6 +94,7 @@ Deno.serve(async (req) => {
       sample_payload: sample,
       mapped_fields: mapped,
       passed,
+      reason: passed ? null : (scope.matched ? filters.reason : scope.reason),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e?.message || "test_failed" }), {
