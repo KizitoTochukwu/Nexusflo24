@@ -107,11 +107,14 @@ export function matchTriggerScope(params: {
   /** Optional escape hatch for scope keys the event didn't carry (async work
    *  is done by the caller and passed in as already-resolved booleans). */
   resolvedKeys?: Record<string, boolean>;
+  /** Test mode: there is no real event, so event-scoped keys are assumed met. */
+  assumeScopeSatisfied?: boolean;
 }): ScopeMatchResult {
   const cfg = params.triggerConfig || {};
   const event = params.eventConfig || {};
   const record = params.record || null;
   const resolved = params.resolvedKeys || {};
+  const assume = params.assumeScopeSatisfied === true;
 
   for (const key of Object.keys(cfg)) {
     if (!ALL_SCOPE_KEYS.includes(key)) continue; // setting, not scope
