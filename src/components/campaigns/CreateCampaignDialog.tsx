@@ -249,7 +249,8 @@ export default function CreateCampaignDialog({
   const reset = (opts: { keepAudience?: boolean } = { keepAudience: true }) => {
     setStep(1); setName(""); setType("email"); setObjective("broadcast");
     setCampaignMode("broadcast"); setTriggerType("new_lead"); setTriggerValue("");
-    setTriggerActions(["send_message"]); setSubject(""); setBody("");
+    setTriggerActions(["send_message"]); setTriggerStatusValue(""); setTriggerTagValue("");
+    setSubject(""); setBody("");
     setAiTone("professional"); setAiContext(""); setShowAiPanel(false); setAiVariants([]);
     setTemplateSettings(DEFAULT_TEMPLATE_SETTINGS);
     setFallbackEnabled(false); setFallbackChannel("sms"); setFallbackDelay("30");
