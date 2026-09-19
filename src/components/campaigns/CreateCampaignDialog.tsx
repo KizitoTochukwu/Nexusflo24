@@ -282,6 +282,8 @@ export default function CreateCampaignDialog({
     setTriggerType(trigger.type ?? "new_lead");
     setTriggerValue(trigger.value ?? "");
     setTriggerActions(Array.isArray(trigger.actions) && trigger.actions.length ? trigger.actions : ["send_message"]);
+    setTriggerStatusValue(trigger.status_value ?? "");
+    setTriggerTagValue(trigger.tag_value ?? "");
     setSubject(content.subject ?? "");
     setBody(content.body ?? "");
     if (content.templateSettings) setTemplateSettings({ ...DEFAULT_TEMPLATE_SETTINGS, ...content.templateSettings });
