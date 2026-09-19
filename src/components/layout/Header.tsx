@@ -32,6 +32,7 @@ const solutionsLinks = [
   { label: "For Coaches & Creators", to: "/coaches-creators" },
   { label: "For Marketing Agencies", to: "/marketing-agencies" },
   { label: "For SMEs / Local Businesses", to: "/small-business" },
+  { label: "AI Receptionist", to: "/ai-receptionist" },
 ];
 
 const Header = () => {
