@@ -83,6 +83,8 @@ export default function CreateCampaignDialog({
   const [triggerType, setTriggerType] = useState("new_lead");
   const [triggerValue, setTriggerValue] = useState("");
   const [triggerActions, setTriggerActions] = useState<string[]>(["send_message"]);
+  const [triggerStatusValue, setTriggerStatusValue] = useState("");
+  const [triggerTagValue, setTriggerTagValue] = useState("");
 
   // Step 3 - Content
   const [subject, setSubject] = useState("");
