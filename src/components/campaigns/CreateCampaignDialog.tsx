@@ -392,7 +392,6 @@ export default function CreateCampaignDialog({
           scheduled_at: campaignMode === "broadcast" ? (scheduleNow ? null : scheduledAt || null) : editCampaign.scheduled_at,
           trigger_config: campaignMode === "triggered" ? {
             type: triggerType, value: triggerValue, actions: triggerActions,
-        status_value: triggerStatusValue, tag_value: triggerTagValue.trim(),
             status_value: triggerStatusValue, tag_value: triggerTagValue.trim(),
           } as any : {} as any,
           fallback_settings: fallbackEnabled ? {
