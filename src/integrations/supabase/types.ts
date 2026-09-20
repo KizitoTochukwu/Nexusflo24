@@ -11916,6 +11916,7 @@ export type Database = {
           enabled: boolean
           included_minutes: number
           max_concurrent_calls: number
+          max_numbers: number
           notification_emails: string[]
           overage_rate_pence: number
           provider_status: Json
@@ -11931,6 +11932,7 @@ export type Database = {
           enabled?: boolean
           included_minutes?: number
           max_concurrent_calls?: number
+          max_numbers?: number
           notification_emails?: string[]
           overage_rate_pence?: number
           provider_status?: Json
@@ -11946,6 +11948,7 @@ export type Database = {
           enabled?: boolean
           included_minutes?: number
           max_concurrent_calls?: number
+          max_numbers?: number
           notification_emails?: string[]
           overage_rate_pence?: number
           provider_status?: Json
