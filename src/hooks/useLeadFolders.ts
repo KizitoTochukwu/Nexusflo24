@@ -95,6 +95,35 @@ export function useRenameFolder() {
   });
 }
 
+/** Mark one folder as the workspace default (clears the previous default first). */
+export function useSetDefaultFolder() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, workspaceId, enabled = true }: { id: string; workspaceId: string; enabled?: boolean }) => {
+      const { error: clearErr } = await supabase
+        .from("lead_folders")
+        .update({ is_default: false } as any)
+        .eq("workspace_id", workspaceId)
+        .eq("is_default", true);
+      if (clearErr) throw clearErr;
+
+      if (!enabled) return;
+      const { error } = await supabase
+        .from("lead_folders")
+        .update({ is_default: true } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["lead-folders"] });
+      toast.success(vars.enabled === false ? "Default folder cleared" : "Default folder updated");
+    },
+    onError: (e: any) => toast.error(e.message || "Failed to set default folder"),
+  });
+}
+
+
 export function useDeleteFolder() {
   const qc = useQueryClient();
 
