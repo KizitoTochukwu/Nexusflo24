@@ -518,6 +518,12 @@ export default function CreateCampaignDialog({
       ? "Enter the tag that should be added to the lead."
     : null;
 
+  // An approved WhatsApp template is a valid substitute for free-text content.
+  const hasWaTemplate =
+    (type === "whatsapp" || type === "multi-channel") &&
+    !!(waTemplateSelection?.contentSid || waTemplateSelection?.id || (waTemplateId && waTemplateId !== "none"));
+  const hasMessageContent = !!body.trim() || hasWaTemplate;
+
   const nextStep = () => {
     if (step === 1 && campaignMode === "broadcast") setStep(3);
     else setStep(step + 1);
