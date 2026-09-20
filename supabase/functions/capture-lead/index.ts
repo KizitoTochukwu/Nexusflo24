@@ -4,6 +4,7 @@ import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
 import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
 import { dispatchTriggerEvent } from "../_shared/triggerDispatch.ts";
+import { routeLeadToFolders } from "../_shared/leadFolders.ts";
 
 
 const corsHeaders = {
@@ -11,45 +12,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Best-effort: fire automations matching trigger_type=lead_added_to_folder for a single lead
-async function fireFolderAutomations(
-  supabase: any,
-  workspaceId: string,
-  leadId: string,
-  folderId: string,
-) {
-  try {
-    const { data: autos } = await supabase
-      .from("automations")
-      .select("id, trigger_config")
-      .eq("workspace_id", workspaceId)
-      .eq("status", "active")
-      .eq("trigger_type", "lead_added_to_folder");
-
-    const matched = (autos ?? []).filter((a: any) => {
-      const cfg = a.trigger_config ?? {};
-      const cfgFolder = cfg.folder_id;
-      if (!cfgFolder) return true; // any folder
-      return String(cfgFolder) === String(folderId);
-    });
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    for (const auto of matched) {
-      fetch(`${supabaseUrl}/functions/v1/execute-automation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${anonKey}` },
-        body: JSON.stringify({
-          automation_id: auto.id,
-          workspace_id: workspaceId,
-          lead_id: leadId,
-        }),
-      }).catch(() => { /* best effort */ });
-    }
-  } catch (e) {
-    console.error("[capture-lead] fireFolderAutomations error:", e);
-  }
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -179,7 +141,7 @@ Deno.serve(async (req) => {
     const destTags: string[] = Array.isArray(leadDest.apply_tags) ? leadDest.apply_tags : [];
     const destSource = sanitizeString(leadDest.source, 100);
     const destPipelineStage = sanitizeString(leadDest.pipeline_stage, 50) || "new_lead";
-    const destFolderName = sanitizeString(leadDest.folder_name, 100);
+    const destFolderName = sanitizeString(leadDest.folder_name ?? body.folder_name, 100);
 
     // Campaign/funnel names from meta
     const campaignName = sanitizeString(body.campaign_name || meta.campaign_name, 200);
@@ -465,151 +427,18 @@ Deno.serve(async (req) => {
     }
 
 
-    // --- Auto-route to folders based on routing rules ---
-    let routedToAnyFolder = false;
-    try {
-      const { data: rules } = await supabase
-        .from("lead_routing_rules")
-        .select("folder_id, match_field, match_value")
-        .eq("workspace_id", workspaceId)
-        .eq("is_active", true);
-
-      if (rules && rules.length > 0) {
-        const matchedFolderIds = new Set<string>();
-
-        for (const rule of rules) {
-          let matches = false;
-          if (rule.match_field === "source" && finalSource.toLowerCase() === rule.match_value.toLowerCase()) {
-            matches = true;
-          } else if (rule.match_field === "campaign_name" && campaignName?.toLowerCase() === rule.match_value.toLowerCase()) {
-            matches = true;
-          } else if (rule.match_field === "funnel_name" && funnelName?.toLowerCase() === rule.match_value.toLowerCase()) {
-            matches = true;
-          } else if (rule.match_field === "tag" && newTags.some(t => t.toLowerCase() === rule.match_value.toLowerCase())) {
-            matches = true;
-          }
-          if (matches) matchedFolderIds.add(rule.folder_id);
-        }
-
-        for (const folderId of matchedFolderIds) {
-          // Check if not already in folder
-          const { data: existing } = await supabase
-            .from("lead_folder_leads")
-            .select("id")
-            .eq("lead_id", leadId)
-            .eq("folder_id", folderId)
-            .maybeSingle();
-
-          if (!existing) {
-            await supabase.from("lead_folder_leads").insert({
-              workspace_id: workspaceId,
-              folder_id: folderId,
-              lead_id: leadId,
-            });
-            routedToAnyFolder = true;
-            await fireFolderAutomations(supabase, workspaceId, leadId, folderId);
-          } else {
-            routedToAnyFolder = true;
-          }
-        }
-      }
-
-      // Also route by folder_name from lead destination.
-      // If the folder doesn't exist yet, auto-create it so the form's CRM mapping
-      // is truly self-serve (lead lands in the configured folder, never falls
-      // through to "Uncategorized" just because the user hasn't pre-created it).
-      if (destFolderName) {
-        let { data: folder } = await supabase
-          .from("lead_folders")
-          .select("id")
-          .eq("workspace_id", workspaceId)
-          .ilike("name", destFolderName)
-          .maybeSingle();
-
-        if (!folder) {
-          const { data: created, error: createErr } = await supabase
-            .from("lead_folders")
-            .insert({
-              workspace_id: workspaceId,
-              user_id: ownerId,
-              name: destFolderName,
-              color: "#0B1F3B",
-            })
-            .select("id")
-            .maybeSingle();
-          if (createErr) {
-            console.error("[capture-lead] failed to auto-create folder:", createErr);
-          } else {
-            folder = created;
-          }
-        }
-
-        if (folder) {
-          const { data: existingLink } = await supabase
-            .from("lead_folder_leads")
-            .select("id")
-            .eq("lead_id", leadId)
-            .eq("folder_id", folder.id)
-            .maybeSingle();
-
-          if (!existingLink) {
-            await supabase.from("lead_folder_leads").insert({
-              workspace_id: workspaceId,
-              folder_id: folder.id,
-              lead_id: leadId,
-            });
-            await fireFolderAutomations(supabase, workspaceId, leadId, folder.id);
-          }
-          routedToAnyFolder = true;
-        }
-      }
-
-      // Also count any pre-existing folder assignment (e.g. from CSV import) as routed
-      if (!routedToAnyFolder) {
-        const { data: anyFolder } = await supabase
-          .from("lead_folder_leads")
-          .select("id")
-          .eq("lead_id", leadId)
-          .limit(1)
-          .maybeSingle();
-        if (anyFolder) routedToAnyFolder = true;
-      }
-
-      // Fallback: assign to "Uncategorized" so no lead is left orphaned
-      if (!routedToAnyFolder) {
-        let { data: uncatFolder } = await supabase
-          .from("lead_folders")
-          .select("id")
-          .eq("workspace_id", workspaceId)
-          .ilike("name", "uncategorized")
-          .maybeSingle();
-
-        if (!uncatFolder) {
-          const { data: created } = await supabase
-            .from("lead_folders")
-            .insert({
-              workspace_id: workspaceId,
-              user_id: ownerId,
-              name: "Uncategorized",
-              color: "#94A3B8",
-            })
-            .select("id")
-            .single();
-          uncatFolder = created;
-        }
-
-        if (uncatFolder) {
-          await supabase.from("lead_folder_leads").insert({
-            workspace_id: workspaceId,
-            folder_id: uncatFolder.id,
-            lead_id: leadId,
-          });
-          await fireFolderAutomations(supabase, workspaceId, leadId, uncatFolder.id);
-        }
-      }
-    } catch (routeErr) {
-      console.error("Routing error:", routeErr);
-    }
+    // --- Auto-route to folders (explicit → rules → workspace default → Uncategorized) ---
+    await routeLeadToFolders(supabase, {
+      workspaceId,
+      leadId,
+      ownerId: ownerId as string,
+      folderId: sanitizeString((leadDest as any).folder_id, 64) || null,
+      folderName: destFolderName || null,
+      source: finalSource,
+      campaignName,
+      funnelName,
+      tags: newTags,
+    });
 
     // --- Record form submission (so forms.submission_count trigger fires) ---
     const formId = sanitizeString(body.form_id, 64);

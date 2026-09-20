@@ -12,8 +12,8 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Route, Lock, Inbox } from "lucide-react";
-import { type LeadFolder, useCreateFolder, useRenameFolder, useDeleteFolder } from "@/hooks/useLeadFolders";
+import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Route, Lock, Inbox, Star } from "lucide-react";
+import { type LeadFolder, useCreateFolder, useRenameFolder, useDeleteFolder, useSetDefaultFolder } from "@/hooks/useLeadFolders";
 import { useRoutingRules, useCreateRoutingRule, useDeleteRoutingRule, type LeadRoutingRule } from "@/hooks/useLeadRouting";
 import { Badge } from "@/components/ui/badge";
 
@@ -40,6 +40,7 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
   const createFolder = useCreateFolder();
   const renameFolder = useRenameFolder();
   const deleteFolder = useDeleteFolder();
+  const setDefaultFolder = useSetDefaultFolder();
   const { data: routingRules = [] } = useRoutingRules(workspaceId);
   const createRule = useCreateRoutingRule();
   const deleteRule = useDeleteRoutingRule();
@@ -130,6 +131,7 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
                 {f.name}
               </span>
               <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                {f.is_default && <Star className="h-3 w-3 fill-accent text-accent" aria-label="Default folder" />}
                 {protectedFolder && <Lock className="h-3 w-3 text-muted-foreground" />}
                 {folderRules(f.id).length > 0 && (
                   <Route className="h-3 w-3 text-accent" />
@@ -151,6 +153,12 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
                 )}
                 <DropdownMenuItem onClick={() => { setRouteOpen(f.id); setRuleField("source"); setRuleValue(""); }}>
                   <Route className="mr-2 h-3.5 w-3.5" /> Auto-Route Rules
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setDefaultFolder.mutate({ id: f.id, workspaceId, enabled: !f.is_default })}
+                >
+                  <Star className={`mr-2 h-3.5 w-3.5 ${f.is_default ? "fill-accent text-accent" : ""}`} />
+                  {f.is_default ? "Remove as default folder" : "Set as default folder"}
                 </DropdownMenuItem>
                 {!protectedFolder && (
                   <DropdownMenuItem onClick={() => setDeleteId(f.id)} className="text-destructive">

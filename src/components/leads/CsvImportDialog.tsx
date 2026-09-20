@@ -398,8 +398,9 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
         }
       }
 
-      // Determine destination folder: user-picked or fall back to "Uncategorized"
+      // Destination folder: user-picked → workspace default → "Uncategorized"
       let folderId: string | null = selectedFolderId !== "__none__" ? selectedFolderId : null;
+      if (!folderId) folderId = folders.find((f) => f.is_default)?.id ?? null;
       if (!folderId) {
         const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
         if (uncategorized) {
