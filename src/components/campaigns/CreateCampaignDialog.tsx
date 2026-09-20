@@ -816,7 +816,7 @@ export default function CreateCampaignDialog({
             )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={nextStep} disabled={!body.trim()} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
+              <Button onClick={nextStep} disabled={!hasMessageContent} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>
         )}
@@ -1150,8 +1150,8 @@ export default function CreateCampaignDialog({
                 disabled={
                   createCampaign.isPending || updateCampaign.isPending ||
                   !!triggerIssue ||
-                  (triggerActions.includes("send_message") && !body.trim()) ||
-                  (campaignMode === "broadcast" && (!body.trim() ||
+                  (triggerActions.includes("send_message") && !hasMessageContent) ||
+                  (campaignMode === "broadcast" && (!hasMessageContent ||
                     (audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))))
                 }
                 className="flex-1"
