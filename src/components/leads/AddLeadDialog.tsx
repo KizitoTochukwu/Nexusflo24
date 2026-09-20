@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { PIPELINE_STAGES, type Lead } from "@/hooks/useLeads";
-import type { LeadFolder } from "@/hooks/useLeadFolders";
+import { useCreateFolder, type LeadFolder } from "@/hooks/useLeadFolders";
 
 import { normalizePhoneE164 } from "@/lib/leads/phone";
 
@@ -45,6 +45,10 @@ type Props = {
 
 const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, workspaceId, folders = [] }: Props) => {
   const isEdit = !!defaultValues?.id;
+  const createFolder = useCreateFolder();
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const defaultFolder = folders.find((f) => f.is_default);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
