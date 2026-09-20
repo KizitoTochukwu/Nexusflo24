@@ -131,6 +131,7 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
                 {f.name}
               </span>
               <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                {f.is_default && <Star className="h-3 w-3 fill-accent text-accent" aria-label="Default folder" />}
                 {protectedFolder && <Lock className="h-3 w-3 text-muted-foreground" />}
                 {folderRules(f.id).length > 0 && (
                   <Route className="h-3 w-3 text-accent" />
@@ -152,6 +153,12 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
                 )}
                 <DropdownMenuItem onClick={() => { setRouteOpen(f.id); setRuleField("source"); setRuleValue(""); }}>
                   <Route className="mr-2 h-3.5 w-3.5" /> Auto-Route Rules
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setDefaultFolder.mutate({ id: f.id, workspaceId, enabled: !f.is_default })}
+                >
+                  <Star className={`mr-2 h-3.5 w-3.5 ${f.is_default ? "fill-accent text-accent" : ""}`} />
+                  {f.is_default ? "Remove as default folder" : "Set as default folder"}
                 </DropdownMenuItem>
                 {!protectedFolder && (
                   <DropdownMenuItem onClick={() => setDeleteId(f.id)} className="text-destructive">
