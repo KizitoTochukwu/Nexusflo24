@@ -431,7 +431,7 @@ Deno.serve(async (req) => {
     await routeLeadToFolders(supabase, {
       workspaceId,
       leadId,
-      ownerId,
+      ownerId: ownerId as string,
       folderId: sanitizeString((leadDest as any).folder_id, 64) || null,
       folderName: destFolderName || null,
       source: finalSource,
