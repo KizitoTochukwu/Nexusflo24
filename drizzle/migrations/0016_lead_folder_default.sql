@@ -1,0 +1,2 @@
+ALTER TABLE public.lead_folders ADD COLUMN IF NOT EXISTS is_default boolean NOT NULL DEFAULT false;
+CREATE UNIQUE INDEX IF NOT EXISTS lead_folders_one_default_per_workspace ON public.lead_folders (workspace_id) WHERE is_default;
