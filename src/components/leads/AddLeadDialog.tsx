@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { PIPELINE_STAGES, type Lead } from "@/hooks/useLeads";
-import type { LeadFolder } from "@/hooks/useLeadFolders";
+import { useCreateFolder, type LeadFolder } from "@/hooks/useLeadFolders";
 
 import { normalizePhoneE164 } from "@/lib/leads/phone";
 
@@ -45,6 +45,10 @@ type Props = {
 
 const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, workspaceId, folders = [] }: Props) => {
   const isEdit = !!defaultValues?.id;
+  const createFolder = useCreateFolder();
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const defaultFolder = folders.find((f) => f.is_default);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -94,11 +98,14 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
     const tags = values.tags
       ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
-    // Folder fallback: user-picked → Uncategorized → first folder
-    let folderId = values.folder_id && values.folder_id !== "__none__" ? values.folder_id : undefined;
+    // Folder fallback: user-picked → workspace default → Uncategorized → first folder
+    let folderId =
+      values.folder_id && !["__none__", "__create__"].includes(values.folder_id)
+        ? values.folder_id
+        : undefined;
     if (!folderId && folders.length > 0) {
       const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
-      folderId = (uncategorized || folders[0]).id;
+      folderId = (defaultFolder || uncategorized || folders[0]).id;
     }
     onSubmit({
       ...(defaultValues?.id ? { id: defaultValues.id } : {}),
@@ -192,25 +199,57 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
                 <FormMessage />
               </FormItem>
             )} />
-            {folders.length > 0 && (
-              <FormField control={form.control} name="folder_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign to Folder</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || "__none__"}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Uncategorized (default)" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="__none__">Uncategorized (default)</SelectItem>
-                      {folders.filter((f) => f.name.trim().toLowerCase() !== "uncategorized").map((f) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.color ? `${f.color} ` : ""}{f.name}
-                        </SelectItem>
+            <FormField control={form.control} name="folder_id" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Assign to Folder</FormLabel>
+                <Select
+                  onValueChange={(v) => {
+                    if (v === "__create__") { setCreatingFolder(true); return; }
+                    setCreatingFolder(false);
+                    field.onChange(v);
+                  }}
+                  value={field.value || "__none__"}
+                >
+                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      {defaultFolder ? `${defaultFolder.name} (default)` : "Uncategorized (default)"}
+                    </SelectItem>
+                    {folders
+                      .filter((f) => f.name.trim().toLowerCase() !== "uncategorized" && f.id !== defaultFolder?.id)
+                      .map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            )}
+                    <SelectItem value="__create__">+ Create new folder…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {creatingFolder && (
+                  <div className="mt-2 flex gap-2">
+                    <Input
+                      placeholder="New folder name"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      disabled={!newFolderName.trim() || createFolder.isPending || !workspaceId}
+                      onClick={async () => {
+                        const created = await createFolder.mutateAsync({
+                          name: newFolderName.trim(),
+                          workspace_id: workspaceId!,
+                        });
+                        field.onChange((created as any).id);
+                        setNewFolderName("");
+                        setCreatingFolder(false);
+                      }}
+                    >
+                      Create
+                    </Button>
+                  </div>
+                )}
+                <FormMessage />
+              </FormItem>
+            )} />
             <FormField control={form.control} name="tags" render={({ field }) => (
               <FormItem>
                 <FormLabel>Tags (comma-separated)</FormLabel>
