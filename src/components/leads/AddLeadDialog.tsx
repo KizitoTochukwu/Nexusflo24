@@ -98,11 +98,14 @@ const AddLeadDialog = ({ open, onOpenChange, onSubmit, defaultValues, loading, w
     const tags = values.tags
       ? values.tags.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
-    // Folder fallback: user-picked → Uncategorized → first folder
-    let folderId = values.folder_id && values.folder_id !== "__none__" ? values.folder_id : undefined;
+    // Folder fallback: user-picked → workspace default → Uncategorized → first folder
+    let folderId =
+      values.folder_id && !["__none__", "__create__"].includes(values.folder_id)
+        ? values.folder_id
+        : undefined;
     if (!folderId && folders.length > 0) {
       const uncategorized = folders.find((f) => f.name.trim().toLowerCase() === "uncategorized");
-      folderId = (uncategorized || folders[0]).id;
+      folderId = (defaultFolder || uncategorized || folders[0]).id;
     }
     onSubmit({
       ...(defaultValues?.id ? { id: defaultValues.id } : {}),
