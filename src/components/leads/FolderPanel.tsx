@@ -12,8 +12,8 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Route, Lock, Inbox } from "lucide-react";
-import { type LeadFolder, useCreateFolder, useRenameFolder, useDeleteFolder } from "@/hooks/useLeadFolders";
+import { FolderOpen, Plus, MoreHorizontal, Pencil, Trash2, Route, Lock, Inbox, Star } from "lucide-react";
+import { type LeadFolder, useCreateFolder, useRenameFolder, useDeleteFolder, useSetDefaultFolder } from "@/hooks/useLeadFolders";
 import { useRoutingRules, useCreateRoutingRule, useDeleteRoutingRule, type LeadRoutingRule } from "@/hooks/useLeadRouting";
 import { Badge } from "@/components/ui/badge";
 
@@ -40,6 +40,7 @@ const FolderPanel = ({ folders, activeFolderId, onSelectFolder, workspaceId, tot
   const createFolder = useCreateFolder();
   const renameFolder = useRenameFolder();
   const deleteFolder = useDeleteFolder();
+  const setDefaultFolder = useSetDefaultFolder();
   const { data: routingRules = [] } = useRoutingRules(workspaceId);
   const createRule = useCreateRoutingRule();
   const deleteRule = useDeleteRoutingRule();
