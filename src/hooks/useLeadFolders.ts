@@ -11,8 +11,14 @@ export type LeadFolder = {
   name: string;
   color: string | null;
   created_at: string;
+  is_default?: boolean;
   lead_count?: number;
 };
+
+/** The folder new leads land in when nothing else routes them. */
+export function defaultFolderId(folders: LeadFolder[]): string | undefined {
+  return folders.find((f) => f.is_default)?.id;
+}
 
 export function useLeadFolders(workspaceId: string) {
   const { user } = useAuth();
