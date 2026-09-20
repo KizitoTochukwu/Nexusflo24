@@ -518,6 +518,12 @@ export default function CreateCampaignDialog({
       ? "Enter the tag that should be added to the lead."
     : null;
 
+  // An approved WhatsApp template is a valid substitute for free-text content.
+  const hasWaTemplate =
+    (type === "whatsapp" || type === "multi-channel") &&
+    !!(waTemplateSelection?.contentSid || waTemplateSelection?.id || (waTemplateId && waTemplateId !== "none"));
+  const hasMessageContent = !!body.trim() || hasWaTemplate;
+
   const nextStep = () => {
     if (step === 1 && campaignMode === "broadcast") setStep(3);
     else setStep(step + 1);
@@ -810,7 +816,7 @@ export default function CreateCampaignDialog({
             )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={prevStep} className="flex-1 gap-2"><ChevronLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={nextStep} disabled={!body.trim()} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
+              <Button onClick={nextStep} disabled={!hasMessageContent} className="flex-1 gap-2">Next <ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>
         )}
@@ -1144,8 +1150,8 @@ export default function CreateCampaignDialog({
                 disabled={
                   createCampaign.isPending || updateCampaign.isPending ||
                   !!triggerIssue ||
-                  (triggerActions.includes("send_message") && !body.trim()) ||
-                  (campaignMode === "broadcast" && (!body.trim() ||
+                  (triggerActions.includes("send_message") && !hasMessageContent) ||
+                  (campaignMode === "broadcast" && (!hasMessageContent ||
                     (audienceMode === "folder" && (!selectedFolderId || folderLeadIds.length === 0))))
                 }
                 className="flex-1"

@@ -199,15 +199,29 @@ serve(async (req) => {
               .select("email, full_name, total_pence, currency, workspace_id")
               .eq("id", orderId)
               .maybeSingle();
+            const { data: orderItems } = await supabase
+              .from("store_order_items")
+              .select("product_slug, name")
+              .eq("order_id", orderId);
+            const isWebinarProduct = (orderItems ?? []).some((it: any) =>
+              String(it?.product_slug ?? "").toLowerCase() === "whatsapp-lead-follow-up-system" ||
+              String(it?.name ?? "").toLowerCase().includes("whatsapp lead follow-up system")
+            );
             const buyerEmail = (paidOrder?.email || "").trim().toLowerCase();
-            if (buyerEmail) {
-              const { data: lead } = await supabase
+            if (buyerEmail && isWebinarProduct) {
+              // Only the webinar registrant record may be converted, and only
+              // inside the order's own workspace when the order carries one.
+              let leadQuery = supabase
                 .from("leads")
                 .select("id, workspace_id, user_id, tags, full_name")
                 .ilike("email", buyerEmail)
-                .order("created_at", { ascending: true })
-                .limit(1)
-                .maybeSingle();
+                .contains("tags", ["webinar-lead"])
+                .order("created_at", { ascending: false })
+                .limit(1);
+              if (paidOrder?.workspace_id) {
+                leadQuery = leadQuery.eq("workspace_id", paidOrder.workspace_id);
+              }
+              const { data: lead } = await leadQuery.maybeSingle();
 
               if (lead) {
                 const { data: already } = await supabase

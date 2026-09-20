@@ -142,11 +142,15 @@ Deno.serve(async (req) => {
       isAdmin ? null : json({ error: "Only workspace admins can change phone numbers" }, 403);
 
     // --- entitlement ----------------------------------------------------
-    const { data: settings } = await admin
+    const { data: settings, error: settingsErr } = await admin
       .from("voice_settings")
       .select("max_numbers, enabled")
       .eq("workspace_id", workspaceId)
       .maybeSingle();
+    if (settingsErr) {
+      console.error("voice-numbers: voice_settings lookup failed", settingsErr);
+      return json({ error: "Could not read this workspace's voice plan limits. Please try again." }, 500);
+    }
     const maxNumbers = Number(settings?.max_numbers ?? 1);
 
     const countNumbers = async () => {
