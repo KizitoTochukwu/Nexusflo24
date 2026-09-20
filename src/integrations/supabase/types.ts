@@ -4504,7 +4504,6 @@ export type Database = {
           color: string | null
           created_at: string
           id: string
-          is_default: boolean
           name: string
           user_id: string
           workspace_id: string
@@ -4513,7 +4512,6 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
-          is_default?: boolean
           name: string
           user_id: string
           workspace_id: string
@@ -4522,7 +4520,6 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
-          is_default?: boolean
           name?: string
           user_id?: string
           workspace_id?: string

@@ -4,7 +4,6 @@ import { normalizePhoneE164 } from "../_shared/phone.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "../_shared/canonicalContact.ts";
 import { isAfarhomeEnquiry, processAfarhomeEnquiry } from "../_shared/afarhomeIntake.ts";
 import { dispatchTriggerEvent } from "../_shared/triggerDispatch.ts";
-import { routeLeadToFolders } from "../_shared/leadFolders.ts";
 import {
   isWebinarRegistration,
   processWebinarRegistration,
@@ -382,23 +381,6 @@ Deno.serve(async (req) => {
         },
       });
     }
-
-    // --- File the lead (explicit folder → routing rules → default folder → Uncategorized) ---
-    const leadDest =
-      typeof body.lead_destination === "object" && body.lead_destination !== null
-        ? (body.lead_destination as Record<string, unknown>)
-        : {};
-    await routeLeadToFolders(supabase, {
-      workspaceId: workspaceId!,
-      leadId,
-      ownerId,
-      folderId: sanitizeString(body.folder_id ?? leadDest.folder_id, 64) || null,
-      folderName: sanitizeString(body.folder_name ?? leadDest.folder_name, 100) || null,
-      source: source || "Make.com",
-      campaignName: sanitizeString(body.campaign_name ?? (meta as any)?.campaign_name, 200),
-      funnelName: sanitizeString(body.funnel_name ?? (meta as any)?.funnel_name, 200),
-      tags,
-    });
 
     // --- Fire enrolment triggers (Automations + Workflows, one dispatcher) ---
     try {
