@@ -89,6 +89,9 @@
     iframe.loading = "lazy";
     iframe.title = "NexusFlo24 form";
     iframe.style.cssText = "width:100%;height:100%;border:0;display:block;";
+    iframe.addEventListener("load", function () {
+      if (iframe.contentWindow) iframe.contentWindow.postMessage({ type: "nexusflo-popup-request-size" }, "*");
+    });
 
     resizeHandler = function (event) {
       if (event.source !== iframe.contentWindow || !event.data || event.data.type !== "nexusflo-popup-resize") return;

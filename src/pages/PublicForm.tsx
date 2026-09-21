@@ -37,10 +37,17 @@ export default function PublicForm() {
         "*",
       );
     };
+    const handleResizeRequest = (event: MessageEvent) => {
+      if (event.data?.type === "nexusflo-popup-request-size") notifyHeight();
+    };
     notifyHeight();
+    window.addEventListener("message", handleResizeRequest);
     const observer = new ResizeObserver(notifyHeight);
     observer.observe(document.documentElement);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("message", handleResizeRequest);
+    };
   }, [form, isPopup]);
 
   if (loading) {
