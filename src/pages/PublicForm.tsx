@@ -32,8 +32,12 @@ export default function PublicForm() {
   useEffect(() => {
     if (!isPopup || !form) return;
     const notifyHeight = () => {
+      const renderedForm = document.querySelector("form");
+      const renderedHeight = renderedForm
+        ? Math.ceil(renderedForm.getBoundingClientRect().height)
+        : document.body.scrollHeight;
       window.parent?.postMessage(
-        { type: "nexusflo-popup-resize", height: document.documentElement.scrollHeight },
+        { type: "nexusflo-popup-resize", height: renderedHeight },
         "*",
       );
     };
@@ -43,7 +47,8 @@ export default function PublicForm() {
     notifyHeight();
     window.addEventListener("message", handleResizeRequest);
     const observer = new ResizeObserver(notifyHeight);
-    observer.observe(document.documentElement);
+    const renderedForm = document.querySelector("form");
+    observer.observe(renderedForm ?? document.body);
     return () => {
       observer.disconnect();
       window.removeEventListener("message", handleResizeRequest);
