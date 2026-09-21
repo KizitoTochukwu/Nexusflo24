@@ -33,7 +33,7 @@ export default function PublicForm() {
     if (!isPopup || !form) return;
     const notifyHeight = () => {
       window.parent?.postMessage(
-        { type: "nexusflo-popup-resize", height: document.body.scrollHeight },
+        { type: "nexusflo-popup-resize", height: document.documentElement.scrollHeight },
         "*",
       );
     };
@@ -43,7 +43,7 @@ export default function PublicForm() {
     notifyHeight();
     window.addEventListener("message", handleResizeRequest);
     const observer = new ResizeObserver(notifyHeight);
-    observer.observe(document.body);
+    observer.observe(document.documentElement);
     return () => {
       observer.disconnect();
       window.removeEventListener("message", handleResizeRequest);
