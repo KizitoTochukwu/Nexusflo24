@@ -119,6 +119,12 @@ export default function EnrollmentTriggerCard({
           {record.trigger_summary && (
             <p className="mt-2 text-xs italic text-foreground/80">"{record.trigger_summary}"</p>
           )}
+          <UnscopedTriggerWarning
+            workspaceId={record.workspace_id}
+            recordId={record.id}
+            triggerEvent={record.trigger_event}
+            scopeText={scope}
+          />
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" className="flex-1" onClick={() => setDrawerOpen(true)}>
