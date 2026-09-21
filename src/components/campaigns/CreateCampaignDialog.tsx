@@ -689,6 +689,15 @@ export default function CreateCampaignDialog({
               </div>
             )}
 
+            {campaignMode === "triggered" && triggerType === "new_lead" && (
+              <p className="rounded-md border border-amber-500/50 bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                This fires for <strong>every</strong> new lead in the account, including
+                webinar, contact-form and imported leads. If it is meant for one source
+                only, use a tag trigger instead so people don't receive it alongside your
+                other sequences.
+              </p>
+            )}
+
             {triggerIssue && (
               <p className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
                 {triggerIssue}
