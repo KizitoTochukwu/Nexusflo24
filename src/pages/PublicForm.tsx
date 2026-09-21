@@ -29,6 +29,20 @@ export default function PublicForm() {
     if (form) document.title = `${form.name} – NexusFlo24`;
   }, [form]);
 
+  useEffect(() => {
+    if (!isPopup || !form) return;
+    const notifyHeight = () => {
+      window.parent?.postMessage(
+        { type: "nexusflo-popup-resize", height: document.documentElement.scrollHeight },
+        "*",
+      );
+    };
+    notifyHeight();
+    const observer = new ResizeObserver(notifyHeight);
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, [form, isPopup]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6 text-sm text-muted-foreground">
@@ -53,7 +67,7 @@ export default function PublicForm() {
   return (
     <div
       className={isPopup
-        ? "flex min-h-[100dvh] items-start justify-center p-0"
+        ? "flex items-start justify-center p-0"
         : "flex min-h-screen items-center justify-center p-4 sm:p-8"}
       style={{ background: form.theme.bg_color || "#f8fafc" }}
     >

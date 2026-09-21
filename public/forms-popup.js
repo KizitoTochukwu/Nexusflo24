@@ -42,6 +42,7 @@
   }
 
   var overlay = null;
+  var resizeHandler = null;
 
   function popupFormUrl() {
     try {
@@ -55,6 +56,7 @@
 
   function close() {
     if (overlay) { overlay.remove(); overlay = null; }
+    if (resizeHandler) { window.removeEventListener("message", resizeHandler); resizeHandler = null; }
     document.body.style.overflow = "";
   }
 
@@ -87,6 +89,15 @@
     iframe.loading = "lazy";
     iframe.title = "NexusFlo24 form";
     iframe.style.cssText = "width:100%;height:100%;border:0;display:block;";
+
+    resizeHandler = function (event) {
+      if (event.source !== iframe.contentWindow || !event.data || event.data.type !== "nexusflo-popup-resize") return;
+      var requested = Number(event.data.height);
+      if (!Number.isFinite(requested) || requested <= 0) return;
+      var available = Math.max(320, window.innerHeight - 12);
+      panel.style.height = Math.min(requested, available) + "px";
+    };
+    window.addEventListener("message", resizeHandler);
 
     panel.appendChild(closeBtn);
     panel.appendChild(iframe);
