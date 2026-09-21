@@ -42,9 +42,11 @@ interface Props {
   form: FormRecord;
   /** When true, the renderer simulates submit instead of calling capture-lead. */
   preview?: boolean;
+  /** Condenses spacing and controls for the popup embed. */
+  compact?: boolean;
 }
 
-export default function PublicFormRenderer({ form, preview }: Props) {
+export default function PublicFormRenderer({ form, preview, compact = false }: Props) {
   const steps = form.schema?.steps ?? [];
   const theme = form.theme;
   const settings = form.settings;
@@ -200,7 +202,9 @@ export default function PublicFormRenderer({ form, preview }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative space-y-5 rounded-xl border p-6 shadow-sm"
+      className={compact
+        ? "relative space-y-2.5 rounded-lg border px-4 py-3 shadow-sm sm:px-5 sm:py-4"
+        : "relative space-y-5 rounded-xl border p-6 shadow-sm"}
       style={{
         background: theme.bg_color,
         color: theme.text_color,
@@ -209,12 +213,12 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       }}
     >
       {theme.logo_url && (
-        <img src={theme.logo_url} alt="Logo" className="mx-auto mb-2 max-h-12" />
+        <img src={theme.logo_url} alt="Logo" className={compact ? "mx-auto max-h-8" : "mx-auto mb-2 max-h-12"} />
       )}
       <div>
-        <h2 className="text-xl font-bold">{form.name}</h2>
+        <h2 className={compact ? "text-lg font-bold leading-tight" : "text-xl font-bold"}>{form.name}</h2>
         {form.description && (
-          <p className="mt-1 text-sm opacity-70">{form.description}</p>
+          <p className={compact ? "mt-0.5 text-xs leading-snug opacity-70" : "mt-1 text-sm opacity-70"}>{form.description}</p>
         )}
       </div>
 
@@ -231,10 +235,10 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       )}
 
       {currentStep?.title && (
-        <p className="text-sm font-medium opacity-80">{currentStep.title}</p>
+        <p className={compact ? "text-xs font-medium opacity-80" : "text-sm font-medium opacity-80"}>{currentStep.title}</p>
       )}
 
-      <div className="space-y-4">
+      <div className={compact ? "space-y-2.5" : "space-y-4"}>
         {visibleCurrentFields.map((f) => (
           <FieldRenderer
             key={f.id}
@@ -244,6 +248,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
             accent={theme.accent_color}
             formId={form.id}
             preview={preview}
+            compact={compact}
           />
         ))}
       </div>
@@ -253,6 +258,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           checked={smsConsent}
           onCheckedChange={setSmsConsent}
           consentText={messagingConsentText}
+          className={compact ? "[&_label]:text-[10px] [&_label]:leading-[1.35]" : undefined}
         />
       )}
 
@@ -273,7 +279,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
 
 
 
-      <div className="flex items-center justify-between gap-2 pt-2">
+      <div className={compact ? "flex items-center justify-between gap-2 pt-0.5" : "flex items-center justify-between gap-2 pt-2"}>
         {steps.length > 1 && stepIdx > 0 ? (
           <Button type="button" variant="outline" onClick={() => setStepIdx((i) => i - 1)}>
             Back
@@ -282,6 +288,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
         <Button
           type="submit"
           disabled={submitting}
+          className={compact ? "h-9 px-4" : undefined}
           style={{ background: theme.accent_color, color: "#fff" }}
         >
           {submitting ? "Submitting…" : isLast ? settings.submit_text : "Next"}
@@ -292,7 +299,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
 }
 
 function FieldRenderer({
-  field, value, onChange, accent, formId, preview,
+  field, value, onChange, accent, formId, preview, compact,
 }: {
   field: FormField;
   value: any;
@@ -300,11 +307,12 @@ function FieldRenderer({
   accent: string;
   formId?: string;
   preview?: boolean;
+  compact?: boolean;
 }) {
 
   const styledLabel = (extra?: React.CSSProperties) => (
     <Label
-      className="mb-1.5 block font-medium"
+      className={compact ? "mb-1 block text-xs font-medium" : "mb-1.5 block font-medium"}
       style={{
         color: field.label_color || undefined,
         fontSize: field.label_size ? `${field.label_size}px` : undefined,
@@ -317,7 +325,7 @@ function FieldRenderer({
     </Label>
   );
   const labelEl = (
-    <Label className="mb-1.5 block text-sm font-medium">
+    <Label className={compact ? "mb-1 block text-xs font-medium" : "mb-1.5 block text-sm font-medium"}>
       {field.label}
       {field.required && <span style={{ color: accent }}>{" *"}</span>}
     </Label>
@@ -415,7 +423,7 @@ function FieldRenderer({
         <div>
           {labelEl}
           <Select value={value ?? ""} onValueChange={onChange}>
-            <SelectTrigger><SelectValue placeholder={field.placeholder || "Select…"} /></SelectTrigger>
+            <SelectTrigger className={compact ? "h-9" : undefined}><SelectValue placeholder={field.placeholder || "Select…"} /></SelectTrigger>
             <SelectContent>
               {(field.options ?? []).map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -463,7 +471,9 @@ function FieldRenderer({
       return (
         <label
           htmlFor={field.id}
-          className="group flex cursor-pointer items-start gap-3 rounded-xl border p-3 sm:p-4 transition-all hover:shadow-sm"
+          className={compact
+            ? "group flex cursor-pointer items-start gap-2 rounded-lg border p-2 transition-all hover:shadow-sm"
+            : "group flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all hover:shadow-sm sm:p-4"}
           style={{
             backgroundColor: `${accent}0D`, // ~5% opacity
             borderColor: checked ? accent : `${accent}40`, // 25% when unchecked, full when checked
@@ -485,7 +495,7 @@ function FieldRenderer({
               style={{ color: accent }}
               aria-hidden="true"
             />
-            <span className="text-sm leading-relaxed">
+            <span className={compact ? "text-xs leading-snug" : "text-sm leading-relaxed"}>
               {field.label}
               {field.required && <span style={{ color: accent }}>{" *"}</span>}
             </span>
@@ -519,28 +529,28 @@ function FieldRenderer({
       return (
         <div>
           {labelEl}
-          <Input type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />
+          <Input className={compact ? "h-9" : undefined} type="date" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />
         </div>
       );
     case "number":
       return (
         <div>
           {labelEl}
-          <Input type="number" value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+          <Input className={compact ? "h-9" : undefined} type="number" value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
         </div>
       );
     case "email":
       return (
         <div>
           {labelEl}
-          <Input type="email" value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+          <Input className={compact ? "h-9" : undefined} type="email" value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
         </div>
       );
     case "phone":
       return (
         <div>
           {labelEl}
-          <Input type="tel" value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+          <Input className={compact ? "h-9" : undefined} type="tel" value={value ?? ""} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
         </div>
       );
     case "short_text":
@@ -550,6 +560,7 @@ function FieldRenderer({
         <div>
           {isShortText ? styledLabel() : labelEl}
           <Input
+            className={compact ? "h-9" : undefined}
             value={value ?? ""}
             placeholder={field.placeholder}
             onChange={(e) => onChange(e.target.value)}

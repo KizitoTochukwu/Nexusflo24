@@ -42,9 +42,21 @@
   }
 
   var overlay = null;
+  var resizeHandler = null;
+
+  function popupFormUrl() {
+    try {
+      var url = new URL(formUrl, window.location.href);
+      url.searchParams.set("display", "popup");
+      return url.toString();
+    } catch (e) {
+      return formUrl + (formUrl.indexOf("?") === -1 ? "?" : "&") + "display=popup";
+    }
+  }
 
   function close() {
     if (overlay) { overlay.remove(); overlay = null; }
+    if (resizeHandler) { window.removeEventListener("message", resizeHandler); resizeHandler = null; }
     document.body.style.overflow = "";
   }
 
@@ -56,11 +68,11 @@
     overlay.setAttribute("aria-modal", "true");
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:2147483000;background:rgba(11,31,59,.55);" +
-      "display:flex;align-items:center;justify-content:center;padding:16px;";
+      "display:flex;align-items:center;justify-content:center;padding:clamp(6px,2vh,16px);box-sizing:border-box;";
 
     var panel = document.createElement("div");
     panel.style.cssText =
-      "position:relative;width:100%;max-width:560px;max-height:90vh;background:#fff;" +
+      "position:relative;width:100%;max-width:560px;height:min(96dvh,760px);max-height:calc(100dvh - 12px);background:#fff;" +
       "border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.3);";
 
     var closeBtn = document.createElement("button");
@@ -73,9 +85,22 @@
     closeBtn.addEventListener("click", close);
 
     var iframe = document.createElement("iframe");
-    iframe.src = formUrl;
+    iframe.src = popupFormUrl();
     iframe.loading = "lazy";
-    iframe.style.cssText = "width:100%;height:78vh;border:0;display:block;";
+    iframe.title = "NexusFlo24 form";
+    iframe.style.cssText = "width:100%;height:100%;border:0;display:block;";
+    iframe.addEventListener("load", function () {
+      if (iframe.contentWindow) iframe.contentWindow.postMessage({ type: "nexusflo-popup-request-size" }, "*");
+    });
+
+    resizeHandler = function (event) {
+      if (event.source !== iframe.contentWindow || !event.data || event.data.type !== "nexusflo-popup-resize") return;
+      var requested = Number(event.data.height);
+      if (!Number.isFinite(requested) || requested <= 0) return;
+      var available = Math.max(320, window.innerHeight - 12);
+      panel.style.height = Math.min(requested, available) + "px";
+    };
+    window.addEventListener("message", resizeHandler);
 
     panel.appendChild(closeBtn);
     panel.appendChild(iframe);
