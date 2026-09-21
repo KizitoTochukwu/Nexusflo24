@@ -519,8 +519,10 @@ export default function CreateCampaignDialog({
     : null;
 
   // An approved WhatsApp template is a valid substitute for free-text content.
+  // Only a WhatsApp-only campaign can rely on a template alone. Multi-channel
+  // still needs body text, or the email and SMS legs go out empty.
   const hasWaTemplate =
-    (type === "whatsapp" || type === "multi-channel") &&
+    type === "whatsapp" &&
     !!(waTemplateSelection?.contentSid || waTemplateSelection?.id || (waTemplateId && waTemplateId !== "none"));
   const hasMessageContent = !!body.trim() || hasWaTemplate;
 
