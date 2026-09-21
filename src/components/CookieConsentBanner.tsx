@@ -30,6 +30,8 @@ const CookieConsentBanner = () => {
     analytics: true,
     marketing: false,
   });
+  const isPopupForm = window.location.pathname.startsWith("/forms/")
+    && new URLSearchParams(window.location.search).get("display") === "popup";
 
   useEffect(() => {
     const stored = getStoredPreferences();
@@ -54,7 +56,7 @@ const CookieConsentBanner = () => {
   const rejectNonEssential = () => save({ necessary: true, functional: false, analytics: false, marketing: false });
   const savePrefs = () => save(prefs);
 
-  if (!visible) return null;
+  if (!visible || isPopupForm) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[100] border-t bg-background/95 backdrop-blur-lg shadow-lg">
