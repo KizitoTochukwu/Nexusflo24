@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PublicFormRenderer from "@/components/forms/PublicFormRenderer";
 import type { FormRecord } from "@/hooks/useForms";
@@ -7,6 +7,8 @@ import WorkspacePixelLoader from "@/components/analytics/WorkspacePixelLoader";
 
 export default function PublicForm() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const isPopup = searchParams.get("display") === "popup";
   const [form, setForm] = useState<FormRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,15 +52,19 @@ export default function PublicForm() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center p-4 sm:p-8"
+      className={isPopup
+        ? "flex min-h-[100dvh] items-start justify-center p-0"
+        : "flex min-h-screen items-center justify-center p-4 sm:p-8"}
       style={{ background: form.theme.bg_color || "#f8fafc" }}
     >
       <WorkspacePixelLoader workspaceId={form.workspace_id} />
-      <div className="w-full max-w-xl">
-        <PublicFormRenderer form={form} />
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          Powered by NexusFlo24
-        </p>
+      <div className={isPopup ? "w-full" : "w-full max-w-xl"}>
+        <PublicFormRenderer form={form} compact={isPopup} />
+        {!isPopup && (
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Powered by NexusFlo24
+          </p>
+        )}
       </div>
     </div>
   );
