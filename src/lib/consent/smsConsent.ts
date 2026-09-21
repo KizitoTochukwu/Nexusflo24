@@ -3,8 +3,18 @@
  * The exact text below is what the visitor sees next to the checkbox and what
  * we persist into `sms_consent_text` so we can prove what was shown at capture.
  */
-export const SMS_CONSENT_TEXT =
-  "I agree to receive email, WhatsApp, and/or SMS messages from NexusFlo24 regarding my enquiry, demo booking, account updates, appointment reminders, and service notifications. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. View our Privacy Policy and Terms.";
+export const DEFAULT_SMS_CONSENT_PURPOSE =
+  "I agree to receive email, WhatsApp, and/or SMS messages from NexusFlo24 regarding my enquiry, demo booking, account updates, appointment reminders, and service notifications.";
+
+export const SMS_CONSENT_REQUIRED_TEXT =
+  "Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. View our Privacy Policy and Terms.";
+
+export function buildSmsConsentText(purpose?: string | null) {
+  const safePurpose = purpose?.trim() || DEFAULT_SMS_CONSENT_PURPOSE;
+  return `${safePurpose} ${SMS_CONSENT_REQUIRED_TEXT}`;
+}
+
+export const SMS_CONSENT_TEXT = buildSmsConsentText();
 
 export interface SmsConsentPayload {
   sms_consent: boolean;

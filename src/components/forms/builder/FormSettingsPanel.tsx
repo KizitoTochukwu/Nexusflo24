@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useLeadFolders, useCreateFolder } from "@/hooks/useLeadFolders";
 import { Plus } from "lucide-react";
+import { DEFAULT_SMS_CONSENT_PURPOSE, SMS_CONSENT_REQUIRED_TEXT } from "@/lib/consent/smsConsent";
 
 interface Props {
   description: string;
@@ -89,6 +90,27 @@ export default function FormSettingsPanel({
           onChange={(e) => onChangeDescription(e.target.value)}
           placeholder="Optional intro text shown above the form"
         />
+      </div>
+
+      <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Messaging consent</p>
+        <div>
+          <Label className="text-xs">Consent purpose</Label>
+          <Textarea
+            rows={4}
+            maxLength={1000}
+            value={settings.messaging_consent_text ?? ""}
+            onChange={(e) => setS("messaging_consent_text", e.target.value)}
+            placeholder={DEFAULT_SMS_CONSENT_PURPOSE}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Describe what messages people are agreeing to receive. Leave blank to use the NexusFlo24 default.
+          </p>
+        </div>
+        <div className="rounded-md border bg-background p-2.5">
+          <p className="text-[11px] font-medium text-muted-foreground">Required wording added automatically</p>
+          <p className="mt-1 text-xs text-foreground">{SMS_CONSENT_REQUIRED_TEXT}</p>
+        </div>
       </div>
 
       <div className="space-y-3 rounded-lg border bg-muted/20 p-3">

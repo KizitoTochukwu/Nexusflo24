@@ -8,6 +8,7 @@ interface Props {
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
   className?: string;
+  consentText?: string;
 }
 
 /**
@@ -15,10 +16,10 @@ interface Props {
  * The displayed copy must match SMS_CONSENT_TEXT exactly — that string is what
  * gets persisted as `sms_consent_text` for proof-of-consent.
  */
-export default function SmsConsentCheckbox({ id = "sms-consent", checked, onCheckedChange, className }: Props) {
+export default function SmsConsentCheckbox({ id = "sms-consent", checked, onCheckedChange, className, consentText = SMS_CONSENT_TEXT }: Props) {
   // Split the canonical text so we can render Privacy Policy / Terms as real links
   // without changing the copy that gets stored.
-  const parts = SMS_CONSENT_TEXT.split("View our Privacy Policy and Terms.");
+  const parts = consentText.split("View our Privacy Policy and Terms.");
   const lead = parts[0];
 
   return (

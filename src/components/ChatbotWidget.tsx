@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { MessageCircle, X, Send, Zap, Loader2, UserPlus, PhoneCall } from "lucide-react";
 
 const AUTO_OPEN_KEY = "nexus_ai_auto_opened";
 const DISMISSED_KEY = "nexus_ai_dismissed";
-const SKIP_ROUTES = [/^\/login/, /^\/register/, /^\/auth\/callback/, /^\/embed\//, /^\/f\//, /^\/book\//, /^\/unsubscribe/];
+const SKIP_ROUTES = [/^\/login/, /^\/register/, /^\/auth\/callback/, /^\/embed\//, /^\/forms\//, /^\/f\//, /^\/book\//, /^\/unsubscribe/];
 
 function shouldSkipAutoOpen() {
   if (typeof window === "undefined") return true;
@@ -119,6 +120,7 @@ function getCurrentWorkspaceId() {
 }
 
 const ChatbotWidget = () => {
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "👋 Hi! I'm **Nexus AI**. How can I help you today? Ask me about features, pricing, or getting started!" },
@@ -303,6 +305,8 @@ const ChatbotWidget = () => {
       setIsLoading(false);
     }
   }, [input, isLoading, messages, leadCaptured, handoffTriggered, workspaceId]);
+
+  if (SKIP_ROUTES.some((pattern) => pattern.test(location.pathname))) return null;
 
   return (
     <>

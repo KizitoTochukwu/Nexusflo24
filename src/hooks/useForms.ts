@@ -124,6 +124,7 @@ export interface FormSettings {
   notify_phones?: string[];
   spam?: FormSpamSettings;
   popup?: FormPopupSettings;
+  messaging_consent_text?: string;
 }
 
 export interface FormSpamSettings {
@@ -224,6 +225,7 @@ export const DEFAULT_SETTINGS: FormSettings = {
   notify_phones: [],
   spam: DEFAULT_SPAM,
   popup: DEFAULT_POPUP,
+  messaging_consent_text: "",
 
 };
 
