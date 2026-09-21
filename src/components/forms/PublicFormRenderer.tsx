@@ -15,7 +15,7 @@ import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { fbqTrack } from "@/lib/analytics/metaPixel";
 import { wsTrack } from "@/lib/analytics/workspacePixels";
 import SmsConsentCheckbox from "@/components/forms/SmsConsentCheckbox";
-import { SMS_CONSENT_TEXT } from "@/lib/consent/smsConsent";
+import { buildSmsConsentText } from "@/lib/consent/smsConsent";
 import { isFieldVisible } from "@/lib/forms/conditions";
 
 
@@ -48,6 +48,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
   const steps = form.schema?.steps ?? [];
   const theme = form.theme;
   const settings = form.settings;
+  const messagingConsentText = buildSmsConsentText(settings.messaging_consent_text);
   const [stepIdx, setStepIdx] = useState(0);
   const [values, setValues] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -134,7 +135,7 @@ export default function PublicFormRenderer({ form, preview }: Props) {
           hp_field: honeypot,
           elapsed_ms: Date.now() - startedAt.current,
           sms_consent: hasPhoneField ? smsConsent : undefined,
-          sms_consent_text: hasPhoneField && smsConsent ? SMS_CONSENT_TEXT : undefined,
+          sms_consent_text: hasPhoneField && smsConsent ? messagingConsentText : undefined,
           sms_consent_timestamp: hasPhoneField && smsConsent ? new Date().toISOString() : undefined,
           sms_consent_source: hasPhoneField && smsConsent ? `Form: ${form.name}` : undefined,
           lead_destination: {
@@ -248,7 +249,11 @@ export default function PublicFormRenderer({ form, preview }: Props) {
       </div>
 
       {hasPhoneField && isLast && (
-        <SmsConsentCheckbox checked={smsConsent} onCheckedChange={setSmsConsent} />
+        <SmsConsentCheckbox
+          checked={smsConsent}
+          onCheckedChange={setSmsConsent}
+          consentText={messagingConsentText}
+        />
       )}
 
       {/* Honeypot — hidden from humans, tempting to bots */}

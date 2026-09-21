@@ -5,3 +5,5 @@
 - [x] Support exact opportunity links in the CRM
 - [x] Add interpolation and regression tests
 - [x] Verify runtime functions and app build
+- [x] Make form messaging-consent purpose editable with protected compliance wording
+- [x] Remove Nexus AI from hosted and embedded forms
