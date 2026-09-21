@@ -286,13 +286,18 @@ serve(async (req) => {
     }
 
     // Contact through the canonical upsert so dedupe rules apply.
+    // Pass every parameter explicitly: partial argument sets make PostgREST
+    // guess parameter types (uuid instead of text) and the overload lookup fails.
     const { data: crmContactId, error: upsertErr } = await admin.rpc("crm_upsert_contact", {
       _workspace_id: workspaceId,
       _email: reply.from_email,
+      _phone: null,
       _full_name: prospect?.full_name ?? null,
+      _external_source_id: null,
       _source: "ai_client_finder",
+      _attribution: {},
       _source_table: "prospecting_replies",
-      _source_record_id: reply.id,
+      _source_record_id: String(reply.id),
     });
     if (upsertErr) return cfJson({ error: upsertErr.message }, 500);
 
