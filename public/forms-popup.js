@@ -72,7 +72,7 @@
 
     var panel = document.createElement("div");
     panel.style.cssText =
-      "position:relative;width:100%;max-width:560px;height:min(96dvh,760px);max-height:calc(100dvh - 12px);background:#fff;" +
+      "position:relative;width:100%;max-width:760px;height:calc(100dvh - 24px);max-height:calc(100dvh - 24px);background:#fff;" +
       "border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.3);";
 
     var closeBtn = document.createElement("button");
@@ -97,7 +97,7 @@
       if (event.source !== iframe.contentWindow || !event.data || event.data.type !== "nexusflo-popup-resize") return;
       var requested = Number(event.data.height);
       if (!Number.isFinite(requested) || requested <= 0) return;
-      var available = Math.max(320, window.innerHeight - 12);
+      var available = Math.max(320, window.innerHeight - 24);
       panel.style.height = Math.min(requested, available) + "px";
     };
     window.addEventListener("message", resizeHandler);
