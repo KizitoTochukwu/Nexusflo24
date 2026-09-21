@@ -7,4 +7,3 @@
 - [x] Verify runtime functions and app build
 - [x] Make form messaging-consent purpose editable with protected compliance wording
 - [x] Remove Nexus AI from hosted and embedded forms
-- [x] Make popup forms fully visible with responsive columns and short mobile steps

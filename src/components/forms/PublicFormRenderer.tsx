@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { FormRecord, FormField } from "@/hooks/useForms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,18 +57,7 @@ export default function PublicFormRenderer({ form, preview, compact = false }: P
   const [done, setDone] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);
   const [honeypot, setHoneypot] = useState("");
-  const [isNarrowPopup, setIsNarrowPopup] = useState(false);
-  const [popupPage, setPopupPage] = useState(0);
   const startedAt = useRef<number>(Date.now());
-
-  useEffect(() => {
-    if (!compact) return;
-    const media = window.matchMedia("(max-width: 639px)");
-    const sync = () => setIsNarrowPopup(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, [compact]);
 
   const allFieldsFlat = steps.flatMap((s) => s.fields);
   const hasPhoneField = allFieldsFlat.some(
@@ -81,15 +70,11 @@ export default function PublicFormRenderer({ form, preview, compact = false }: P
     () => (currentStep?.fields ?? []).filter((f) => isFieldVisible(f, values)),
     [currentStep, values],
   );
-  const usesMobilePopupPages = compact && isNarrowPopup && steps.length === 1 && visibleCurrentFields.length > 4;
-  const visiblePopupFields = usesMobilePopupPages
-    ? (popupPage === 0 ? visibleCurrentFields.slice(0, 4) : visibleCurrentFields.slice(4))
-    : visibleCurrentFields;
 
   const setVal = (name: string, v: any) => setValues((s) => ({ ...s, [name]: v }));
 
-  const validateFields = (fields: FormField[]) => {
-    for (const f of fields) {
+  const validateCurrent = () => {
+    for (const f of visibleCurrentFields) {
       if (!f.required) continue;
       const v = values[f.name];
       if (f.type === "consent" || f.type === "checkbox") {
@@ -105,13 +90,9 @@ export default function PublicFormRenderer({ form, preview, compact = false }: P
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validateFields(visiblePopupFields);
+    const err = validateCurrent();
     if (err) {
       toast.error(err);
-      return;
-    }
-    if (usesMobilePopupPages && popupPage === 0) {
-      setPopupPage(1);
       return;
     }
     if (!isLast) {
@@ -234,20 +215,20 @@ export default function PublicFormRenderer({ form, preview, compact = false }: P
       {theme.logo_url && (
         <img src={theme.logo_url} alt="Logo" className={compact ? "mx-auto max-h-8" : "mx-auto mb-2 max-h-12"} />
       )}
-      <div className={compact ? "pr-8" : undefined}>
+      <div>
         <h2 className={compact ? "text-lg font-bold leading-tight" : "text-xl font-bold"}>{form.name}</h2>
         {form.description && (
           <p className={compact ? "mt-0.5 text-xs leading-snug opacity-70" : "mt-1 text-sm opacity-70"}>{form.description}</p>
         )}
       </div>
 
-      {(steps.length > 1 || usesMobilePopupPages) && (
+      {steps.length > 1 && (
         <div className="flex gap-1">
-          {(usesMobilePopupPages ? [0, 1] : steps).map((_, i) => (
+          {steps.map((_, i) => (
             <div
               key={i}
               className="h-1.5 flex-1 rounded-full"
-              style={{ background: i <= (usesMobilePopupPages ? popupPage : stepIdx) ? theme.accent_color : "#e5e7eb" }}
+              style={{ background: i <= stepIdx ? theme.accent_color : "#e5e7eb" }}
             />
           ))}
         </div>
@@ -257,23 +238,22 @@ export default function PublicFormRenderer({ form, preview, compact = false }: P
         <p className={compact ? "text-xs font-medium opacity-80" : "text-sm font-medium opacity-80"}>{currentStep.title}</p>
       )}
 
-      <div className={compact ? "grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2" : "space-y-4"}>
-        {visiblePopupFields.map((f) => (
-          <div key={f.id} className={compact && isFullWidthPopupField(f) ? "sm:col-span-2" : undefined}>
-            <FieldRenderer
-              field={f}
-              value={values[f.name]}
-              onChange={(v) => setVal(f.name, v)}
-              accent={theme.accent_color}
-              formId={form.id}
-              preview={preview}
-              compact={compact}
-            />
-          </div>
+      <div className={compact ? "space-y-2.5" : "space-y-4"}>
+        {visibleCurrentFields.map((f) => (
+          <FieldRenderer
+            key={f.id}
+            field={f}
+            value={values[f.name]}
+            onChange={(v) => setVal(f.name, v)}
+            accent={theme.accent_color}
+            formId={form.id}
+            preview={preview}
+            compact={compact}
+          />
         ))}
       </div>
 
-      {hasPhoneField && isLast && (!usesMobilePopupPages || popupPage === 1) && (
+      {hasPhoneField && isLast && (
         <SmsConsentCheckbox
           checked={smsConsent}
           onCheckedChange={setSmsConsent}
@@ -300,13 +280,8 @@ export default function PublicFormRenderer({ form, preview, compact = false }: P
 
 
       <div className={compact ? "flex items-center justify-between gap-2 pt-0.5" : "flex items-center justify-between gap-2 pt-2"}>
-        {(usesMobilePopupPages && popupPage > 0) || (steps.length > 1 && stepIdx > 0) ? (
-          <Button
-            type="button"
-            variant="outline"
-            className={compact ? "h-9 px-4" : undefined}
-            onClick={() => usesMobilePopupPages ? setPopupPage(0) : setStepIdx((i) => i - 1)}
-          >
+        {steps.length > 1 && stepIdx > 0 ? (
+          <Button type="button" variant="outline" onClick={() => setStepIdx((i) => i - 1)}>
             Back
           </Button>
         ) : <span />}
@@ -316,15 +291,11 @@ export default function PublicFormRenderer({ form, preview, compact = false }: P
           className={compact ? "h-9 px-4" : undefined}
           style={{ background: theme.accent_color, color: "#fff" }}
         >
-          {submitting ? "Submitting…" : (usesMobilePopupPages && popupPage === 0) || !isLast ? "Next" : settings.submit_text}
+          {submitting ? "Submitting…" : isLast ? settings.submit_text : "Next"}
         </Button>
       </div>
     </form>
   );
-}
-
-function isFullWidthPopupField(field: FormField) {
-  return ["consent", "checkbox", "checkbox_group", "radio", "long_text", "heading", "paragraph", "divider", "image", "logo", "file"].includes(field.type);
 }
 
 function FieldRenderer({
