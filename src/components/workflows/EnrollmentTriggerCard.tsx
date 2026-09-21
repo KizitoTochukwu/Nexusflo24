@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import EnrollmentTriggerDrawer, { type EnrollmentTriggerPatch } from "./EnrollmentTriggerDrawer";
 import TriggerActivityPanel from "./TriggerActivityPanel";
+import UnscopedTriggerWarning from "./UnscopedTriggerWarning";
 import {
   ENROLLMENT_OBJECTS,
   TRIGGER_SOURCES,
