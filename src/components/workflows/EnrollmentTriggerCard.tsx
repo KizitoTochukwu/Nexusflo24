@@ -123,7 +123,9 @@ export default function EnrollmentTriggerCard({
             workspaceId={record.workspace_id}
             recordId={record.id}
             triggerEvent={record.trigger_event}
-            scopeText={scope}
+            scopeText={
+              scope || (record.filter_groups?.length ? "Additional filters set" : "")
+            }
           />
         </div>
         <div className="flex gap-2">
