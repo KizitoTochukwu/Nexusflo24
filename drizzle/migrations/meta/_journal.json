@@ -120,6 +120,13 @@
       "when": 1789931752385,
       "tag": "0016_lead_folder_default",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790097266476,
+      "tag": "0017_fix_convert_lead_to_contact_full_name",
+      "breakpoints": true
     }
   ]
 }
