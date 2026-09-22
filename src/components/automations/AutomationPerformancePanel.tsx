@@ -129,11 +129,11 @@ export default function AutomationPerformancePanel({ automationId, workspaceId }
 
       const rows: PerfRow[] = (leadsRes.data ?? []).map((lead: any) => {
         const reg = (regsRes.data ?? []).find((r: any) => r.lead_id === lead.id);
-        const emails = (emailRes.data ?? []).filter((e: any) => e.lead_id === lead.id && e.direction === "outbound");
-        const wa = (waRes.data ?? []).filter((m: any) => m.lead_id === lead.id && m.direction === "outbound");
+        const emails = (emailRes.data ?? []).filter((e: any) => e.lead_id === lead.id && e.direction === "outbound" && inRun(lead.id, e.created_at));
+        const wa = (waRes.data ?? []).filter((m: any) => m.lead_id === lead.id && m.direction === "outbound" && inRun(lead.id, m.created_at));
         const replied =
-          (waInboundRes.data ?? []).some((m: any) => m.lead_id === lead.id) ||
-          (emailRes.data ?? []).some((e: any) => e.lead_id === lead.id && e.direction === "inbound");
+          (waInboundRes.data ?? []).some((m: any) => m.lead_id === lead.id && inRun(lead.id, m.created_at)) ||
+          (emailRes.data ?? []).some((e: any) => e.lead_id === lead.id && e.direction === "inbound" && inRun(lead.id, e.created_at));
         const bookings = (bookingsRes.data ?? []).filter((b: any) => b.lead_id === lead.id);
         const purchases = (purchasesRes.data ?? []).filter((p: any) => p.lead_id === lead.id);
         const deal = (dealsRes.data ?? []).find((d: any) => d.lead_id === lead.id);
