@@ -620,6 +620,18 @@ Deno.serve(async (req) => {
                 const isAuth = isCredentialError("email", msg);
                 status = "error";
                 details = { error: msg, channel: "email", provider_auth_error: isAuth };
+                try {
+                  await supabase.from("email_logs").insert({
+                    workspace_id: workspace_id,
+                    to_email: lead.email,
+                    from_email: fromEmail,
+                    subject,
+                    direction: "outbound",
+                    status: "failed",
+                    error: msg,
+                    lead_id: lead_id,
+                  });
+                } catch (_) { /* logging must never break the run */ }
                 if (isAuth) {
                   // Deduped workspace-level alert (once per 6h per channel)
                   await notifyCredentialFailure({
