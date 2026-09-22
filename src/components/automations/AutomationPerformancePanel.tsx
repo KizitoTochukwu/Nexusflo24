@@ -78,6 +78,23 @@ export default function AutomationPerformancePanel({ automationId, workspaceId }
       if (logsErr) throw logsErr;
       const leadIds = Array.from(new Set((logs ?? []).map((l: any) => l.lead_id).filter(Boolean))) as string[];
 
+      // Per-lead enrolment start for THIS automation: earliest log timestamp.
+      // Messages before this belong to other automations/campaigns and must not be counted.
+      const BUFFER_MS = 2 * 60 * 1000;
+      const enrolStartByLead = new Map<string, number>();
+      for (const l of logs ?? []) {
+        if (!l.lead_id || !l.created_at) continue;
+        const t = new Date(l.created_at).getTime();
+        const cur = enrolStartByLead.get(l.lead_id);
+        if (cur === undefined || t < cur) enrolStartByLead.set(l.lead_id, t);
+      }
+      const inRun = (leadId: string, ts?: string | null) => {
+        const start = enrolStartByLead.get(leadId);
+        if (start === undefined) return false;
+        if (!ts) return false;
+        return new Date(ts).getTime() >= start - BUFFER_MS;
+      };
+
       const empty = { logs: logs ?? [], rows: [] as PerfRow[], stageNames: [] as string[], owners: [] as { id: string; name: string }[] };
       if (leadIds.length === 0) return empty;
 
@@ -85,8 +102,9 @@ export default function AutomationPerformancePanel({ automationId, workspaceId }
         supabase.from("leads").select("id, full_name, email, phone, assigned_owner_id, created_at, status").eq("workspace_id", workspaceId).in("id", leadIds),
         supabase.from("webinar_registrations").select("*").eq("workspace_id", workspaceId).in("lead_id", leadIds),
         supabase.from("email_logs").select("lead_id, status, direction, created_at").eq("workspace_id", workspaceId).in("lead_id", leadIds).limit(1000),
-        supabase.from("whatsapp_messages").select("lead_id, status, direction, delivered_at, read_at, failed_at").eq("workspace_id", workspaceId).in("lead_id", leadIds).limit(1000),
-        supabase.from("whatsapp_messages").select("lead_id").eq("workspace_id", workspaceId).eq("direction", "inbound").in("lead_id", leadIds).limit(1000),
+        supabase.from("whatsapp_messages").select("lead_id, status, direction, created_at, delivered_at, read_at, failed_at").eq("workspace_id", workspaceId).in("lead_id", leadIds).limit(1000),
+        supabase.from("whatsapp_messages").select("lead_id, created_at").eq("workspace_id", workspaceId).eq("direction", "inbound").in("lead_id", leadIds).limit(1000),
+
         supabase.from("bookings").select("lead_id, contact_id, guest_email, status, start_time").eq("workspace_id", workspaceId).in("lead_id", leadIds).limit(500),
         supabase.from("lead_activities").select("lead_id, meta, created_at").eq("workspace_id", workspaceId).eq("type", "purchase").in("lead_id", leadIds).limit(500),
         supabase.from("crm_deals").select("id, lead_id, contact_id, stage_id, owner_user_id, status").eq("workspace_id", workspaceId).in("lead_id", leadIds).limit(500),
