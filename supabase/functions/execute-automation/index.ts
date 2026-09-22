@@ -600,12 +600,38 @@ Deno.serve(async (req) => {
                   const res = await sendResend(apiKey, `NexusFlo24 <${fromEmail}>`, lead.email, subject, html, "NexusFlo24 Support <support@nexusflo24.com>");
                   lastSendTime = Date.now();
                   details = { messageId: res.id, channel: "email" };
+                  // Direct Resend sends bypass email-send, so log them here or the
+                  // performance dashboards (which read email_logs) stay empty.
+                  try {
+                    await supabase.from("email_logs").insert({
+                      workspace_id: workspace_id,
+                      to_email: lead.email,
+                      from_email: fromEmail,
+                      subject,
+                      direction: "outbound",
+                      status: "sent",
+                      provider_message_id: res.id ?? null,
+                      lead_id: lead_id,
+                    });
+                  } catch (_) { /* logging must never break the run */ }
                 }
               } catch (sendErr: any) {
                 const msg = String(sendErr?.message || "Email send failed");
                 const isAuth = isCredentialError("email", msg);
                 status = "error";
                 details = { error: msg, channel: "email", provider_auth_error: isAuth };
+                try {
+                  await supabase.from("email_logs").insert({
+                    workspace_id: workspace_id,
+                    to_email: lead.email,
+                    from_email: fromEmail,
+                    subject,
+                    direction: "outbound",
+                    status: "failed",
+                    error: msg,
+                    lead_id: lead_id,
+                  });
+                } catch (_) { /* logging must never break the run */ }
                 if (isAuth) {
                   // Deduped workspace-level alert (once per 6h per channel)
                   await notifyCredentialFailure({
