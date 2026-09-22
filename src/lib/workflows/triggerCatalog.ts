@@ -372,11 +372,26 @@ export function scopeSummary(w: TriggerLike): string {
   const fields = scopeFieldsFor(w.trigger_source, w.trigger_event);
   const cfg = w.trigger_config || {};
   const parts: string[] = [];
-  for (const f of fields.slice(0, 3)) {
+  // Check every scope field (not just the first few) so tag / lead-source /
+  // Meta-form scoping counts as a real scope.
+  for (const f of fields) {
     const v = cfg[f.key];
-    if (!v) continue;
-    if (typeof v === "object" && v?.label) parts.push(`${f.label}: ${v.label}`);
-    else if (typeof v === "string" && v !== "__any__") parts.push(`${f.label}: ${v}`);
+    if (v === undefined || v === null || v === "" || v === "__any__") continue;
+    if (Array.isArray(v)) {
+      const labels = v
+        .map((item) =>
+          item && typeof item === "object" && "label" in item
+            ? String(item.label)
+            : String(item),
+        )
+        .filter((s) => s && s !== "__any__");
+      if (labels.length) parts.push(`${f.label}: ${labels.join(", ")}`);
+    } else if (typeof v === "object" && "label" in v && v.label) {
+      parts.push(`${f.label}: ${v.label}`);
+    } else if (typeof v === "string") {
+      parts.push(`${f.label}: ${v}`);
+    }
+    if (parts.length >= 3) break;
   }
   return parts.join(" · ");
 }
