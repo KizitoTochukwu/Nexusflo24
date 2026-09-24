@@ -9,77 +9,36 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { courses } from "@/data/academyCourses";
+import { AcademyCoursesAdmin, AcademyEnrolmentsAdmin, AcademyTestimonialsAdmin } from "@/components/platform-admin/AcademyAdmin";
 
 export default function PlatformAcademy() {
   const moderation = usePlatformCommunityModeration(50);
   const action = usePlatformAction();
   const [decision, setDecision] = useState<{ kind: "post" | "comment"; id: string; action: "remove" | "restore" } | null>(null);
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   const m = moderation.data as any;
-  const lessonCount = courses.reduce((a, c) => a + c.modules.reduce((b, mod) => b + mod.lessons.length, 0), 0);
 
   return (
     <div>
       <PageHeader
         title="Academy & Community"
-        description="Academy content catalogue and moderation of posts and comments across storefront communities."
+        description="Manage Academy courses, enrolments and testimonials, and moderate of posts and comments across storefront communities."
       />
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Academy courses" value={courses.length} hint="Static catalogue — content managed in code" />
-        <StatCard label="Lessons" value={lessonCount} hint="Across all courses" />
+      <Tabs defaultValue="courses">
+        <TabsList>
+          <TabsTrigger value="courses">Courses</TabsTrigger>
+          <TabsTrigger value="enrolments">Enrolments</TabsTrigger>
+          <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
+        </TabsList>
+        <TabsContent value="courses"><AcademyCoursesAdmin /></TabsContent>
+        <TabsContent value="enrolments"><AcademyEnrolmentsAdmin /></TabsContent>
+        <TabsContent value="testimonials"><AcademyTestimonialsAdmin /></TabsContent>
+      </Tabs>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <StatCard label="Communities" value={m?.total_communities ?? 0} hint={`${m?.total_members ?? 0} members total`} />
       </div>
-
-      <Card className="mt-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Course catalogue</CardTitle>
-          <CardDescription>
-            Courses are file-defined — edit them in <code className="text-xs">src/data/academyCourses.ts</code> and redeploy. This is a read-only preview, not an editor.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="divide-y text-sm">
-            {courses.map((c) => (
-              <li key={c.slug} className="py-2">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-3 text-left"
-                  onClick={() => setExpanded((cur) => (cur === c.slug ? null : c.slug))}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {c.title}
-                      {c.premium && <Badge className="ml-2 bg-accent/10 text-accent border-accent/30">Premium</Badge>}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {c.category} · {c.duration} · {c.modules.length} modules · {c.modules.reduce((a, mod) => a + mod.lessons.length, 0)} lessons · {c.instructor.name}
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{expanded === c.slug ? "Hide" : "Show"} modules</span>
-                </button>
-                {expanded === c.slug && (
-                  <div className="mt-2 space-y-2 rounded-md border bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground">{c.tagline}</p>
-                    {c.modules.map((mod, i) => (
-                      <div key={i}>
-                        <p className="text-xs font-semibold">Module {i + 1}: {mod.title}</p>
-                        <ul className="mt-1 space-y-0.5 pl-4 text-[11px] text-muted-foreground">
-                          {mod.lessons.map((l, j) => (
-                            <li key={j} className="list-disc">{l.title} <span className="opacity-70">({l.duration})</span></li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
 
       <Card className="mt-4">
         <CardHeader className="pb-2">
