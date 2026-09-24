@@ -1,4 +1,4 @@
-export type Lesson = { title: string; duration: string };
+export type Lesson = { title: string; duration: string; videoUrl?: string };
 export type Module = { title: string; lessons: Lesson[] };
 
 export type Course = {
@@ -312,5 +312,25 @@ export const courses: Course[] = [
   },
 ];
 
+// Keep lesson counts honest: always derived from the syllabus.
+courses.forEach((c) => {
+  c.lessons = c.modules.reduce((a, m) => a + m.lessons.length, 0);
+});
+
 export const getCourseBySlug = (slug?: string) =>
   courses.find((c) => c.slug === slug);
+
+/** Stable key for a lesson, used for progress tracking. */
+export const lessonKey = (moduleIndex: number, lessonIndex: number) => `m${moduleIndex}-l${lessonIndex}`;
+
+/** Plans that unlock Premium Academy courses. */
+export const PREMIUM_ACADEMY_TIERS = ["plus", "pro", "enterprise"] as const;
+export const PREMIUM_ACADEMY_LABEL = "Plus plan and above";
+
+export const academyStats = () => {
+  const categories = Array.from(new Set(courses.map((c) => c.category)));
+  const totalLessons = courses.reduce((a, c) => a + c.lessons, 0);
+  return { categories, totalLessons, totalCourses: courses.length };
+};
+
+export const ACADEMY_PENDING_COURSE_KEY = "nexusflo_academy_course";

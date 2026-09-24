@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_progress: {
+        Row: {
+          completed_at: string
+          course_slug: string
+          created_at: string
+          id: string
+          lesson_key: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          course_slug: string
+          created_at?: string
+          id?: string
+          lesson_key: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          course_slug?: string
+          created_at?: string
+          id?: string
+          lesson_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ad_accounts: {
         Row: {
           connection_id: string | null

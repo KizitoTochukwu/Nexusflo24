@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { ACADEMY_PENDING_COURSE_KEY } from "@/data/academyCourses";
 
 const DashboardRedirect = () => {
   const { user, loading: authLoading } = useAuth();
@@ -25,6 +26,12 @@ const DashboardRedirect = () => {
     const createdAt = user?.created_at ? new Date(user.created_at).getTime() : 0;
     const isNewAccount = createdAt > 0 && Date.now() - createdAt < 3 * 24 * 60 * 60 * 1000;
     if (!onboarding && isNewAccount) return <Navigate to="/onboarding" replace />;
+    const pendingCourse = localStorage.getItem(ACADEMY_PENDING_COURSE_KEY);
+    if (pendingCourse !== null) {
+      localStorage.removeItem(ACADEMY_PENDING_COURSE_KEY);
+      const safe = pendingCourse.replace(/[^a-z0-9-]/gi, "");
+      return <Navigate to={`/dashboard/${firstWorkspaceId}/academy${safe ? `/${safe}` : ""}`} replace />;
+    }
     return <Navigate to={`/dashboard/${firstWorkspaceId}/overview`} replace />;
   }
 

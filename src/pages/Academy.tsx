@@ -2,6 +2,7 @@ import Layout from "@/components/layout/Layout";
 import Seo from "@/components/seo/Seo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   BookOpen,
   Play,
@@ -18,16 +19,22 @@ import {
   Quote,
 } from "lucide-react";
 
-const categories = [
-  { icon: Zap, label: "AI Marketing", count: 8 },
-  { icon: Target, label: "Funnels", count: 6 },
-  { icon: Users, label: "CRM Automation", count: 5 },
-  { icon: BarChart3, label: "Ads & Analytics", count: 7 },
-  { icon: Mail, label: "Email Automation", count: 4 },
-  { icon: MessageCircle, label: "WhatsApp Automation", count: 3 },
-];
+import { courses, academyStats, PREMIUM_ACADEMY_LABEL } from "@/data/academyCourses";
 
-import { courses } from "@/data/academyCourses";
+const categoryIcons: Record<string, typeof Zap> = {
+  "AI Marketing": Zap,
+  Funnels: Target,
+  "CRM Automation": Users,
+  "Ads & Analytics": BarChart3,
+  "Email Automation": Mail,
+  "WhatsApp Automation": MessageCircle,
+};
+const stats = academyStats();
+const categories = stats.categories.map((label) => ({
+  label,
+  icon: categoryIcons[label] ?? BookOpen,
+  count: courses.filter((c) => c.category === label).length,
+}));
 
 const testimonials = [
   { name: "Sarah M.", role: "Digital Marketer", quote: "NexusFlo24 Academy transformed how I approach AI marketing. The courses are practical and immediately applicable.", rating: 5 },
@@ -35,7 +42,10 @@ const testimonials = [
   { name: "Amina O.", role: "SaaS Founder", quote: "I automated my entire WhatsApp follow-up sequence after taking the WhatsApp Marketing course. Game changer!", rating: 5 },
 ];
 
-const Academy = () => (
+const Academy = () => {
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const visibleCourses = activeCategory ? courses.filter((c) => c.category === activeCategory) : courses;
+  return (
   <Layout>
     <Seo
       title="NexusFlo24 Academy – Free AI Marketing & Automation Courses"
@@ -67,9 +77,9 @@ const Academy = () => (
           Learn from experts. Build real campaigns. Grow your business with AI-powered strategies.
         </p>
         <div className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-primary-foreground/60 animate-fade-up animation-delay-600">
-          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 6 categories</span>
-          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 70+ lessons</span>
-          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 5,000+ learners</span>
+          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> {stats.categories.length} categories</span>
+          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> {stats.totalLessons} lessons</span>
+          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> {stats.totalCourses} courses · free & premium</span>
         </div>
         <div className="mt-10 flex flex-wrap justify-center gap-3 animate-fade-up animation-delay-600">
           <Link to="/register?plan=academy&intent=learn">
@@ -96,9 +106,15 @@ const Academy = () => (
         </p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
-            <div
+            <button
+              type="button"
               key={c.label}
-              className="group relative cursor-pointer overflow-hidden rounded-2xl border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/50 hover:shadow-card-hover"
+              aria-pressed={activeCategory === c.label}
+              onClick={() => {
+                setActiveCategory((cur) => (cur === c.label ? null : c.label));
+                document.getElementById("courses")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className={`group relative cursor-pointer text-left ${activeCategory === c.label ? "!border-accent ring-2 ring-accent/40" : ""} overflow-hidden rounded-2xl border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/50 hover:shadow-card-hover`}
             >
               <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-accent/5 transition-all duration-500 group-hover:bg-accent/15" />
               <div className="relative flex items-start gap-4">
@@ -108,25 +124,33 @@ const Academy = () => (
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-primary">{c.label}</p>
                   <span className="mt-2 inline-flex items-center rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
-                    {c.count} courses
+                    {c.count} {c.count === 1 ? "course" : "courses"}
                   </span>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
     </section>
 
     {/* Featured Courses */}
-    <section className="bg-background py-20">
+    <section id="courses" className="scroll-mt-24 bg-background py-20">
       <div className="container max-w-6xl">
-        <h2 className="mb-3 text-center text-4xl font-bold">Featured Courses</h2>
-        <p className="mx-auto mb-14 max-w-xl text-center text-muted-foreground">
+        <h2 className="mb-3 text-center text-4xl font-bold">{activeCategory ?? "Featured Courses"}</h2>
+        <p className="mx-auto mb-4 max-w-xl text-center text-muted-foreground">
           On-demand, expert-led, and built around real campaigns.
         </p>
+        <p className="mx-auto mb-10 max-w-xl text-center text-sm text-muted-foreground">
+          Free courses are open to every account. Premium courses are included with the {PREMIUM_ACADEMY_LABEL}.
+          {activeCategory && (
+            <button type="button" onClick={() => setActiveCategory(null)} className="ml-2 font-semibold text-accent underline-offset-4 hover:underline">
+              Show all courses
+            </button>
+          )}
+        </p>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {courses.map((c) => (
+          {visibleCourses.map((c) => (
             <Link
               to={`/academy/${c.slug}`}
               key={c.title}
@@ -165,12 +189,10 @@ const Academy = () => (
                     <span>{c.duration}</span>
                   </div>
                   <div className="flex items-center justify-between border-t pt-3">
-                    <span className="flex items-center gap-1 text-xs font-semibold">
-                      <Star className="h-3.5 w-3.5 fill-accent text-accent" /> {c.rating}
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {c.premium ? PREMIUM_ACADEMY_LABEL : "Free with any account"}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Users className="h-3 w-3" /> {c.students.toLocaleString()}
-                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 text-accent transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
               </div>
@@ -185,7 +207,7 @@ const Academy = () => (
       <div className="container max-w-5xl">
         <h2 className="mb-3 text-center text-4xl font-bold">What Students Say</h2>
         <p className="mx-auto mb-14 max-w-xl text-center text-muted-foreground">
-          Real outcomes from marketers, agencies, and founders.
+          The kind of outcomes the Academy is built for. <span className="italic">Illustrative examples.</span>
         </p>
         <div className="grid gap-6 md:grid-cols-3">
           {testimonials.map((t) => (
@@ -225,7 +247,7 @@ const Academy = () => (
       <div className="container relative max-w-2xl">
         <h2 className="text-4xl font-bold text-primary-foreground">Ready to Level Up Your Marketing?</h2>
         <p className="mx-auto mt-4 max-w-md text-primary-foreground/70">
-          Join thousands of marketers learning AI automation with NexusFlo24 Academy.
+          Start learning AI automation with NexusFlo24 Academy.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link to="/register?plan=academy&intent=enroll">
@@ -234,7 +256,7 @@ const Academy = () => (
               <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>
-          <a href="#categories">
+          <a href="#courses">
             <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
               Browse Courses
             </Button>
@@ -244,6 +266,7 @@ const Academy = () => (
       </div>
     </section>
   </Layout>
-);
+  );
+};
 
 export default Academy;

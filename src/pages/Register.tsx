@@ -1,3 +1,4 @@
+import { ACADEMY_PENDING_COURSE_KEY } from "@/data/academyCourses";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import nexusLogo from "@/assets/nexusflo24-logo-full.png";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import AuthLayout from "@/components/auth/AuthLayout";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -19,6 +20,11 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const prefillEmail = searchParams.get("email") || "";
   const refCode = searchParams.get("ref") || "";
+  useEffect(() => {
+    if (searchParams.get("plan") === "academy") {
+      localStorage.setItem(ACADEMY_PENDING_COURSE_KEY, searchParams.get("course") || "");
+    }
+  }, [searchParams]);
   const [form, setForm] = useState({ name: "", email: prefillEmail, password: "" });
   const [agreed, setAgreed] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);

@@ -12,7 +12,7 @@ import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   LayoutDashboard, Users, Contact2, Megaphone, Workflow, Zap, LayoutTemplate, CalendarDays,
-  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket, Handshake, Settings2, PieChart, ShoppingBag, Store, Radar, PhoneCall } from
+  BarChart3, Settings, Menu, X, LogOut, ChevronDown, UserCircle, Building2, Check, Shield, MessageCircle, FileText, Sparkles, FormInput, Radio, HelpCircle, ListChecks, Rocket, Handshake, Settings2, PieChart, ShoppingBag, Store, Radar, PhoneCall, GraduationCap } from
 "lucide-react";
 import NotificationBell from "@/components/dashboard/NotificationBell";
 import NexusAiPanel, { openNexusAi } from "@/components/ai/NexusAiPanel";
@@ -93,6 +93,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: Radar, label: "AI Client Finder", to: `/dashboard/${workspaceId}/client-finder/overview`, match: [`/dashboard/${workspaceId}/client-finder`] },
   { icon: Store, label: "Commerce", to: `/dashboard/${workspaceId}/commerce/overview`, match: [`/dashboard/${workspaceId}/commerce`] },
   { icon: BarChart3, label: "Analytics", to: `/dashboard/${workspaceId}/analytics` },
+  { icon: GraduationCap, label: "Academy", to: `/dashboard/${workspaceId}/academy` },
   { icon: ShoppingBag, label: "My Automations", to: `/dashboard/${workspaceId}/my-automations` },
   { icon: Settings, label: "Settings", to: `/dashboard/${workspaceId}/settings` },
   ...(isAdmin ? [
