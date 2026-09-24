@@ -14,6 +14,138 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_courses: {
+        Row: {
+          audience: Json
+          category: string
+          created_at: string
+          currency: string
+          description: string
+          duration: string
+          id: string
+          image: string
+          instructor_name: string
+          instructor_title: string
+          modules: Json
+          outcomes: Json
+          position: number
+          premium: boolean
+          price_minor: number
+          published: boolean
+          slug: string
+          tagline: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: Json
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          duration?: string
+          id?: string
+          image?: string
+          instructor_name?: string
+          instructor_title?: string
+          modules?: Json
+          outcomes?: Json
+          position?: number
+          premium?: boolean
+          price_minor?: number
+          published?: boolean
+          slug: string
+          tagline?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: Json
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          duration?: string
+          id?: string
+          image?: string
+          instructor_name?: string
+          instructor_title?: string
+          modules?: Json
+          outcomes?: Json
+          position?: number
+          premium?: boolean
+          price_minor?: number
+          published?: boolean
+          slug?: string
+          tagline?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      academy_enrolments: {
+        Row: {
+          admin_notes: string | null
+          agreed_date: string | null
+          amount_minor: number
+          business_type: string | null
+          course_slug: string
+          course_title: string
+          created_at: string
+          currency: string
+          email: string
+          full_name: string
+          goals: string | null
+          id: string
+          paid_at: string | null
+          phone: string | null
+          status: string
+          stripe_session_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          agreed_date?: string | null
+          amount_minor?: number
+          business_type?: string | null
+          course_slug: string
+          course_title?: string
+          created_at?: string
+          currency?: string
+          email: string
+          full_name: string
+          goals?: string | null
+          id?: string
+          paid_at?: string | null
+          phone?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          agreed_date?: string | null
+          amount_minor?: number
+          business_type?: string | null
+          course_slug?: string
+          course_title?: string
+          created_at?: string
+          currency?: string
+          email?: string
+          full_name?: string
+          goals?: string | null
+          id?: string
+          paid_at?: string | null
+          phone?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       academy_progress: {
         Row: {
           completed_at: string
@@ -38,6 +170,39 @@ export type Database = {
           id?: string
           lesson_key?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      academy_testimonials: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          position: number
+          published: boolean
+          quote: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          published?: boolean
+          quote: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          published?: boolean
+          quote?: string
+          role?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -14115,6 +14280,7 @@ export type Database = {
         Args: { _automation_id: string }
         Returns: undefined
       }
+      is_academy_manager: { Args: { _user_id: string }; Returns: boolean }
       is_community_member: {
         Args: { _community_id: string; _user_id: string }
         Returns: boolean
