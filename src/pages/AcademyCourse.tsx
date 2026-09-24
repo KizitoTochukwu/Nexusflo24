@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { getCourseBySlug, courses } from "@/data/academyCourses";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { PREMIUM_ACADEMY_LABEL } from "@/data/academyCourses";
 import { useHasEntitlement } from "@/hooks/useEntitlements";
 
 const AcademyCourse = () => {
@@ -22,6 +24,8 @@ const AcademyCourse = () => {
   const course = getCourseBySlug(slug);
   const { user } = useAuth();
   const { data: hasAccess } = useHasEntitlement("course", slug, !!user);
+  const { workspaces } = useWorkspace();
+  const wsId = workspaces?.[0]?.id;
 
   if (!course) return <Navigate to="/academy" replace />;
 
@@ -59,10 +63,7 @@ const AcademyCourse = () => {
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
               <span className="flex items-center gap-2">
-                <Star className="h-4 w-4 fill-accent text-accent" /> {course.rating} rating
-              </span>
-              <span className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-accent" /> {course.students.toLocaleString()} learners
+                <Star className="h-4 w-4 fill-accent text-accent" /> {course.premium ? PREMIUM_ACADEMY_LABEL : "Free with any account"}
               </span>
               <span className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-accent" /> {course.lessons} lessons
@@ -79,15 +80,15 @@ const AcademyCourse = () => {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to={
-                  hasAccess
-                    ? `/academy/${course.slug}#syllabus`
+                  user && wsId
+                    ? `/dashboard/${wsId}/academy/${course.slug}`
                     : `/register?plan=academy&intent=enroll&course=${course.slug}`
                 }
               >
                 <Button size="lg" className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
                   <span className="font-semibold">
-                    {hasAccess
-                      ? "Continue Course"
+                    {user
+                      ? "Open Course"
                       : course.premium
                         ? "Enroll in Course"
                         : "Start Free Course"}

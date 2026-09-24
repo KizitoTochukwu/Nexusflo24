@@ -1,3 +1,4 @@
+import { ACADEMY_PENDING_COURSE_KEY } from "@/data/academyCourses";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import nexusLogo from "@/assets/nexusflo24-logo-full.png";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,11 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const prefillEmail = searchParams.get("email") || "";
   const refCode = searchParams.get("ref") || "";
+  useEffect(() => {
+    if (searchParams.get("plan") === "academy") {
+      localStorage.setItem(ACADEMY_PENDING_COURSE_KEY, searchParams.get("course") || "");
+    }
+  }, [searchParams]);
   const [form, setForm] = useState({ name: "", email: prefillEmail, password: "" });
   const [agreed, setAgreed] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);
