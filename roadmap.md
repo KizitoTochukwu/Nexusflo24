@@ -11,6 +11,8 @@
 ## Academy
 - [x] Phase 1 honest public page
 - [x] Phase 2 in-app Academy with progress + premium lock
-- [ ] Phase 3 no-code course editor (next step)
+- [x] Phase 3 no-code course editor (courses, enrolments, testimonials)
+- [x] Enrolment form + Stripe payment + live class date agreed after payment
+- [ ] Set Premium course prices in admin (waiting on user)
 - [ ] Real lesson video links (waiting on user)
-- [ ] Real testimonials (waiting on user)
+- [x] Real testimonials
