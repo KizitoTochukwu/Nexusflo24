@@ -22,7 +22,7 @@ export default function PlatformAcademy() {
     <div>
       <PageHeader
         title="Academy & Community"
-        description="Manage Academy courses, enrolments and testimonials, and moderate of posts and comments across storefront communities."
+        description="Manage Academy courses, enrolments and testimonials, and moderate posts and comments across storefront communities."
       />
 
       <Tabs defaultValue="courses">
