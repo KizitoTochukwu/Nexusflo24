@@ -11,9 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  courses, getCourseBySlug, lessonKey, PREMIUM_ACADEMY_TIERS, PREMIUM_ACADEMY_LABEL, type Course,
-} from "@/data/academyCourses";
+import { lessonKey, type Course } from "@/data/academyCourses";
+import { useAcademyCourses, useMyEnrolments, formatCoursePrice, ENROLMENT_STATUS_LABEL } from "@/hooks/useAcademy";
 
 function useAcademyProgress(userId?: string) {
   return useQuery({
@@ -43,9 +42,13 @@ export default function DashboardAcademy() {
   const { slug } = useParams<{ slug?: string }>();
   const { user } = useAuth();
   const wsId = useWorkspaceId();
-  const { tier, isAdmin, loading: planLoading } = usePlanGating();
+  const { isAdmin, loading: planLoading } = usePlanGating();
   const progress = useAcademyProgress(user?.id);
-  const canPremium = isAdmin || (PREMIUM_ACADEMY_TIERS as readonly string[]).includes(tier);
+  const { data: courses = [] } = useAcademyCourses();
+  const { data: enrolments = [], isLoading: enrLoading } = useMyEnrolments(user?.id);
+  const getCourseBySlug = (s?: string) => courses.find((c) => c.slug === s);
+  const enrolmentFor = (s: string) => enrolments.find((e) => e.course_slug === s && e.status !== "cancelled");
+  const hasPaid = (s: string) => ["awaiting_date", "scheduled", "completed"].includes(enrolmentFor(s)?.status ?? "");
 
   const done = useMemo(() => {
     const m = new Map<string, Set<string>>();
@@ -68,7 +71,9 @@ export default function DashboardAcademy() {
         wsId={wsId}
         userId={user?.id}
         completed={done.get(course.slug) ?? new Set()}
-        locked={course.premium && !canPremium && !planLoading}
+        locked={course.premium && !isAdmin && !hasPaid(course.slug) && !planLoading && !enrLoading}
+        priceLabel={formatCoursePrice(course)}
+        enrolment={enrolmentFor(course.slug)}
       />
     );
   }
@@ -80,7 +85,7 @@ export default function DashboardAcademy() {
     <div className="space-y-6 p-4 md:p-6">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold"><GraduationCap className="h-6 w-6 text-accent" /> Academy</h1>
-        <p className="text-sm text-muted-foreground">Learn marketing automation at your own pace. Premium courses are included with the {PREMIUM_ACADEMY_LABEL}.</p>
+        <p className="text-sm text-muted-foreground">Learn marketing automation at your own pace. Premium courses are paid per course and include a live class.</p>
       </div>
 
       {progress.error && <p className="text-sm text-destructive">Couldn't load your progress. Please refresh.</p>}
@@ -101,7 +106,8 @@ export default function DashboardAcademy() {
         {courses.map((c) => {
           const n = done.get(c.slug)?.size ?? 0;
           const pct = Math.round((n / c.lessons) * 100);
-          const locked = c.premium && !canPremium;
+          const locked = c.premium && !isAdmin && !hasPaid(c.slug);
+          const enr = enrolmentFor(c.slug);
           return (
             <Link key={c.slug} to={`/dashboard/${wsId}/academy/${c.slug}`} className="group">
               <Card className="h-full overflow-hidden transition-shadow group-hover:shadow-card-hover">
@@ -116,7 +122,7 @@ export default function DashboardAcademy() {
                 </CardHeader>
                 <CardContent className="space-y-1">
                   <Progress value={pct} className="h-2" />
-                  <p className="text-xs text-muted-foreground">{n}/{c.lessons} complete</p>
+                  <p className="text-xs text-muted-foreground">{n}/{c.lessons} complete{enr ? ` · ${ENROLMENT_STATUS_LABEL[enr.status] ?? enr.status}` : ""}</p>
                 </CardContent>
               </Card>
             </Link>
@@ -127,8 +133,9 @@ export default function DashboardAcademy() {
   );
 }
 
-function CoursePlayer({ course, wsId, userId, completed, locked }: {
+function CoursePlayer({ course, wsId, userId, completed, locked, priceLabel, enrolment }: {
   course: Course; wsId: string; userId?: string; completed: Set<string>; locked: boolean;
+  priceLabel: string; enrolment?: { status: string; agreed_date: string | null };
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -180,13 +187,28 @@ function CoursePlayer({ course, wsId, userId, completed, locked }: {
         </div>
       </div>
 
+      {enrolment && !locked && (
+        <Card className="border-accent/40">
+          <CardContent className="p-4 text-sm">
+            <span className="font-semibold">Live class: </span>
+            {enrolment.agreed_date
+              ? new Date(enrolment.agreed_date).toLocaleString("en-GB", { dateStyle: "full", timeStyle: "short" })
+              : "We'll contact you to agree a date."}
+          </CardContent>
+        </Card>
+      )}
+
       {locked ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
             <Lock className="h-8 w-8 text-accent" />
             <p className="font-semibold">This is a Premium course</p>
-            <p className="max-w-md text-sm text-muted-foreground">Premium Academy courses are included with the {PREMIUM_ACADEMY_LABEL}. Upgrade to unlock every lesson.</p>
-            <Button asChild><Link to={`/dashboard/${wsId}/settings?tab=billing`}>Upgrade plan</Link></Button>
+            <p className="max-w-md text-sm text-muted-foreground">
+              {enrolment?.status === "pending_payment"
+                ? "Your enrolment is waiting for payment. Complete payment to unlock this course."
+                : `Enrol in this course (${priceLabel}) to unlock every lesson and book your live class.`}
+            </p>
+            <Button asChild><Link to={`/academy/${course.slug}`}>Book live class</Link></Button>
           </CardContent>
         </Card>
       ) : (
@@ -199,7 +221,8 @@ function CoursePlayer({ course, wsId, userId, completed, locked }: {
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-primary-foreground/70">
                     <PlayCircle className="h-12 w-12 text-accent" />
-                    <p className="text-sm">Lesson video coming soon</p>
+                    <p className="text-sm">Lesson video coming soon — book a live class meanwhile</p>
+                    <Button asChild size="sm" variant="secondary"><Link to={`/academy/${course.slug}`}>Book live class</Link></Button>
                   </div>
                 )}
               </div>
