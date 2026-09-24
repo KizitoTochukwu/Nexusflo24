@@ -13,21 +13,41 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { getCourseBySlug, courses } from "@/data/academyCourses";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { PREMIUM_ACADEMY_LABEL } from "@/data/academyCourses";
-import { useHasEntitlement } from "@/hooks/useEntitlements";
+import { useAcademyCourses, formatCoursePrice } from "@/hooks/useAcademy";
+import EnrolDialog from "@/components/academy/EnrolDialog";
 
 const AcademyCourse = () => {
   const { slug } = useParams<{ slug: string }>();
-  const course = getCourseBySlug(slug);
+  const { data: courses = [], isFetching } = useAcademyCourses();
+  const course = courses.find((c) => c.slug === slug);
   const { user } = useAuth();
-  const { data: hasAccess } = useHasEntitlement("course", slug, !!user);
   const { workspaces } = useWorkspace();
   const wsId = workspaces?.[0]?.id;
+  const [enrolOpen, setEnrolOpen] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
 
-  if (!course) return <Navigate to="/academy" replace />;
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("enrolment");
+    if (params.get("enrolment_cancelled")) toast.info("Payment cancelled — you can try again any time.");
+    if (!id) return;
+    supabase.functions.invoke("academy-enrol", { body: { action: "verify", enrolmentId: id } }).then(({ data }) => {
+      const st = (data as any)?.status;
+      if (st && st !== "pending_payment") {
+        setHasAccess(true);
+        toast.success("Payment received! We'll email you to agree your live class date.");
+      } else toast.info("We're still confirming your payment. Refresh in a moment.");
+    });
+  }, []);
+
+  if (!course) return isFetching ? null : <Navigate to="/academy" replace />;
+  const price = formatCoursePrice(course);
+  const enrolLabel = course.priceMinor > 0 ? `Book Live Class · ${price}` : course.premium ? "Enrolment opening soon" : "Book Free Live Class";
 
   const related = courses.filter((c) => c.slug !== course.slug).slice(0, 3);
 
@@ -63,7 +83,7 @@ const AcademyCourse = () => {
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
               <span className="flex items-center gap-2">
-                <Star className="h-4 w-4 fill-accent text-accent" /> {course.premium ? PREMIUM_ACADEMY_LABEL : "Free with any account"}
+                <Star className="h-4 w-4 fill-accent text-accent" /> {price}
               </span>
               <span className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-accent" /> {course.lessons} lessons
@@ -74,28 +94,19 @@ const AcademyCourse = () => {
             </div>
             {hasAccess && (
               <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-navy-light/50 px-4 py-1.5 text-sm text-gold">
-                <CheckCircle2 className="h-3.5 w-3.5" /> You have full access to this course
+                <CheckCircle2 className="h-3.5 w-3.5" /> You're enrolled — we'll be in touch to agree your class date
               </p>
             )}
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to={
-                  user && wsId
-                    ? `/dashboard/${wsId}/academy/${course.slug}`
-                    : `/register?plan=academy&intent=enroll&course=${course.slug}`
-                }
-              >
-                <Button size="lg" className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
-                  <span className="font-semibold">
-                    {user
-                      ? "Open Course"
-                      : course.premium
-                        ? "Enroll in Course"
-                        : "Start Free Course"}
-                  </span>
-                  <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
+              <Button size="lg" disabled={course.premium && course.priceMinor <= 0} onClick={() => setEnrolOpen(true)} className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
+                <span className="font-semibold">{enrolLabel}</span>
+                <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Button>
+              {user && wsId && (
+                <Link to={`/dashboard/${wsId}/academy/${course.slug}`}>
+                  <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">Open in Dashboard</Button>
+                </Link>
+              )}
               <a href="#syllabus">
                 <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
                   View Syllabus
@@ -177,8 +188,8 @@ const AcademyCourse = () => {
               <p className="text-xs uppercase tracking-wider text-muted-foreground">Includes</p>
               <ul className="mt-3 space-y-2 text-sm text-primary">
                 <li className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-accent" /> {course.lessons} on-demand lessons</li>
-                <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-accent" /> {course.duration} of video</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Certificate of completion</li>
+                <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-accent" /> {course.duration} of content</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Live class with an instructor</li>
                 <li className="flex items-center gap-2"><Users className="h-4 w-4 text-accent" /> Community access</li>
               </ul>
             </div>
@@ -264,26 +275,23 @@ const AcademyCourse = () => {
         <div className="container relative max-w-2xl">
           <h2 className="text-3xl font-bold text-primary-foreground">Ready to start {course.title}?</h2>
           <p className="mx-auto mt-4 max-w-md text-primary-foreground/70">
-            Join thousands of marketers building real campaigns with NexusFlo24 Academy.
+            Lesson videos are on the way. Meanwhile, book a live class and we'll agree a date with you after enrolment.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link to={`/register?plan=academy&intent=enroll&course=${course.slug}`}>
-              <Button size="lg" className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
-                <span className="font-semibold">
-                  {course.premium ? "Enroll Now" : "Start Free"}
-                </span>
-                <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
+            <Button size="lg" disabled={course.premium && course.priceMinor <= 0} onClick={() => setEnrolOpen(true)} className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">
+              <span className="font-semibold">{enrolLabel}</span>
+              <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
             <Link to="/academy">
               <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
                 Browse All Courses
               </Button>
             </Link>
           </div>
-          <p className="mt-5 text-xs text-primary-foreground/50">No credit card required · Cancel anytime</p>
+          <p className="mt-5 text-xs text-primary-foreground/50">Secure payments via Stripe · Class date agreed with you after enrolment</p>
         </div>
       </section>
+      <EnrolDialog course={course} open={enrolOpen} onOpenChange={setEnrolOpen} />
     </Layout>
   );
 };
