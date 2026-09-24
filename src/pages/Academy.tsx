@@ -19,7 +19,7 @@ import {
   Quote,
 } from "lucide-react";
 
-import { courses, academyStats, PREMIUM_ACADEMY_LABEL } from "@/data/academyCourses";
+import { useAcademyCourses, useAcademyTestimonials, formatCoursePrice } from "@/hooks/useAcademy";
 
 const categoryIcons: Record<string, typeof Zap> = {
   "AI Marketing": Zap,
@@ -29,20 +29,19 @@ const categoryIcons: Record<string, typeof Zap> = {
   "Email Automation": Mail,
   "WhatsApp Automation": MessageCircle,
 };
-const stats = academyStats();
-const categories = stats.categories.map((label) => ({
-  label,
-  icon: categoryIcons[label] ?? BookOpen,
-  count: courses.filter((c) => c.category === label).length,
-}));
-
-const testimonials = [
-  { name: "Sarah M.", role: "Digital Marketer", quote: "NexusFlo24 Academy transformed how I approach AI marketing. The courses are practical and immediately applicable.", rating: 5 },
-  { name: "James K.", role: "Agency Owner", quote: "The funnel building course alone paid for itself 10x over. Highly recommend to any serious marketer.", rating: 5 },
-  { name: "Amina O.", role: "SaaS Founder", quote: "I automated my entire WhatsApp follow-up sequence after taking the WhatsApp Marketing course. Game changer!", rating: 5 },
-];
-
 const Academy = () => {
+  const { data: courses = [] } = useAcademyCourses();
+  const { data: testimonials = [] } = useAcademyTestimonials();
+  const stats = {
+    categories: Array.from(new Set(courses.map((c) => c.category))),
+    totalCourses: courses.length,
+    totalLessons: courses.reduce((a, c) => a + c.lessons, 0),
+  };
+  const categories = stats.categories.map((label) => ({
+    label,
+    icon: categoryIcons[label] ?? BookOpen,
+    count: courses.filter((c) => c.category === label).length,
+  }));
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const visibleCourses = activeCategory ? courses.filter((c) => c.category === activeCategory) : courses;
   return (
@@ -142,7 +141,7 @@ const Academy = () => {
           On-demand, expert-led, and built around real campaigns.
         </p>
         <p className="mx-auto mb-10 max-w-xl text-center text-sm text-muted-foreground">
-          Free courses are open to every account. Premium courses are included with the {PREMIUM_ACADEMY_LABEL}.
+          Free courses are open to everyone. Premium courses are paid per course and include a live class, with the date agreed after enrolment.
           {activeCategory && (
             <button type="button" onClick={() => setActiveCategory(null)} className="ml-2 font-semibold text-accent underline-offset-4 hover:underline">
               Show all courses
@@ -190,7 +189,7 @@ const Academy = () => {
                   </div>
                   <div className="flex items-center justify-between border-t pt-3">
                     <span className="text-xs font-semibold text-muted-foreground">
-                      {c.premium ? PREMIUM_ACADEMY_LABEL : "Free with any account"}
+                      {formatCoursePrice(c)}
                     </span>
                     <ArrowRight className="h-3.5 w-3.5 text-accent transition-transform group-hover:translate-x-1" />
                   </div>
@@ -207,22 +206,17 @@ const Academy = () => {
       <div className="container max-w-5xl">
         <h2 className="mb-3 text-center text-4xl font-bold">What Students Say</h2>
         <p className="mx-auto mb-14 max-w-xl text-center text-muted-foreground">
-          The kind of outcomes the Academy is built for. <span className="italic">Illustrative examples.</span>
+          Real feedback from Academy students.
         </p>
         <div className="grid gap-6 md:grid-cols-3">
           {testimonials.map((t) => (
             <div
-              key={t.name}
+              key={t.id}
               className="rounded-2xl bg-gradient-to-br from-accent/40 via-border to-accent/20 p-[1px] shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover"
             >
               <div className="relative h-full overflow-hidden rounded-2xl bg-card p-6">
                 <Quote className="pointer-events-none absolute right-4 top-4 h-16 w-16 text-accent/10" />
-                <div className="relative flex gap-0.5">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} className="h-4 w-4 fill-accent text-accent" />
-                  ))}
-                </div>
-                <p className="relative mt-4 text-sm italic leading-relaxed text-muted-foreground">"{t.quote}"</p>
+                <p className="relative text-sm italic leading-relaxed text-muted-foreground">"{t.quote}"</p>
                 <div className="relative mt-6 flex items-center gap-3 border-t pt-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-gold text-sm font-bold text-primary shadow-gold">
                     {t.name.charAt(0)}
@@ -262,7 +256,7 @@ const Academy = () => {
             </Button>
           </a>
         </div>
-        <p className="mt-5 text-xs text-primary-foreground/50">No credit card required · Cancel anytime</p>
+        <p className="mt-5 text-xs text-primary-foreground/50">Free courses available · Premium courses paid per course</p>
       </div>
     </section>
   </Layout>
