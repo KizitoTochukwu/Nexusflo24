@@ -114,7 +114,7 @@ const Academy = () => {
                 setActiveCategory((cur) => (cur === c.label ? null : c.label));
                 document.getElementById("courses")?.scrollIntoView({ behavior: "smooth" });
               }}
-              className={`group relative cursor-pointer text-left ${activeCategory === c.label ? "!border-accent ring-2 ring-accent/40" : ""} overflow-hidden rounded-2xl border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/50 hover:shadow-card-hover"
+              className={`group relative cursor-pointer text-left ${activeCategory === c.label ? "!border-accent ring-2 ring-accent/40" : ""} overflow-hidden rounded-2xl border bg-card p-6 shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/50 hover:shadow-card-hover`}
             >
               <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-accent/5 transition-all duration-500 group-hover:bg-accent/15" />
               <div className="relative flex items-start gap-4">
