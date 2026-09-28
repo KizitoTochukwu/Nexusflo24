@@ -111,13 +111,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session, { allowSubFetch: true });
+    // Watchdog: never leave the app stuck on a loading spinner if the stored
+    // session can't be read/refreshed (common on mobile browsers with stale
+    // or locked storage). After 2.5s we show the UI regardless.
+    const watchdog = setTimeout(() => {
       setLoading(false);
-      if (!session?.user) setSubLoading(false);
-    });
+      setSubLoading((prev) => (currentUserIdRef.current ? prev : false));
+    }, 2500);
 
-    return () => authSub.unsubscribe();
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        applySession(session, { allowSubFetch: true });
+        setLoading(false);
+        if (!session?.user) setSubLoading(false);
+      })
+      .catch(() => {
+        // Corrupted / unreadable stored token: clear it so the next visit is clean.
+        try {
+          Object.keys(localStorage)
+            .filter((k) => k.startsWith("sb-") && k.endsWith("-auth-token"))
+            .forEach((k) => localStorage.removeItem(k));
+        } catch {
+          /* storage unavailable - ignore */
+        }
+        applySession(null, { allowSubFetch: false });
+        setLoading(false);
+        setSubLoading(false);
+      })
+      .finally(() => clearTimeout(watchdog));
+
+    return () => {
+      clearTimeout(watchdog);
+      authSub.unsubscribe();
+    };
   }, []);
 
   return (
