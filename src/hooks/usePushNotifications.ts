@@ -25,7 +25,7 @@ export function usePushNotifications() {
       if (!supported || Notification.permission !== "granted") return;
       const n = new Notification(title, {
         body: body ?? undefined,
-        icon: "/favicon.png",
+        icon: "/icon-192.png?v=3",
       });
       if (onClick) n.onclick = () => { onClick(); n.close(); };
     },
