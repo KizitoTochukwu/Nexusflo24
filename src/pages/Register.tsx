@@ -1,6 +1,6 @@
 import { ACADEMY_PENDING_COURSE_KEY } from "@/data/academyCourses";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import nexusLogo from "@/assets/nexusflo24-logo-full.png";
+import nexusLogo from "@/assets/brand-logo-full.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
