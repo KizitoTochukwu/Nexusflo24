@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import nexusLogo from "@/assets/nexusflo24-logo-full.png";
+import nexusLogo from "@/assets/brand-logo-full.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,7 @@ const ForgotPassword = () => {
     <AuthLayout>
       <div className="mb-6 text-center lg:hidden">
         <Link to="/">
-          <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-11 sm:h-12 object-contain mx-auto" />
+          <img src={nexusLogo.url} alt="NexusFlo24" width={174} height={48} className="mx-auto h-11 w-auto object-contain sm:h-12" />
         </Link>
       </div>
 
