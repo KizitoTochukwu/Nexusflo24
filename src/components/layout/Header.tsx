@@ -8,7 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import logoFull from "@/assets/nexusflo24-logo-full.png";
+import logoFull from "@/assets/brand-logo-full.png.asset.json";
 import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 
 const navLinks = [
