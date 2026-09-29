@@ -103,7 +103,7 @@ const Register = () => {
       {/* Mobile logo */}
       <div className="mb-6 text-center lg:hidden">
         <Link to="/">
-          <img src={nexusLogo} alt="NexusFlo24 Logo" className="h-9 sm:h-10 object-contain mx-auto" />
+          <img src={nexusLogo.url} alt="NexusFlo24" width={174} height={48} className="mx-auto h-10 w-auto object-contain sm:h-11" />
         </Link>
       </div>
 
