@@ -40,6 +40,7 @@ import CrmWorkspaceLayout from "./components/crm/CrmWorkspaceLayout";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
 import DashboardAutomations from "./pages/dashboard/DashboardAutomations";
 import DashboardAcademy from "./pages/dashboard/DashboardAcademy";
+import DashboardCommunity from "./pages/dashboard/DashboardCommunity";
 import DashboardFunnels from "./pages/dashboard/DashboardFunnels";
 import FunnelDetailPage from "./pages/dashboard/FunnelDetailPage";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics";
@@ -312,6 +313,7 @@ const App = () => (
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="academy" element={<DashboardAcademy />} />
                 <Route path="academy/:slug" element={<DashboardAcademy />} />
+                <Route path="community" element={<DashboardCommunity />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="forms" element={<DashboardForms />} />
