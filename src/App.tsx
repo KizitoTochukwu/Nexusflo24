@@ -313,6 +313,7 @@ const App = () => (
                 <Route path="automations" element={<DashboardAutomations />} />
                 <Route path="academy" element={<DashboardAcademy />} />
                 <Route path="academy/:slug" element={<DashboardAcademy />} />
+                <Route path="community" element={<DashboardCommunity />} />
                 <Route path="funnels" element={<DashboardFunnels />} />
                 <Route path="funnels/:funnelId" element={<FunnelDetailPage />} />
                 <Route path="forms" element={<DashboardForms />} />
