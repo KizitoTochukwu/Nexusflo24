@@ -40,6 +40,7 @@ import CrmWorkspaceLayout from "./components/crm/CrmWorkspaceLayout";
 import DashboardCampaigns from "./pages/dashboard/DashboardCampaigns";
 import DashboardAutomations from "./pages/dashboard/DashboardAutomations";
 import DashboardAcademy from "./pages/dashboard/DashboardAcademy";
+import DashboardCommunity from "./pages/dashboard/DashboardCommunity";
 import DashboardFunnels from "./pages/dashboard/DashboardFunnels";
 import FunnelDetailPage from "./pages/dashboard/FunnelDetailPage";
 import DashboardAnalytics from "./pages/dashboard/DashboardAnalytics";
