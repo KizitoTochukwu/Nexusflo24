@@ -144,7 +144,31 @@ export function useCommunityMembers(communityId?: string) {
   });
 }
 
+/* --------------------------- Platform community --------------------------- */
+
+/** Slug of the official, platform-wide NexusFlo24 member community. */
+export const PLATFORM_COMMUNITY_SLUG = "nexusflo24-community";
+
+/** The official NexusFlo24 community, readable by any signed-in member. */
+export function usePlatformCommunity() {
+  return useQuery({
+    queryKey: ["platform-community"],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<Community | null> => {
+      const { data, error } = await db
+        .from("shop_communities")
+        .select("*")
+        .eq("slug", PLATFORM_COMMUNITY_SLUG)
+        .eq("status", "active")
+        .maybeSingle();
+      if (error) throw error;
+      return (data as Community) ?? null;
+    },
+  });
+}
+
 /* -------------------------------- Public --------------------------------- */
+
 
 export type PublicCommunity = {
   id: string;
