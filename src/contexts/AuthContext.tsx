@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const watchdog = setTimeout(() => {
       setLoading(false);
       setSubLoading((prev) => (currentUserIdRef.current ? prev : false));
-    }, 2500);
+    }, 10000);
 
     supabase.auth
       .getSession()
