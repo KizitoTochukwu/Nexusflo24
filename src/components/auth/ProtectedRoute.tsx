@@ -13,7 +13,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    const next = window.location.pathname + window.location.search;
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
   }
 
   return <>{children}</>;

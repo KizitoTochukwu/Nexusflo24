@@ -20,7 +20,7 @@ const RedirectIfAuth = ({ children }: { children: React.ReactNode }) => {
   // login form instead of an endless spinner.
   const [waited, setWaited] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => setWaited(true), 2000);
+    const t = setTimeout(() => setWaited(true), 11000);
     return () => clearTimeout(t);
   }, []);
 
