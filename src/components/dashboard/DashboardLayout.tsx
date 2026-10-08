@@ -189,8 +189,6 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
           })}
         </nav>
 
-        {/* Credit balances */}
-        <SidebarCreditWidget collapsed={!showLabels} />
 
         {/* Sidebar logout */}
         <div className="border-t border-sidebar-border px-2 py-3">
