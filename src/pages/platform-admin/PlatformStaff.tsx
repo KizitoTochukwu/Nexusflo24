@@ -17,8 +17,10 @@ const ROLES = [
   { value: "operations_admin", label: "Operations Admin", hint: "Users, workspaces, automations, integrations" },
   { value: "billing_admin", label: "Billing Admin", hint: "Plans, subscriptions, credits, refunds" },
   { value: "support_agent", label: "Support Agent", hint: "Read-only support access sessions" },
-  { value: "content_manager", label: "Content Manager", hint: "Blog, pages, academy content" },
-  { value: "read_only_analyst", label: "Read-only Analyst", hint: "Metrics and reporting only" },
+  { value: "content_admin", label: "Content Manager", hint: "Blog, pages, academy content" },
+  { value: "compliance_admin", label: "Compliance Admin", hint: "Legal, consent and audit records" },
+  { value: "technical_admin", label: "Technical Admin", hint: "Integrations, functions and system health" },
+  { value: "analyst", label: "Read-only Analyst", hint: "Metrics and reporting only" },
 ];
 
 export default function PlatformStaff() {

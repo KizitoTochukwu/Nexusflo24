@@ -496,7 +496,11 @@ Deno.serve(async (req) => {
 
     return json({ error: "Unhandled action" }, 400);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = err instanceof Error
+      ? err.message
+      : (err && typeof err === "object" && "message" in err)
+        ? String((err as { message: unknown }).message)
+        : String(err);
     console.error("[platform-admin-action]", message);
     return json({ error: message }, 500);
   }
