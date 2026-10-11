@@ -25,7 +25,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import heroImg from "@/assets/voice-receptionist-hero.png";
+import heroAsset from "@/assets/voice-receptionist-hero-v2.png.asset.json";
+const heroImg = heroAsset.url;
 
 const DEMO_PATH = "/book/30-minute-discovery-call-9f5d5f";
 
