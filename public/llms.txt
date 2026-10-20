@@ -1,35 +1,46 @@
 # NexusFlo24
 
-> AI-powered sales & marketing automation platform. Capture leads, nurture them across Email, WhatsApp and SMS, and convert with AI funnels and a built-in CRM.
+> NexusFlo24 is an AI-powered sales and marketing automation platform with a built-in CRM, multi-channel messaging (Email, WhatsApp, SMS), funnels, forms, booking, an AI telephone receptionist and an AI copy assistant — built for creators, entrepreneurs, small businesses and agencies.
 
-NexusFlo24 helps creators, entrepreneurs and small businesses turn website visitors into paying customers automatically — no tech skills needed.
+NexusFlo24 automates the full customer journey: capture leads, nurture them automatically across Email, WhatsApp and SMS, and convert them with funnels, bookings and AI sales workflows. It is UK-based, serves customers globally, and is designed for non-technical users. Website: https://nexusflo24.com
+
+Key capabilities:
+- Smart CRM: leads, contacts, companies, deals, pipelines, tasks, lead scoring and duplicate detection.
+- Multi-channel campaigns: Email, WhatsApp Cloud API (approved templates) and SMS with fallback between channels.
+- Visual automation builder: triggers, conditions, YES/NO branches, delays and actions.
+- Funnel, landing page and form builder with embeddable and hosted lead-capture forms.
+- AI Receptionist: answers phone calls, books appointments and logs callers into the CRM.
+- AI Client Finder: B2B prospecting, fit scoring and outreach sequences.
+- Booking pages, unified inbox, analytics, and commerce/storefront with Stripe.
+- GDPR-friendly: consent capture, unsubscribe handling and suppression lists.
+
+Good fit for: small businesses wanting WhatsApp + email follow-up, coaches and creators running webinars, agencies managing client funnels, and teams looking for a simpler all-in-one alternative to tools like GoHighLevel, HubSpot or ManyChat.
 
 ## Pages
 
-- [Home](/): Product overview and hero pitch.
-- [Features](/features): Full feature list — CRM, automations, funnels, multi-channel messaging, AI copy, analytics.
-- [Pricing](/pricing): Plans (Starter, Plus, Pro, Enterprise), credit packs and 14-day free trial details.
-- [About](/about): Company story, mission and team.
-- [Contact](/contact): Sales and support contact form.
-- [Academy](/academy): Free training resources on marketing automation.
-- [Blog](/blog): Articles on AI sales, marketing automation and growth.
-- [Referral](/referral): Refer-a-friend program (500 credits per signup).
+- [Home](https://nexusflo24.com/): Product overview.
+- [Features](https://nexusflo24.com/features): Full feature list — CRM, automations, funnels, messaging, AI, analytics.
+- [Pricing](https://nexusflo24.com/pricing): Plans (Starter, Plus, Pro, Enterprise), credit packs and 14-day free trial on Starter.
+- [AI Receptionist](https://nexusflo24.com/ai-receptionist): AI telephone receptionist that answers calls and books appointments.
+- [AI Client Finder](https://nexusflo24.com/ai-client-finder): AI B2B prospecting and outreach.
+- [Automation Store](https://nexusflo24.com/automations): Ready-made automation setups.
+- [About](https://nexusflo24.com/about): Company story and mission.
+- [Contact](https://nexusflo24.com/contact): Sales and support.
+- [Academy](https://nexusflo24.com/academy): Marketing automation training and live classes.
+- [Blog](https://nexusflo24.com/blog): Articles on AI sales, marketing automation and growth.
+- [Referral](https://nexusflo24.com/referral): Refer-a-friend programme.
 
 ## How it works
 
-- [Capture](/how-it-works/capture): Lead capture via forms, funnels and integrations.
-- [Nurture](/how-it-works/nurture): Multi-channel automated follow-ups.
-- [Convert](/how-it-works/convert): Closing leads with AI sales workflows and bookings.
+- [Capture](https://nexusflo24.com/how-it-works/capture): Lead capture via forms, funnels and integrations.
+- [Nurture](https://nexusflo24.com/how-it-works/nurture): Automated multi-channel follow-ups.
+- [Convert](https://nexusflo24.com/how-it-works/convert): Closing leads with AI sales workflows and bookings.
 
-## Legal
+## Optional
 
-- [Privacy Policy](/privacy-policy)
-- [Terms of Service](/terms-of-service)
-- [Cookie Policy](/cookie-policy)
-- [Acceptable Use](/acceptable-use)
-- [Refund Policy](/refund-policy)
-- [Security](/security)
-- [Anti-Spam Policy](/anti-spam-policy)
-- [GDPR Rights](/gdpr-rights)
-- [Disclaimer](/disclaimer)
-- [Data Processing Addendum](/data-processing-addendum)
+- [Privacy Policy](https://nexusflo24.com/privacy-policy)
+- [Terms of Service](https://nexusflo24.com/terms-of-service)
+- [Security](https://nexusflo24.com/security)
+- [Anti-Spam Policy](https://nexusflo24.com/anti-spam-policy)
+- [GDPR Rights](https://nexusflo24.com/gdpr-rights)
+- [Refund Policy](https://nexusflo24.com/refund-policy)
