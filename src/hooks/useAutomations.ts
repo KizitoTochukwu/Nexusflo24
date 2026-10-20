@@ -77,6 +77,7 @@ export const TRIGGER_OPTIONS = [
   { value: "purchase_event", label: "Purchase event (placeholder)" },
   { value: "book_appointment", label: "Appointment booked" },
   { value: "roi_calculator_submitted", label: "ROI Calculator submitted" },
+  { value: "cold_lead_14d", label: "Lead has not replied for 14 days (checked automatically)" },
 ] as const;
 
 export type ConditionInputType = "none" | "text" | "number" | "select" | "field";

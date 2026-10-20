@@ -108,3 +108,5 @@ project_id = "stuaikfyuwcjmchcvfie"
 
 [functions.academy-enrol]
     verify_jwt = false
+  [functions.cold-lead-reactivation]
+    verify_jwt = false

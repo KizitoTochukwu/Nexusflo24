@@ -237,6 +237,14 @@ async function evaluateExitCriteria(
         const pos = (d as any).crm_pipeline_stages?.position;
         if (typeof pos === "number" && pos >= fromPosition) return type;
       }
+    } else if (type === "replied_recently") {
+      const days = Number(c.days ?? 20);
+      const { count } = await supabase
+        .from("sales_conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_id", ctx.leadId).eq("direction", "inbound")
+        .gte("created_at", new Date(Date.now() - days * 86_400_000).toISOString());
+      if ((count ?? 0) > 0) return type;
     } else if (type === "consent_withdrawn") {
       const { data: contact } = await supabase
         .from("contacts").select("consent_status, consent_email")
