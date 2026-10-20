@@ -395,6 +395,7 @@ const TEMPLATES: AutomationTemplate[] = [
       { type: "appointment_booked" },
       { type: "consent_withdrawn" },
       { type: "tag_added", tag: "reactivated" },
+      { type: "replied_recently", days: 13 } as unknown as ExitCriterion,
       { type: "tag_added", tag: "do-not-contact" },
     ],
     steps: [
