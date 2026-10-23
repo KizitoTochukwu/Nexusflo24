@@ -98,6 +98,7 @@ const Footer = () => {
             <h4 className="text-sm font-semibold uppercase tracking-wider text-accent">Company</h4>
             {[
             { label: "About", to: "/about" },
+            { label: "Compare", to: "/compare/nexusflo24-vs-gohighlevel-vs-hubspot" },
             { label: "Contact", to: "/contact" }].
             map((item) =>
             <Link key={item.label} to={item.to} className="block text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground">
