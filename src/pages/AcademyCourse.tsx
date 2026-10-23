@@ -102,11 +102,6 @@ const AcademyCourse = () => {
                 <span className="font-semibold">{enrolLabel}</span>
                 <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
-              {user && wsId && (
-                <Link to={`/dashboard/${wsId}/academy/${course.slug}`}>
-                  <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">Open in Dashboard</Button>
-                </Link>
-              )}
               <a href="#syllabus">
                 <Button size="lg" variant="outline" className="h-12 border-accent/40 bg-transparent px-7 text-primary-foreground hover:bg-accent/10 hover:text-primary-foreground">
                   View Syllabus
