@@ -28,17 +28,17 @@ const values = [
 
 const timeline = [
   { year: "2022", event: "Founded with a mission to democratize AI marketing." },
-  { year: "2023", event: "Launched beta with 500 early adopters. Raised seed funding." },
-  { year: "2024", event: "10,000+ active users. WhatsApp & SMS channels launched." },
+  { year: "2023", event: "Early product development with our first business users." },
+  { year: "2024", event: "WhatsApp & SMS channels launched." },
   { year: "2025", event: "Agency platform, white-label, and advanced AI features." },
-  { year: "2026", event: "AI Sales Closer, smart funnels, and global expansion." },
+  { year: "2026", event: "AI Sales Closer, smart funnels, and AI receptionist." },
 ];
 
 const stats = [
-  { icon: Users, stat: "10,000+", label: "Active Users" },
-  { icon: Globe, stat: "40+", label: "Countries Served" },
-  { icon: MessageSquare, stat: "2M+", label: "Messages Automated" },
-  { icon: BarChart3, stat: "35%", label: "Avg. Conversion Lift" },
+  { icon: MessageSquare, stat: "3", label: "Messaging Channels" },
+  { icon: Users, stat: "1", label: "Connected CRM" },
+  { icon: Globe, stat: "UK", label: "Based, Serving Globally" },
+  { icon: BarChart3, stat: "24/7", label: "Automated Follow-up" },
 ];
 
 const culture = [
@@ -85,8 +85,8 @@ const About = () => (
           We believe every business deserves the power of AI-driven marketing automation — not just the big players.
         </p>
         <div className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-primary-foreground/60 animate-fade-up animation-delay-600">
-          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 10,000+ active users</span>
-          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 40+ countries served</span>
+          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Email, WhatsApp &amp; SMS</span>
+          <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Secure payments via Stripe</span>
           <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> GDPR-ready</span>
         </div>
       </div>

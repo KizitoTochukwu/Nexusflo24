@@ -2,41 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import AutomationFlowGraphic from "./AutomationFlowGraphic";
 
 const stats = [
-  { label: "Leads Captured", value: 10000, suffix: "+", format: (n: number) => `${(n / 1000).toFixed(0)}K` },
-  { label: "Messages Sent", value: 2000000, suffix: "+", format: (n: number) => `${(n / 1000000).toFixed(0)}M` },
-  { label: "Avg. Conversion Lift", value: 47, suffix: "%", format: (n: number) => `${n}` },
+  { value: "3", label: "Channels: Email, WhatsApp & SMS" },
+  { value: "24/7", label: "Automated lead capture" },
+  { value: "14-day", label: "Free trial on Starter" },
 ];
 
-const useCountUp = (target: number, start: boolean, duration = 1500) => {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (!start) return;
-    const startTime = performance.now();
-    let raf = 0;
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - startTime) / duration);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.floor(target * eased));
-      if (progress < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, start, duration]);
-  return value;
-};
-
-const StatItem = ({ stat, visible }: { stat: typeof stats[number]; visible: boolean }) => {
-  const v = useCountUp(stat.value, visible);
-  return (
-    <div className="text-center">
-      <div className="text-3xl font-bold text-accent md:text-4xl">
-        {stat.format(v)}
-        {stat.suffix}
-      </div>
-      <div className="mt-1 text-sm text-primary-foreground/70">{stat.label}</div>
-    </div>
-  );
-};
+const StatItem = ({ stat }: { stat: typeof stats[number] }) => (
+  <div className="text-center">
+    <div className="text-3xl font-bold text-accent md:text-4xl">{stat.value}</div>
+    <div className="mt-1 text-sm text-primary-foreground/70">{stat.label}</div>
+  </div>
+);
 
 const MotionShowcaseSection = () => {
   const ref = useRef<HTMLElement>(null);
