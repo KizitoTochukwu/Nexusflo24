@@ -64,7 +64,7 @@ const MotionShowcaseSection = () => {
 
         <div className="mx-auto mt-12 grid max-w-3xl grid-cols-3 gap-4 border-t border-accent/20 pt-8 md:gap-8 md:pt-10">
           {stats.map((s) => (
-            <StatItem key={s.label} stat={s} visible={visible} />
+            <StatItem key={s.label} stat={s} />
           ))}
         </div>
       </div>
