@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Module } from "@/data/academyCourses";
 import type { AcademyCourseRow } from "@/hooks/useAcademy";
@@ -68,6 +68,7 @@ export function AcademyCoursesAdmin() {
     },
   });
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [uploading, setUploading] = useState(false);
   const refresh = () => { qc.invalidateQueries({ queryKey: ["admin-academy-courses"] }); qc.invalidateQueries({ queryKey: ["academy-courses"] }); };
 
   const save = useMutation({
@@ -162,7 +163,34 @@ export function AcademyCoursesAdmin() {
                   </Select>
                 </div>
               </div>
-              <div className="sm:col-span-2"><Label>Image link</Label><Input value={draft.image} onChange={set("image")} /></div>
+              <div className="sm:col-span-2">
+                <Label>Cover image</Label>
+                <div className="mt-1 flex flex-wrap items-center gap-3 rounded-md border p-3">
+                  {draft.image ? <img src={draft.image} alt="Course cover" className="h-20 w-32 rounded object-cover" /> : <div className="flex h-20 w-32 items-center justify-center rounded bg-muted text-xs text-muted-foreground">No image</div>}
+                  <label className="cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={async (e) => {
+                      const file = e.target.files?.[0]; e.target.value = "";
+                      if (!file) return;
+                      if (!file.type.startsWith("image/")) return toast.error("Please choose an image file");
+                      if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5MB");
+                      setUploading(true);
+                      try {
+                        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+                        const path = `academy/courses-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                        const { error } = await supabase.storage.from("blog-assets").upload(path, file, { cacheControl: "3600" });
+                        if (error) throw error;
+                        const url = supabase.storage.from("blog-assets").getPublicUrl(path).data.publicUrl;
+                        setDraft((d) => d && { ...d, image: url });
+                        toast.success("Image uploaded");
+                      } catch (err) { toast.error((err as Error).message || "Upload failed"); }
+                      finally { setUploading(false); }
+                    }} />
+                    <span className="inline-flex h-9 items-center gap-1 rounded-md border px-3 text-sm hover:bg-accent/10"><Upload className="h-4 w-4" />{uploading ? "Uploading…" : draft.image ? "Replace image" : "Upload image"}</span>
+                  </label>
+                  {draft.image && <Button type="button" size="sm" variant="ghost" onClick={() => setDraft({ ...draft, image: "" })}>Remove</Button>}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Choose a photo from your computer or phone. JPG, PNG or WEBP, under 5MB.</p>
+              </div>
               <div className="sm:col-span-2"><Label>Tagline</Label><Input value={draft.tagline} onChange={set("tagline")} /></div>
               <div className="sm:col-span-2"><Label>Description</Label><Textarea rows={3} value={draft.description} onChange={set("description")} /></div>
               <div><Label>What you'll learn (one per line)</Label><Textarea rows={4} value={draft.outcomes} onChange={set("outcomes")} /></div>
