@@ -13,6 +13,7 @@ import Index from "./pages/Index";
 import Features from "./pages/Features";
 import AiClientFinder from "./pages/AiClientFinder";
 import AiReceptionist from "./pages/AiReceptionist";
+import CompareGoHighLevelHubSpot from "./pages/CompareGoHighLevelHubSpot";
 import Pricing from "./pages/Pricing";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -214,6 +215,7 @@ const App = () => (
               <Route path="/features" element={<Features />} />
               <Route path="/ai-client-finder" element={<AiClientFinder />} />
               <Route path="/ai-receptionist" element={<AiReceptionist />} />
+              <Route path="/compare/nexusflo24-vs-gohighlevel-vs-hubspot" element={<CompareGoHighLevelHubSpot />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/automations" element={<StoreIndex />} />
               <Route path="/automations/all" element={<StoreCatalogue />} />
