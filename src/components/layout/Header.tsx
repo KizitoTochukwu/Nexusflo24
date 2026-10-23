@@ -26,6 +26,7 @@ const resourcesLinks = [
   { label: "Academy", to: "/academy" },
   { label: "Blog", to: "/blog" },
   { label: "ROI Savings Calculator", to: "/tools/roi-savings-calculator" },
+  { label: "Compare Alternatives", to: "/compare/nexusflo24-vs-gohighlevel-vs-hubspot" },
 ];
 
 const solutionsLinks = [
