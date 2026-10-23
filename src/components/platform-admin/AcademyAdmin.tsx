@@ -176,10 +176,10 @@ export function AcademyCoursesAdmin() {
                       setUploading(true);
                       try {
                         const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-                        const path = `courses/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-                        const { error } = await supabase.storage.from("academy-assets").upload(path, file, { cacheControl: "3600" });
+                        const path = `academy/courses-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                        const { error } = await supabase.storage.from("blog-assets").upload(path, file, { cacheControl: "3600" });
                         if (error) throw error;
-                        const url = supabase.storage.from("academy-assets").getPublicUrl(path).data.publicUrl;
+                        const url = supabase.storage.from("blog-assets").getPublicUrl(path).data.publicUrl;
                         setDraft((d) => d && { ...d, image: url });
                         toast.success("Image uploaded");
                       } catch (err) { toast.error((err as Error).message || "Upload failed"); }
