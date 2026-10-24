@@ -84,7 +84,10 @@ serve(async (req) => {
     }).select("id").single();
     if (error) throw error;
 
-    if (!paid) return json({ enrolmentId: en.id, status: "awaiting_date" });
+    if (!paid) {
+      await fulfilAcademyEnrolment(db, en.id);
+      return json({ enrolmentId: en.id, status: "awaiting_date" });
+    }
     if (!stripeKey) return json({ error: "Payments are not available right now." }, 500);
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
