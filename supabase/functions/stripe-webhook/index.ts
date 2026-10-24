@@ -3,6 +3,7 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { allocatePlanCredits, addCredits } from "../_shared/credit-guard.ts";
 import type { CreditChannel } from "../_shared/credit-guard.ts";
+import { fulfilAcademyEnrolment } from "../_shared/academyFulfil.ts";
 
 const log = (step: string, details?: unknown) =>
   console.log(`[STRIPE-WEBHOOK] ${step}`, details ? JSON.stringify(details) : "");
@@ -81,6 +82,17 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+
+        // Academy live class payments
+        if (session.metadata?.kind === "academy_enrolment" && session.metadata.enrolment_id) {
+          if (session.payment_status === "paid") {
+            await supabase.from("academy_enrolments")
+              .update({ status: "awaiting_date", paid_at: new Date().toISOString() })
+              .eq("id", session.metadata.enrolment_id).eq("status", "pending_payment");
+            await fulfilAcademyEnrolment(supabase, session.metadata.enrolment_id);
+          }
+          break;
+        }
 
         // Handle credit pack purchases (one-time payments)
         if (session.metadata?.type === "credit_purchase") {

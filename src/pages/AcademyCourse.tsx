@@ -30,6 +30,7 @@ const AcademyCourse = () => {
   const wsId = workspaces?.[0]?.id;
   const [enrolOpen, setEnrolOpen] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
+  const [bookingUrl, setBookingUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,7 +41,9 @@ const AcademyCourse = () => {
       const st = (data as any)?.status;
       if (st && st !== "pending_payment") {
         setHasAccess(true);
-        toast.success("Payment received! We'll email you to agree your live class date.");
+        const url = (data as any)?.booking_url as string | null;
+        if (url) setBookingUrl(url.replace(/^https:\/\/nexusflo24\.com/, window.location.origin));
+        toast.success("Payment received! Check your email, or pick your class time below.");
       } else toast.info("We're still confirming your payment. Refresh in a moment.");
     });
   }, []);
@@ -93,9 +96,14 @@ const AcademyCourse = () => {
               </span>
             </div>
             {hasAccess && (
-              <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-navy-light/50 px-4 py-1.5 text-sm text-gold">
-                <CheckCircle2 className="h-3.5 w-3.5" /> You're enrolled — we'll be in touch to agree your class date
-              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-gold/30 bg-navy-light/50 px-4 py-3 text-sm text-gold">
+                <CheckCircle2 className="h-4 w-4" /> Payment confirmed — we've emailed you. Choose your live class time now:
+                {bookingUrl && (
+                  <a href={bookingUrl}>
+                    <Button size="sm" className="bg-gradient-gold text-primary">Select date &amp; time</Button>
+                  </a>
+                )}
+              </div>
             )}
             <div className="mt-8 flex flex-wrap gap-3">
               <Button size="lg" disabled={course.premium && course.priceMinor <= 0} onClick={() => setEnrolOpen(true)} className="group h-12 bg-gradient-gold px-7 text-primary shadow-gold hover:opacity-95">

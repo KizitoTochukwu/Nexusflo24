@@ -53,9 +53,10 @@ export default function PublicBooking() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [step, setStep] = useState<"pick" | "details" | "review">("pick");
 
-  const [guestName, setGuestName] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
+  const prefill = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const [guestName, setGuestName] = useState(prefill?.get("name")?.slice(0, 120) ?? "");
+  const [guestEmail, setGuestEmail] = useState(prefill?.get("email")?.slice(0, 200) ?? "");
+  const [guestPhone, setGuestPhone] = useState(prefill?.get("phone")?.slice(0, 40) ?? "");
   const [notes, setNotes] = useState("");
   const [smsConsent, setSmsConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
