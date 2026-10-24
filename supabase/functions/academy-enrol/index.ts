@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fulfilAcademyEnrolment, academyBookingUrl } from "../_shared/academyFulfil.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ serve(async (req) => {
       const id = clean(body.enrolmentId, 64);
       const { data: en } = await db.from("academy_enrolments").select("*").eq("id", id).maybeSingle();
       if (!en) return json({ error: "Enrolment not found" }, 404);
+      let status = en.status;
       if (en.status === "pending_payment" && en.stripe_session_id && stripeKey) {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
         const s = await stripe.checkout.sessions.retrieve(en.stripe_session_id);
@@ -34,10 +36,14 @@ serve(async (req) => {
           await db.from("academy_enrolments")
             .update({ status: "awaiting_date", paid_at: new Date().toISOString() })
             .eq("id", id).eq("status", "pending_payment");
-          return json({ status: "awaiting_date", course_title: en.course_title });
+          status = "awaiting_date";
         }
       }
-      return json({ status: en.status, course_title: en.course_title });
+      if (status !== "pending_payment") await fulfilAcademyEnrolment(db, id);
+      return json({
+        status, course_title: en.course_title,
+        booking_url: status !== "pending_payment" ? academyBookingUrl(en) : null,
+      });
     }
 
     // Create enrolment
