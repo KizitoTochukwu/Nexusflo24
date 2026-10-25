@@ -53,7 +53,10 @@ serve(async (req) => {
           headers: { Authorization: `Bearer ${paystackKey}` },
         });
         const j = await r.json();
-        if (j?.data?.status === "success" && j.data.amount >= en.amount_minor && String(j.data.currency).toUpperCase() === en.currency) {
+        const d = j?.data;
+        if (d?.status === "success" && `${PAYSTACK_PREFIX}${d.reference}` === ref
+          && d.amount === en.amount_minor && String(d.currency).toUpperCase() === en.currency
+          && (!d.metadata?.enrolment_id || d.metadata.enrolment_id === en.id)) {
           await markPaid(db, id);
           status = "awaiting_date";
         }
@@ -66,9 +69,17 @@ serve(async (req) => {
         }
       }
       if (status !== "pending_payment") await fulfilAcademyEnrolment(db, id);
+      // Purchase is only reported for paid, server-verified enrolments.
+      const paidVerified = status !== "pending_payment" && en.amount_minor > 0;
       return json({
         status, course_title: en.course_title,
         booking_url: status !== "pending_payment" ? academyBookingUrl(en) : null,
+        purchase: paidVerified ? {
+          event_id: `academy_purchase_${en.id}`,
+          course_slug: en.course_slug ?? null,
+          value: en.amount_minor / 100,
+          currency: en.currency,
+        } : null,
       });
     }
 

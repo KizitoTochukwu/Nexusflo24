@@ -50,13 +50,19 @@ serve(async (req) => {
 
       if (purchaseType === "academy_enrolment" && meta?.enrolment_id) {
         const { data: en } = await supabase.from("academy_enrolments")
-          .select("id, amount_minor, currency, status").eq("id", meta.enrolment_id).maybeSingle();
-        if (en && en.status === "pending_payment" && amountMinor >= en.amount_minor && currency === en.currency) {
-          await supabase.from("academy_enrolments")
+          .select("id, amount_minor, currency, status, stripe_session_id").eq("id", meta.enrolment_id).maybeSingle();
+        // Exact amount, currency and the reference we created must all match.
+        const refOk = !!data?.reference && en?.stripe_session_id === `ps:${data.reference}`;
+        if (en && en.status === "pending_payment" && refOk && amountMinor === en.amount_minor && currency === en.currency) {
+          const { data: claimed } = await supabase.from("academy_enrolments")
             .update({ status: "awaiting_date", paid_at: new Date().toISOString() })
-            .eq("id", en.id).eq("status", "pending_payment");
-          const { fulfilAcademyEnrolment } = await import("../_shared/academyFulfil.ts");
-          await fulfilAcademyEnrolment(supabase, en.id);
+            .eq("id", en.id).eq("status", "pending_payment").select("id");
+          if (claimed?.length) {
+            const { fulfilAcademyEnrolment } = await import("../_shared/academyFulfil.ts");
+            await fulfilAcademyEnrolment(supabase, en.id);
+          }
+        } else if (en && en.status === "pending_payment") {
+          console.warn("[paystack-webhook] academy payment mismatch", en.id);
         }
       } else if (purchaseType === "credit_purchase" && workspaceId) {
         const channel = meta.channel as string;
