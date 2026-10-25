@@ -159,7 +159,7 @@ serve(async (req) => {
           detail: `Paystack said: ${clean(j?.message, 200) || `HTTP ${r.status}`}` }, 502);
       }
       await db.from("academy_enrolments").update({ stripe_session_id: PAYSTACK_PREFIX + j.data.reference }).eq("id", en.id);
-      return json({ enrolmentId: en.id, url: j.data.authorization_url });
+      return json({ enrolmentId: en.id, url: j.data.authorization_url, amount_minor: amount, currency });
     }
 
     if (!stripeKey) return json({ error: "Payments are not available right now." }, 500);
@@ -180,7 +180,7 @@ serve(async (req) => {
       metadata: { kind: "academy_enrolment", enrolment_id: en.id, course_slug: course.slug },
     });
     await db.from("academy_enrolments").update({ stripe_session_id: session.id }).eq("id", en.id);
-    return json({ enrolmentId: en.id, url: session.url });
+    return json({ enrolmentId: en.id, url: session.url, amount_minor: amount, currency });
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
     console.error("[academy-enrol]", m);
