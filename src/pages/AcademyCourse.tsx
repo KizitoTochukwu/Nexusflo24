@@ -40,6 +40,14 @@ const AcademyCourse = () => {
     if (!id) return;
     supabase.functions.invoke("academy-enrol", { body: { action: "verify", enrolmentId: id } }).then(({ data }) => {
       const st = (data as any)?.status;
+      const p = (data as any)?.purchase;
+      if (p?.event_id) {
+        // Server-verified payment only; once per enrolment even on refresh.
+        fbqTrackOnce(p.event_id, "Purchase", {
+          content_ids: [p.course_slug ?? slug], content_name: (data as any)?.course_title,
+          content_type: "product", value: p.value, currency: p.currency, num_items: 1,
+        }, p.event_id);
+      }
       if (st && st !== "pending_payment") {
         setHasAccess(true);
         const url = (data as any)?.booking_url as string | null;

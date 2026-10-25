@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { CURRENCY_LIST, type CurrencyCode } from "@/lib/currency/config";
+import { fbqTrackOnce } from "@/lib/analytics/metaPixel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,17 @@ export default function EnrolDialog({ course, open, onOpenChange }: { course: Ac
         duration: 10000,
       });
     }
-    if (data?.url) { window.location.href = data.url; return; }
+    if (data?.url) {
+      // Checkout session opened successfully — report once per attempt (enrolment).
+      if (data.enrolmentId && data.amount_minor > 0) {
+        fbqTrackOnce(`ic_${data.enrolmentId}`, "InitiateCheckout", {
+          content_ids: [course.slug], content_name: course.title, content_type: "product",
+          value: data.amount_minor / 100, currency: data.currency, num_items: 1,
+        }, `academy_ic_${data.enrolmentId}`);
+        await new Promise((r) => setTimeout(r, 300)); // let the beacon leave before redirect
+      }
+      window.location.href = data.url; return;
+    }
     setDone(true);
   };
 

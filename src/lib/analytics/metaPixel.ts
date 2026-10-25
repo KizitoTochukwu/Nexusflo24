@@ -15,14 +15,25 @@ declare global {
 
 const isAvailable = () => typeof window !== "undefined" && typeof window.fbq === "function";
 
-/** Fire a standard or custom Meta Pixel `track` event. */
-export const fbqTrack = (event: string, params?: Record<string, any>) => {
+/** Fire a standard or custom Meta Pixel `track` event (optionally with an eventID for dedup). */
+export const fbqTrack = (event: string, params?: Record<string, any>, eventId?: string) => {
   if (!isAvailable()) return;
   try {
-    window.fbq!("track", event, params);
+    if (eventId) window.fbq!("track", event, params, { eventID: eventId });
+    else window.fbq!("track", event, params);
   } catch (err) {
     console.warn("[meta-pixel] track failed", event, err);
   }
+};
+
+/** Fire an event at most once per browser (survives refreshes). */
+export const fbqTrackOnce = (key: string, event: string, params: Record<string, any>, eventId?: string) => {
+  try {
+    const k = `nf24_px_${key}`;
+    if (localStorage.getItem(k)) return;
+    localStorage.setItem(k, "1");
+  } catch { /* storage blocked: still fire */ }
+  fbqTrack(event, params, eventId);
 };
 
 /** Fire a custom (non-standard) Meta Pixel event. */
