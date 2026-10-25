@@ -89,9 +89,12 @@ export type Database = {
           agreed_date: string | null
           amount_minor: number
           business_type: string | null
+          confirmation_sent_at: string | null
           course_slug: string
           course_title: string
           created_at: string
+          crm_contact_id: string | null
+          crm_lead_id: string | null
           currency: string
           email: string
           full_name: string
@@ -109,9 +112,12 @@ export type Database = {
           agreed_date?: string | null
           amount_minor?: number
           business_type?: string | null
+          confirmation_sent_at?: string | null
           course_slug: string
           course_title?: string
           created_at?: string
+          crm_contact_id?: string | null
+          crm_lead_id?: string | null
           currency?: string
           email: string
           full_name: string
@@ -129,9 +135,12 @@ export type Database = {
           agreed_date?: string | null
           amount_minor?: number
           business_type?: string | null
+          confirmation_sent_at?: string | null
           course_slug?: string
           course_title?: string
           created_at?: string
+          crm_contact_id?: string | null
+          crm_lead_id?: string | null
           currency?: string
           email?: string
           full_name?: string
