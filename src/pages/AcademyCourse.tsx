@@ -21,6 +21,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAcademyCourses, useLocalCoursePrice } from "@/hooks/useAcademy";
 import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 import EnrolDialog from "@/components/academy/EnrolDialog";
+import { fbqTrack, fbqTrackOnce } from "@/lib/analytics/metaPixel";
 
 const AcademyCourse = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -58,6 +59,19 @@ const AcademyCourse = () => {
   }, []);
 
   const local = useLocalCoursePrice(course ?? { premium: false, priceMinor: 0, currency: "GBP" });
+  // ViewContent once per course page view (after the route PageView).
+  const vcKey = course ? `${course.slug}|${local.currency}` : "";
+  useEffect(() => {
+    if (!course) return;
+    const t = setTimeout(() => fbqTrack("ViewContent", {
+      content_ids: [course.slug], content_name: course.title, content_type: "product",
+      ...(local.minor > 0 ? { value: local.minor / 100, currency: local.currency } : {}),
+    }), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course?.slug]);
+  void vcKey;
+
   if (!course) return isFetching ? null : <Navigate to="/academy" replace />;
   const price = local.label;
   const enrolLabel = course.priceMinor > 0 ? `Book Live Class · ${price}` : course.premium ? "Enrolment opening soon" : "Book Free Live Class";
