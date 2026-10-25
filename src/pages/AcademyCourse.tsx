@@ -18,7 +18,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useAcademyCourses, formatCoursePrice } from "@/hooks/useAcademy";
+import { useAcademyCourses, useLocalCoursePrice } from "@/hooks/useAcademy";
+import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 import EnrolDialog from "@/components/academy/EnrolDialog";
 
 const AcademyCourse = () => {
@@ -48,8 +49,9 @@ const AcademyCourse = () => {
     });
   }, []);
 
+  const local = useLocalCoursePrice(course ?? { premium: false, priceMinor: 0, currency: "GBP" });
   if (!course) return isFetching ? null : <Navigate to="/academy" replace />;
-  const price = formatCoursePrice(course);
+  const price = local.label;
   const enrolLabel = course.priceMinor > 0 ? `Book Live Class · ${price}` : course.premium ? "Enrolment opening soon" : "Book Free Live Class";
 
   const related = courses.filter((c) => c.slug !== course.slug).slice(0, 3);
@@ -87,6 +89,7 @@ const AcademyCourse = () => {
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
               <span className="flex items-center gap-2">
                 <Star className="h-4 w-4 fill-accent text-accent" /> {price}
+                {course.priceMinor > 0 && <CurrencySwitcher variant="compact" className="border border-accent/30 text-primary-foreground hover:text-primary" />}
               </span>
               <span className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-accent" /> {course.lessons} lessons

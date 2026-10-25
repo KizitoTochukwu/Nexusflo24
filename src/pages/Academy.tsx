@@ -19,7 +19,9 @@ import {
   Quote,
 } from "lucide-react";
 
-import { useAcademyCourses, useAcademyTestimonials, formatCoursePrice } from "@/hooks/useAcademy";
+import { useAcademyCourses, useAcademyTestimonials } from "@/hooks/useAcademy";
+import CoursePrice from "@/components/academy/CoursePrice";
+import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 
 const categoryIcons: Record<string, typeof Zap> = {
   "AI Marketing": Zap,
@@ -140,6 +142,9 @@ const Academy = () => {
         <p className="mx-auto mb-4 max-w-xl text-center text-muted-foreground">
           On-demand, expert-led, and built around real campaigns.
         </p>
+        <div className="mb-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          Show prices in <CurrencySwitcher className="border" />
+        </div>
         <p className="mx-auto mb-10 max-w-xl text-center text-sm text-muted-foreground">
           Free courses are open to everyone. Premium courses are paid per course and include a live class, with the date agreed after enrolment.
           {activeCategory && (
@@ -189,7 +194,7 @@ const Academy = () => {
                   </div>
                   <div className="flex items-center justify-between border-t pt-3">
                     <span className="text-xs font-semibold text-muted-foreground">
-                      {formatCoursePrice(c)}
+                      <CoursePrice course={c} />
                     </span>
                     <ArrowRight className="h-3.5 w-3.5 text-accent transition-transform group-hover:translate-x-1" />
                   </div>

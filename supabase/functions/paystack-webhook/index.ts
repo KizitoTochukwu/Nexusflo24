@@ -48,7 +48,17 @@ serve(async (req) => {
       const currency = (data?.currency || meta?.currency || "NGN").toUpperCase();
       const amountMinor = data?.amount ?? 0;
 
-      if (purchaseType === "credit_purchase" && workspaceId) {
+      if (purchaseType === "academy_enrolment" && meta?.enrolment_id) {
+        const { data: en } = await supabase.from("academy_enrolments")
+          .select("id, amount_minor, currency, status").eq("id", meta.enrolment_id).maybeSingle();
+        if (en && en.status === "pending_payment" && amountMinor >= en.amount_minor && currency === en.currency) {
+          await supabase.from("academy_enrolments")
+            .update({ status: "awaiting_date", paid_at: new Date().toISOString() })
+            .eq("id", en.id).eq("status", "pending_payment");
+          const { fulfilAcademyEnrolment } = await import("../_shared/academyFulfil.ts");
+          await fulfilAcademyEnrolment(supabase, en.id);
+        }
+      } else if (purchaseType === "credit_purchase" && workspaceId) {
         const channel = meta.channel as string;
         const credits = Number(meta.credits || 0);
         if (credits > 0) {
