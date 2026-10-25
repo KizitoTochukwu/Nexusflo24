@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { courses as staticCourses, type Course, type Module } from "@/data/academyCourses";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { convertCoursePrice, formatMinorAmount } from "@/lib/currency/academyPrice";
 
 export type AcademyCourse = Course & { id?: string; priceMinor: number; currency: string; published: boolean };
 
@@ -66,6 +68,14 @@ export function formatCoursePrice(c: { premium: boolean; priceMinor: number; cur
   if (!c.premium && c.priceMinor <= 0) return "Free";
   if (c.priceMinor <= 0) return "Price coming soon";
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: c.currency || "GBP" }).format(c.priceMinor / 100);
+}
+
+/** Course price in the visitor's chosen currency (matches what checkout charges). */
+export function useLocalCoursePrice(c: { premium: boolean; priceMinor: number; currency: string }) {
+  const { currency, rates } = useCurrency();
+  const minor = convertCoursePrice(c.priceMinor, c.currency || "GBP", currency, rates);
+  const label = c.priceMinor <= 0 ? formatCoursePrice(c) : formatMinorAmount(minor, currency);
+  return { minor, currency, label };
 }
 
 export const ENROLMENT_STATUS_LABEL: Record<string, string> = {
