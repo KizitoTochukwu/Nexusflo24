@@ -142,6 +142,9 @@ const Academy = () => {
         <p className="mx-auto mb-4 max-w-xl text-center text-muted-foreground">
           On-demand, expert-led, and built around real campaigns.
         </p>
+        <div className="mb-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          Show prices in <CurrencySwitcher className="border" />
+        </div>
         <p className="mx-auto mb-10 max-w-xl text-center text-sm text-muted-foreground">
           Free courses are open to everyone. Premium courses are paid per course and include a live class, with the date agreed after enrolment.
           {activeCategory && (

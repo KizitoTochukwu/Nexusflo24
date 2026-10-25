@@ -18,7 +18,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useAcademyCourses, formatCoursePrice } from "@/hooks/useAcademy";
+import { useAcademyCourses, useLocalCoursePrice } from "@/hooks/useAcademy";
+import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 import EnrolDialog from "@/components/academy/EnrolDialog";
 
 const AcademyCourse = () => {
@@ -48,8 +49,9 @@ const AcademyCourse = () => {
     });
   }, []);
 
+  const local = useLocalCoursePrice(course ?? { premium: false, priceMinor: 0, currency: "GBP" });
   if (!course) return isFetching ? null : <Navigate to="/academy" replace />;
-  const price = formatCoursePrice(course);
+  const price = local.label;
   const enrolLabel = course.priceMinor > 0 ? `Book Live Class · ${price}` : course.premium ? "Enrolment opening soon" : "Book Free Live Class";
 
   const related = courses.filter((c) => c.slug !== course.slug).slice(0, 3);
