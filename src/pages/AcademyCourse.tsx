@@ -60,7 +60,6 @@ const AcademyCourse = () => {
 
   const local = useLocalCoursePrice(course ?? { premium: false, priceMinor: 0, currency: "GBP" });
   // ViewContent once per course page view (after the route PageView).
-  const vcKey = course ? `${course.slug}|${local.currency}` : "";
   useEffect(() => {
     if (!course) return;
     const t = setTimeout(() => fbqTrack("ViewContent", {
@@ -70,7 +69,6 @@ const AcademyCourse = () => {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course?.slug]);
-  void vcKey;
 
   if (!course) return isFetching ? null : <Navigate to="/academy" replace />;
   const price = local.label;

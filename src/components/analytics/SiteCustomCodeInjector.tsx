@@ -8,6 +8,13 @@ function clearTagged(mark: string) {
   document.querySelectorAll(`[${mark}]`).forEach((el) => el.remove());
 }
 
+// The Meta Pixel is already installed in index.html. A second copy pasted into
+// Custom Code re-inits the pixel and doubles automatic form/click events, so skip it.
+const isDuplicateMetaPixel = (el: HTMLElement) => {
+  const t = (el.textContent || "") + (el.getAttribute("src") || "") + (el.innerHTML || "");
+  return /fbevents\.js|fbq\(\s*['"]init['"]|facebook\.com\/tr\?id=/.test(t);
+};
+
 function injectHtml(html: string, target: HTMLElement, mark: string) {
   if (!html?.trim()) return;
   const doc = new DOMParser().parseFromString(`<!doctype html><html><head></head><body>${html}</body></html>`, "text/html");
@@ -15,6 +22,7 @@ function injectHtml(html: string, target: HTMLElement, mark: string) {
   for (const node of nodes) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
+      if ((el.tagName === "SCRIPT" || el.tagName === "NOSCRIPT") && isDuplicateMetaPixel(el)) continue;
       // re-create scripts so they execute
       if (el.tagName === "SCRIPT") {
         const src = el.getAttribute("src");
