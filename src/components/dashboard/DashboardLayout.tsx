@@ -152,7 +152,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
 
       {/* Sidebar */}
       <aside className={asideClasses}>
-        <div className="flex h-14 items-center justify-between px-3">
+        <div className="flex h-14 shrink-0 items-center justify-between px-3">
           {showLabels && (
             <Link to="/" className="flex items-center">
               <SidebarLogo collapsed={false} />
@@ -168,7 +168,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
             {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
-        <nav className="flex-1 space-y-1 overflow-hidden px-2 py-4 my-[20px]">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 py-2">
           {sidebarItems.map((item) => {
             const prefixes = ("match" in item && item.match ? item.match : [item.to]) as string[];
             const isActive = prefixes.some(
