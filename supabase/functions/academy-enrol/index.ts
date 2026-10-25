@@ -53,7 +53,10 @@ serve(async (req) => {
           headers: { Authorization: `Bearer ${paystackKey}` },
         });
         const j = await r.json();
-        if (j?.data?.status === "success" && j.data.amount >= en.amount_minor && String(j.data.currency).toUpperCase() === en.currency) {
+        const d = j?.data;
+        if (d?.status === "success" && `${PAYSTACK_PREFIX}${d.reference}` === ref
+          && d.amount === en.amount_minor && String(d.currency).toUpperCase() === en.currency
+          && (!d.metadata?.enrolment_id || d.metadata.enrolment_id === en.id)) {
           await markPaid(db, id);
           status = "awaiting_date";
         }
@@ -66,9 +69,17 @@ serve(async (req) => {
         }
       }
       if (status !== "pending_payment") await fulfilAcademyEnrolment(db, id);
+      // Purchase is only reported for paid, server-verified enrolments.
+      const paidVerified = status !== "pending_payment" && en.amount_minor > 0;
       return json({
         status, course_title: en.course_title,
         booking_url: status !== "pending_payment" ? academyBookingUrl(en) : null,
+        purchase: paidVerified ? {
+          event_id: `academy_purchase_${en.id}`,
+          course_slug: en.course_slug ?? null,
+          value: en.amount_minor / 100,
+          currency: en.currency,
+        } : null,
       });
     }
 
@@ -148,7 +159,7 @@ serve(async (req) => {
           detail: `Paystack said: ${clean(j?.message, 200) || `HTTP ${r.status}`}` }, 502);
       }
       await db.from("academy_enrolments").update({ stripe_session_id: PAYSTACK_PREFIX + j.data.reference }).eq("id", en.id);
-      return json({ enrolmentId: en.id, url: j.data.authorization_url });
+      return json({ enrolmentId: en.id, url: j.data.authorization_url, amount_minor: amount, currency });
     }
 
     if (!stripeKey) return json({ error: "Payments are not available right now." }, 500);
@@ -169,7 +180,7 @@ serve(async (req) => {
       metadata: { kind: "academy_enrolment", enrolment_id: en.id, course_slug: course.slug },
     });
     await db.from("academy_enrolments").update({ stripe_session_id: session.id }).eq("id", en.id);
-    return json({ enrolmentId: en.id, url: session.url });
+    return json({ enrolmentId: en.id, url: session.url, amount_minor: amount, currency });
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
     console.error("[academy-enrol]", m);
