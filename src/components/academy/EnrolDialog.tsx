@@ -29,11 +29,34 @@ export default function EnrolDialog({ course, open, onOpenChange }: { course: Ac
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke("academy-enrol", { body: { courseSlug: course.slug, currency, ...form } });
+    const gateway = !paid ? null : currency === "NGN" ? "Paystack" : "Stripe";
+    let data: any = null, error: any = null;
+    try {
+      ({ data, error } = await supabase.functions.invoke("academy-enrol", { body: { courseSlug: course.slug, currency, ...form } }));
+    } catch (err) { error = err; }
     setBusy(false);
-    const msg = (data as any)?.error;
-    if (error || msg) return toast.error(msg || "Couldn't submit. Please try again.");
-    if ((data as any)?.url) { window.location.href = (data as any).url; return; }
+    let msg: string | undefined = data?.error;
+    let detail: string | undefined = data?.detail;
+    if (error && !msg) {
+      const ctx = error?.context;
+      if (ctx && typeof ctx.json === "function") {
+        try { const b = await ctx.clone().json(); msg = b?.error; detail = b?.detail; } catch { /* non-JSON */ }
+      }
+      const name = error?.name ?? "";
+      if (!msg && (name === "FunctionsFetchError" || name === "FunctionsRelayError" || !navigator.onLine)) {
+        msg = gateway
+          ? `We couldn't reach the ${gateway} payment service — please check your connection and try again${currency === "NGN" ? ", or choose another currency" : ""}.`
+          : "Network problem — please check your connection and try again.";
+      }
+      if (!msg) msg = error?.message;
+    }
+    if (error || msg) {
+      return toast.error(msg || "Couldn't submit. Please try again.", {
+        description: [gateway && `Payment gateway: ${gateway} (${currency})`, detail].filter(Boolean).join(" · ") || undefined,
+        duration: 10000,
+      });
+    }
+    if (data?.url) { window.location.href = data.url; return; }
     setDone(true);
   };
 

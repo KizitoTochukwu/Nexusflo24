@@ -141,10 +141,11 @@ serve(async (req) => {
             cancel_action: `${origin}/academy/${course.slug}?enrolment_cancelled=1` },
         }),
       });
-      const j = await r.json();
+      const j = await r.json().catch(() => null);
       if (!r.ok || !j?.status) {
-        console.error("[academy-enrol] paystack init failed", j?.message);
-        return json({ error: "Couldn't start Naira payment. Please try again or choose another currency." }, 502);
+        console.error("[academy-enrol] paystack init failed", r.status, j?.message);
+        return json({ error: "Couldn't start Naira payment. Please try again or choose another currency.",
+          detail: `Paystack said: ${clean(j?.message, 200) || `HTTP ${r.status}`}` }, 502);
       }
       await db.from("academy_enrolments").update({ stripe_session_id: PAYSTACK_PREFIX + j.data.reference }).eq("id", en.id);
       return json({ enrolmentId: en.id, url: j.data.authorization_url });
@@ -170,7 +171,10 @@ serve(async (req) => {
     await db.from("academy_enrolments").update({ stripe_session_id: session.id }).eq("id", en.id);
     return json({ enrolmentId: en.id, url: session.url });
   } catch (e) {
-    console.error("[academy-enrol]", e instanceof Error ? e.message : e);
-    return json({ error: "Something went wrong. Please try again." }, 500);
+    const m = e instanceof Error ? e.message : String(e);
+    console.error("[academy-enrol]", m);
+    const isStripe = (e as any)?.type?.startsWith?.("Stripe");
+    return json({ error: isStripe ? "Couldn't start card payment. Please try again." : "Something went wrong. Please try again.",
+      detail: isStripe ? `Stripe said: ${clean(m, 200)}` : undefined }, isStripe ? 502 : 500);
   }
 });
