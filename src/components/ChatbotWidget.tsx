@@ -155,9 +155,10 @@ const ChatbotWidget = () => {
     setOpen(true);
   }, []);
 
-  // Auto-open triggers: time, scroll, exit-intent
+  // Auto-open disabled: the chat stays closed until the visitor clicks the bubble.
+  const AUTO_OPEN_ENABLED = false;
   useEffect(() => {
-    if (shouldSkipAutoOpen()) return;
+    if (!AUTO_OPEN_ENABLED || shouldSkipAutoOpen()) return;
 
     const timeDelay = isDashboard ? 15000 : 8000;
     const timeTimer = window.setTimeout(triggerAutoOpen, timeDelay);
