@@ -100,7 +100,7 @@ async function sendConfirmation(db: any, en: any) {
 
   const from = Deno.env.get("EMAIL_FROM") || "noreply@nexusflo24.com";
   const url = academyBookingUrl(en);
-  const amount = `£${(en.amount_minor / 100).toFixed(2)}`;
+  const amount = new Intl.NumberFormat("en-GB", { style: "currency", currency: en.currency || "GBP" }).format(en.amount_minor / 100);
   const html = `<!DOCTYPE html><html><body style="margin:0;background:#ffffff;font-family:Inter,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;">
   <table width="600" style="max-width:600px;width:100%;" cellpadding="0" cellspacing="0">
@@ -112,7 +112,7 @@ async function sendConfirmation(db: any, en: any) {
   <p style="text-align:center;margin:28px 0;"><a href="${url}" style="background:#C9A227;color:#0B1F3B;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px;display:inline-block;">Select your live class date &amp; time</a></p>
   <p style="font-size:13px;color:#6b7280;">Once you pick a slot you'll receive a calendar confirmation. Questions? Just reply to this email.</p>
   </td></tr>
-  <tr><td style="padding:16px;text-align:center;font-size:12px;color:#9ca3af;">NexusFlo24 Academy · Secure payments via Stripe</td></tr>
+  <tr><td style="padding:16px;text-align:center;font-size:12px;color:#9ca3af;">NexusFlo24 Academy · Secure payments via ${en.currency === "NGN" ? "Paystack" : "Stripe"}</td></tr>
   </table></td></tr></table></body></html>`;
 
   const res = await fetch("https://api.resend.com/emails", {
