@@ -38,6 +38,7 @@ const solutionsLinks = [
 
 const Header = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSection, setMobileSection] = useState<"solutions" | "resources" | null>(null);
   const location = useLocation();
   const solutionsActive = solutionsLinks.some((l) => l.to === location.pathname);
   const resourcesActive = resourcesLinks.some((l) => l.to === location.pathname);
@@ -127,8 +128,18 @@ const Header = () => {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t bg-background p-4 md:hidden animate-fade-in">
-          <nav className="flex flex-col gap-2">
+        <div className="border-t bg-background p-4 md:hidden animate-fade-in max-h-[calc(100dvh-4rem)] overflow-y-auto">
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <Link to="/login" onClick={() => setMobileOpen(false)}>
+              <Button variant="outline" className="w-full">Log In</Button>
+            </Link>
+            <Link to="/register" onClick={() => setMobileOpen(false)}>
+              <Button className="w-full bg-accent text-accent-foreground hover:bg-gold-dark">
+                Start Free Trial
+              </Button>
+            </Link>
+          </div>
+          <nav className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <div key={link.to}>
                 <Link
@@ -138,57 +149,40 @@ const Header = () => {
                 >
                   {link.label}
                 </Link>
-                {link.to === "/features" && (
-                  <div className="mt-1">
-                    <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
-                      Solutions
-                    </div>
-                    {solutionsLinks.map((s) => (
-                      <Link
-                        key={s.to}
-                        to={s.to}
-                        onClick={() => setMobileOpen(false)}
-                        className={`block rounded-md pl-6 pr-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
-                          location.pathname === s.to ? "text-accent" : "text-muted-foreground"
-                        }`}
+                {(link.to === "/features" || link.to === "/pricing") && (() => {
+                  const isRes = link.to === "/pricing";
+                  const key = isRes ? "resources" : "solutions";
+                  const links = isRes ? resourcesLinks : solutionsLinks;
+                  const open = mobileSection === key;
+                  return (
+                    <div>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        onClick={() => setMobileSection(open ? null : key)}
+                        className={`${linkClass(isRes ? resourcesActive : solutionsActive)} flex w-full items-center justify-between`}
                       >
-                        {s.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-                {link.to === "/pricing" && (
-                  <div className="mt-1">
-                    <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
-                      Resources
+                        {isRes ? "Resources" : "Solutions"}
+                        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                      </button>
+                      {open && links.map((s) => (
+                        <Link
+                          key={s.to}
+                          to={s.to}
+                          onClick={() => setMobileOpen(false)}
+                          className={`block rounded-md pl-6 pr-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
+                            location.pathname === s.to ? "text-accent" : "text-muted-foreground"
+                          }`}
+                        >
+                          {s.label}
+                        </Link>
+                      ))}
                     </div>
-                    {resourcesLinks.map((s) => (
-                      <Link
-                        key={s.to}
-                        to={s.to}
-                        onClick={() => setMobileOpen(false)}
-                        className={`block rounded-md pl-6 pr-3 py-2 text-sm font-medium transition-colors hover:bg-muted ${
-                          location.pathname === s.to ? "text-accent" : "text-muted-foreground"
-                        }`}
-                      >
-                        {s.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             ))}
-            <div className="mt-2 flex flex-col gap-2">
-              <div className="flex justify-center pb-1"><CurrencySwitcher /></div>
-              <Link to="/login" onClick={() => setMobileOpen(false)}>
-                <Button variant="ghost" className="w-full">Log In</Button>
-              </Link>
-              <Link to="/register" onClick={() => setMobileOpen(false)}>
-                <Button className="w-full bg-accent text-accent-foreground hover:bg-gold-dark">
-                  Start Free Trial
-                </Button>
-              </Link>
-            </div>
+            <div className="mt-2 flex justify-center"><CurrencySwitcher /></div>
           </nav>
         </div>
       )}
