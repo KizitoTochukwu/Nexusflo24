@@ -2,15 +2,19 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { CURRENCY_LIST, type CurrencyCode } from "@/lib/currency/config";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatCoursePrice, type AcademyCourse } from "@/hooks/useAcademy";
+import { useLocalCoursePrice, type AcademyCourse } from "@/hooks/useAcademy";
+import { cn } from "@/lib/utils";
 
 export default function EnrolDialog({ course, open, onOpenChange }: { course: AcademyCourse; open: boolean; onOpenChange: (v: boolean) => void }) {
   const { user } = useAuth();
+  const { currency, setCurrency } = useCurrency();
   const [form, setForm] = useState({
     fullName: (user?.user_metadata?.full_name as string) ?? "",
     email: user?.email ?? "",
@@ -18,14 +22,14 @@ export default function EnrolDialog({ course, open, onOpenChange }: { course: Ac
   });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  const price = formatCoursePrice(course);
+  const price = useLocalCoursePrice(course).label;
   const paid = course.priceMinor > 0;
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke("academy-enrol", { body: { courseSlug: course.slug, ...form } });
+    const { data, error } = await supabase.functions.invoke("academy-enrol", { body: { courseSlug: course.slug, currency, ...form } });
     setBusy(false);
     const msg = (data as any)?.error;
     if (error || msg) return toast.error(msg || "Couldn't submit. Please try again.");
@@ -39,16 +43,30 @@ export default function EnrolDialog({ course, open, onOpenChange }: { course: Ac
         <DialogHeader>
           <DialogTitle>Book a live class: {course.title}</DialogTitle>
           <DialogDescription>
-            Fill in your details{paid ? `, pay ${price}` : ""}, and we'll contact you to agree a live class date that suits you.
+            Fill in your details{paid ? `, pay ${price}` : ""}, then pick a live class time that suits you.
           </DialogDescription>
         </DialogHeader>
         {done ? (
           <div className="space-y-2 py-4 text-center">
             <p className="font-semibold">You're enrolled!</p>
-            <p className="text-sm text-muted-foreground">We'll email {form.email} shortly to agree your live class date.</p>
+            <p className="text-sm text-muted-foreground">We'll email {form.email} shortly with your class booking link.</p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
+            {paid && (
+              <div>
+                <Label>Pay in</Label>
+                <div className="mt-1 grid grid-cols-4 gap-2">
+                  {CURRENCY_LIST.map((c) => (
+                    <button type="button" key={c.code} onClick={() => setCurrency(c.code as CurrencyCode)}
+                      className={cn("rounded-md border px-2 py-2 text-sm font-medium transition-colors",
+                        currency === c.code ? "border-accent bg-accent/10 text-primary" : "text-muted-foreground hover:border-accent/50")}>
+                      {c.symbol} {c.code}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label>Full name *</Label><Input required value={form.fullName} onChange={set("fullName")} /></div>
               <div><Label>Email *</Label><Input required type="email" value={form.email} onChange={set("email")} /></div>
@@ -60,7 +78,7 @@ export default function EnrolDialog({ course, open, onOpenChange }: { course: Ac
               {busy ? "Please wait…" : paid ? `Continue to payment (${price})` : "Enrol for free"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              {paid ? "Secure payments via Stripe. " : ""}The class date is agreed with you after enrolment.
+              {paid ? (currency === "NGN" ? "Secure Naira payments via Paystack. " : "Secure payments via Stripe. ") : ""}You'll choose your class date after enrolment.
             </p>
           </form>
         )}

@@ -89,6 +89,7 @@ const AcademyCourse = () => {
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-primary-foreground/70">
               <span className="flex items-center gap-2">
                 <Star className="h-4 w-4 fill-accent text-accent" /> {price}
+                {course.priceMinor > 0 && <CurrencySwitcher variant="compact" className="border border-accent/30 text-primary-foreground hover:text-primary" />}
               </span>
               <span className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-accent" /> {course.lessons} lessons
