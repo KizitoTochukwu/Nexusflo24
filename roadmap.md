@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Monitoring repairs
-- [ ] Replace rejected Paystack key (requires owner's secure input)
+- [x] Replace rejected Paystack key (securely saved; live checkout initialization returned 200 for NGN 25,000; no payment made)
 - [x] Verify Academy confirmation fields against live database (finding outdated)
 - [x] Fix and test cold-lead scanning beyond the first 500 rows (six tests passed; worker deployed)
 
