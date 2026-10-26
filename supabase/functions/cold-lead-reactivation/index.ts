@@ -4,6 +4,7 @@
 // 2) Enrolment: leads with no reply for 14 days are enrolled into every active
 //    automation whose trigger_type is "cold_lead_14d".
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { paginatedRows } from "../_shared/paginatedRows.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,15 +98,19 @@ Deno.serve(async (req) => {
 
       // ---------- 2) Enrolment ----------
       const cutoff = new Date(Date.now() - 14 * DAY).toISOString();
-      const { data: candidates } = await db.from("leads").select("*")
-        .eq("workspace_id", auto.workspace_id)
-        .lte("created_at", cutoff)
-        .or(`last_activity_at.is.null,last_activity_at.lte.${cutoff}`)
-        .limit(500);
+      const candidates = paginatedRows<any>((after, limit) => {
+        let query = db.from("leads").select("*")
+          .eq("workspace_id", auto.workspace_id)
+          .lte("created_at", cutoff)
+          .or(`last_activity_at.is.null,last_activity_at.lte.${cutoff}`)
+          .order("id", { ascending: true }).limit(limit);
+        if (after) query = query.gt("id", after);
+        return query;
+      });
       const everEnrolled = new Set((await allEnrolled(db, auto.id)));
       let enrolledThisRun = 0;
 
-      for (const lead of candidates ?? []) {
+      for await (const lead of candidates) {
         if (enrolledThisRun >= 50) break;
         if (everEnrolled.has(lead.id)) continue;
         const tags = ((lead.tags ?? []) as string[]).map((t) => t.toLowerCase());
@@ -185,7 +190,16 @@ async function isSuppressed(db: any, email: string) {
 }
 
 async function allEnrolled(db: any, automationId: string): Promise<string[]> {
-  const { data } = await db.from("automation_logs").select("lead_id")
-    .eq("automation_id", automationId).eq("event_type", "reactivation_enrolled").limit(10000);
-  return (data ?? []).map((r: any) => r.lead_id);
+  const ids: string[] = [];
+  const rows = paginatedRows<any>((after, limit) => {
+    let query = db.from("automation_logs").select("id, lead_id")
+      .eq("automation_id", automationId).eq("event_type", "reactivation_enrolled")
+      .order("id", { ascending: true }).limit(limit);
+    if (after) query = query.gt("id", after);
+    return query;
+  });
+  for await (const row of rows) {
+    if (row.lead_id) ids.push(row.lead_id);
+  }
+  return ids;
 }
