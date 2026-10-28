@@ -24,6 +24,7 @@ import { useNotificationWatcher } from "@/hooks/useNotifications";
 import PlanBadge from "@/components/billing/PlanBadge";
 import BillingWarningBanner from "@/components/billing/BillingWarningBanner";
 import { useIsAdmin } from "@/hooks/useAdminRole";
+import { usePlatformAccess } from "@/hooks/usePlatformAdmin";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from
@@ -64,6 +65,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   const { workspaces, currentWorkspace } = useWorkspace();
   const workspaceId = useWorkspaceId();
   const { data: isAdmin } = useIsAdmin();
+  const { isStaff: isPlatformStaff } = usePlatformAccess();
   useNotificationWatcher();
   useLowCreditAlert();
   useRouteMemory();
@@ -101,6 +103,8 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
     { icon: Zap, label: "Workflow Builder", to: `/dashboard/${workspaceId}/workflows` },
     { icon: ShoppingBag, label: "Store Fulfilment", to: `/dashboard/${workspaceId}/admin/store-orders` },
     { icon: FileText, label: "Blog Manager", to: `/dashboard/${workspaceId}/admin/blog` },
+  ] : []),
+  ...(isAdmin || isPlatformStaff ? [
     { icon: Shield, label: "Platform Admin", to: `/platform-admin` },
   ] : [])];
 
