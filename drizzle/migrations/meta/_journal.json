@@ -176,6 +176,13 @@
       "when": 1794921585162,
       "tag": "0024_comment_automations_table",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794921994524,
+      "tag": "0025_ai_video_ad_lead_nurture",
+      "breakpoints": true
     }
   ]
 }
