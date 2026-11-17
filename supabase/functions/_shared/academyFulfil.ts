@@ -1,6 +1,7 @@
 // Academy paid-enrolment fulfilment: CRM lead in "Academy Students" folder,
 // canonical contact + timeline, and a confirmation email with the class
 // booking link. Idempotent: guarded by academy_enrolments columns.
+import { dispatchTriggerEvent } from "./triggerDispatch.ts";
 import { upsertCanonicalContact, linkLeadToContact, recordContactTimeline } from "./canonicalContact.ts";
 
 export const ACADEMY_WORKSPACE_ID = "95bc7e99-798e-49ef-a5c3-ab68bbc08950";
@@ -87,6 +88,18 @@ async function syncCrm(db: any, en: any) {
   }
 
   await db.from("academy_enrolments").update({ crm_lead_id: leadId, crm_contact_id: contactId }).eq("id", en.id);
+
+  // First sync only: start tag-triggered follow-up automations (e.g. class booking reminders).
+  if (!en.crm_lead_id && leadId) {
+    for (const tag of tags) {
+      try {
+        await dispatchTriggerEvent({
+          supabase: db, supabaseUrl: Deno.env.get("SUPABASE_URL")!, serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          workspaceId: ws, leadIds: [leadId], eventType: "lead_tagged", eventConfig: { tag },
+        });
+      } catch (e) { console.error("[academy] trigger dispatch failed", String(e)); }
+    }
+  }
 }
 
 async function sendConfirmation(db: any, en: any) {

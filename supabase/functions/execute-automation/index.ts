@@ -1638,7 +1638,28 @@ Deno.serve(async (req) => {
 
           case "delay": {
             console.log("Delay step config:", JSON.stringify(config));
-            const delayMinutes = parseDelayFromConfig(config);
+            // Booking-anchored wait: run relative to the lead's next class/appointment.
+            let anchoredRunAt: string | null = null;
+            if (config.anchor === "booking_start" || config.anchor === "booking_end") {
+              let bq = supabase.from("bookings")
+                .select("start_time, end_time")
+                .eq("workspace_id", workspace_id).eq("lead_id", lead_id)
+                .neq("status", "cancelled")
+                .order("start_time", { ascending: false }).limit(1);
+              if (config.booking_page_id) bq = bq.eq("booking_page_id", config.booking_page_id);
+              const { data: bk } = await bq;
+              const b = bk?.[0];
+              if (!b) {
+                details = { message: "No booking found for this lead — stopping here", anchor: config.anchor };
+                status = "completed";
+                skipRemaining = true;
+                break;
+              }
+              const base = new Date(config.anchor === "booking_end" ? (b.end_time ?? b.start_time) : b.start_time).getTime();
+              const target = base + Number(config.offset_minutes || 0) * 60_000;
+              anchoredRunAt = new Date(Math.max(target, Date.now() + 60_000)).toISOString();
+            }
+            const delayMinutes = anchoredRunAt ? 1 : parseDelayFromConfig(config);
             console.log("Parsed delay minutes:", delayMinutes);
             if (delayMinutes <= 0) {
               details = { message: "Invalid delay value", config: { duration: config.duration, unit: config.unit, delay: config.delay }, rawConfig: config };
@@ -1646,7 +1667,7 @@ Deno.serve(async (req) => {
               break;
             }
 
-            const runAt = new Date(Date.now() + delayMinutes * 60_000).toISOString();
+            const runAt = anchoredRunAt ?? new Date(Date.now() + delayMinutes * 60_000).toISOString();
             const nextStepIndex = i + 1;
 
             if (nextStepIndex >= (steps || []).length) {
