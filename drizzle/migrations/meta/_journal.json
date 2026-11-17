@@ -183,6 +183,13 @@
       "when": 1794921994524,
       "tag": "0025_ai_video_ad_lead_nurture",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794922103017,
+      "tag": "0026_restrict_store_assets_read",
+      "breakpoints": true
     }
   ]
 }
