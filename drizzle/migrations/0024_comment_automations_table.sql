@@ -1,0 +1,1 @@
+COMMENT ON TABLE public.automations IS 'Step-based automations per workspace';

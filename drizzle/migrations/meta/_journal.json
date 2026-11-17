@@ -169,6 +169,13 @@
       "when": 1794919380895,
       "tag": "0023_academy_ai_video_followup",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794921585162,
+      "tag": "0024_comment_automations_table",
+      "breakpoints": true
     }
   ]
 }
