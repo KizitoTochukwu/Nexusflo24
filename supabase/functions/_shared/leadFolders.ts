@@ -23,8 +23,10 @@ export async function fireFolderAutomations(
       .eq("trigger_type", "lead_added_to_folder");
 
     const matched = (autos ?? []).filter((a: any) => {
-      const cfgFolder = (a.trigger_config ?? {}).folder_id;
-      if (!cfgFolder) return true; // any folder
+      const raw = (a.trigger_config ?? {}).folder_id;
+      // Scope values are saved as { id, label } by the trigger drawer.
+      const cfgFolder = raw && typeof raw === "object" ? raw.id : raw;
+      if (!cfgFolder || cfgFolder === "__any__") return true; // any folder
       return String(cfgFolder) === String(folderId);
     });
 

@@ -16,6 +16,7 @@ export type TriggerSourceKey =
 export type ScopeFieldKey =
   // CRM
   | "pipeline" | "stage" | "owner" | "lead_source" | "tags"
+  | "folder_id"
   // Forms
   | "form_id"
   // Funnels
@@ -117,7 +118,11 @@ export const TRIGGER_SOURCES: TriggerSourceDef[] = [
     scopeFields: CRM_SCOPE,
     events: [
       { key: "new_lead", label: "New lead created", emitted: true },
-      { key: "lead_added_to_folder", label: "Lead added to folder", emitted: true },
+      {
+        key: "lead_added_to_folder", label: "Lead added to folder", emitted: true,
+        // Folder is the only scope that matters here; other CRM scopes are hidden.
+        scopeFields: [{ key: "folder_id", label: "Folder", allowAny: true }],
+      },
       { key: "lead_tagged", label: "Lead tagged", emitted: true },
       { key: "tag_added", label: "Any tag added", description: "Fires for every newly applied tag", emitted: true },
       { key: "contact_created", label: "Contact created", emitted: true },

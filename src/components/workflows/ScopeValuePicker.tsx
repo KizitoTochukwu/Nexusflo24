@@ -19,7 +19,7 @@ export const ANY = "__any__";
 
 /** Scope keys that resolve to a real record we can list. */
 const PICKABLE: ScopeFieldKey[] = [
-  "pipeline", "stage", "owner", "lead_source", "tags", "form_id",
+  "pipeline", "stage", "owner", "lead_source", "tags", "form_id", "folder_id",
   "funnel_id", "funnel_step_id", "calendar_id", "booking_type",
   "assigned_user", "campaign_id", "store_id", "shop_product_id",
 ];
@@ -50,6 +50,8 @@ async function loadOptions(
       return rows("crm_tags");
     case "form_id":
       return rows("forms");
+    case "folder_id":
+      return rows("lead_folders");
     case "funnel_id":
       return rows("funnels");
     case "calendar_id":
