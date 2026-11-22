@@ -76,9 +76,15 @@ export default function EnrollmentTriggerCard({
       }
       const { data, error } = await supabase.functions.invoke("test-workflow-trigger", { body });
       if (error) throw error;
-      toast[data?.passed ? "success" : "message"](
-        data?.passed ? "Test passed" : "Test ran — filters did not pass"
-      );
+      if (data?.passed) {
+        toast.success("Test passed", {
+          description: data?.sample_payload?.simulated
+            ? "A simulated lead with your source and tags would be enrolled."
+            : undefined,
+        });
+      } else {
+        toast.message("Test ran — filters did not pass", { description: data?.reason || undefined });
+      }
     } catch (e: any) {
       toast.error(e?.message || "Test failed");
     } finally {

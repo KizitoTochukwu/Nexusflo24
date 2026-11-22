@@ -132,15 +132,17 @@ export function matchTriggerScope(params: {
 
     if ((RECORD_SCOPE_KEYS as readonly string[]).includes(key)) {
       if (key === "tags") {
-        const wantedTags = wanted.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+        // Tag scopes may be saved as {id, label}; leads store tag names, so match either.
+        const wantedTags = [wanted, scopeValueLabel(want)]
+          .join(",").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
         const have = recordTagList(record);
         if (!wantedTags.some((t) => have.includes(t))) {
-          return { matched: false, failedKey: key, reason: `Record does not have tag ${wanted}` };
+          return { matched: false, failedKey: key, reason: `Record does not have tag ${scopeValueLabel(want) || wanted}` };
         }
         continue;
       }
       if (key === "lead_source") {
-        if (!eq(record?.source, wanted)) {
+        if (!eq(record?.source, wanted) && !eq(record?.source, scopeValueLabel(want))) {
           return { matched: false, failedKey: key, reason: `Source is ${record?.source ?? "unset"}` };
         }
         continue;

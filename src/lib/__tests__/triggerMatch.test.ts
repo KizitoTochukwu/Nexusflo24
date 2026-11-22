@@ -40,6 +40,13 @@ describe("scope matching", () => {
     expect(matchTriggerScope({ triggerConfig: { lead_source: "meta" }, record }).matched).toBe(true);
   });
 
+  it("matches tag and source scopes saved as {id,label} by their label", () => {
+    const record = { tags: ["facebook-ads"], source: "Facebook Ad" };
+    const cfg = { tags: { id: "76cbc99e-uuid", label: "facebook-ads" }, lead_source: { id: "Facebook Ad", label: "Facebook Ad" } };
+    expect(matchTriggerScope({ triggerConfig: cfg, record }).matched).toBe(true);
+    expect(matchTriggerScope({ triggerConfig: cfg, record: { tags: ["other"], source: "Facebook Ad" } }).matched).toBe(false);
+  });
+
   it("accepts {id,label} scope objects", () => {
     const r = matchTriggerScope({
       triggerConfig: { funnel_id: { id: "f1", label: "Webinar" } },

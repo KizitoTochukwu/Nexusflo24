@@ -68,6 +68,25 @@ Deno.serve(async (req) => {
       sample = { note: `No recent ${trigger_source ?? "event"} sample found. Rules were checked against an empty payload.` };
     }
 
+    // Simulate a lead that has the scoped source/tags, so the test checks the
+    // rules themselves rather than whichever lead happened to arrive last.
+    const cfg = (trigger_config || {}) as Record<string, any>;
+    const label = (v: any) => (v && typeof v === "object" ? (v.label ?? v.id ?? v.value) : v);
+    const isAny = (v: any) => v == null || v === "" || v === "__any__";
+    if (["crm", "forms", "funnels", "meta_lead_ads"].includes(trigger_source) && (!isAny(cfg.lead_source) || !isAny(cfg.tags))) {
+      const realSample = sample;
+      sample = {
+        ...(realSample?.id ? realSample : {}),
+        simulated: true,
+        full_name: realSample?.full_name ?? "Test Lead",
+        email: realSample?.email ?? "test.lead@example.com",
+        source: isAny(cfg.lead_source) ? realSample?.source : String(label(cfg.lead_source)),
+        tags: Array.from(new Set([...(Array.isArray(realSample?.tags) ? realSample.tags : []),
+          ...(isAny(cfg.tags) ? [] : String(label(cfg.tags)).split(",").map((t) => t.trim()).filter(Boolean))])),
+      };
+      mapped = { name: sample.full_name, email: sample.email, source: sample.source };
+    }
+
     // Same rules the live engines use: scope first, then extra filters.
     const scope = matchTriggerScope({
       triggerConfig: (trigger_config || {}) as Record<string, any>,
