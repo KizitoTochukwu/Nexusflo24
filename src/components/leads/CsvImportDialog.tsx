@@ -20,46 +20,9 @@ type Props = { open: boolean; onOpenChange: (v: boolean) => void; workspaceId: s
 
 type ImportMode = "skip" | "update" | "cancel";
 
-type ParsedRow = Record<string, string>;
+import { parseCsv, decodeCsvBytes, type ParsedRow } from "@/lib/leads/csvParse";
 
 type ErrorRow = { data: ParsedRow; _error: string; _row: number };
-
-// ─── Header aliasing — map common variants to canonical names ──
-const HEADER_ALIASES: Record<string, string> = {
-  name: "full_name",
-  fullname: "full_name",
-  full_name: "full_name",
-  contact: "full_name",
-  contact_name: "full_name",
-  customer: "full_name",
-  customer_name: "full_name",
-  lead: "full_name",
-  lead_name: "full_name",
-  first_name: "full_name",
-  firstname: "full_name",
-  last_name: "full_name",
-  lastname: "full_name",
-  email: "email",
-  email_address: "email",
-  e_mail: "email",
-  phone: "phone",
-  phone_number: "phone",
-  mobile: "phone",
-  mobile_number: "phone",
-  whatsapp: "phone",
-  whatsapp_number: "phone",
-  source: "source",
-  lead_source: "source",
-  status: "status",
-  lead_status: "status",
-  tags: "tags",
-  tag: "tags",
-};
-
-function canonicalHeader(h: string): string {
-  const key = h.trim().toLowerCase().replace(/[\s-]+/g, "_");
-  return HEADER_ALIASES[key] || key;
-}
 
 // ─── Phone normalisation ───────────────────────────────────────
 function normalizePhone(raw: string): string {
@@ -79,93 +42,6 @@ function normalizePhone(raw: string): string {
     p = "+" + p;
   }
   return p;
-}
-
-// ─── CSV parser (RFC 4180 — handles quoted fields, embedded commas & newlines) ──
-function parseCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++; }
-        else { inQuotes = false; }
-      } else {
-        cur += ch;
-      }
-    } else {
-      if (ch === '"') inQuotes = true;
-      else if (ch === ",") { out.push(cur); cur = ""; }
-      else cur += ch;
-    }
-  }
-  out.push(cur);
-  return out.map((v) => v.trim());
-}
-
-function parseCsv(text: string): ParsedRow[] {
-  // Strip BOM
-  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
-
-  // Walk char-by-char to honour quoted newlines
-  const rows: string[][] = [];
-  let cur = "";
-  let row: string[] = [];
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { cur += '"'; i++; }
-        else { inQuotes = false; }
-      } else {
-        cur += ch;
-      }
-    } else {
-      if (ch === '"') inQuotes = true;
-      else if (ch === ",") { row.push(cur.trim()); cur = ""; }
-      else if (ch === "\n" || ch === "\r") {
-        if (ch === "\r" && text[i + 1] === "\n") i++;
-        row.push(cur.trim());
-        if (row.some((c) => c.length > 0)) rows.push(row);
-        row = [];
-        cur = "";
-      } else {
-        cur += ch;
-      }
-    }
-  }
-  if (cur.length > 0 || row.length > 0) {
-    row.push(cur.trim());
-    if (row.some((c) => c.length > 0)) rows.push(row);
-  }
-
-  if (rows.length < 2) return [];
-  const headers = rows[0].map(canonicalHeader);
-
-  // Track which raw headers map to full_name so we can combine first+last name
-  const rawHeaders = rows[0].map((h) => h.trim().toLowerCase().replace(/[\s-]+/g, "_"));
-  const firstNameIdx = rawHeaders.indexOf("first_name") !== -1 ? rawHeaders.indexOf("first_name") : rawHeaders.indexOf("firstname");
-  const lastNameIdx = rawHeaders.indexOf("last_name") !== -1 ? rawHeaders.indexOf("last_name") : rawHeaders.indexOf("lastname");
-  const hasSplitName = firstNameIdx !== -1 && lastNameIdx !== -1;
-
-  return rows.slice(1).map((values) => {
-    const obj: ParsedRow = {};
-    headers.forEach((h, i) => {
-      // If we have BOTH first_name and last_name columns, skip overwriting full_name from individual cols
-      if (hasSplitName && (i === firstNameIdx || i === lastNameIdx)) return;
-      if (!obj[h]) obj[h] = values[i] || "";
-    });
-    if (hasSplitName) {
-      const fn = (values[firstNameIdx] || "").trim();
-      const ln = (values[lastNameIdx] || "").trim();
-      const combined = [fn, ln].filter(Boolean).join(" ");
-      if (combined) obj.full_name = combined;
-    }
-    return obj;
-  });
 }
 
 // ─── Build a CSV string from error rows ────────────────────────
@@ -240,7 +116,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
     setAnalysing(true);
 
     try {
-      const text = await f.text();
+      const text = decodeCsvBytes(await f.arrayBuffer());
       const rows = parseCsv(text);
       setAllRows(rows);
 
@@ -478,7 +354,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
 
         <p className="text-sm text-muted-foreground">
           CSV should have headers: <code className="text-xs">full_name, email, phone, source, status, tags</code>.<br />
-          Tags separated by semicolons. Phones are normalised automatically.
+          Tags separated by semicolons. Raw Facebook/Instagram lead exports work as-is.
         </p>
 
         {/* Template download */}
@@ -512,7 +388,7 @@ const CsvImportDialog = ({ open, onOpenChange, workspaceId, folders = [] }: Prop
 
         {/* File picker */}
         <div className="mt-4">
-          <input type="file" accept=".csv" ref={inputRef} onChange={handleFile} className="hidden" />
+          <input type="file" accept=".csv,.tsv,.txt" ref={inputRef} onChange={handleFile} className="hidden" />
           <Button variant="outline" onClick={() => inputRef.current?.click()} disabled={analysing}>
             <Upload className="mr-2 h-4 w-4" /> {analysing ? "Analysing…" : file ? file.name : "Choose CSV file"}
           </Button>
