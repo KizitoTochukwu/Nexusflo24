@@ -12,10 +12,11 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clapperboard, Download, ImagePlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { prepareVideoImage } from "@/lib/video/prepareVideoImage";
 
 // Credits per second from the AI Gateway model listing for bytedance/seedance-2.5.
 const RATE = { "480p": 0.4112, "720p": 0.9248 } as const;
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 15 * 1024 * 1024;
 
 type Item = { name: string; created_at: string; url: string | null };
 
@@ -56,13 +57,20 @@ export default function PromoVideoStudio() {
   };
   useEffect(() => { if (isAdmin) loadList(); return () => { if (poll.current) clearTimeout(poll.current); }; }, [workspaceId, isAdmin]);
 
-  const onFile = (f?: File) => {
+  const [imageNote, setImageNote] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const onFile = async (f?: File) => {
     if (!f) return;
     if (!/^image\/(png|jpeg|webp)$/.test(f.type)) return toast.error("Use a PNG, JPG or WebP photo.");
-    if (f.size > MAX_BYTES) return toast.error("Photo must be under 5 MB.");
-    const r = new FileReader();
-    r.onload = () => setImage(r.result as string);
-    r.readAsDataURL(f);
+    if (f.size > MAX_BYTES) return toast.error("Photo must be under 15 MB.");
+    setPreparing(true); setError(null);
+    try {
+      const prepared = await prepareVideoImage(f);
+      setImage(prepared.dataUrl);
+      setImageNote(prepared.note);
+    } catch (e: any) {
+      toast.error(e.message ?? "This photo could not be used.");
+    } finally { setPreparing(false); }
   };
 
   const check = async (videoId: string) => {
@@ -113,8 +121,10 @@ export default function PromoVideoStudio() {
             <label className="flex h-48 cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/40 hover:border-primary">
               {image ? <img src={image} alt="Product" className="h-full object-contain" /> :
                 <span className="flex flex-col items-center gap-2 text-sm text-muted-foreground"><ImagePlus className="h-8 w-8" />{mode === "promo" ? "Upload product photo" : "Upload an image"}</span>}
-              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} />
             </label>
+            {preparing && <p className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Preparing your photo…</p>}
+            {imageNote && !preparing && <p className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">{imageNote}</p>}
             {mode === "promo" && <div className="space-y-2"><Label>Product name</Label><Input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} placeholder="e.g. Glow Vitamin C Serum" /></div>}
             <div className="space-y-2"><Label>{mode === "promo" ? "Short description" : "How should it move? (optional)"}</Label><Textarea value={desc} maxLength={1000} rows={3} onChange={(e) => setDesc(e.target.value)} placeholder="What it is, the mood, and where it's shown — e.g. on a marble bathroom shelf with morning sunlight" /></div>
             <div className="grid grid-cols-3 gap-3">
@@ -130,7 +140,7 @@ export default function PromoVideoStudio() {
             </div>
             <div className="flex items-center justify-between"><Label>Background music</Label><Switch checked={audio} onCheckedChange={setAudio} /></div>
             <p className="text-xs text-muted-foreground">Estimated cost: about {cost} AI credits.</p>
-            <Button className="w-full" onClick={generate} disabled={busy || !workspaceId}>
+            <Button className="w-full" onClick={generate} disabled={busy || preparing || !workspaceId}>
               {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating video…</> : (mode === "promo" ? "Generate promo video" : "Create video clip")}
             </Button>
           </CardContent>

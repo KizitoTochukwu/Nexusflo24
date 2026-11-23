@@ -10,6 +10,67 @@ const BUCKET = "promo-videos";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+// Seedance accepts images with every side 300–6000 px and a width/height ratio of 0.4–2.5.
+const MIN_SIDE = 300, MAX_SIDE = 6000, MIN_RATIO = 0.4, MAX_RATIO = 2.5;
+
+/** Reads width/height from a PNG, JPEG or WebP data URL header without decoding the whole image. */
+function imageSize(dataUrl: string): { w: number; h: number } | null {
+  const b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  let bytes: Uint8Array;
+  try { bytes = Uint8Array.from(atob(b64.slice(0, 400_000)), (c) => c.charCodeAt(0)); } catch { return null; }
+  const u16 = (i: number) => (bytes[i] << 8) | bytes[i + 1];
+  const u16le = (i: number) => bytes[i] | (bytes[i + 1] << 8);
+  const u24le = (i: number) => bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16);
+  // PNG
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) {
+    const u32 = (i: number) => ((bytes[i] << 24) >>> 0) + (bytes[i + 1] << 16) + (bytes[i + 2] << 8) + bytes[i + 3];
+    return { w: u32(16), h: u32(20) };
+  }
+  // JPEG: walk segments to the first SOF marker
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < bytes.length) {
+      if (bytes[i] !== 0xff) { i++; continue; }
+      const m = bytes[i + 1];
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { h: u16(i + 5), w: u16(i + 7) };
+      i += 2 + u16(i + 2);
+    }
+    return null;
+  }
+  // WebP (RIFF....WEBP)
+  if (bytes[0] === 0x52 && bytes[8] === 0x57 && bytes[9] === 0x45) {
+    const chunk = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]);
+    if (chunk === "VP8X") return { w: u24le(24) + 1, h: u24le(27) + 1 };
+    if (chunk === "VP8 ") return { w: u16le(26) & 0x3fff, h: u16le(28) & 0x3fff };
+    if (chunk === "VP8L") {
+      const b = bytes.subarray(21, 25);
+      return { w: 1 + (((b[1] & 0x3f) << 8) | b[0]), h: 1 + (((b[3] & 0xf) << 10) | (b[2] << 2) | ((b[1] & 0xc0) >> 6)) };
+    }
+  }
+  return null;
+}
+
+function imageProblem(dataUrl: string): string | null {
+  const size = imageSize(dataUrl);
+  if (!size) return null; // unknown format: let the model decide
+  const { w, h } = size;
+  if (Math.min(w, h) < MIN_SIDE) return `This photo is too small (${w}×${h}px). Each side must be at least ${MIN_SIDE}px — upload a larger photo.`;
+  if (Math.max(w, h) > MAX_SIDE) return `This photo is too large (${w}×${h}px). Each side must be at most ${MAX_SIDE}px.`;
+  const r = w / h;
+  if (r < MIN_RATIO || r > MAX_RATIO) return `This photo is too wide or too tall (${w}×${h}px). Use a photo closer to square, portrait or landscape.`;
+  return null;
+}
+
+/** Turns the model's short failure codes into plain advice. */
+function friendlyFailure(code: string | undefined, message: string | undefined): string {
+  const m = (message ?? "").toLowerCase();
+  if (code === "moderation_blocked" || code === "content_filtered" || m.includes("moderation") || m.includes("sensitive"))
+    return "The video model blocked this photo or description for safety reasons. Try a different photo or wording.";
+  if (m.includes("user input error") || code === "invalid_request")
+    return "The video model could not use this photo or description. Try a clear photo at least 300×300px, avoid very wide or tall images, and keep the description short and simple.";
+  return (message || "Video generation failed.") + " Please try again with a different photo.";
+}
+
 const Body = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("create"),
@@ -66,6 +127,8 @@ Deno.serve(async (req) => {
 
     if (b.action === "create") {
       if (b.mode === "promo" && (!b.product_name || b.description.length < 5)) return json({ error: "Add a product name and short description." }, 400);
+      const problem = imageProblem(b.image);
+      if (problem) return json({ error: problem }, 400);
       const animate = b.mode === "animate";
       const prompt = animate
         ? `Bring this image to life as a short, natural video clip. Keep the scene, subjects, colours and composition faithful to the image. ${b.description || "Subtle natural motion and a gentle cinematic camera move."} ` + (b.generate_audio ? "Fitting ambient sound, no speech." : "")
@@ -118,9 +181,7 @@ Deno.serve(async (req) => {
     if (!res.ok) return json({ error: job?.error?.message ?? "Could not check video status." }, res.status);
     if (job.status === "failed") {
       await clearLock();
-      const code = job.error?.code;
-      const hint = code === "moderation_blocked" || code === "invalid_request" ? " The product photo may be the cause — try a different photo." : "";
-      return json({ status: "failed", error: (job.error?.message ?? "Video generation failed.") + hint });
+      return json({ status: "failed", error: friendlyFailure(job.error?.code, job.error?.message) });
     }
     if (job.status !== "completed") return json({ status: job.status, progress: job.progress ?? 0 });
 
