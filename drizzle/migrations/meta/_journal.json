@@ -190,6 +190,13 @@
       "when": 1794922103017,
       "tag": "0026_restrict_store_assets_read",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795440925689,
+      "tag": "0027_notify_admin_on_signup",
+      "breakpoints": true
     }
   ]
 }
