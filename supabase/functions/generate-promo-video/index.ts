@@ -15,8 +15,9 @@ const Body = z.discriminatedUnion("action", [
     action: z.literal("create"),
     workspace_id: z.string().uuid(),
     image: z.string().startsWith("data:image/").max(8_000_000),
-    product_name: z.string().trim().min(1).max(120),
-    description: z.string().trim().min(5).max(1000),
+    mode: z.enum(["promo", "animate"]).default("promo"),
+    product_name: z.string().trim().max(120).default(""),
+    description: z.string().trim().max(1000).default(""),
     duration: z.union([z.literal(5), z.literal(10)]),
     resolution: z.enum(["480p", "720p"]),
     aspect_ratio: z.enum(["16:9", "9:16", "1:1"]),
@@ -59,8 +60,11 @@ Deno.serve(async (req) => {
     }
 
     if (b.action === "create") {
-      const prompt =
-        `A polished commercial promo video for "${b.product_name}". The product from [Image1] is the hero of every shot and keeps its exact shape, colours, logo and packaging. ` +
+      if (b.mode === "promo" && (!b.product_name || b.description.length < 5)) return json({ error: "Add a product name and short description." }, 400);
+      const animate = b.mode === "animate";
+      const prompt = animate
+        ? `Bring this image to life as a short, natural video clip. Keep the scene, subjects, colours and composition faithful to the image. ${b.description || "Subtle natural motion and a gentle cinematic camera move."} ` + (b.generate_audio ? "Fitting ambient sound, no speech." : "")
+        : `A polished commercial promo video for "${b.product_name}". The product from [Image1] is the hero of every shot and keeps its exact shape, colours, logo and packaging. ` +
         `${b.description} Smooth cinematic camera movement slowly orbiting and pushing in on the product, soft studio lighting with gentle reflections, clean premium background, shallow depth of field. ` +
         (b.generate_audio ? "Upbeat modern background music, no speech." : "");
       const res = await fetch(`${GATEWAY}/videos`, {
@@ -70,10 +74,10 @@ Deno.serve(async (req) => {
           model: MODEL,
           input: {
             prompt,
-            reference_images: [b.image],
+            ...(animate ? { image: b.image } : { reference_images: [b.image] }),
             duration: b.duration,
             resolution: b.resolution,
-            aspect_ratio: b.aspect_ratio,
+            aspect_ratio: animate ? "adaptive" : b.aspect_ratio,
             generate_audio: b.generate_audio,
           },
         }),

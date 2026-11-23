@@ -30,6 +30,7 @@ async function call(body: Record<string, unknown>) {
 
 export default function PromoVideoStudio() {
   const workspaceId = useWorkspaceId();
+  const [mode, setMode] = useState<"promo" | "animate">("promo");
   const [image, setImage] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
@@ -73,10 +74,11 @@ export default function PromoVideoStudio() {
   };
 
   const generate = async () => {
-    if (!image || !name.trim() || desc.trim().length < 5) return toast.error("Add a photo, product name and short description.");
+    if (!image) return toast.error("Upload an image first.");
+    if (mode === "promo" && (!name.trim() || desc.trim().length < 5)) return toast.error("Add a product name and short description.");
     setBusy(true); setError(null); setResult(null); setProgress(2);
     try {
-      const job = await call({ action: "create", workspace_id: workspaceId, image, product_name: name, description: desc, duration, resolution, aspect_ratio: aspect, generate_audio: audio });
+      const job = await call({ action: "create", mode, workspace_id: workspaceId, image, product_name: name, description: desc, duration, resolution, aspect_ratio: aspect, generate_audio: audio });
       check(job.video_id);
     } catch (e: any) { setError(e.message); setBusy(false); }
   };
@@ -86,20 +88,24 @@ export default function PromoVideoStudio() {
   return (
     <div className="space-y-6 p-4 md:p-8">
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground"><Clapperboard className="h-6 w-6 text-primary" /> AI Promo Video</h1>
-        <p className="text-muted-foreground">Turn a product photo and a short description into a promo video.</p>
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground"><Clapperboard className="h-6 w-6 text-primary" /> AI Video Studio</h1>
+        <p className="text-muted-foreground">Turn your images into short video clips, or make a product promo video.</p>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>Your product</CardTitle><CardDescription>Clear, well-lit photos work best.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>{mode === "promo" ? "Your product" : "Your image"}</CardTitle><CardDescription>Clear, well-lit photos work best.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" variant={mode === "animate" ? "default" : "outline"} onClick={() => setMode("animate")}>Animate image</Button>
+              <Button type="button" variant={mode === "promo" ? "default" : "outline"} onClick={() => setMode("promo")}>Product promo</Button>
+            </div>
             <label className="flex h-48 cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-border bg-muted/40 hover:border-primary">
               {image ? <img src={image} alt="Product" className="h-full object-contain" /> :
-                <span className="flex flex-col items-center gap-2 text-sm text-muted-foreground"><ImagePlus className="h-8 w-8" />Upload product photo</span>}
+                <span className="flex flex-col items-center gap-2 text-sm text-muted-foreground"><ImagePlus className="h-8 w-8" />{mode === "promo" ? "Upload product photo" : "Upload an image"}</span>}
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
             </label>
-            <div className="space-y-2"><Label>Product name</Label><Input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} placeholder="e.g. Glow Vitamin C Serum" /></div>
-            <div className="space-y-2"><Label>Short description</Label><Textarea value={desc} maxLength={1000} rows={3} onChange={(e) => setDesc(e.target.value)} placeholder="What it is, the mood, and where it's shown — e.g. on a marble bathroom shelf with morning sunlight" /></div>
+            {mode === "promo" && <div className="space-y-2"><Label>Product name</Label><Input value={name} maxLength={120} onChange={(e) => setName(e.target.value)} placeholder="e.g. Glow Vitamin C Serum" /></div>}
+            <div className="space-y-2"><Label>{mode === "promo" ? "Short description" : "How should it move? (optional)"}</Label><Textarea value={desc} maxLength={1000} rows={3} onChange={(e) => setDesc(e.target.value)} placeholder="What it is, the mood, and where it's shown — e.g. on a marble bathroom shelf with morning sunlight" /></div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2"><Label>Length</Label>
                 <Select value={String(duration)} onValueChange={(v) => setDuration(Number(v) as 5 | 10)}><SelectTrigger><SelectValue /></SelectTrigger>
@@ -107,14 +113,14 @@ export default function PromoVideoStudio() {
               <div className="space-y-2"><Label>Quality</Label>
                 <Select value={resolution} onValueChange={(v) => setResolution(v as any)}><SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="480p">480p</SelectItem><SelectItem value="720p">720p</SelectItem></SelectContent></Select></div>
-              <div className="space-y-2"><Label>Shape</Label>
+              {mode === "promo" ? <div className="space-y-2"><Label>Shape</Label>
                 <Select value={aspect} onValueChange={(v) => setAspect(v as any)}><SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="9:16">Vertical 9:16</SelectItem><SelectItem value="1:1">Square 1:1</SelectItem><SelectItem value="16:9">Wide 16:9</SelectItem></SelectContent></Select></div>
+                  <SelectContent><SelectItem value="9:16">Vertical 9:16</SelectItem><SelectItem value="1:1">Square 1:1</SelectItem><SelectItem value="16:9">Wide 16:9</SelectItem></SelectContent></Select></div> : <div className="space-y-2"><Label>Shape</Label><p className="pt-2 text-sm text-muted-foreground">Matches image</p></div>}
             </div>
             <div className="flex items-center justify-between"><Label>Background music</Label><Switch checked={audio} onCheckedChange={setAudio} /></div>
             <p className="text-xs text-muted-foreground">Estimated cost: about {cost} AI credits.</p>
             <Button className="w-full" onClick={generate} disabled={busy || !workspaceId}>
-              {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating video…</> : "Generate promo video"}
+              {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating video…</> : {mode === "promo" ? "Generate promo video" : "Create video clip"}}
             </Button>
           </CardContent>
         </Card>

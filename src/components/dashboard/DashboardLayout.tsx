@@ -88,7 +88,7 @@ const DashboardLayout = ({ children }: {children: React.ReactNode;}) => {
   { icon: LayoutTemplate, label: "Funnels", to: `/dashboard/${workspaceId}/funnels` },
   { icon: Megaphone, label: "Campaigns", to: `/dashboard/${workspaceId}/campaigns` },
   { icon: PieChart, label: "Ads Hub", to: `/dashboard/${workspaceId}/ads/overview`, match: [`/dashboard/${workspaceId}/ads`] },
-  { icon: Clapperboard, label: "AI Promo Video", to: `/dashboard/${workspaceId}/promo-video` },
+  { icon: Clapperboard, label: "AI Video Studio", to: `/dashboard/${workspaceId}/promo-video` },
   { icon: Workflow, label: "Automations", to: `/dashboard/${workspaceId}/automations` },
   { icon: CalendarDays, label: "Bookings", to: `/dashboard/${workspaceId}/bookings` },
   { icon: PhoneCall, label: "NexusFlo Voice", to: `/dashboard/${workspaceId}/voice/overview`, match: [`/dashboard/${workspaceId}/voice`] },
