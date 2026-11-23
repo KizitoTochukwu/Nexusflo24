@@ -120,7 +120,7 @@ export default function PromoVideoStudio() {
             <div className="flex items-center justify-between"><Label>Background music</Label><Switch checked={audio} onCheckedChange={setAudio} /></div>
             <p className="text-xs text-muted-foreground">Estimated cost: about {cost} AI credits.</p>
             <Button className="w-full" onClick={generate} disabled={busy || !workspaceId}>
-              {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating video…</> : {mode === "promo" ? "Generate promo video" : "Create video clip"}}
+              {busy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating video…</> : (mode === "promo" ? "Generate promo video" : "Create video clip")}
             </Button>
           </CardContent>
         </Card>
