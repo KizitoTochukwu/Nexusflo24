@@ -1,4 +1,4 @@
-import { Link, useParams, Navigate } from "react-router-dom";
+import { Link, useParams, Navigate, useLocation } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import Seo from "@/components/seo/Seo";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,13 @@ import { useAcademyCourses, useLocalCoursePrice } from "@/hooks/useAcademy";
 import CurrencySwitcher from "@/components/layout/CurrencySwitcher";
 import EnrolDialog from "@/components/academy/EnrolDialog";
 import { fbqTrack, fbqTrackOnce } from "@/lib/analytics/metaPixel";
+import { findCourseBySlug } from "@/lib/academy/courseSlug";
 
 const AcademyCourse = () => {
   const { slug } = useParams<{ slug: string }>();
   const { data: courses = [], isFetching } = useAcademyCourses();
-  const course = courses.find((c) => c.slug === slug);
+  const location = useLocation();
+  const course = findCourseBySlug(courses, slug);
   const { user } = useAuth();
   const { workspaces } = useWorkspace();
   const wsId = workspaces?.[0]?.id;
@@ -71,6 +73,10 @@ const AcademyCourse = () => {
   }, [course?.slug]);
 
   if (!course) return isFetching ? null : <Navigate to="/academy" replace />;
+  // Badly copied link (stray/invisible characters) → swap in the clean address.
+  if (slug !== course.slug) {
+    return <Navigate to={`/academy/${course.slug}${location.search}${location.hash}`} replace />;
+  }
   const price = local.label;
   const enrolLabel = course.priceMinor > 0 ? `Book Live Class · ${price}` : course.premium ? "Enrolment opening soon" : "Book Free Live Class";
 
