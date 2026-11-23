@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ async function call(body: Record<string, unknown>) {
 
 export default function PromoVideoStudio() {
   const workspaceId = useWorkspaceId();
+  const { role, isAdmin } = useWorkspaceRole();
   const [mode, setMode] = useState<"promo" | "animate">("promo");
   const [image, setImage] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -52,7 +54,7 @@ export default function PromoVideoStudio() {
     catch { /* non-blocking */ }
     finally { setLoadingList(false); }
   };
-  useEffect(() => { loadList(); return () => { if (poll.current) clearTimeout(poll.current); }; }, [workspaceId]);
+  useEffect(() => { if (isAdmin) loadList(); return () => { if (poll.current) clearTimeout(poll.current); }; }, [workspaceId, isAdmin]);
 
   const onFile = (f?: File) => {
     if (!f) return;
@@ -84,6 +86,15 @@ export default function PromoVideoStudio() {
   };
 
   const cost = (RATE[resolution] * duration).toFixed(1);
+
+  if (role && !isAdmin) {
+    return (
+      <div className="p-4 md:p-8">
+        <Card><CardHeader><CardTitle>AI Video Studio</CardTitle>
+          <CardDescription>Only workspace owners and admins can create AI videos. Ask your workspace admin for access.</CardDescription></CardHeader></Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-8">

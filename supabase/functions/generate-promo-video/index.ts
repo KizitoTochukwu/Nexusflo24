@@ -42,8 +42,13 @@ Deno.serve(async (req) => {
     if (!parsed.success) return json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400);
     const b = parsed.data;
 
-    const { data: isMember } = await admin.rpc("is_workspace_member", { _user_id: userId, _workspace_id: b.workspace_id });
-    if (!isMember) return json({ error: "You don't have access to this workspace." }, 403);
+    const { data: isAdmin } = await admin.rpc("is_workspace_admin", { _user_id: userId, _workspace_id: b.workspace_id });
+    if (!isAdmin) return json({ error: "Only workspace admins can use AI Video Studio." }, 403);
+
+    // One active video per workspace: an atomic lock file in storage (upload without upsert fails if it exists).
+    const lockPath = `${b.workspace_id}/.lock.json`;
+    const LOCK_TTL_MS = 10 * 60 * 1000;
+    const clearLock = () => admin.storage.from(BUCKET).remove([lockPath]);
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "AI is not configured yet." }, 503);
@@ -67,6 +72,16 @@ Deno.serve(async (req) => {
         : `A polished commercial promo video for "${b.product_name}". The product from [Image1] is the hero of every shot and keeps its exact shape, colours, logo and packaging. ` +
         `${b.description} Smooth cinematic camera movement slowly orbiting and pushing in on the product, soft studio lighting with gentle reflections, clean premium background, shallow depth of field. ` +
         (b.generate_audio ? "Upbeat modern background music, no speech." : "");
+      const takeLock = () => admin.storage.from(BUCKET).upload(lockPath, new Blob([JSON.stringify({ at: Date.now(), by: userId })], { type: "application/json" }), { upsert: false });
+      let { error: lockErr } = await takeLock();
+      if (lockErr) {
+        const { data: f } = await admin.storage.from(BUCKET).download(lockPath);
+        const at = f ? Number(JSON.parse(await f.text()).at) || 0 : 0;
+        if (Date.now() - at < LOCK_TTL_MS) return json({ error: "A video is already generating for this workspace. Please wait for it to finish." }, 409);
+        await clearLock();
+        ({ error: lockErr } = await takeLock());
+        if (lockErr) return json({ error: "A video is already generating for this workspace. Please wait for it to finish." }, 409);
+      }
       const res = await fetch(`${GATEWAY}/videos`, {
         method: "POST",
         headers: { ...gwHeaders, "Content-Type": "application/json" },
@@ -84,6 +99,7 @@ Deno.serve(async (req) => {
       });
       const job = await res.json().catch(() => ({}));
       if (!res.ok) {
+        await clearLock();
         const msg = job?.error?.message ?? job?.message ?? "Video generation could not start.";
         const friendly = res.status === 402 ? "Not enough AI credits to make this video." : res.status === 429 ? "Too many videos are being made right now. Please try again in a minute." : msg;
         return json({ error: friendly }, res.status);
@@ -101,6 +117,7 @@ Deno.serve(async (req) => {
     const job = await res.json().catch(() => ({}));
     if (!res.ok) return json({ error: job?.error?.message ?? "Could not check video status." }, res.status);
     if (job.status === "failed") {
+      await clearLock();
       const code = job.error?.code;
       const hint = code === "moderation_blocked" || code === "invalid_request" ? " The product photo may be the cause — try a different photo." : "";
       return json({ status: "failed", error: (job.error?.message ?? "Video generation failed.") + hint });
@@ -111,6 +128,7 @@ Deno.serve(async (req) => {
     if (!content.ok) return json({ error: "Video finished but could not be downloaded. Please check again." }, 502);
     const bytes = new Uint8Array(await content.arrayBuffer());
     const { error: upErr } = await admin.storage.from(BUCKET).upload(path, bytes, { contentType: "video/mp4", upsert: true });
+    await clearLock();
     if (upErr) return json({ error: "Could not save the video." }, 500);
     return json({ status: "completed", progress: 100, url: await signed() });
   } catch (e) {
