@@ -88,6 +88,7 @@ import AdsOverview from "./pages/dashboard/ads/AdsOverview";
 import AdsAccounts from "./pages/dashboard/ads/AdsAccounts";
 import VoiceWorkspaceLayout from "./components/voice/VoiceWorkspaceLayout";
 import VoiceOverview from "./pages/dashboard/voice/VoiceOverview";
+import PromoVideoStudio from "./pages/dashboard/PromoVideoStudio";
 import VoiceAssistants from "./pages/dashboard/voice/VoiceAssistants";
 import VoiceAssistantEditor from "./pages/dashboard/voice/VoiceAssistantEditor";
 import VoiceCalls from "./pages/dashboard/voice/VoiceCalls";
@@ -333,6 +334,7 @@ const App = () => (
                   {/* Sections still in build-out fall back to the overview. */}
                   <Route path="*" element={<Navigate to="overview" replace />} />
                 </Route>
+                <Route path="promo-video" element={<PromoVideoStudio />} />
                 <Route path="voice" element={<VoiceWorkspaceLayout />}>
                   <Route index element={<Navigate to="overview" replace />} />
                   <Route path="overview" element={<VoiceOverview />} />
