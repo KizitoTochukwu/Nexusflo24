@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Key, Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Copy, Key, Loader2, Plus, Trash2, AlertTriangle, Archive, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 type ApiKey = {
@@ -44,6 +46,11 @@ export default function ApiKeysTab({ workspaceId }: Props) {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ApiKey | "all" | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const activeKeys = keys.filter((key) => !key.revoked_at);
+  const revokedKeys = keys.filter((key) => key.revoked_at);
 
   const load = async () => {
     if (!workspaceId) return;
@@ -103,6 +110,49 @@ export default function ApiKeysTab({ workspaceId }: Props) {
     toast.success(label);
   };
 
+  const deleteArchived = async () => {
+    if (!workspaceId || !deleteTarget || deleting) return;
+    const ids = deleteTarget === "all" ? revokedKeys.map((key) => key.id) : [deleteTarget.id];
+    if (!ids.length) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.from("workspace_api_keys")
+        .delete().eq("workspace_id", workspaceId).not("revoked_at", "is", null)
+        .in("id", ids).select("id");
+      if (error) throw error;
+      if (!data?.length) throw new Error("No archived keys were deleted. Check your permissions and try again.");
+      toast.success(`${data.length} archived ${data.length === 1 ? "key" : "keys"} permanently deleted`);
+      setDeleteTarget(null);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete archived keys");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const renderKey = (k: ApiKey) => (
+    <div key={k.id} className="flex items-center justify-between gap-3 border rounded-lg p-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium break-words min-w-0">{k.name}</span>
+          <Badge variant={k.revoked_at ? "destructive" : "secondary"}>{k.revoked_at ? "Revoked" : "Active"}</Badge>
+          {k.scopes.map((s) => <Badge key={s} variant="outline">{s}</Badge>)}
+        </div>
+        <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground mt-1 font-mono">
+          <span>{k.key_prefix}••••••••</span>
+          <span>Last used: {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}</span>
+        </div>
+      </div>
+      <Button variant="ghost" size="icon" className="shrink-0" disabled={deleting}
+        title={k.revoked_at ? `Delete ${k.name} permanently` : `Revoke ${k.name}`}
+        aria-label={k.revoked_at ? `Delete ${k.name} permanently` : `Revoke ${k.name}`}
+        onClick={() => k.revoked_at ? setDeleteTarget(k) : revoke(k.id)}>
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
+
   const sampleBody = JSON.stringify({
     title: "5 Marketing Automation Tips",
     content: "<p>Full HTML or markdown content here…</p>",
@@ -128,33 +178,30 @@ export default function ApiKeysTab({ workspaceId }: Props) {
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          ) : keys.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No API keys yet. Create one to start automating blog posts.</p>
+          ) : activeKeys.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">No active API keys.</p>
           ) : (
             <div className="space-y-2">
-              {keys.map((k) => (
-                <div key={k.id} className="flex items-center justify-between gap-3 border rounded-lg p-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{k.name}</span>
-                      {k.revoked_at
-                        ? <Badge variant="destructive">Revoked</Badge>
-                        : <Badge variant="secondary">Active</Badge>}
-                      {k.scopes.map((s) => <Badge key={s} variant="outline">{s}</Badge>)}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1 font-mono">
-                      {k.key_prefix}••••••••
-                      <span className="ml-3">Last used: {k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}</span>
-                    </div>
-                  </div>
-                  {!k.revoked_at && (
-                    <Button variant="ghost" size="icon" onClick={() => revoke(k.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+              {activeKeys.map(renderKey)}
             </div>
+          )}
+          {!loading && revokedKeys.length > 0 && (
+            <Collapsible open={archiveOpen} onOpenChange={setArchiveOpen} className="mt-4 border-t pt-3">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start gap-2">
+                  <Archive className="h-4 w-4" /> Revoked keys ({revokedKeys.length})
+                  <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${archiveOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 pt-3">
+                <div className="flex justify-end">
+                  <Button variant="destructive" size="sm" disabled={deleting} onClick={() => setDeleteTarget("all")}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Clear archive
+                  </Button>
+                </div>
+                {revokedKeys.map(renderKey)}
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </CardContent>
       </Card>
@@ -213,6 +260,26 @@ Content-Type: application/json`}</pre>
           </Alert>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(v) => { if (!v && !deleting) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{deleteTarget === "all" ? "Clear revoked key archive?" : "Delete archived key permanently?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget === "all"
+                ? `Permanently delete ${revokedKeys.length} revoked key records?`
+                : `Permanently delete the revoked key “${deleteTarget?.name ?? ""}”?`}
+              {" "}This cannot be undone. Active keys will not be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={deleteArchived} disabled={deleting}>
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Delete permanently
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setRevealedKey(null); }}>
         <DialogContent>
