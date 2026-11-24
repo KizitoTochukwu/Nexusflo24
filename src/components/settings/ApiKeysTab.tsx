@@ -34,6 +34,7 @@ function randomKey() {
   return `nfk_live_${body}`;
 }
 
+const LEADS_URL = `https://stuaikfyuwcjmchcvfie.supabase.co/functions/v1/ingest-leads`;
 const FUNCTION_URL = `https://stuaikfyuwcjmchcvfie.supabase.co/functions/v1/blog-ingest`;
 
 export default function ApiKeysTab({ workspaceId }: Props) {
@@ -72,7 +73,7 @@ export default function ApiKeysTab({ workspaceId }: Props) {
         name: newName.trim(),
         key_hash: hash,
         key_prefix: prefix,
-        scopes: ["blog:write"],
+        scopes: ["leads:write", "blog:write"],
         created_by: user?.id ?? null,
       });
       if (error) throw error;
@@ -118,7 +119,7 @@ export default function ApiKeysTab({ workspaceId }: Props) {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2"><Key className="h-5 w-5" /> API Keys</CardTitle>
-            <CardDescription>Generate keys to let Make.com, Zapier, or n8n create blog posts in this workspace.</CardDescription>
+            <CardDescription>Generate keys to let Make.com, Zapier, or n8n send leads and create blog posts in this workspace.</CardDescription>
           </div>
           <Button onClick={() => setOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
             <Plus className="h-4 w-4 mr-1" /> New Key
@@ -155,6 +156,20 @@ export default function ApiKeysTab({ workspaceId }: Props) {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Lead ingestion (Make.com, Zapier)</CardTitle>
+          <CardDescription>Send leads straight into this workspace's CRM. New keys include the leads:write permission.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex gap-2">
+            <Input value={LEADS_URL} readOnly className="bg-muted font-mono text-xs" />
+            <Button variant="outline" size="icon" onClick={() => copy(LEADS_URL)}><Copy className="h-4 w-4" /></Button>
+          </div>
+          <p className="text-muted-foreground">POST with header <code className="bg-muted px-1 rounded">x-api-key: nfk_live_…</code> and JSON body: <code className="bg-muted px-1 rounded">{'{"full_name","email","phone","source","tags"}'}</code>. The workspace is taken from the key.</p>
         </CardContent>
       </Card>
 

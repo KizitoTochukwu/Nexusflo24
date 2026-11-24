@@ -14,7 +14,7 @@ import {
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-workspace-id, x-crm-webhook-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-workspace-id, x-crm-webhook-secret, x-api-key",
 };
 
 // Constant-time string comparison (avoids leaking secret via timing)
@@ -67,7 +67,31 @@ Deno.serve(async (req) => {
   const expectedToken = Deno.env.get("LEADS_INGEST_TOKEN") ?? "";
   const webhookSecret = Deno.env.get("CRM_WEBHOOK_SECRET") ?? "";
 
+  // Workspace API key (nfk_...) from Settings → API Keys, via x-api-key or Bearer.
+  const apiKey = (req.headers.get("x-api-key") ?? "").trim() || (bearer.startsWith("nfk_") ? bearer : "");
+  let apiKeyWorkspaceId: string | null = null;
+  let apiKeyId: string | null = null;
+  if (apiKey) {
+    if (!apiKey.startsWith("nfk_")) {
+      return new Response(JSON.stringify({ error: "Invalid API key format" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(apiKey));
+    const keyHash = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const { data: keyRow, error: keyErr } = await admin.rpc("verify_workspace_api_key", { _key_hash: keyHash }).maybeSingle();
+    if (keyErr || !keyRow) {
+      return new Response(JSON.stringify({ error: "Invalid or revoked API key" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const scopes: string[] = (keyRow as any).scopes || [];
+    if (!scopes.includes("leads:write")) {
+      return new Response(JSON.stringify({ error: "API key missing leads:write scope. Create a key with Lead ingestion enabled in Settings → API Keys." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    apiKeyWorkspaceId = (keyRow as any).workspace_id;
+    apiKeyId = (keyRow as any).key_id ?? null;
+  }
+
   const authorized =
+    !!apiKeyWorkspaceId ||
     (!!expectedToken && !!bearer && timingSafeEqual(bearer, expectedToken)) ||
     (!!webhookSecret && !!providedSecret && timingSafeEqual(providedSecret, webhookSecret)) ||
     (!!webhookSecret && !!bearer && timingSafeEqual(bearer, webhookSecret));
@@ -135,6 +159,13 @@ Deno.serve(async (req) => {
     const headerWs = req.headers.get("X-Workspace-Id");
     const bodyWs = typeof body.workspace_id === "string" ? body.workspace_id.trim() : "";
     let workspaceId: string | null = (headerWs || bodyWs || "").trim() || null;
+    if (apiKeyWorkspaceId) {
+      if (workspaceId && workspaceId !== apiKeyWorkspaceId) {
+        return new Response(JSON.stringify({ error: "workspace_mismatch", message: "This API key belongs to a different workspace." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      workspaceId = apiKeyWorkspaceId;
+      if (apiKeyId) supabase.from("workspace_api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", apiKeyId).then(() => {});
+    }
 
     if (workspaceId && !uuidRe.test(workspaceId)) {
       return new Response(
