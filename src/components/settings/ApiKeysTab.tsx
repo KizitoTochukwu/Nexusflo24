@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Key, Loader2, Plus, Trash2, AlertTriangle, Archive, ChevronDown } from "lucide-react";
+import { Copy, Key, Loader2, Plus, Trash2, AlertTriangle, Archive, ChevronDown, BookOpen } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 type ApiKey = {
@@ -163,6 +166,48 @@ export default function ApiKeysTab({ workspaceId }: Props) {
     status: "published",
   }, null, 2);
 
+  const leadBody = JSON.stringify({
+    full_name: "Jane Doe",
+    email: "jane@example.com",
+    phone: "+447700900123",
+    source: "Facebook Ad",
+    tags: ["facebook-ads"],
+  }, null, 2);
+
+  const LEADS_NOTE = <>Use <code>email</code> or <code>phone</code> (at least one). Optional: <code>full_name</code>, <code>source</code>, <code>tags</code>, <code>notes</code>, <code>status</code>. No workspace ID is needed — it comes from the key.</>;
+  const BLOG_NOTE = <><code>title</code> and <code>content</code> are required. Optional: <code>slug</code>, <code>excerpt</code>, <code>image_url</code>, <code>category</code>, <code>author</code>, <code>read_time</code>, <code>featured</code>, <code>status</code> (<code>draft</code> or <code>published</code>). Published posts auto-share to connected social channels.</>;
+
+  const guide = (url: string, body: string, note: ReactNode) => (
+    <div className="space-y-4 pt-2">
+      <div>
+        <Label className="text-xs">Endpoint URL</Label>
+        <div className="flex gap-2 mt-1">
+          <Input readOnly value={url} className="font-mono text-xs" />
+          <Button variant="outline" size="icon" onClick={() => copy(url, "URL copied")} aria-label="Copy URL"><Copy className="h-4 w-4" /></Button>
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs">Method</Label>
+        <Input readOnly value="POST" className="font-mono text-xs mt-1" />
+      </div>
+      <div>
+        <Label className="text-xs">Headers</Label>
+        <pre className="mt-1 rounded-md bg-muted p-3 text-xs overflow-x-auto">{`x-api-key: nfk_live_your_key_here
+Content-Type: application/json`}</pre>
+      </div>
+      <div>
+        <Label className="text-xs">Sample JSON body</Label>
+        <div className="relative mt-1">
+          <pre className="rounded-md bg-muted p-3 text-xs overflow-x-auto">{body}</pre>
+          <Button variant="outline" size="icon" className="absolute top-2 right-2" onClick={() => copy(body, "Body copied")} aria-label="Copy body">
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <Alert><AlertDescription className="text-xs">{note}</AlertDescription></Alert>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <Card>
@@ -171,9 +216,30 @@ export default function ApiKeysTab({ workspaceId }: Props) {
             <CardTitle className="flex items-center gap-2"><Key className="h-5 w-5" /> API Keys</CardTitle>
             <CardDescription>Generate keys to let Make.com, Zapier, or n8n send leads and create blog posts in this workspace.</CardDescription>
           </div>
-          <Button onClick={() => setOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
-            <Plus className="h-4 w-4 mr-1" /> New Key
-          </Button>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline"><BookOpen className="h-4 w-4 mr-1" /> Integration Guide</Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Integration Guide</SheetTitle>
+                  <SheetDescription>Use the HTTP module in Make.com, Zapier or n8n with your API key.</SheetDescription>
+                </SheetHeader>
+                <Tabs defaultValue="leads" className="mt-4">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="leads">Lead ingestion</TabsTrigger>
+                    <TabsTrigger value="blog">Blog publishing</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="leads">{guide(LEADS_URL, leadBody, LEADS_NOTE)}</TabsContent>
+                  <TabsContent value="blog">{guide(FUNCTION_URL, sampleBody, BLOG_NOTE)}</TabsContent>
+                </Tabs>
+              </SheetContent>
+            </Sheet>
+            <Button onClick={() => setOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Plus className="h-4 w-4 mr-1" /> New Key
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -203,61 +269,6 @@ export default function ApiKeysTab({ workspaceId }: Props) {
               </CollapsibleContent>
             </Collapsible>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Lead ingestion (Make.com, Zapier)</CardTitle>
-          <CardDescription>Send leads straight into this workspace's CRM. New keys include the leads:write permission.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex gap-2">
-            <Input value={LEADS_URL} readOnly className="bg-muted font-mono text-xs" />
-            <Button variant="outline" size="icon" onClick={() => copy(LEADS_URL)}><Copy className="h-4 w-4" /></Button>
-          </div>
-          <p className="text-muted-foreground">POST with header <code className="bg-muted px-1 rounded">x-api-key: nfk_live_…</code> and JSON body: <code className="bg-muted px-1 rounded">{'{"full_name","email","phone","source","tags"}'}</code>. The workspace is taken from the key.</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Make.com Setup</CardTitle>
-          <CardDescription>Use the HTTP module in Make.com (or any tool that can call an HTTP endpoint) with the values below.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label className="text-xs">Endpoint URL</Label>
-            <div className="flex gap-2 mt-1">
-              <Input readOnly value={FUNCTION_URL} className="font-mono text-xs" />
-              <Button variant="outline" size="icon" onClick={() => copy(FUNCTION_URL, "URL copied")}><Copy className="h-4 w-4" /></Button>
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs">Method</Label>
-            <Input readOnly value="POST" className="font-mono text-xs mt-1" />
-          </div>
-          <div>
-            <Label className="text-xs">Headers</Label>
-            <pre className="mt-1 rounded-md bg-muted p-3 text-xs overflow-x-auto">{`x-api-key: nfk_live_your_key_here
-Content-Type: application/json`}</pre>
-          </div>
-          <div>
-            <Label className="text-xs">Sample JSON body</Label>
-            <div className="relative mt-1">
-              <pre className="rounded-md bg-muted p-3 text-xs overflow-x-auto">{sampleBody}</pre>
-              <Button variant="outline" size="icon" className="absolute top-2 right-2" onClick={() => copy(sampleBody, "Body copied")}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <Alert>
-            <AlertDescription className="text-xs">
-              <strong>Fields:</strong> <code>title</code> and <code>content</code> are required.
-              Optional: <code>slug</code>, <code>excerpt</code>, <code>image_url</code>, <code>category</code>, <code>author</code>, <code>read_time</code>, <code>featured</code>, <code>status</code> (<code>draft</code> or <code>published</code>).
-              When <code>status: "published"</code>, posts auto-share to LinkedIn, Facebook & Instagram if those channels are connected.
-            </AlertDescription>
-          </Alert>
         </CardContent>
       </Card>
 
